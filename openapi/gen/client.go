@@ -54,8 +54,6 @@ type APIClient struct {
 
 	BlockApi *BlockApiService
 
-	BorrowersApi *BorrowersApiService
-
 	CloutApi *CloutApiService
 
 	CodesApi *CodesApiService
@@ -140,7 +138,6 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.AuthApi = (*AuthApiService)(&c.common)
 	c.BankApi = (*BankApiService)(&c.common)
 	c.BlockApi = (*BlockApiService)(&c.common)
-	c.BorrowersApi = (*BorrowersApiService)(&c.common)
 	c.CloutApi = (*CloutApiService)(&c.common)
 	c.CodesApi = (*CodesApiService)(&c.common)
 	c.ExportApi = (*ExportApiService)(&c.common)

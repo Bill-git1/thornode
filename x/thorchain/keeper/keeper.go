@@ -58,7 +58,6 @@ type Keeper interface {
 	KeeperPool
 	KeeperLastHeight
 	KeeperLiquidityProvider
-	KeeperLoan
 	KeeperNodeAccount
 	KeeperUpgrade
 	KeeperObserver
@@ -138,15 +137,6 @@ type KeeperStreamingSwap interface {
 	GetStreamingSwap(ctx cosmos.Context, _ common.TxID) (StreamingSwap, error)
 	StreamingSwapExists(ctx cosmos.Context, _ common.TxID) bool
 	RemoveStreamingSwap(ctx cosmos.Context, _ common.TxID)
-}
-
-type KeeperLoan interface {
-	GetLoanIterator(ctx cosmos.Context, _ common.Asset) cosmos.Iterator
-	GetLoan(ctx cosmos.Context, asset common.Asset, addr common.Address) (Loan, error)
-	SetLoan(ctx cosmos.Context, _ Loan)
-	RemoveLoan(ctx cosmos.Context, _ Loan)
-	SetTotalCollateral(_ cosmos.Context, _ common.Asset, _ cosmos.Uint)
-	GetTotalCollateral(_ cosmos.Context, _ common.Asset) (cosmos.Uint, error)
 }
 
 type KeeperLiquidityProvider interface {

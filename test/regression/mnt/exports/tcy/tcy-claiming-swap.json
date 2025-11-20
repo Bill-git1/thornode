@@ -283,8 +283,6 @@
           "units": "25000000000000"
         }
       ],
-      "loan_total_collateral": [],
-      "loans": [],
       "mimirs": [],
       "network": {
         "bond_reward_rune": "0",

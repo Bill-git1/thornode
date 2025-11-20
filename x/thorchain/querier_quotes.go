@@ -487,8 +487,11 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 		minSwapAmount = destInSrcAsset
 	}
 
-	// Apply multiplier to the final result
-	minSwapAmount = minSwapAmount.Mul(cosmos.NewUint(getQuoteRecommendedMinAmountFeeMultiplier()))
+	// Bypass non determinism for wasm queries
+	isWasm, _ := ctx.Value(constants.CtxWASMQuery).(bool)
+	if !isWasm {
+		minSwapAmount = minSwapAmount.Mul(cosmos.NewUint(getQuoteRecommendedMinAmountFeeMultiplier()))
+	}
 
 	// Apply affiliate fee multiplier: multiply by (100% + affiliate_bps)
 	// This accounts for the fact that affiliate fees are taken out before processing
@@ -1147,7 +1150,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		res.Notes += " " + outboundNotes
 	}
 	res.Warning = quoteWarning
-	res.Expiry = time.Now().Add(quoteExpiration).Unix()
+	res.Expiry = ctx.BlockTime().Add(quoteExpiration).Unix()
 	res.RecommendedMinAmountIn = minSwapAmount.String()
 
 	// set inbound recommended gas for non-native swaps

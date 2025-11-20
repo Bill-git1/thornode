@@ -61,7 +61,7 @@ func (k KVStore) SetStreamingSwap(ctx cosmos.Context, swp StreamingSwap) {
 	k.setStreamingSwap(ctx, k.GetKey(prefixStreamingSwap, swp.TxID.String()), swp)
 }
 
-// RemoveStreamingSwap remove the loan to kv store
+// RemoveStreamingSwap remove the streaming swap from kv store
 func (k KVStore) RemoveStreamingSwap(ctx cosmos.Context, hash common.TxID) {
 	k.del(ctx, k.GetKey(prefixStreamingSwap, hash.String()))
 }

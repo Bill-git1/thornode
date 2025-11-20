@@ -277,20 +277,6 @@ func (k KVStoreDummy) GetStreamingSwap(ctx cosmos.Context, _ common.TxID) (Strea
 func (k KVStoreDummy) StreamingSwapExists(ctx cosmos.Context, _ common.TxID) bool { return false }
 func (k KVStoreDummy) RemoveStreamingSwap(ctx cosmos.Context, _ common.TxID)      {}
 
-func (k KVStoreDummy) GetLoanIterator(ctx cosmos.Context, _ common.Asset) cosmos.Iterator {
-	return nil
-}
-
-func (k KVStoreDummy) GetLoan(ctx cosmos.Context, asset common.Asset, addr common.Address) (Loan, error) {
-	return Loan{}, kaboom
-}
-func (k KVStoreDummy) SetLoan(ctx cosmos.Context, _ Loan)                                 {}
-func (k KVStoreDummy) RemoveLoan(ctx cosmos.Context, _ Loan)                              {}
-func (k KVStoreDummy) SetTotalCollateral(_ cosmos.Context, _ common.Asset, _ cosmos.Uint) {}
-func (k KVStoreDummy) GetTotalCollateral(_ cosmos.Context, _ common.Asset) (cosmos.Uint, error) {
-	return cosmos.ZeroUint(), kaboom
-}
-
 func (k KVStoreDummy) GetLiquidityProviderIterator(_ cosmos.Context, _ common.Asset) cosmos.Iterator {
 	return nil
 }

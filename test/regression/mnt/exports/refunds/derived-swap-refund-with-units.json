@@ -232,8 +232,6 @@
           "units": "100000000000"
         }
       ],
-      "loan_total_collateral": [],
-      "loans": [],
       "mimirs": [
         {
           "key": "DERIVEDDEPTHBASISPTS",

@@ -23,8 +23,6 @@ var (
 	_ jsonpb.JSONPBMarshaler = &QueryBalanceModuleResponse{}
 	_ jsonpb.JSONPBMarshaler = &BanVoter{}
 	_ jsonpb.JSONPBMarshaler = &QueryBlockResponse{}
-	_ jsonpb.JSONPBMarshaler = &QueryBorrowerResponse{}
-	_ jsonpb.JSONPBMarshaler = &QueryBorrowersResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryConstantValuesResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryDerivedPoolResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryDerivedPoolsResponse{}
@@ -104,15 +102,6 @@ func (m *QueryBalanceModuleResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte,
 // BanVoter
 func (m *BanVoter) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
 	return jsonify(m)
-}
-
-// QueryBorrowerResponse
-func (m *QueryBorrowerResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
-	return jsonify(m)
-}
-
-func (m *QueryBorrowersResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
-	return jsonify(m.Borrowers)
 }
 
 func (m *QueryConstantValuesResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {

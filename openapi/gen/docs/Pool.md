@@ -23,9 +23,6 @@ Name | Type | Description | Notes
 **SaversCapacityRemaining** | **string** | amount of remaining capacity in asset | 
 **SynthMintPaused** | **bool** | whether additional synths cannot be minted | 
 **SynthSupplyRemaining** | **string** | the amount of synth supply remaining before the current max supply is reached | 
-**LoanCollateral** | **string** | the amount of collateral collects for loans | 
-**LoanCollateralRemaining** | **string** | the amount of remaining collateral collects for loans | 
-**LoanCr** | **string** | the current loan collateralization ratio | 
 **DerivedDepthBps** | **string** | the depth of the derived virtual pool relative to L1 pool (in basis points) | 
 **TradingHalted** | Pointer to **bool** | indicates if the pool can be used for swaps | [optional] 
 **VolumeAsset** | Pointer to **string** | 24h volume in asset | [optional] 
@@ -35,7 +32,7 @@ Name | Type | Description | Notes
 
 ### NewPool
 
-`func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, assetTorPrice string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, saversFillBps string, saversCapacityRemaining string, synthMintPaused bool, synthSupplyRemaining string, loanCollateral string, loanCollateralRemaining string, loanCr string, derivedDepthBps string, ) *Pool`
+`func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, assetTorPrice string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, saversFillBps string, saversCapacityRemaining string, synthMintPaused bool, synthSupplyRemaining string, derivedDepthBps string, ) *Pool`
 
 NewPool instantiates a new Pool object
 This constructor will assign default values to properties that have it defined,
@@ -438,66 +435,6 @@ and a boolean to check if the value has been set.
 `func (o *Pool) SetSynthSupplyRemaining(v string)`
 
 SetSynthSupplyRemaining sets SynthSupplyRemaining field to given value.
-
-
-### GetLoanCollateral
-
-`func (o *Pool) GetLoanCollateral() string`
-
-GetLoanCollateral returns the LoanCollateral field if non-nil, zero value otherwise.
-
-### GetLoanCollateralOk
-
-`func (o *Pool) GetLoanCollateralOk() (*string, bool)`
-
-GetLoanCollateralOk returns a tuple with the LoanCollateral field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetLoanCollateral
-
-`func (o *Pool) SetLoanCollateral(v string)`
-
-SetLoanCollateral sets LoanCollateral field to given value.
-
-
-### GetLoanCollateralRemaining
-
-`func (o *Pool) GetLoanCollateralRemaining() string`
-
-GetLoanCollateralRemaining returns the LoanCollateralRemaining field if non-nil, zero value otherwise.
-
-### GetLoanCollateralRemainingOk
-
-`func (o *Pool) GetLoanCollateralRemainingOk() (*string, bool)`
-
-GetLoanCollateralRemainingOk returns a tuple with the LoanCollateralRemaining field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetLoanCollateralRemaining
-
-`func (o *Pool) SetLoanCollateralRemaining(v string)`
-
-SetLoanCollateralRemaining sets LoanCollateralRemaining field to given value.
-
-
-### GetLoanCr
-
-`func (o *Pool) GetLoanCr() string`
-
-GetLoanCr returns the LoanCr field if non-nil, zero value otherwise.
-
-### GetLoanCrOk
-
-`func (o *Pool) GetLoanCrOk() (*string, bool)`
-
-GetLoanCrOk returns a tuple with the LoanCr field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetLoanCr
-
-`func (o *Pool) SetLoanCr(v string)`
-
-SetLoanCr sets LoanCr field to given value.
 
 
 ### GetDerivedDepthBps

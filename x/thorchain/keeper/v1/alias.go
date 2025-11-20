@@ -48,7 +48,6 @@ const (
 var (
 	NewPool                    = types.NewPool
 	NewJail                    = types.NewJail
-	NewLoan                    = types.NewLoan
 	NewStreamingSwap           = types.NewStreamingSwap
 	NewNetwork                 = types.NewNetwork
 	NewProtocolOwnedLiquidity  = types.NewProtocolOwnedLiquidity
@@ -107,7 +106,6 @@ type (
 	Pool                     = types.Pool
 	Pools                    = types.Pools
 	LiquidityProvider        = types.LiquidityProvider
-	Loan                     = types.Loan
 	StreamingSwap            = types.StreamingSwap
 	ObservedTxs              = common.ObservedTxs
 	ObservedTxVoter          = types.ObservedTxVoter

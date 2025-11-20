@@ -669,78 +669,6 @@ paths:
           description: OK
       tags:
       - Savers
-  /thorchain/pool/{asset}/borrower/{address}:
-    get:
-      description: Returns the borrower position given the pool and address.
-      operationId: borrower
-      parameters:
-      - description: "optional block height, defaults to current tip"
-        explode: true
-        in: query
-        name: height
-        required: false
-        schema:
-          format: int64
-          minimum: 0
-          type: integer
-        style: form
-      - explode: false
-        in: path
-        name: asset
-        required: true
-        schema:
-          example: BTC.BTC
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: address
-        required: true
-        schema:
-          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BorrowerResponse'
-          description: OK
-      tags:
-      - Borrowers
-  /thorchain/pool/{asset}/borrowers:
-    get:
-      description: Returns all borrowers for the given pool.
-      operationId: borrowers
-      parameters:
-      - description: "optional block height, defaults to current tip"
-        explode: true
-        in: query
-        name: height
-        required: false
-        schema:
-          format: int64
-          minimum: 0
-          type: integer
-        style: form
-      - explode: false
-        in: path
-        name: asset
-        required: true
-        schema:
-          example: BTC.BTC
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BorrowersResponse'
-          description: OK
-      tags:
-      - Borrowers
   /thorchain/tx/{hash}:
     get:
       description: Returns the observed transaction for a provided inbound or outbound
@@ -2809,30 +2737,27 @@ components:
   schemas:
     Pool:
       example:
+        volume_rune: "123456"
         synth_units: "0"
-        loan_cr: "123456"
+        volume_asset: "123456"
+        savers_fill_bps: "4500"
         savers_depth: "199998"
+        savers_units: "199998"
         derived_depth_bps: "123456"
         balance_asset: "3197744873"
         synth_supply: "0"
+        savers_capacity_remaining: "1000"
+        trading_halted: false
         asset_tor_price: "123456"
         synth_mint_paused: true
-        balance_rune: "13460619152985"
-        pool_units: "14694928607473"
-        short_code: b
-        volume_rune: "123456"
-        volume_asset: "123456"
-        savers_fill_bps: "4500"
-        savers_units: "199998"
-        savers_capacity_remaining: "1000"
-        loan_collateral_remaining: "123456"
-        trading_halted: false
         pending_inbound_rune: "464993836"
         decimals: 6
         LP_units: "14694928607473"
-        loan_collateral: "123456"
+        balance_rune: "13460619152985"
         asset: BTC.BTC
+        pool_units: "14694928607473"
         synth_supply_remaining: "123456"
+        short_code: b
         status: Available
         pending_inbound_asset: "101713319"
       properties:
@@ -2906,18 +2831,6 @@ components:
             supply is reached
           example: "123456"
           type: string
-        loan_collateral:
-          description: the amount of collateral collects for loans
-          example: "123456"
-          type: string
-        loan_collateral_remaining:
-          description: the amount of remaining collateral collects for loans
-          example: "123456"
-          type: string
-        loan_cr:
-          description: the current loan collateralization ratio
-          example: "123456"
-          type: string
         derived_depth_bps:
           description: the depth of the derived virtual pool relative to L1 pool (in
             basis points)
@@ -2942,9 +2855,6 @@ components:
       - balance_asset
       - balance_rune
       - derived_depth_bps
-      - loan_collateral
-      - loan_collateral_remaining
-      - loan_cr
       - pending_inbound_asset
       - pending_inbound_rune
       - pool_units
@@ -3390,63 +3300,6 @@ components:
       - asset_redeem_value
       - growth_pct
       - units
-      type: object
-    Borrower:
-      example:
-        owner: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
-        last_repay_height: 82745
-        collateral_current: "123456"
-        collateral_withdrawn: "123456"
-        debt_issued: "123456"
-        debt_current: "123456"
-        collateral_deposited: "123456"
-        asset: BTC.BTC
-        debt_repaid: "123456"
-        last_open_height: 82745
-      properties:
-        owner:
-          example: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
-          type: string
-        asset:
-          example: BTC.BTC
-          type: string
-        debt_issued:
-          example: "123456"
-          type: string
-        debt_repaid:
-          example: "123456"
-          type: string
-        debt_current:
-          example: "123456"
-          type: string
-        collateral_deposited:
-          example: "123456"
-          type: string
-        collateral_withdrawn:
-          example: "123456"
-          type: string
-        collateral_current:
-          example: "123456"
-          type: string
-        last_open_height:
-          example: 82745
-          format: int64
-          type: integer
-        last_repay_height:
-          example: 82745
-          format: int64
-          type: integer
-      required:
-      - asset
-      - collateral_current
-      - collateral_deposited
-      - collateral_withdrawn
-      - debt_current
-      - debt_issued
-      - debt_repaid
-      - last_open_height
-      - last_repay_height
-      - owner
       type: object
     Coin:
       example:
@@ -4940,12 +4793,6 @@ components:
     SaversResponse:
       items:
         $ref: '#/components/schemas/Saver'
-      type: array
-    BorrowerResponse:
-      $ref: '#/components/schemas/Borrower'
-    BorrowersResponse:
-      items:
-        $ref: '#/components/schemas/Borrower'
       type: array
     TxResponse:
       example:
@@ -7338,253 +7185,6 @@ components:
       - outbound_delay_seconds
       - recommended_gas_rate
       - slippage_bps
-      - warning
-      type: object
-    QuoteLoanOpenResponse:
-      properties:
-        inbound_address:
-          description: the inbound address for the transaction on the source chain
-          example: bc1qjk3xzu5slu7mtmc8jc9yed3zqvkhkttm700g9a
-          type: string
-        inbound_confirmation_blocks:
-          description: the approximate number of source chain blocks required before
-            processing
-          format: int64
-          type: integer
-        inbound_confirmation_seconds:
-          description: the approximate seconds for block confirmations required before
-            processing
-          format: int64
-          type: integer
-        outbound_delay_blocks:
-          description: the number of thorchain blocks the outbound will be delayed
-          format: int64
-          type: integer
-        outbound_delay_seconds:
-          description: the approximate seconds for the outbound delay before it will
-            be sent
-          format: int64
-          type: integer
-        fees:
-          $ref: '#/components/schemas/QuoteFees'
-        router:
-          description: the EVM chain router contract address
-          example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
-          type: string
-        expiry:
-          description: expiration timestamp in unix seconds
-          example: 1671660285
-          format: int64
-          type: integer
-        warning:
-          description: static warning message
-          example: Do not cache this response. Do not send funds after the expiry.
-          type: string
-        notes:
-          description: chain specific quote notes
-          example: "Transfer the inbound_address the asset with the memo. Do not use\
-            \ multi-in, multi-out transactions."
-          type: string
-        dust_threshold:
-          description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
-            \ the dust_threshold are ignored."
-          example: "10000"
-          type: string
-        recommended_min_amount_in:
-          description: The recommended minimum inbound amount for this transaction
-            type & inbound asset. Sending less than this amount could result in failed
-            refunds.
-          example: "15000"
-          type: string
-        recommended_gas_rate:
-          description: the recommended gas rate to use for the inbound to ensure timely
-            confirmation
-          example: "10"
-          type: string
-        gas_rate_units:
-          description: the units of the recommended gas rate
-          example: gwei
-          type: string
-        memo:
-          description: generated memo for the loan open
-          example: $+:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
-          type: string
-        expected_amount_out:
-          description: the amount of the target asset the user can expect to receive
-            after fees in 1e8 decimals
-          example: "10000"
-          type: string
-        expected_collateralization_ratio:
-          description: the expected collateralization ratio in basis points
-          example: "30000"
-          type: string
-        expected_collateral_deposited:
-          description: the expected amount of collateral increase on the loan
-          example: "1000000"
-          type: string
-        expected_debt_issued:
-          description: the expected amount of TOR debt increase on the loan
-          example: "1000000"
-          type: string
-        streaming_swap_blocks:
-          description: The number of blocks involved in the streaming swaps during
-            the open loan process.
-          example: 10
-          format: int64
-          type: integer
-        streaming_swap_seconds:
-          description: The approximate number of seconds taken by the streaming swaps
-            involved in the open loan process.
-          example: 600
-          format: int64
-          type: integer
-        total_open_loan_seconds:
-          description: "The total expected duration for a open loan, measured in seconds,\
-            \ which includes the time for inbound confirmation, the duration of streaming\
-            \ swaps, and any outbound delays."
-          example: 600
-          format: int64
-          type: integer
-      required:
-      - expected_amount_out
-      - expected_collateral_deposited
-      - expected_collateralization_ratio
-      - expected_debt_issued
-      - expiry
-      - fees
-      - gas_rate_units
-      - notes
-      - outbound_delay_blocks
-      - outbound_delay_seconds
-      - recommended_gas_rate
-      - streaming_swap_blocks
-      - streaming_swap_seconds
-      - total_open_loan_seconds
-      - warning
-      type: object
-    QuoteLoanCloseResponse:
-      properties:
-        inbound_address:
-          description: the inbound address for the transaction on the source chain
-          example: bc1qjk3xzu5slu7mtmc8jc9yed3zqvkhkttm700g9a
-          type: string
-        inbound_confirmation_blocks:
-          description: the approximate number of source chain blocks required before
-            processing
-          format: int64
-          type: integer
-        inbound_confirmation_seconds:
-          description: the approximate seconds for block confirmations required before
-            processing
-          format: int64
-          type: integer
-        outbound_delay_blocks:
-          description: the number of thorchain blocks the outbound will be delayed
-          format: int64
-          type: integer
-        outbound_delay_seconds:
-          description: the approximate seconds for the outbound delay before it will
-            be sent
-          format: int64
-          type: integer
-        fees:
-          $ref: '#/components/schemas/QuoteFees'
-        router:
-          description: the EVM chain router contract address
-          example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
-          type: string
-        expiry:
-          description: expiration timestamp in unix seconds
-          example: 1671660285
-          format: int64
-          type: integer
-        warning:
-          description: static warning message
-          example: Do not cache this response. Do not send funds after the expiry.
-          type: string
-        notes:
-          description: chain specific quote notes
-          example: "Transfer the inbound_address the asset with the memo. Do not use\
-            \ multi-in, multi-out transactions."
-          type: string
-        dust_threshold:
-          description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
-            \ the dust_threshold are ignored."
-          example: "10000"
-          type: string
-        recommended_min_amount_in:
-          description: The recommended minimum inbound amount for this transaction
-            type & inbound asset. Sending less than this amount could result in failed
-            refunds.
-          example: "15000"
-          type: string
-        recommended_gas_rate:
-          description: the recommended gas rate to use for the inbound to ensure timely
-            confirmation
-          example: "10"
-          type: string
-        gas_rate_units:
-          description: the units of the recommended gas rate
-          example: gwei
-          type: string
-        memo:
-          description: generated memo for the loan close
-          example: $-:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
-          type: string
-        expected_amount_out:
-          description: the amount of collateral asset the user can expect to receive
-            after fees in 1e8 decimals
-          example: "10000"
-          type: string
-        expected_amount_in:
-          description: "The quantity of the repayment asset to be sent by the user,\
-            \ calculated as the desired percentage of the loan's value, expressed\
-            \ in units of 1e8"
-          example: "10000"
-          type: string
-        expected_collateral_withdrawn:
-          description: the expected amount of collateral decrease on the loan
-          example: "1000000"
-          type: string
-        expected_debt_repaid:
-          description: the expected amount of TOR debt decrease on the loan
-          example: "1000000"
-          type: string
-        streaming_swap_blocks:
-          description: The number of blocks involved in the streaming swaps during
-            the repayment process.
-          example: 10
-          format: int64
-          type: integer
-        streaming_swap_seconds:
-          description: The approximate number of seconds taken by the streaming swaps
-            involved in the repayment process.
-          example: 600
-          format: int64
-          type: integer
-        total_repay_seconds:
-          description: "The total expected duration for a repayment, measured in seconds,\
-            \ which includes the time for inbound confirmation, the duration of streaming\
-            \ swaps, and any outbound delays."
-          example: 600
-          format: int64
-          type: integer
-      required:
-      - expected_amount_in
-      - expected_amount_out
-      - expected_collateral_withdrawn
-      - expected_debt_repaid
-      - expiry
-      - fees
-      - memo
-      - notes
-      - outbound_delay_blocks
-      - outbound_delay_seconds
-      - streaming_swap_blocks
-      - streaming_swap_seconds
-      - total_repay_seconds
       - warning
       type: object
     ReferenceMemoResponse:

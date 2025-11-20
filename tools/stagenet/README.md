@@ -75,7 +75,7 @@ thornode tx thorchain mimir HaltChurning --from dog --chain-id thorchain --node 
 
 ## Usage
 
-This document and tooling provides a local `stagenet` setup to test pools, swaps, churns, savers, loans, and all other features as desired - however this usage is outside the scope of this document. Consult other documentation for an understanding of THORChain:
+This document and tooling provides a local `stagenet` setup to test pools, swaps, churns, savers and all other features as desired - however this usage is outside the scope of this document. Consult other documentation for an understanding of THORChain:
 
 - https://dev.thorchain.org/
 - https://docs.thorchain.org/

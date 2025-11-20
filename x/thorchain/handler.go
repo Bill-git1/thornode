@@ -69,8 +69,6 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgConsolidate{})] = NewConsolidateHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgManageTHORName{})] = NewManageTHORNameHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgReferenceMemo{})] = NewReferenceMemoHandler(mgr)
-	m[sdk.MsgTypeURL(&MsgLoanOpen{})] = NewLoanOpenHandler(mgr)
-	m[sdk.MsgTypeURL(&MsgLoanRepayment{})] = NewLoanRepaymentHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgTradeAccountDeposit{})] = NewTradeAccountDepositHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgTradeAccountWithdrawal{})] = NewTradeAccountWithdrawalHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgSecuredAssetDeposit{})] = NewSecuredAssetDepositHandler(mgr)
@@ -173,15 +171,6 @@ func getMsgLeaveFromMemo(memo LeaveMemo, tx ObservedTx, signer cosmos.AccAddress
 	return NewMsgLeave(tx.Tx, memo.GetAccAddress(), signer), nil
 }
 
-func getMsgLoanOpenFromMemo(ctx cosmos.Context, keeper keeper.Keeper, memo LoanOpenMemo, tx ObservedTx, signer cosmos.AccAddress, txid common.TxID) (cosmos.Msg, error) {
-	memo.TargetAsset = fuzzyAssetMatch(ctx, keeper, memo.TargetAsset)
-	return NewMsgLoanOpen(tx.Tx.FromAddress, tx.Tx.Coins[0].Asset, tx.Tx.Coins[0].Amount, memo.TargetAddress, memo.TargetAsset, memo.GetMinOut(), memo.GetAffiliateAddress(), memo.GetAffiliateBasisPoints(), memo.GetDexAggregator(), memo.GetDexTargetAddress(), memo.DexTargetLimit, signer, txid), nil
-}
-
-func getMsgLoanRepaymentFromMemo(memo LoanRepaymentMemo, from common.Address, coin common.Coin, signer cosmos.AccAddress, txid common.TxID) (cosmos.Msg, error) {
-	return NewMsgLoanRepayment(memo.Owner, memo.Asset, memo.MinOut, from, coin, signer, txid), nil
-}
-
 func getMsgBondFromMemo(memo BondMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	coin := tx.Tx.Coins.GetCoin(common.RuneAsset())
 	return NewMsgBond(tx.Tx, memo.GetAccAddress(), coin.Amount, tx.Tx.FromAddress, memo.BondProviderAddress, signer, memo.NodeOperatorFee), nil
@@ -264,12 +253,6 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg, err = getMsgReferenceMemo(m, signer)
 	case ManageTHORNameMemo:
 		newMsg, err = getMsgManageTHORNameFromMemo(m, tx, signer)
-	case LoanOpenMemo:
-		newMsg, err = getMsgLoanOpenFromMemo(ctx, keeper, m, tx, signer, tx.Tx.ID)
-	case LoanRepaymentMemo:
-		m.Asset = fuzzyAssetMatch(ctx, keeper, m.Asset)
-		from := tx.Tx.FromAddress
-		newMsg, err = getMsgLoanRepaymentFromMemo(m, from, tx.Tx.Coins[0], signer, tx.Tx.ID)
 	case TradeAccountDepositMemo:
 		coin := tx.Tx.Coins[0]
 		newMsg = NewMsgTradeAccountDeposit(coin.Asset, coin.Amount, m.GetAccAddress(), signer, tx.Tx)

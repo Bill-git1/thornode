@@ -109,22 +109,6 @@ func (s *queryServer) Savers(c context.Context, req *types.QuerySaversRequest) (
 	return s.querySavers(ctx, req)
 }
 
-func (s *queryServer) Borrower(c context.Context, req *types.QueryBorrowerRequest) (*types.QueryBorrowerResponse, error) {
-	if err := checkHeightParam(req.Height); err != nil {
-		return nil, err
-	}
-	ctx := s.unwrapSdkContext(c)
-	return s.queryBorrower(ctx, req)
-}
-
-func (s *queryServer) Borrowers(c context.Context, req *types.QueryBorrowersRequest) (*types.QueryBorrowersResponse, error) {
-	if err := checkHeightParam(req.Height); err != nil {
-		return nil, err
-	}
-	ctx := s.unwrapSdkContext(c)
-	return s.queryBorrowers(ctx, req)
-}
-
 func (s *queryServer) TradeUnit(c context.Context, req *types.QueryTradeUnitRequest) (*types.QueryTradeUnitResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

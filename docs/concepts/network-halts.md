@@ -42,7 +42,6 @@ Chain specific halts do occur and need to be monitored and reacted to when they 
 ### **Network Level Halts**
 
 - **Network Pause LP** `PAUSELP = 1` Addition and withdrawal of liquidity are suspended for all pools but swaps and other transactions are processed.
-- **Network Pause Lending** `PAUSELOANS = 1` Opening and closing of loans is paused for all loans.
 - **Network Trading Halt** `HALTTRADING = 1` Will stop all trading for every connected chain. The THORChain blockchain will continue and native RUNE transactions will be processed.
 
 There is no Network level chain halt setting as the THORChain Blockchain continually needs to produce blocks.
@@ -60,7 +59,7 @@ While very rare, a network level halt is possible and should be monitored for.
 2. **Specific Secured Asset Deposit Halt** - Disables deposits of secured assets in base and App Layer for the specified chain.
    1. Mimir setting is `HaltSecuredDeposit-<Chain>`, e.g., `HaltSecuredDeposit-ETH = 1` disabled deposits for ETH-ETH and all ERC20 secured assets.
 3. **Specific Secured Asset Withdrawal Halt** - Same as `HaltSecuredDeposit-<Chain>` except for Secured Asset Withdrawal.
-   1. Mimir setting is `HaltSecuredWithdraw-<Chain>`, e.g., `HaltSecuredWithdraw-ETH =``, set to `1`to disable;`0` to enable.
+   1. Mimir setting is `HaltSecuredWithdraw-<Chain>`, e.g., `HaltSecuredWithdraw-ETH =``, set to      `1`to disable;`0` to enable.
 
 ### Smart Contract Halt Management
 

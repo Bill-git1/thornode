@@ -32,7 +32,6 @@ func ScanBlock(block *thorscan.BlockResponse) {
 	ScanInfo(block)
 	ScanActivity(block)
 	ScanSecurity(block)
-	ScanLoans(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -84,9 +84,6 @@ const (
 	StreamingLimitSwapMaxAge
 	MinCR
 	MaxCR
-	LoanStreamingSwapsInterval
-	PauseLoans
-	LoanRepaymentMaturity
 	LendingLever
 	PermittedSolvencyGap
 	NodeOperatorFee

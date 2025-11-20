@@ -312,14 +312,7 @@ func handleObservedTxInQuorum(
 		return nil
 	}
 
-	// if it is a loan, inject the observed TxID and ToAddress into the context
-	_, isLoanOpen := m.(*MsgLoanOpen)
-	_, isLoanRepayment := m.(*MsgLoanRepayment)
 	mCtx := ctx
-	if isLoanOpen || isLoanRepayment {
-		mCtx = ctx.WithValue(constants.CtxLoanTxID, tx.Tx.ID)
-		mCtx = mCtx.WithValue(constants.CtxLoanToAddress, tx.Tx.ToAddress)
-	}
 
 	// Check and block switch assets
 	// Check is independent of the mimir to enable the handler in order to support

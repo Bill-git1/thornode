@@ -224,8 +224,6 @@
           "units": "100099894672"
         }
       ],
-      "loan_total_collateral": [],
-      "loans": [],
       "mimirs": [
         {
           "key": "PENDINGLIQUIDITYAGELIMIT",

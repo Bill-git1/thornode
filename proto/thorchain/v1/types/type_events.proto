@@ -571,56 +571,6 @@ message EventRUNEPoolWithdraw {
             "gitlab.com/thorchain/thornode/v3/common.Address" ];
 }
 
-message EventLoanOpen {
-  string collateral_deposited = 1 [
-    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
-    (gogoproto.nullable) = false
-  ];
-  common.Asset collateral_asset = 2 [
-    (gogoproto.nullable) = false,
-    (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"
-  ];
-  string collateralization_ratio = 3 [
-    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
-    (gogoproto.nullable) = false
-  ];
-  string debt_issued = 4 [
-    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
-    (gogoproto.nullable) = false
-  ];
-  string owner = 5 [ (gogoproto.casttype) =
-                         "gitlab.com/thorchain/thornode/v3/common.Address" ];
-  common.Asset target_asset = 6 [
-    (gogoproto.nullable) = false,
-    (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"
-  ];
-  string tx_id = 7 [
-    (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID",
-    (gogoproto.customname) = "TxID"
-  ];
-}
-
-message EventLoanRepayment {
-  string collateral_withdrawn = 1 [
-    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
-    (gogoproto.nullable) = false
-  ];
-  common.Asset collateral_asset = 2 [
-    (gogoproto.nullable) = false,
-    (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"
-  ];
-  string debt_repaid = 3 [
-    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
-    (gogoproto.nullable) = false
-  ];
-  string owner = 4 [ (gogoproto.casttype) =
-                         "gitlab.com/thorchain/thornode/v3/common.Address" ];
-  string tx_id = 7 [
-    (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID",
-    (gogoproto.customname) = "TxID"
-  ];
-}
-
 message EventTHORName {
   string name = 1;
   string chain = 2 [ (gogoproto.casttype) =

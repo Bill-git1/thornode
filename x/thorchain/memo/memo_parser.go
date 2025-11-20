@@ -105,10 +105,6 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseReferenceWriteMemo()
 	case TxReferenceReadMemo:
 		return p.ParseReferenceReadMemo()
-	case TxLoanOpen:
-		return p.ParseLoanOpenMemo()
-	case TxLoanRepayment:
-		return p.ParseLoanRepaymentMemo()
 	case TxTradeAccountDeposit:
 		return p.ParseTradeAccountDeposit()
 	case TxTradeAccountWithdrawal:

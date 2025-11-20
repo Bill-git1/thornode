@@ -21,7 +21,6 @@ import "types/type_observed_tx.proto";
 import "types/type_liquidity_provider.proto";
 import "types/type_thorname.proto";
 import "types/type_reference_memo.proto";
-import "types/type_loan.proto";
 import "types/type_clout.proto";
 import "types/type_trade_account.proto";
 import "types/type_rune_provider.proto";
@@ -94,7 +93,6 @@ message GenesisState {
   repeated types.BondProviders bond_providers = 26
       [ (gogoproto.nullable) = false ];
   types.ProtocolOwnedLiquidity POL = 27 [ (gogoproto.nullable) = false ];
-  repeated types.Loan loans = 28 [ (gogoproto.nullable) = false ];
   repeated types.StreamingSwap streaming_swaps = 29
       [ (gogoproto.nullable) = false ];
   repeated types.MsgSwap swap_queue_items = 30 [ (gogoproto.nullable) = false ];
@@ -117,10 +115,6 @@ message GenesisState {
   repeated types.NodeMimir nodeMimirs = 38 [ (gogoproto.nullable) = false ];
   repeated types.AffiliateFeeCollector affiliate_collectors = 39
       [ (gogoproto.nullable) = false ];
-  repeated common.Coin loan_total_collateral = 40 [
-    (gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Coins",
-    (gogoproto.nullable) = false
-  ];
   repeated types.SecuredAsset secured_assets = 41
       [ (gogoproto.nullable) = false ];
   repeated types.TCYClaimer tcy_claimers = 42 [ (gogoproto.nullable) = false ];

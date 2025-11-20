@@ -36,8 +36,6 @@ const (
 	TxNoOp
 	TxConsolidate
 	TxTHORName
-	TxLoanOpen
-	TxLoanRepayment
 	TxTradeAccountDeposit
 	TxTradeAccountWithdrawal
 	TxSecuredAssetDeposit
@@ -83,10 +81,6 @@ var stringToTxTypeMap = map[string]TxType{
 	"name":        TxTHORName,
 	"n":           TxTHORName,
 	"~":           TxTHORName,
-	"$+":          TxLoanOpen,
-	"loan+":       TxLoanOpen,
-	"$-":          TxLoanRepayment,
-	"loan-":       TxLoanRepayment,
 	"reference":   TxReferenceWriteMemo, // etup reference memo
 	"r":           TxReferenceReadMemo,  // use reference memo
 	"trade+":      TxTradeAccountDeposit,
@@ -126,8 +120,6 @@ var txToStringMap = map[TxType]string{
 	TxTHORName:               "thorname",
 	TxReferenceWriteMemo:     "reference",
 	TxReferenceReadMemo:      "r",
-	TxLoanOpen:               "$+",
-	TxLoanRepayment:          "$-",
 	TxTradeAccountDeposit:    "trade+",
 	TxTradeAccountWithdrawal: "trade-",
 	TxSecuredAssetDeposit:    "secure+",
@@ -175,8 +167,6 @@ func (tx TxType) IsInbound() bool {
 		TxReserve,
 		TxNoOp,
 		TxTHORName,
-		TxLoanOpen,
-		TxLoanRepayment,
 		TxExec,
 		TxSwitch,
 		TxTCYClaim,

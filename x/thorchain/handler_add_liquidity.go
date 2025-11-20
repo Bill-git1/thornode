@@ -332,9 +332,7 @@ func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) err
 }
 
 func (h AddLiquidityHandler) swap(ctx cosmos.Context, msg MsgAddLiquidity) error {
-	// ensure TxID does NOT have a collision with another swap, this could
-	// happen if the user submits two identical loan requests in the same
-	// block
+	// ensure TxID does NOT have a collision with another swap
 	if ok := h.mgr.Keeper().HasSwapQueueItem(ctx, msg.Tx.ID, 0); ok {
 		return fmt.Errorf("txn hash conflict")
 	}

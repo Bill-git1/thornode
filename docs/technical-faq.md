@@ -32,7 +32,6 @@ RUNE tokens can be transferred via:
 ### Reward Claiming
 
 - **Reserve and RUNEPool**: For liquidity provision and protocol-owned liquidity transactions.
-- **Lending Program**: Fixed capacity, not currently accepting new loans.
 
 ## Transaction Protocol Modifications
 

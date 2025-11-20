@@ -420,43 +420,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/SaversResponse"
 
-  # ------------------------------ loans ------------------------------
-
-  /thorchain/pool/{asset}/borrower/{address}:
-    parameters:
-      - $ref: "#/components/parameters/queryHeight"
-      - $ref: "#/components/parameters/asset"
-      - $ref: "#/components/parameters/address"
-    get:
-      description: Returns the borrower position given the pool and address.
-      operationId: borrower
-      tags:
-        - Borrowers
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BorrowerResponse"
-
-  /thorchain/pool/{asset}/borrowers:
-    parameters:
-      - $ref: "#/components/parameters/queryHeight"
-      - $ref: "#/components/parameters/asset"
-    get:
-      description: Returns all borrowers for the given pool.
-      operationId: borrowers
-      tags:
-        - Borrowers
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BorrowersResponse"
-
   # ------------------------------ transactions ------------------------------
 
   /thorchain/tx/{hash}:
@@ -1804,9 +1767,6 @@ components:
         - savers_capacity_remaining
         - synth_mint_paused
         - synth_supply_remaining
-        - loan_collateral
-        - loan_collateral_remaining
-        - loan_cr
         - derived_depth_bps
       properties:
         asset:
@@ -1878,18 +1838,6 @@ components:
           type: string
           example: "123456"
           description: the amount of synth supply remaining before the current max supply is reached
-        loan_collateral:
-          type: string
-          example: "123456"
-          description: the amount of collateral collects for loans
-        loan_collateral_remaining:
-          type: string
-          example: "123456"
-          description: the amount of remaining collateral collects for loans
-        loan_cr:
-          type: string
-          example: "123456"
-          description: the current loan collateralization ratio
         derived_depth_bps:
           type: string
           example: "123456"
@@ -2247,53 +2195,6 @@ components:
         growth_pct:
           type: string
           example: "0.02"
-
-    Borrower:
-      type: object
-      required:
-        - owner
-        - asset
-        - debt_issued
-        - debt_repaid
-        - debt_current
-        - collateral_deposited
-        - collateral_withdrawn
-        - collateral_current
-        - last_open_height
-        - last_repay_height
-      properties:
-        owner:
-          type: string
-          example: "bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46"
-        asset:
-          type: string
-          example: "BTC.BTC"
-        debt_issued:
-          type: string
-          example: "123456"
-        debt_repaid:
-          type: string
-          example: "123456"
-        debt_current:
-          type: string
-          example: "123456"
-        collateral_deposited:
-          type: string
-          example: "123456"
-        collateral_withdrawn:
-          type: string
-          example: "123456"
-        collateral_current:
-          type: string
-          example: "123456"
-        last_open_height:
-          type: integer
-          format: int64
-          example: 82745
-        last_repay_height:
-          type: integer
-          format: int64
-          example: 82745
 
     Coin:
       type: object
@@ -3541,14 +3442,6 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/Saver"
-
-    BorrowerResponse:
-      $ref: "#/components/schemas/Borrower"
-
-    BorrowersResponse:
-      type: array
-      items:
-        $ref: "#/components/schemas/Borrower"
 
     TxResponse:
       type: object
@@ -4815,117 +4708,6 @@ components:
           type: string
           description: the amount of the target asset the user can expect to withdraw after fees in 1e8 decimals
           example: "10000"
-
-    QuoteLoanOpenResponse:
-      type: object
-      required:
-        - expected_amount_out
-        - expected_collateralization_ratio
-        - expected_collateral_deposited
-        - expected_debt_issued
-        - outbound_delay_blocks
-        - outbound_delay_seconds
-        - fees
-        - warning
-        - notes
-        - expiry
-        - streaming_swap_blocks
-        - streaming_swap_seconds
-        - total_open_loan_seconds
-        - recommended_gas_rate
-        - gas_rate_units
-      properties:
-        <<: *quote-properties
-        memo:
-          type: string
-          description: generated memo for the loan open
-          example: "$+:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe"
-        expected_amount_out:
-          type: string
-          description: the amount of the target asset the user can expect to receive after fees in 1e8 decimals
-          example: "10000"
-        expected_collateralization_ratio:
-          type: string
-          description: the expected collateralization ratio in basis points
-          example: "30000"
-        expected_collateral_deposited:
-          type: string
-          description: the expected amount of collateral increase on the loan
-          example: "1000000"
-        expected_debt_issued:
-          type: string
-          description: the expected amount of TOR debt increase on the loan
-          example: "1000000"
-        streaming_swap_blocks:
-          type: integer
-          format: int64
-          description: The number of blocks involved in the streaming swaps during the open loan process.
-          example: 10
-        streaming_swap_seconds:
-          type: integer
-          format: int64
-          description: The approximate number of seconds taken by the streaming swaps involved in the open loan process.
-          example: 600
-        total_open_loan_seconds:
-          type: integer
-          format: int64
-          description: The total expected duration for a open loan, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays.
-          example: 600
-
-    QuoteLoanCloseResponse:
-      type: object
-      required:
-        - expected_amount_out
-        - expected_collateral_withdrawn
-        - expected_debt_repaid
-        - expected_amount_in
-        - memo
-        - outbound_delay_blocks
-        - outbound_delay_seconds
-        - fees
-        - warning
-        - notes
-        - expiry
-        - streaming_swap_blocks
-        - streaming_swap_seconds
-        - total_repay_seconds
-      properties:
-        <<: *quote-properties
-        memo:
-          type: string
-          description: generated memo for the loan close
-          example: "$-:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe"
-        expected_amount_out:
-          type: string
-          description: the amount of collateral asset the user can expect to receive after fees in 1e8 decimals
-          example: "10000"
-        expected_amount_in:
-          type: string
-          description: The quantity of the repayment asset to be sent by the user, calculated as the desired percentage of the loan's value, expressed in units of 1e8
-          example: "10000"
-        expected_collateral_withdrawn:
-          type: string
-          description: the expected amount of collateral decrease on the loan
-          example: "1000000"
-        expected_debt_repaid:
-          type: string
-          description: the expected amount of TOR debt decrease on the loan
-          example: "1000000"
-        streaming_swap_blocks:
-          type: integer
-          format: int64
-          description: The number of blocks involved in the streaming swaps during the repayment process.
-          example: 10
-        streaming_swap_seconds:
-          type: integer
-          format: int64
-          description: The approximate number of seconds taken by the streaming swaps involved in the repayment process.
-          example: 600
-        total_repay_seconds:
-          type: integer
-          format: int64
-          description: The total expected duration for a repayment, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays.
-          example: 600
 
     ReferenceMemoResponse:
       type: object

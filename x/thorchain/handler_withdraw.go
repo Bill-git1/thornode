@@ -299,9 +299,7 @@ func (h WithdrawLiquidityHandler) handleV3_0_0(ctx cosmos.Context, msg MsgWithdr
 }
 
 func (h WithdrawLiquidityHandler) swap(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {
-	// ensure TxID does NOT have a collision with another swap, this could
-	// happen if the user submits two identical loan requests in the same
-	// block
+	// ensure TxID does NOT have a collision with another swap
 	if ok := h.mgr.Keeper().HasSwapQueueItem(ctx, msg.Tx.ID, 0); ok {
 		return fmt.Errorf("txn hash conflict")
 	}

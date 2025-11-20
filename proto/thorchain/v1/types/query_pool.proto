@@ -48,13 +48,6 @@ message QueryPoolResponse {
   // reached
   string synth_supply_remaining = 19
       [ (gogoproto.jsontag) = "synth_supply_remaining" ];
-  // the amount of collateral collects for loans
-  string loan_collateral = 20 [ (gogoproto.jsontag) = "loan_collateral" ];
-  // the amount of remaining collateral collects for loans
-  string loan_collateral_remaining = 21
-      [ (gogoproto.jsontag) = "loan_collateral_remaining" ];
-  // the current loan collateralization ratio
-  string loan_cr = 22 [ (gogoproto.jsontag) = "loan_cr" ];
   // the depth of the derived virtual pool relative to L1 pool (in basis points)
   string derived_depth_bps = 23 [ (gogoproto.jsontag) = "derived_depth_bps" ];
   // whether trading is halted

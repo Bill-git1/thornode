@@ -46,8 +46,6 @@ The following functions can be put into a memo:
 1. [**SWITCH Asset**](memos.md#switch-asset)
 1. [**DEPOSIT** **Savers**](memos.md#deposit-savers)
 1. [**WITHDRAW Savers**](memos.md#withdraw-savers)
-1. [**OPEN Loan**](memos.md#open-loan)
-1. [**REPAY Loan**](memos.md#repay-loan)
 1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
 1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
 1. [**BOND**, **UNBOND**, **REBOND** & **LEAVE**](memos.md#bond-unbond-rebond-and-leave)
@@ -396,46 +394,6 @@ Withdraw an asset from THORChain Savers.
 ```admonish info
 Withdrawing from Savers can be also be done [without a memo](../archived/saving-guide/quickstart-guide.md#basic-mechanics).
 ```
-
-### **Open Loan**
-
-Open a loan on THORChain.
-
-**`LOAN+:ASSET:DESTADDR:MINOUT:AFFILIATE:FEE`**
-
-| Parameter    | Notes                                                                                                   | Conditions                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Payload      | The collateral to open the loan with.                                                                   | Must be L1 supported by THORChain.            |
-| `LOAN+`      | The loan open handler.                                                                                  | Also `$+`                                     |
-| `:ASSET`     | Target debt [asset identifier](asset-notation.md).                                                      | Can be shortened.                             |
-| `:DESTADDR`  | The destination address to send the debt to.                                                            | Can use THORName.                             |
-| `:MINOUT`    | Minimum debt amount, else a refund. Similar to `:LIM`.                                                  | Optional. 1e8 format.                         |
-| `:AFFILIATE` | The affiliate address.                                                                                  | Optional. Must be a THORName or THOR Address. |
-| `:FEE`       | The [affiliate fee](../affiliate-guide/affiliate-fee-guide.md#how-it-works). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points. |
-
-**Examples:**
-
-- `LOAN+:BSC.BUSD:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0` &mdash; open a loan with BUSD as the debt asset
-- `$+:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe:10400000000` &mdash; open a loan where the debt is at least 104 USDT
-
-### **Repay Loan**
-
-Repay a loan on THORChain.
-
-**`LOAN-:ASSET:DESTADDR:MINOUT`**
-
-| Parameter   | Notes                                                            | Conditions                                                    |
-| ----------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
-| Payload     | The repayment for the loan.                                      | Must be L1 supported on THORChain.                            |
-| `LOAN-`     | The loan repayment handler.                                      | Also `$-`                                                     |
-| `:ASSET`    | Target collateral [asset identifier](asset-notation.md).         | Can be shortened.                                             |
-| `:DESTADDR` | The destination address to send the collateral to.               | Can use a THORName.                                           |
-| `:MINOUT`   | Minimum collateral to receive, else a refund. Similar to `:LIM`. | Optional. 1e8 format, loan needs to be fully repaid to close. |
-
-**Examples:**
-
-- `LOAN-:BTC.BTC:bc1qp2t4hl4jr6wjfzv28tsdyjysw7p5armf7px55w` &mdash; repay BTC loan owned by owner bc1qp2t4hl4jr6wjfzv28tsdyjysw7p5armf7px55w
-- `$-:ETH.ETH:0xe9973cb51ee04446a54ffca73446d33f133d2f49:404204059` &mdash; repay ETH loan owned by `0xe9973cb51ee04446a54ffca73446d33f133d2f49` and receive at least 4.04 ETH collateral back, else refund
 
 ### Deposit RUNEPool
 

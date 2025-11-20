@@ -455,8 +455,7 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 		ctx.Logger().Error("swap handler failed to parse memo", "memo", msg.Tx.Memo, "error", parseMemoErr)
 		return nil, cosmos.ZeroUint(), parseMemoErr
 	}
-	switch mem.GetType() {
-	case TxAdd:
+	if mem.GetType() == TxAdd {
 		m, ok := mem.(AddLiquidityMemo)
 		if !ok {
 			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to cast add liquidity memo")
@@ -472,49 +471,6 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 		_, err = handler.Run(ctx, msg)
 		if err != nil {
 			ctx.Logger().Error("swap handler failed to add liquidity", "error", err)
-			return nil, cosmos.ZeroUint(), err
-		}
-	case TxLoanOpen:
-		m, ok := mem.(LoanOpenMemo)
-		if !ok {
-			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to cast loan open memo")
-		}
-		m.Asset = fuzzyAssetMatch(ctx, h.mgr.Keeper(), m.Asset)
-		msg.Tx.Coins = common.NewCoins(common.NewCoin(
-			msg.TargetAsset, emit,
-		))
-
-		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
-
-		obTx := ObservedTx{Tx: msg.Tx}
-		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer, msg.Tx.ID)
-		if err != nil {
-			return nil, cosmos.ZeroUint(), err
-		}
-		openLoanHandler := NewLoanOpenHandler(h.mgr)
-
-		_, err = openLoanHandler.Run(ctx, msg) // fire and forget
-		if err != nil {
-			ctx.Logger().Error("swap handler failed to open loan", "error", err)
-			return nil, cosmos.ZeroUint(), err
-		}
-	case TxLoanRepayment:
-		m, ok := mem.(LoanRepaymentMemo)
-		if !ok {
-			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to cast loan repayment memo")
-		}
-		m.Asset = fuzzyAssetMatch(ctx, h.mgr.Keeper(), m.Asset)
-
-		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
-
-		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer, msg.Tx.ID)
-		if err != nil {
-			return nil, cosmos.ZeroUint(), err
-		}
-		repayLoanHandler := NewLoanRepaymentHandler(h.mgr)
-		_, err = repayLoanHandler.Run(ctx, msg) // fire and forget
-		if err != nil {
-			ctx.Logger().Error("swap handler failed to repay loan", "error", err)
 			return nil, cosmos.ZeroUint(), err
 		}
 	}

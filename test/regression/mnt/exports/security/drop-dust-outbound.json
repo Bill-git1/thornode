@@ -225,8 +225,6 @@
           "units": "50010000000"
         }
       ],
-      "loan_total_collateral": [],
-      "loans": [],
       "mimirs": [],
       "network": {
         "LPIncomeSplit": "9900",

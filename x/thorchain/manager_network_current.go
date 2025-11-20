@@ -1504,19 +1504,6 @@ func (vm *NetworkMgrVCUR) withdrawLiquidity(ctx cosmos.Context, pool Pool, na No
 	// in case the pool is ever recreated.
 	vm.k.DeletePoolRagnarokStart(ctx, pool.Asset)
 
-	// zero all loans
-	iterator := vm.k.GetLoanIterator(ctx, pool.Asset)
-	defer iterator.Close()
-	for ; iterator.Valid(); iterator.Next() {
-		var loan Loan
-		vm.k.Cdc().MustUnmarshal(iterator.Value(), &loan)
-		ctx.Logger().Info("removing loan", "loan", loan.Key())
-		vm.k.RemoveLoan(ctx, loan)
-	}
-
-	// zero loan collateral
-	vm.k.SetTotalCollateral(ctx, pool.Asset, cosmos.ZeroUint())
-
 	// burn coin from the lending module
 	derivedAsset := pool.Asset.GetDerivedAsset()
 	balance := vm.k.GetBalanceOfModule(ctx, LendingName, derivedAsset.Native())

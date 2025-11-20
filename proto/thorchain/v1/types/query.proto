@@ -9,7 +9,6 @@ import "types/query_pool.proto";
 import "types/query_derived_pool.proto";
 import "types/query_liquidity_provider.proto";
 import "types/query_saver.proto";
-import "types/query_borrower.proto";
 import "types/query_trade_unit.proto";
 import "types/query_trade_account.proto";
 import "types/query_node.proto";
@@ -117,14 +116,6 @@ service Query {
 
   rpc Savers(QuerySaversRequest) returns (QuerySaversResponse) {
     option (google.api.http).get = "/thorchain/pool/{asset}/savers";
-  }
-
-  rpc Borrower(QueryBorrowerRequest) returns (QueryBorrowerResponse) {
-    option (google.api.http).get = "/thorchain/pool/{asset}/borrower/{address}";
-  }
-
-  rpc Borrowers(QueryBorrowersRequest) returns (QueryBorrowersResponse) {
-    option (google.api.http).get = "/thorchain/pool/{asset}/borrowers";
   }
 
   rpc TradeUnit(QueryTradeUnitRequest) returns (QueryTradeUnitResponse) {

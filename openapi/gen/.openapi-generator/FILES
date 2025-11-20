@@ -5,7 +5,6 @@ api/openapi.yaml
 api_auth.go
 api_bank.go
 api_block.go
-api_borrowers.go
 api_clout.go
 api_codes.go
 api_export.go
@@ -58,8 +57,6 @@ docs/BlockResponseId.md
 docs/BlockResponseIdParts.md
 docs/BlockTx.md
 docs/BlockTxResult.md
-docs/Borrower.md
-docs/BorrowersApi.md
 docs/ChainHeight.md
 docs/CloutApi.md
 docs/Code.md
@@ -128,8 +125,6 @@ docs/QueueResponse.md
 docs/QuoteApi.md
 docs/QuoteFees.md
 docs/QuoteLimitResponse.md
-docs/QuoteLoanCloseResponse.md
-docs/QuoteLoanOpenResponse.md
 docs/QuoteSaverDepositResponse.md
 docs/QuoteSaverWithdrawResponse.md
 docs/QuoteSwapResponse.md
@@ -209,7 +204,6 @@ model_block_response_id.go
 model_block_response_id_parts.go
 model_block_tx.go
 model_block_tx_result.go
-model_borrower.go
 model_chain_height.go
 model_code.go
 model_codes_response.go
@@ -263,8 +257,6 @@ model_pool_slip_response_inner.go
 model_queue_response.go
 model_quote_fees.go
 model_quote_limit_response.go
-model_quote_loan_close_response.go
-model_quote_loan_open_response.go
 model_quote_saver_deposit_response.go
 model_quote_saver_withdraw_response.go
 model_quote_swap_response.go

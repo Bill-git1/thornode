@@ -28,8 +28,6 @@ import (
 // Note: coverage lacking for these queries in this file
 //   check whether there is coverage elsewhere to add openapi conformance verification
 // QueryBlockResponse
-// QueryBorrowerResponse
-// QueryBorrowersResponse
 // QueryDerivedPoolResponse
 // QueryDerivedPoolsResponse
 // QueryLiquidityProviderResponse
@@ -40,8 +38,6 @@ import (
 // QueryOutboundFeesResponse
 // QueryOutboundResponse
 // QueryPoolSlipsResponse
-// QueryQuoteLoanCloseResponse
-// QueryQuoteLoanOpenResponse
 // QueryQuoteSaverDepositResponse
 // QueryQuoteSaverWithdrawResponse
 // QueryQuoteSwapResponse

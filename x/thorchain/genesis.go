@@ -106,12 +106,6 @@ func ValidateGenesis(data GenesisState) error {
 		}
 	}
 
-	for _, loan := range data.Loans {
-		if err := loan.Valid(); err != nil {
-			return fmt.Errorf("invalid loan: %w", err)
-		}
-	}
-
 	return nil
 }
 
@@ -140,8 +134,6 @@ func DefaultGenesisState() GenesisState {
 		NetworkFees:             make([]NetworkFee, 0),
 		ChainContracts:          make([]ChainContract, 0),
 		THORNames:               make([]THORName, 0),
-		Loans:                   make([]Loan, 0),
-		LoanTotalCollateral:     make([]common.Coin, 0),
 		SwapperClout:            make([]SwapperClout, 0),
 		TradeAccounts:           make([]TradeAccount, 0),
 		TradeUnits:              make([]TradeUnit, 0),
@@ -276,14 +268,6 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 
 	for _, n := range data.THORNames {
 		keeper.SetTHORName(ctx, n)
-	}
-
-	for _, loan := range data.Loans {
-		keeper.SetLoan(ctx, loan)
-	}
-
-	for _, c := range data.LoanTotalCollateral {
-		keeper.SetTotalCollateral(ctx, c.Asset, c.Amount)
 	}
 
 	for _, clout := range data.SwapperClout {
@@ -668,42 +652,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		nodeMimirs = append(nodeMimirs, value.GetMimirs()...)
 	}
 
-	// collect all assets
-	seenAssets := make(map[common.Asset]bool)
-	assets := make([]common.Asset, 0)
-	for _, vault := range vaults {
-		for _, coin := range vault.Coins {
-			if !seenAssets[coin.Asset] {
-				seenAssets[coin.Asset] = true
-				assets = append(assets, coin.Asset)
-			}
-		}
-	}
-
-	// export loans from all assets
-	loans := make([]Loan, 0)
-	for _, asset := range assets {
-		loanIter := k.GetLoanIterator(ctx, asset)
-		defer loanIter.Close()
-		for ; loanIter.Valid(); loanIter.Next() {
-			var loan Loan
-			k.Cdc().MustUnmarshal(loanIter.Value(), &loan)
-			loans = append(loans, loan)
-		}
-	}
-
-	loanTotalCollateral := make([]common.Coin, 0)
-	for _, asset := range assets {
-		amount, errTotalCol := k.GetTotalCollateral(ctx, asset)
-		if errTotalCol != nil {
-			panic(errTotalCol)
-		}
-		if !amount.IsZero() {
-			coin := common.NewCoin(asset, amount)
-			loanTotalCollateral = append(loanTotalCollateral, coin)
-		}
-	}
-
 	clouts := make([]SwapperClout, 0)
 	iterClouts := k.GetSwapperCloutIterator(ctx)
 	defer iterClouts.Close()
@@ -824,8 +772,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		NetworkFees:             networkFees,
 		ChainContracts:          chainContracts,
 		THORNames:               names,
-		Loans:                   loans,
-		LoanTotalCollateral:     loanTotalCollateral,
 		Mimirs:                  mimirs,
 		NodeMimirs:              nodeMimirs,
 		SwapperClout:            clouts,

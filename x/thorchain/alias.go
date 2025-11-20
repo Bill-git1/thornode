@@ -94,8 +94,6 @@ const (
 	TxMaint             = mem.TxMaint
 	TxWithdraw          = mem.TxWithdraw
 	TxTHORName          = mem.TxTHORName
-	TxLoanOpen          = mem.TxLoanOpen
-	TxLoanRepayment     = mem.TxLoanRepayment
 	TxReferenceReadMemo = mem.TxReferenceReadMemo
 	TxTCYClaim          = mem.TxTCYClaim
 	TxTCYStake          = mem.TxTCYStake
@@ -119,8 +117,6 @@ var (
 	NewMsgTradeAccountWithdrawal   = types.NewMsgTradeAccountWithdrawal
 	NewMsgSecuredAssetDeposit      = types.NewMsgSecuredAssetDeposit
 	NewMsgSecuredAssetWithdraw     = types.NewMsgSecuredAssetWithdraw
-	NewMsgLoanOpen                 = types.NewMsgLoanOpen
-	NewMsgLoanRepayment            = types.NewMsgLoanRepayment
 	NewMsgMimir                    = types.NewMsgMimir
 	NewMsgNodePauseChain           = types.NewMsgNodePauseChain
 	NewMsgDeposit                  = types.NewMsgDeposit
@@ -185,8 +181,6 @@ var (
 	NewEventSecuredAssetWithdraw   = types.NewEventSecuredAssetWithdraw
 	NewEventRUNEPoolDeposit        = types.NewEventRUNEPoolDeposit
 	NewEventRUNEPoolWithdraw       = types.NewEventRUNEPoolWithdraw
-	NewEventLoanOpen               = types.NewEventLoanOpen
-	NewEventLoanRepayment          = types.NewEventLoanRepayment
 	NewEventSwitch                 = types.NewEventSwitch
 	NewEventOperatorRotate         = types.NewEventOperatorRotate
 	NewEventOraclePrice            = types.NewEventOraclePrice
@@ -222,7 +216,6 @@ var (
 	NewNetworkFee                  = types.NewNetworkFee
 	NewTHORName                    = types.NewTHORName
 	NewReferenceMemo               = types.NewReferenceMemo
-	NewLoan                        = types.NewLoan
 	NewStreamingSwap               = types.NewStreamingSwap
 	GetPoolStatus                  = types.GetPoolStatus
 	GetRandomVault                 = types.GetRandomVault
@@ -315,8 +308,6 @@ type (
 	MsgManageTHORName         = types.MsgManageTHORName
 	MsgReferenceMemo          = types.MsgReferenceMemo
 	MsgSolvency               = types.MsgSolvency
-	MsgLoanOpen               = types.MsgLoanOpen
-	MsgLoanRepayment          = types.MsgLoanRepayment
 	MsgRunePoolDeposit        = types.MsgRunePoolDeposit
 	MsgRunePoolWithdraw       = types.MsgRunePoolWithdraw
 	MsgWasmExec               = types.MsgWasmExec
@@ -332,8 +323,6 @@ type (
 	Pools                    = types.Pools
 	LiquidityProvider        = types.LiquidityProvider
 	LiquidityProviders       = types.LiquidityProviders
-	Loan                     = types.Loan
-	Loans                    = types.Loans
 	StreamingSwap            = types.StreamingSwap
 	StreamingSwaps           = types.StreamingSwaps
 	ObservedTxs              = common.ObservedTxs
@@ -356,8 +345,6 @@ type (
 	EventRewards             = types.EventRewards
 	EventErrata              = types.EventErrata
 	EventReserve             = types.EventReserve
-	EventLoanOpen            = types.EventLoanOpen
-	EventLoanRepayment       = types.EventLoanRepayment
 	PoolAmt                  = types.PoolAmt
 	PoolMod                  = types.PoolMod
 	PoolMods                 = types.PoolMods
@@ -431,8 +418,6 @@ type (
 	TradeAccountWithdrawalMemo = mem.TradeAccountWithdrawalMemo
 	SecuredAssetDepositMemo    = mem.SecuredAssetDepositMemo
 	SecuredAssetWithdrawMemo   = mem.SecuredAssetWithdrawMemo
-	LoanOpenMemo               = mem.LoanOpenMemo
-	LoanRepaymentMemo          = mem.LoanRepaymentMemo
 	RunePoolDepositMemo        = mem.RunePoolDepositMemo
 	RunePoolWithdrawMemo       = mem.RunePoolWithdrawMemo
 	ExecMemo                   = mem.ExecMemo

@@ -130,7 +130,6 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 
 	exactUnmatches := []string{
 		"NodePauseChainBlocks",
-		"PauseLoans",
 		"PauseOnSlashThreshold",
 	}
 	for i := range exactUnmatches {

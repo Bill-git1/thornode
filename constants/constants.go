@@ -54,8 +54,6 @@ type contextKey string
 
 const (
 	CtxMetricLabels   contextKey = "metricLabels"
-	CtxLoanTxID       contextKey = "loan-txid"
-	CtxLoanToAddress  contextKey = "loan-toaddress"
 	CtxObservedTx     contextKey = "observed-tx"
 	CtxSimulationMode contextKey = "simulation-mode"
 	CtxWASMQuery      contextKey = "wasm-query"

@@ -923,90 +923,6 @@ func (qs queryServer) queryNodes(ctx cosmos.Context, _ *types.QueryNodesRequest)
 	return &types.QueryNodesResponse{Nodes: result}, nil
 }
 
-// queryBorrowers
-func (qs queryServer) queryBorrowers(ctx cosmos.Context, req *types.QueryBorrowersRequest) (*types.QueryBorrowersResponse, error) {
-	if len(req.Asset) == 0 {
-		return nil, errors.New("asset not provided")
-	}
-	asset, err := common.NewAsset(req.Asset)
-	if err != nil {
-		ctx.Logger().Error("fail to get parse asset", "error", err)
-		return nil, fmt.Errorf("fail to parse asset: %w", err)
-	}
-
-	var loans Loans
-	iterator := qs.mgr.Keeper().GetLoanIterator(ctx, asset)
-	defer iterator.Close()
-	for ; iterator.Valid(); iterator.Next() {
-		var loan Loan
-		qs.mgr.Keeper().Cdc().MustUnmarshal(iterator.Value(), &loan)
-		if loan.CollateralDeposited.Equal(loan.CollateralWithdrawn) && loan.DebtIssued.Equal(loan.DebtRepaid) {
-			continue
-		}
-		loans = append(loans, loan)
-	}
-
-	borrowers := make([]*types.QueryBorrowerResponse, len(loans))
-	for i, loan := range loans {
-		borrowers[i] = &types.QueryBorrowerResponse{
-			Owner:               loan.Owner.String(),
-			Asset:               loan.Asset.String(),
-			DebtIssued:          loan.DebtIssued.String(),
-			DebtRepaid:          loan.DebtRepaid.String(),
-			DebtCurrent:         loan.Debt().String(),
-			CollateralDeposited: loan.CollateralDeposited.String(),
-			CollateralWithdrawn: loan.CollateralWithdrawn.String(),
-			CollateralCurrent:   loan.Collateral().String(),
-			LastOpenHeight:      loan.LastOpenHeight,
-			LastRepayHeight:     loan.LastRepayHeight,
-		}
-	}
-
-	return &types.QueryBorrowersResponse{Borrowers: borrowers}, nil
-}
-
-// queryBorrower
-func (qs queryServer) queryBorrower(ctx cosmos.Context, req *types.QueryBorrowerRequest) (*types.QueryBorrowerResponse, error) {
-	if len(req.Asset) == 0 {
-		return nil, errors.New("asset not provided")
-	}
-	if len(req.Address) == 0 {
-		return nil, errors.New("loan not provided")
-	}
-	asset, err := common.NewAsset(req.Asset)
-	if err != nil {
-		ctx.Logger().Error("fail to get parse asset", "error", err)
-		return nil, fmt.Errorf("fail to parse asset: %w", err)
-	}
-
-	addr, err := common.NewAddress(req.Address)
-	if err != nil {
-		ctx.Logger().Error("fail to get parse address", "error", err)
-		return nil, fmt.Errorf("fail to parse address: %w", err)
-	}
-
-	loan, err := qs.mgr.Keeper().GetLoan(ctx, asset, addr)
-	if err != nil {
-		ctx.Logger().Error("fail to get borrower", "error", err)
-		return nil, fmt.Errorf("fail to borrower: %w", err)
-	}
-
-	borrower := types.QueryBorrowerResponse{
-		Owner:               loan.Owner.String(),
-		Asset:               loan.Asset.String(),
-		DebtIssued:          loan.DebtIssued.String(),
-		DebtRepaid:          loan.DebtRepaid.String(),
-		DebtCurrent:         loan.Debt().String(),
-		CollateralDeposited: loan.CollateralDeposited.String(),
-		CollateralWithdrawn: loan.CollateralWithdrawn.String(),
-		CollateralCurrent:   loan.Collateral().String(),
-		LastOpenHeight:      loan.LastOpenHeight,
-		LastRepayHeight:     loan.LastRepayHeight,
-	}
-
-	return &borrower, nil
-}
-
 func newSaver(lp LiquidityProvider, pool Pool) *types.QuerySaverResponse {
 	assetRedeemableValue := lp.GetSaversAssetRedeemValue(pool)
 
@@ -1479,20 +1395,6 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 
 	saversFillBps := common.GetUncappedShare(synthSupply, maxSynthsForSaversYieldUint, cosmos.NewUint(constants.MaxBasisPts))
 	saversCapacityRemaining := common.SafeSub(maxSynthsForSaversYieldUint, synthSupply)
-
-	totalCollateral, err := qs.mgr.Keeper().GetTotalCollateral(ctx, pool.Asset)
-	if err != nil {
-		return nil, fmt.Errorf("fail to fetch total loan collateral: %w", err)
-	}
-
-	loanHandler := NewLoanOpenHandler(qs.mgr)
-	// getPoolCR and GetLoanCollateralRemainingForPool
-	// are expected to error for block heights earlier than 12241034
-	// from negative MaxRuneSupply, so dropping the errors for both
-	// and instead displaying both as zero when unretrievable.
-	cr, _ := loanHandler.getPoolCR(ctx, pool, cosmos.OneUint())
-	loanCollateralRemaining, _ := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
-
 	runeDepth, _, _ := qs.mgr.NetworkMgr().CalcAnchor(ctx, qs.mgr, asset)
 	dpool, _ := qs.mgr.Keeper().GetPool(ctx, asset.GetDerivedAsset())
 	dbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
@@ -1550,10 +1452,7 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 	p.SaversCapacityRemaining = saversCapacityRemaining.String()
 	p.SynthMintPaused = (synthMintPausedErr != nil)
 	p.SynthSupplyRemaining = synthSupplyRemaining.String()
-	p.LoanCollateral = totalCollateral.String()
-	p.LoanCollateralRemaining = loanCollateralRemaining.String()
 	p.DerivedDepthBps = dbps.String()
-	p.LoanCr = cr.String()
 
 	if !pool.BalanceAsset.IsZero() && !pool.BalanceRune.IsZero() {
 		dollarsPerRune := dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper())
@@ -1614,20 +1513,6 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 
 		saversFillBps := common.GetUncappedShare(synthSupply, maxSynthsForSaversYieldUint, cosmos.NewUint(constants.MaxBasisPts))
 		saversCapacityRemaining := common.SafeSub(maxSynthsForSaversYieldUint, synthSupply)
-
-		totalCollateral, err := qs.mgr.Keeper().GetTotalCollateral(ctx, pool.Asset)
-		if err != nil {
-			return nil, fmt.Errorf("fail to fetch total loan collateral: %w", err)
-		}
-
-		loanHandler := NewLoanOpenHandler(qs.mgr)
-		// getPoolCR and GetLoanCollateralRemainingForPool
-		// are expected to error for block heights earlier than 12241034
-		// from negative MaxRuneSupply, so dropping the errors for both
-		// and instead displaying both as zero when unretrievable.
-		cr, _ := loanHandler.getPoolCR(ctx, pool, cosmos.OneUint())
-		loanCollateralRemaining, _ := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
-
 		runeDepth, _, _ := qs.mgr.NetworkMgr().CalcAnchor(ctx, qs.mgr, pool.Asset)
 		dpool, _ := qs.mgr.Keeper().GetPool(ctx, pool.Asset.GetDerivedAsset())
 		dbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
@@ -1690,10 +1575,7 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 		p.SaversCapacityRemaining = saversCapacityRemaining.String()
 		p.SynthMintPaused = (synthMintPausedErr != nil)
 		p.SynthSupplyRemaining = synthSupplyRemaining.String()
-		p.LoanCollateral = totalCollateral.String()
-		p.LoanCollateralRemaining = loanCollateralRemaining.String()
 		p.DerivedDepthBps = dbps.String()
-		p.LoanCr = cr.String()
 
 		if !pool.BalanceAsset.IsZero() && !pool.BalanceRune.IsZero() {
 			p.AssetTorPrice = dollarsPerRune.Mul(pool.BalanceRune).Quo(pool.BalanceAsset).String()
@@ -3530,18 +3412,9 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	}
 
 	// set the signer
-	switch m := msg.(type) {
-	case *MsgLoanOpen:
-		m.Signer = nodeAccounts[0].NodeAddress
-	case *MsgLoanRepayment:
-		m.Signer = nodeAccounts[0].NodeAddress
-	case *MsgSwap:
+	if m, ok := msg.(*MsgSwap); ok {
 		m.Signer = nodeAccounts[0].NodeAddress
 	}
-
-	// set random txid
-	txid := common.TxID(common.RandHexString(64))
-	ctx = ctx.WithValue(constants.CtxLoanTxID, txid)
 
 	// mark context as simulation mode for swap logic
 	ctx = ctx.WithValue(constants.CtxSimulationMode, true)

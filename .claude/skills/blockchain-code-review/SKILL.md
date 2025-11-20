@@ -195,7 +195,6 @@ glab ci view
   - Renaming fields in response structs
 - **Current endpoints:**
   - `/types.Query/Network`
-  - `/types.Query/Borrower`
   - `/types.Query/LiquidityProvider`
   - `/types.Query/MimirWithKey`
   - `/types.Query/Node`

@@ -210,15 +210,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		return &cosmos.Result{}, nil
 	}
 
-	// if it is a loan, inject the TxID and ToAddress into the context
-	_, isLoanOpen := m.(*MsgLoanOpen)
-	_, isLoanRepayment := m.(*MsgLoanRepayment)
 	mCtx := ctx
-	if isLoanOpen || isLoanRepayment {
-		mCtx = ctx.WithValue(constants.CtxLoanTxID, txIn.Tx.ID)
-		mCtx = mCtx.WithValue(constants.CtxLoanToAddress, txIn.Tx.ToAddress)
-	}
-
 	result, err := handler(mCtx, m)
 	if err != nil {
 		return nil, err
