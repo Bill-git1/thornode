@@ -28,3 +28,11 @@ go mod verify
 go run tools/analyze/main.go ./common/... ./constants/... ./x/...
 
 go run tools/lint-whitelist-tokens/main.go
+
+# ensure upgrades in app/upgrades only match the current version
+for dir in app/upgrades/*/; do
+  upgrade_version=$(basename "${dir}")
+  if [ "${upgrade_version}" != "${version}" ] && [ "${upgrade_version}" != "standard" ]; then
+    die "upgrade version ${upgrade_version} does not match current version ${version}"
+  fi
+done

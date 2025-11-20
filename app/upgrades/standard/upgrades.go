@@ -15,6 +15,8 @@ import (
 
 // NewUpgrade constructor
 func NewUpgrade(semver string) upgrades.Upgrade {
+	// NOTE: DO NOT modify store upgrades here. Create a new package at
+	// app/upgrades/<semver> and use that for the upgrade in app/upgrades.go.
 	return upgrades.Upgrade{
 		UpgradeName:          semver,
 		CreateUpgradeHandler: CreateUpgradeHandler,
