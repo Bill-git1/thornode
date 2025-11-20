@@ -452,3 +452,29 @@ asserts:
   - '[.end_block_events[]|select(.type=="refund")]|length == 1'
   - .end_block_events[]|select(.type=="refund")|.from == "{{ addr_btc_pig }}"
   - .end_block_events[]|select(.type=="refund")|.reason|match("secured assets are disabled")
+---
+########################################################################################
+# withdraw with wrong network address (mainnet address on mocknet)
+########################################################################################
+# Verify balance before withdrawal attempt (2 deposits of 50000000 each = 100000000)
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
+asserts:
+  - .balances[]|select(.denom == "btc-btc")|.amount|tonumber == 100000000
+---
+# Attempt withdrawal to mainnet address (bc1) - should be rejected on mocknet (tb1)
+type: tx-deposit
+signer: {{ addr_thor_pig }}
+coins:
+  - amount: "50000000"
+    asset: "BTC-BTC"
+memo: "secure-:bc1pywlmh5y7rml8qley0pgjrczqdtfxh09d99kgykk4cqcvg6rudjws3cfspm"
+---
+type: create-blocks
+count: 1
+---
+# Verify balance unchanged - withdrawal was rejected due to wrong network
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
+asserts:
+  - .balances[]|select(.denom == "btc-btc")|.amount|tonumber == 100000000

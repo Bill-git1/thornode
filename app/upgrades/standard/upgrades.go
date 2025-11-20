@@ -8,7 +8,6 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	schedulertypes "gitlab.com/thorchain/thornode/v3/x/scheduler/types"
 
 	"gitlab.com/thorchain/thornode/v3/app/upgrades"
 	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
@@ -20,9 +19,7 @@ func NewUpgrade(semver string) upgrades.Upgrade {
 		UpgradeName:          semver,
 		CreateUpgradeHandler: CreateUpgradeHandler,
 		StoreUpgrades: storetypes.StoreUpgrades{
-			Added: []string{
-				schedulertypes.StoreKey,
-			},
+			Added:   []string{},
 			Deleted: []string{},
 		},
 	}

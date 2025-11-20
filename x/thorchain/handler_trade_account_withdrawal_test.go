@@ -10,6 +10,67 @@ type HandlerTradeAccountWithdrawal struct{}
 
 var _ = Suite(&HandlerTradeAccountWithdrawal{})
 
+func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawalNetworkValidation(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	asset := common.BTCAsset
+	addr := GetRandomBech32Addr()
+
+	// Enable trade accounts
+	mgr.Keeper().SetMimir(ctx, "TradeAccountsEnabled", 1)
+
+	// Test that addresses from a different network are rejected
+	// MainNet and StageNet both use bc1 (mainnet format), MockNet uses tb1 (testnet format)
+	var wrongNetworkAddr common.Address
+	var err error
+	if common.CurrentChainNetwork == common.MockNet {
+		// On mocknet, mainnet address is wrong
+		wrongNetworkAddr, err = common.NewAddress("bc1pywlmh5y7rml8qley0pgjrczqdtfxh09d99kgykk4cqcvg6rudjws3cfspm")
+	} else {
+		// On mainnet/stagenet, testnet address is wrong
+		wrongNetworkAddr, err = common.NewAddress("tb1pywlmh5y7rml8qley0pgjrczqdtfxh09d99kgykk4cqcvg6rudjwsxsllm5")
+	}
+	c.Assert(err, IsNil)
+
+	dummyTx := common.Tx{ID: "test"}
+
+	// Setup: Deposit some assets first
+	{
+		msg := NewMsgTradeAccountDeposit(asset, cosmos.NewUint(500), addr, addr, dummyTx)
+		h := NewTradeAccountDepositHandler(mgr)
+
+		_, err = h.Run(ctx, msg)
+		c.Assert(err, IsNil)
+
+		bal := mgr.TradeAccountManager().BalanceOf(ctx, asset, addr)
+		c.Check(bal.String(), Equals, "500")
+
+		vault := GetRandomVault()
+		vault.Status = ActiveVault
+		vault.Coins = common.Coins{
+			common.NewCoin(asset, cosmos.NewUint(500*common.One)),
+		}
+		c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+	}
+
+	// Attempt withdrawal to wrong network address should be rejected
+	msg := NewMsgTradeAccountWithdrawal(asset.GetTradeAsset(), cosmos.NewUint(350), wrongNetworkAddr, addr, dummyTx)
+
+	// Handler should reject wrong network address
+	h := NewTradeAccountWithdrawalHandler(mgr)
+	_, err = h.Run(ctx, msg)
+	c.Assert(err, NotNil)
+	c.Check(err.Error(), Matches, ".*not same network.*")
+
+	// Verify balance unchanged
+	bal := mgr.TradeAccountManager().BalanceOf(ctx, asset, addr)
+	c.Check(bal.String(), Equals, "500")
+
+	// Verify no outbound created
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 0)
+}
+
 func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawal(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	asset := common.BTCAsset

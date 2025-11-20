@@ -57,6 +57,12 @@ func (h TradeAccountWithdrawalHandler) validateV3_0_0(ctx cosmos.Context, msg Ms
 	if tradeAccountsEnabled <= 0 {
 		return fmt.Errorf("trade accounts are disabled")
 	}
+
+	// Validate that the address network matches the current chain network
+	if msg.AssetAddress.GetNetwork(msg.AssetAddress.GetChain()) != common.CurrentChainNetwork {
+		return fmt.Errorf("address(%s) is not same network", msg.AssetAddress)
+	}
+
 	return msg.ValidateBasic()
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/hashicorp/go-multierror"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 )
@@ -56,6 +57,11 @@ func (h SecuredAssetWithdrawHandler) validateV3_0_0(ctx cosmos.Context, msg MsgS
 	}
 	if m > 0 && m <= ctx.BlockHeight() {
 		return fmt.Errorf("%s secured asset withdrawals are disabled", msg.Asset.Chain)
+	}
+
+	// Validate that the address network matches the current chain network
+	if msg.AssetAddress.GetNetwork(msg.AssetAddress.GetChain()) != common.CurrentChainNetwork {
+		return fmt.Errorf("address(%s) is not same network", msg.AssetAddress)
 	}
 
 	return msg.ValidateBasic()
