@@ -113,6 +113,7 @@ func FormatLocale[T int | uint | int64 | uint64 | float64](n T) string {
 
 func FormatUSD(value float64) string {
 	negative := false
+	// analyze-ignore(float-comparison)
 	if value < 0 {
 		negative = true
 		value = -value

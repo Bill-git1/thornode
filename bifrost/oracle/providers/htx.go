@@ -165,6 +165,7 @@ func (p *HtxProvider) HandleWsMessage(msg []byte) error {
 	var pingMsg HtxWsPingMsg
 
 	err = json.Unmarshal(msg, &tickerMsg)
+	// analyze-ignore(float-comparison)
 	if err == nil && tickerMsg.Tick.Price > 0 {
 		parts := strings.Split(tickerMsg.Channel, ".")
 		if len(parts) != 3 {

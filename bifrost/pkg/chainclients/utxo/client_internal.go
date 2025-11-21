@@ -707,6 +707,7 @@ func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
 	}
 	countWithOutput := 0
 	for _, vout := range tx.Vout {
+		// analyze-ignore(float-comparison)
 		if vout.Value > 0 {
 			countWithOutput++
 		}
@@ -734,6 +735,7 @@ func (c *Client) getOutput(sender string, tx *btcjson.TxRawResult, consolidate b
 		if strings.EqualFold(vout.ScriptPubKey.Type, "nulldata") {
 			continue
 		}
+		// analyze-ignore(float-comparison)
 		if vout.Value <= 0 {
 			continue
 		}

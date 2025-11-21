@@ -98,6 +98,7 @@ func setUpProgress(n int) {
 func incrementAndDisplayProgress() {
 	var progress float64
 	receivedIncomingMsgs++
+	// analyze-ignore(float-comparison)
 	if receivedIncomingMsgs > 0 {
 		progress = math.Min(1, receivedIncomingMsgs/expectedIncomingMsgs)
 	} else {

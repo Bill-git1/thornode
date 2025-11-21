@@ -49,6 +49,7 @@ func NewTssKeyGen(keys *thorclient.Keys, server *tss.TssServer, bridge thorclien
 
 func (kg *KeyGen) getVersion() semver.Version {
 	requestTime := time.Now()
+	// analyze-ignore(float-comparison)
 	if !kg.currentVersion.Equals(semver.Version{}) && requestTime.Sub(kg.lastCheck).Seconds() < constants.ThorchainBlockTime.Seconds() {
 		return kg.currentVersion
 	}

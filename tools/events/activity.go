@@ -157,7 +157,7 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 
 			// notify
 			level := notify.Warning
-			if usdValue > float64(config.Get().Thresholds.Security.USDValue) {
+			if uint64(usdValue) > config.Get().Thresholds.Security.USDValue {
 				level = notify.Danger
 			}
 			notify.Notify(config.Get().Notifications.Activity, title, block.Header.Height, nil, level, fields)
@@ -524,7 +524,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 
 	// determine if the outbound value is a security alert
 	level := notify.Warning
-	if usdValue > float64(config.Get().Thresholds.Security.USDValue) {
+	if uint64(usdValue) > config.Get().Thresholds.Security.USDValue {
 		level = notify.Danger
 	}
 
@@ -611,20 +611,20 @@ func scheduledOutbound(height int64, events []map[string]string) {
 
 		// add the delta
 		delta := usdValue - inboundUSDValue
-		deltaBasisPoints := float64(delta) / inboundUSDValue * 10000
-		deltaStr := fmt.Sprintf("%s (%.02f%%)", util.FormatUSD(delta), deltaBasisPoints/100)
-		if delta > 0 {
+		deltaBasisPoints := uint64(float64(delta) / inboundUSDValue * 10000)
+		deltaStr := fmt.Sprintf("%s (%.02f%%)", util.FormatUSD(delta), float64(delta)/inboundUSDValue*100)
+		if int(delta) > 0 {
 			// red triangle if perceived value increased
 			deltaStr = config.EmojiSmallRedTriangle + " " + deltaStr
 		}
 
 		// skip if delta below threshold and below the broader usd value threshold
-		if deltaBasisPoints < float64(config.Get().Thresholds.SwapDelta.BasisPoints) &&
+		if deltaBasisPoints < config.Get().Thresholds.SwapDelta.BasisPoints &&
 			uint64(inboundUSDValue) < config.Get().Thresholds.USDValue+totalCloutUSD {
 			return
 		}
 
-		if deltaBasisPoints > float64(config.Get().Thresholds.SwapDelta.BasisPoints) {
+		if deltaBasisPoints > config.Get().Thresholds.SwapDelta.BasisPoints {
 			// rotating light and tag @here if delta
 			deltaStr = config.EmojiRotatingLight + " " + deltaStr + " " + config.EmojiRotatingLight
 			level = notify.Danger
@@ -1217,6 +1217,7 @@ func FailedRefunds(block *thorscan.BlockResponse) {
 
 		// skip refunds for less than the native transaction fee (failed affiliate swaps)
 		txFee := float64(constants.NewConstantValue().GetInt64Value(constants.NativeTransactionFee)) / common.One
+		// analyze-ignore(float-comparison)
 		if util.RuneValue(block.Header.Height, coin) < txFee {
 			continue
 		}

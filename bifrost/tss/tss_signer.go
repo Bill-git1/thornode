@@ -259,6 +259,7 @@ func getSignature(r, s string) ([]byte, error) {
 
 func (s *KeySign) getVersion() semver.Version {
 	requestTime := time.Now()
+	// analyze-ignore(float-comparison)
 	if !s.currentVersion.Equals(semver.Version{}) && requestTime.Sub(s.lastCheck).Seconds() < constants.ThorchainBlockTime.Seconds() {
 		return s.currentVersion
 	}

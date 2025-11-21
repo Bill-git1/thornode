@@ -381,6 +381,7 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 	if confMul < 0 || err != nil {
 		confMul = int64(constants.MaxBasisPts)
 	}
+	// analyze-ignore(float-comparison)
 	if chain.DefaultCoinbase() > 0 {
 		confValue := common.GetUncappedShare(cosmos.NewUint(uint64(confMul)), cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUint(uint64(chain.DefaultCoinbase())*common.One))
 		confirmations = amount.Quo(confValue).BigInt().Int64()

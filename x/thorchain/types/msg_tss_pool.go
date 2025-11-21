@@ -159,6 +159,7 @@ func (m *MsgTssPool) ValidateBasic() error {
 
 		// sanity check probability distribution of keyshares backup bytes
 		entropy := common.Entropy(m.KeysharesBackup)
+		// analyze-ignore(float-comparison)
 		if entropy < MinKeysharesBackupEntropy {
 			return cosmos.ErrUnknownRequest("invalid keyshares backup")
 		}

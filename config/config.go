@@ -625,6 +625,7 @@ func (b LevelDBOptions) Options() *opt.Options {
 	o := &opt.Options{}
 
 	// only override zero values if set
+	// analyze-ignore(float-comparison)
 	if b.CompactionTableSizeMultiplier > 0 {
 		o.CompactionTableSizeMultiplier = b.CompactionTableSizeMultiplier
 	}

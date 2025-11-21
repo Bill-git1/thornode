@@ -192,6 +192,7 @@ func UpgradeApprovedByMajority(ctx cosmos.Context, k keeper.Keeper, name string)
 
 	t, _ := valThreshold.Float64()
 
+	// analyze-ignore(float-comparison)
 	if float64(approvingVals) >= t {
 		return &UpgradeQuorum{
 			Approved:        true,

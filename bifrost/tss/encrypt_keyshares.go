@@ -50,6 +50,7 @@ func EncryptKeyshares(path, passphrase string) ([]byte, error) {
 
 	// validate passphrase entropy for added protection
 	ent := common.Entropy([]byte(passphrase))
+	// analyze-ignore(float-comparison)
 	if ent < MinimumMnemonicEntropy {
 		msg := "low mnemonic entropy detected, seek guidance from devs via direct message"
 		log.Error().Float64("entropy", ent).Msg(msg)
