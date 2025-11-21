@@ -283,11 +283,27 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				}
 			}
 
-			// if vault is inactive, do not reassign the outbound txn to
-			// another vault. This check must be done before treasury recovery
-			// to prevent attempting recovery from retired vaults.
+			// If vault is inactive, do not reassign the outbound to another vault. This must
+			// be done before treasury recovery to avoid making active vaults insolvent.
 			if vault.Status == InactiveVault {
-				ctx.Logger().Info("cannot reassign outbound from inactive vault", "hash", toi.InHash)
+				maxRetiredVaultRecoveryAttempts := mgr.Keeper().GetConfigInt64(ctx, constants.MaxRetiredVaultRecoveryAttempts)
+				age := ctx.BlockHeight() - voter.FinalisedHeight
+				attempts := age / signingTransPeriod
+				if attempts >= maxRetiredVaultRecoveryAttempts {
+					ctx.Logger().Info("too many attempts for retired vault recovery",
+						"hash", toi.InHash,
+						"attempts", attempts,
+						"max", maxRetiredVaultRecoveryAttempts)
+					continue
+				}
+
+				err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, toi, rescheduleHeight)
+				if err != nil {
+					ctx.Logger().Error("fail to add outbound to queue for retired vault recovery", "error", err)
+					resultErr = fmt.Errorf("failed to add outbound to queue for retired vault recovery: %w", err)
+				} else {
+					txs.TxArray[i].OutHash = common.BlankTxID
+				}
 				continue
 			}
 

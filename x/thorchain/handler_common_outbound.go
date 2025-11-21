@@ -89,19 +89,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 		}
 	}
 
-	// Look up InactiveVault txouts by inbound voter OutboundHeight, not by signing queue.
-	// Automatic InactiveVault refunds only get one SigningTransactionPeriod best-effort try
-	// and so might be observed in a long-mining-period block (such as BTC) after the TxOutItem is no longer in the queue.
-	vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
-	if err != nil {
-		ctx.Logger().Error("fail to get vault", "error", err)
-	} else if vault.Status == InactiveVault && voter.OutboundHeight > 0 {
-		// Only treat the vault as an InactiveVault is there were no GetVault error.
-		// Only do a height-specific lookup if there is a valid voter OutboundHeight.
-		earliestHeight = voter.OutboundHeight
-		latestHeight = voter.OutboundHeight
-	}
-
 	for height := latestHeight; height >= earliestHeight; height-- {
 		// update txOut record with our TxID that sent funds out of the pool
 		var txOut *TxOut
@@ -156,7 +143,11 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 						ctx.Logger().Info("override match coin", "intend to spend", intendToSpend, "actual spend", actualSpend, "max_gas", maxGasAmt, "actual gas", realGasAmt)
 						if maxGasAmt.GT(realGasAmt) {
 							// Don't reimburse gas difference if the outbound is from an InactiveVault.
-							if vault.Status != InactiveVault {
+							var vault Vault
+							vault, err = h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
+							if err != nil {
+								ctx.Logger().Error("fail to get vault info", "error", err)
+							} else if vault.Status != InactiveVault {
 								// the outbound spend less than MaxGas
 								diffGas := maxGasAmt.Sub(realGasAmt)
 								h.mgr.GasMgr().AddGasAsset(txOutItem.Coin.Asset, common.Gas{

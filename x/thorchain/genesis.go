@@ -493,6 +493,17 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		}
 		includeTxOut := false
 		for _, item := range txOut.TxArray {
+			var vault types.Vault
+			vault, err = k.GetVault(ctx, item.VaultPubKey)
+			if err != nil {
+				ctx.Logger().Error("fail to get vault", "error", err, "pubkey", item.VaultPubKey.String())
+				continue
+			}
+			if vault.Status == types.VaultStatus_InactiveVault || vault.Status == types.VaultStatus_InitVault {
+				// skip txouts from inactive vaults
+				continue
+			}
+
 			if item.OutHash.IsEmpty() {
 				// Set all these txouts if even one is still pending.
 				includeTxOut = true
