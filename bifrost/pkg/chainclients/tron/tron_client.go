@@ -535,6 +535,13 @@ func (c *TronClient) BroadcastTx(
 		return "", err
 	}
 
+	// check the response
+	if !response.Result {
+		err = fmt.Errorf("failed to broadcast tx: %s - %s", response.Code, response.Message)
+		c.logger.Err(err).Msg("")
+		return "", err
+	}
+
 	err = c.signerCacheManager.SetSigned(
 		txOutItem.CacheHash(),
 		txOutItem.CacheVault(c.GetChain()),

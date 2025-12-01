@@ -1,8 +1,10 @@
 package api
 
 type BroadcastResponse struct {
-	Result bool   `json:"result"`
-	TxId   string `json:"txid"`
+	Result  bool   `json:"result"`
+	TxId    string `json:"txid"`
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 type EstimateEnergyResponse struct {
