@@ -1511,3 +1511,411 @@ func (s *NetworkManagerVCURTestSuite) TestGetTCYStakeAmountToDistribute(c *C) {
 	c.Assert(result.IsZero(), Equals, false)
 	c.Assert(result.Equal(cosmos.NewUint(amoutMul2)), Equals, true)
 }
+
+func (s *NetworkManagerVCURTestSuite) TestCalculateNetworkSolvency(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create a pool with some balance
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.PendingInboundAsset = cosmos.NewUint(10 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Create an active vault with funds
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Test 1: Calculate solvency - should show over-solvency
+	// Vault has 150, Pool needs 100 + 10 pending = 110, so 40 over-solvent
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+	c.Assert(solvency[0].Asset.Equals(common.BTCAsset), Equals, true)
+	expectedOverSolvency := math.NewInt(40 * common.One)
+	c.Assert(solvency[0].Amount.Equal(expectedOverSolvency), Equals, true)
+
+	// Test 2: Under-solvency scenario
+	// Reduce vault balance so it's under-solvent
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(50*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+	expectedUnderSolvency := math.NewInt(-60 * common.One)
+	c.Assert(solvency[0].Amount.Equal(expectedUnderSolvency), Equals, true)
+
+	// Test 3: Multiple assets
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(200 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(200 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(110*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(250*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 2)
+
+	// Test 4: With swap queue items
+	swapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    GetRandomTxHash(),
+			Chain: common.BTCChain,
+			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(5*common.One))},
+		},
+		TargetAsset: common.RuneAsset(),
+	}
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, swapMsg, 0), IsNil)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 2)
+	// Should subtract the swap queue amount from vault balance
+
+	// Test 5: Empty vaults
+	vault.Coins = common.Coins{}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	// All should be under-solvent (negative)
+	for _, s := range solvency {
+		c.Assert(s.Amount.IsNegative(), Equals, true)
+	}
+}
+
+func (s *NetworkManagerVCURTestSuite) TestProcessPostChurnSolvency(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create a pool
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Create an active vault with over-solvent funds
+	activeVault := GetRandomVault()
+	activeVault.Type = AsgardVault
+	activeVault.Status = ActiveVault
+	activeVault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, activeVault), IsNil)
+
+	// Test 1: Not at interval block - should not process
+	ctx = ctx.WithBlockHeight(100)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyCheckInterval.String(), 432000)
+	err := nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Test 2: At interval block - should process
+	ctx = ctx.WithBlockHeight(432000)
+
+	// Set OverSolvencyToReserveBps to 0 - should emit event but not create swaps
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), 0)
+
+	err = nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Test 3: With OverSolvencyToReserveBps set to 5000 (50%)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), 5000)
+
+	err = nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Verify swap was added to queue
+	// Note: This depends on which queue is enabled
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		iter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		defer iter.Close()
+		hasSwap := false
+		for ; iter.Valid(); iter.Next() {
+			hasSwap = true
+			break
+		}
+		c.Assert(hasSwap, Equals, true)
+	} else {
+		iter := mgr.Keeper().GetSwapQueueIterator(ctx)
+		defer iter.Close()
+		hasSwap := false
+		for ; iter.Valid(); iter.Next() {
+			hasSwap = true
+			break
+		}
+		c.Assert(hasSwap, Equals, true)
+	}
+
+	// Test 4: No over-solvency case
+	activeVault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(50*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, activeVault), IsNil)
+
+	err = nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	// Should complete without error even when under-solvent
+}
+
+func (s *NetworkManagerVCURTestSuite) TestCreateSwapToReserve(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create an active vault with BTC asset
+	vaultPubKey := GetRandomPubKey()
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, vaultPubKey, common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup: Create a pool for the asset
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Test 1: Create swap to reserve
+	swapAmount := cosmos.NewUint(10 * common.One)
+	err := nmgr.createSwapToReserve(ctx, mgr, common.BTCAsset, swapAmount)
+	c.Assert(err, IsNil)
+
+	// Verify swap was created in the queue
+	var foundSwap *types.MsgSwap
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		iter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		defer iter.Close()
+		for ; iter.Valid(); iter.Next() {
+			var msg types.MsgSwap
+			unmarshalErr := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &msg)
+			c.Assert(unmarshalErr, IsNil)
+			foundSwap = &msg
+			break
+		}
+	} else {
+		iter := mgr.Keeper().GetSwapQueueIterator(ctx)
+		defer iter.Close()
+		for ; iter.Valid(); iter.Next() {
+			var msg types.MsgSwap
+			unmarshalErr := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &msg)
+			c.Assert(unmarshalErr, IsNil)
+			foundSwap = &msg
+			break
+		}
+	}
+
+	c.Assert(foundSwap, NotNil)
+	c.Assert(foundSwap.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	c.Assert(foundSwap.Tx.Coins[0].Amount.Equal(swapAmount), Equals, true)
+	c.Assert(foundSwap.TargetAsset.Equals(common.RuneAsset()), Equals, true)
+
+	// Verify streaming swap parameters
+	c.Assert(foundSwap.StreamInterval, Equals, uint64(1))
+	c.Assert(foundSwap.StreamQuantity, Equals, uint64(1))
+
+	// Verify sender uses chain-appropriate address from vault
+	btcAddr, err := vaultPubKey.GetAddress(common.BTCChain)
+	c.Assert(err, IsNil)
+	c.Assert(foundSwap.Tx.FromAddress.String(), Equals, btcAddr.String())
+	c.Assert(foundSwap.Tx.ToAddress.String(), Equals, btcAddr.String())
+
+	// Verify destination is reserve address
+	reserveAddr := mgr.Keeper().GetModuleAccAddress(ReserveName)
+	c.Assert(foundSwap.Destination.String(), Equals, reserveAddr.String())
+
+	// Test 2: Multiple swaps - add vault for ETH chain
+	ethVaultPubKey := GetRandomPubKey()
+	ethVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, ethVaultPubKey, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	ethVault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, ethVault), IsNil)
+
+	err = nmgr.createSwapToReserve(ctx, mgr, common.ETHAsset, cosmos.NewUint(5*common.One))
+	c.Assert(err, IsNil)
+	// Should succeed and add another swap to queue
+}
+
+func (s *NetworkManagerVCURTestSuite) TestSolvencyWithScheduledOutbounds(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create a pool
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Create vault with funds
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Add scheduled outbound transaction
+	txOut := &TxOut{
+		Height: ctx.BlockHeight() + 1,
+		TxArray: []TxOutItem{
+			{
+				Chain:       common.BTCChain,
+				Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(20*common.One)),
+				ToAddress:   GetRandomBTCAddress(),
+				VaultPubKey: vault.PubKey,
+			},
+		},
+	}
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	// Calculate solvency - should account for scheduled outbound
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+
+	// Vault has 150, pool needs 100, scheduled outbound 20
+	// Expected: 150 - 100 - 20 = 30 over-solvent
+	expectedSolvency := math.NewInt(30 * common.One)
+	c.Assert(solvency[0].Amount.Equal(expectedSolvency), Equals, true)
+}
+
+func (s *NetworkManagerVCURTestSuite) TestSolvencyWithTradeAndSecuredAssets(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create a pool
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Create vault with funds
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Calculate solvency - verifies calculation logic
+	solvency1, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency1), Equals, 1)
+
+	// Vault 150 - Pool 100 = 50 over-solvent
+	expected := math.NewInt(50 * common.One)
+	c.Assert(solvency1[0].Amount.Equal(expected), Equals, true)
+
+	// Test with trade assets: Add trade asset deposits
+	// Trade assets are tracked in KVStore (not bank keeper)
+	tradeAsset := common.BTCAsset.GetTradeAsset()
+	tu := types.NewTradeUnit(tradeAsset)
+	tu.Units = cosmos.NewUint(10 * common.One)
+	tu.Depth = cosmos.NewUint(10 * common.One)
+	mgr.Keeper().SetTradeUnit(ctx, tu)
+
+	// Calculate solvency with trade assets
+	solvency2, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency2), Equals, 1)
+
+	// Vault 150 - Pool 100 - TradeUnits 10 = 40 over-solvent
+	expected = math.NewInt(40 * common.One)
+	c.Assert(solvency2[0].Amount.Equal(expected), Equals, true)
+
+	// Test with secured assets: Add secured asset deposits
+	// Secured assets are minted as bank keeper tokens
+	securedAsset := common.BTCAsset.GetSecuredAsset()
+	addr := GetRandomBech32Addr()
+	coin := common.NewCoin(securedAsset, cosmos.NewUint(15*common.One))
+	err = mgr.Keeper().MintAndSendToAccount(ctx, addr, coin)
+	c.Assert(err, IsNil)
+
+	// Create secured asset pool metadata
+	securedPool := types.NewSecuredAsset(securedAsset)
+	securedPool.Depth = cosmos.NewUint(15 * common.One)
+	mgr.Keeper().SetSecuredAsset(ctx, securedPool)
+
+	// Calculate solvency with both trade and secured assets
+	solvency3, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency3), Equals, 1)
+
+	// Vault 150 - Pool 100 - TradeUnits 10 - SecuredSupply 15 = 25 over-solvent
+	expected = math.NewInt(25 * common.One)
+	c.Assert(solvency3[0].Amount.Equal(expected), Equals, true)
+}
+
+func (s *NetworkManagerVCURTestSuite) TestProcessPostChurnSolvencyEdgeCases(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Set block height to interval so checks will run
+	ctx = ctx.WithBlockHeight(432000)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyCheckInterval.String(), 432000)
+
+	// Test 1: No pools - should not error
+	err := nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Test 2: No vaults - should not error
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	err = nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Test 3: OverSolvencyToReserveBps exceeds maximum (should cap at 10000)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), 15000)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(200*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	err = nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	// Should cap at 100% and not error
+
+	// Test 4: Negative mimir value (should treat as 0)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), -100)
+
+	err = nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	// Should not create any swaps when set to 0
+}

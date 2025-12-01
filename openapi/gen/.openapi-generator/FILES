@@ -183,6 +183,8 @@ docs/VaultAddress.md
 docs/VaultInfo.md
 docs/VaultPubkeysResponse.md
 docs/VaultRouter.md
+docs/VaultSolvencyAsset.md
+docs/VaultSolvencyResponse.md
 docs/VaultsApi.md
 docs/VersionResponse.md
 docs/YggdrasilVault.md
@@ -299,6 +301,8 @@ model_vault_address.go
 model_vault_info.go
 model_vault_pubkeys_response.go
 model_vault_router.go
+model_vault_solvency_asset.go
+model_vault_solvency_response.go
 model_version_response.go
 model_yggdrasil_vault.go
 response.go

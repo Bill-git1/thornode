@@ -65,3 +65,22 @@ message VaultAddress {
   string chain = 1 [ (gogoproto.jsontag) = "chain" ];
   string address = 2 [ (gogoproto.jsontag) = "address" ];
 }
+
+message QueryVaultSolvencyRequest { string height = 1; }
+
+message VaultSolvencyAsset {
+  common.Asset asset = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset",
+    (gogoproto.jsontag) = "asset"
+  ];
+  string amount = 2 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Int",
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "amount"
+  ];
+}
+
+message QueryVaultSolvencyResponse {
+  repeated VaultSolvencyAsset assets = 1 [ (gogoproto.jsontag) = "assets" ];
+}

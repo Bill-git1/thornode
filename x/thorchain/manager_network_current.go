@@ -1,8 +1,11 @@
 package thorchain
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -22,6 +25,12 @@ type NetworkMgrVCUR struct {
 	k          keeper.Keeper
 	txOutStore TxOutStore
 	eventMgr   EventManager
+}
+
+// assetAmount represents an asset with a signed amount (can be positive or negative)
+type assetAmount struct {
+	Asset  common.Asset
+	Amount math.Int
 }
 
 // newNetworkMgrVCUR create a new vault manager
@@ -457,6 +466,10 @@ func (vm *NetworkMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 
 	if err := vm.migrateFunds(ctx, mgr); err != nil {
 		ctx.Logger().Error("fail to migrate funds", "error", err)
+	}
+
+	if err := vm.processOverSolvency(ctx, mgr); err != nil {
+		ctx.Logger().Error("fail to process post-churn solvency", "error", err)
 	}
 
 	if err := vm.checkPoolRagnarok(ctx, mgr); err != nil {
@@ -2175,6 +2188,395 @@ func (vm *NetworkMgrVCUR) claimingSwapRuneToTCY(ctx cosmos.Context, mgr Manager)
 	if err = vm.eventMgr.EmitEvent(ctx, evt); err != nil {
 		ctx.Logger().Error("fail to emit pool balance changed event", "error", err)
 	}
+
+	return nil
+}
+
+// calculateNetworkSolvency calculates the aggregate solvency across all active vaults
+// Returns a list of assets with their solvency amounts (positive = over-solvent, negative = under-solvent)
+func (vm *NetworkMgrVCUR) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) ([]assetAmount, error) {
+	// Get all active vaults (error if any retiring vaults exist)
+	all, err := vm.k.GetAsgardVaults(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vaults: %w", err)
+	}
+
+	var allActiveVaults Vaults
+	for _, vault := range all {
+		if vault.Status == ActiveVault {
+			allActiveVaults = append(allActiveVaults, vault)
+		} else if vault.Status == RetiringVault {
+			// Churn is in progress, cannot calculate solvency accurately
+			return nil, fmt.Errorf("churn in progress, cannot calculate solvency")
+		}
+	}
+
+	// Use a map to track signed amounts per asset
+	assetAmounts := make(map[common.Asset]math.Int)
+
+	// Initialize with zero for all pool assets to ensure we detect under-solvency
+	poolIterator := mgr.Keeper().GetPoolIterator(ctx)
+	defer poolIterator.Close()
+	for ; poolIterator.Valid(); poolIterator.Next() {
+		var pool Pool
+		if err := mgr.Keeper().Cdc().Unmarshal(poolIterator.Value(), &pool); err != nil {
+			ctx.Logger().Error("fail to unmarshal pool", "error", err)
+			continue
+		}
+		// Skip non-L1 pools
+		if !pool.Asset.Equals(pool.Asset.GetLayer1Asset()) {
+			continue
+		}
+		assetAmounts[pool.Asset] = math.ZeroInt()
+	}
+
+	// Step 1: Sum all coins in active vaults (only those with pools)
+	for _, vault := range allActiveVaults {
+		for _, coin := range vault.Coins {
+			// Only include coins that have pools
+			if _, ok := assetAmounts[coin.Asset]; ok {
+				coinAmount := math.NewIntFromBigInt(coin.Amount.BigInt())
+				assetAmounts[coin.Asset] = assetAmounts[coin.Asset].Add(coinAmount)
+			}
+		}
+	}
+
+	// Step 2: Subtract pool balances (BalanceAsset and PendingInboundAsset)
+	poolIterator2 := mgr.Keeper().GetPoolIterator(ctx)
+	defer poolIterator2.Close()
+	for ; poolIterator2.Valid(); poolIterator2.Next() {
+		var pool Pool
+		if err := mgr.Keeper().Cdc().Unmarshal(poolIterator2.Value(), &pool); err != nil {
+			ctx.Logger().Error("fail to unmarshal pool", "error", err)
+			continue
+		}
+		// Skip non-L1 pools
+		if !pool.Asset.Equals(pool.Asset.GetLayer1Asset()) {
+			continue
+		}
+		// Subtract balance asset
+		balanceAsset := math.NewIntFromBigInt(pool.BalanceAsset.BigInt())
+		assetAmounts[pool.Asset] = assetAmounts[pool.Asset].Sub(balanceAsset)
+		// Subtract pending inbound asset
+		pendingInbound := math.NewIntFromBigInt(pool.PendingInboundAsset.BigInt())
+		assetAmounts[pool.Asset] = assetAmounts[pool.Asset].Sub(pendingInbound)
+	}
+
+	// Step 3: Subtract swap queue items (legacy)
+	swapQueueIterator := vm.k.GetSwapQueueIterator(ctx)
+	defer swapQueueIterator.Close()
+	for ; swapQueueIterator.Valid(); swapQueueIterator.Next() {
+		var msg types.MsgSwap
+		if err := vm.k.Cdc().Unmarshal(swapQueueIterator.Value(), &msg); err != nil {
+			ctx.Logger().Error("fail to unmarshal swap queue item", "error", err)
+			continue
+		}
+		// Subtract the source asset coin from the calculation
+		if !msg.Tx.Coins.IsEmpty() {
+			coin := msg.Tx.Coins[0]
+			// Skip trade/secured assets
+			if coin.Asset.IsTradeAsset() || coin.Asset.IsSecuredAsset() {
+				continue
+			}
+			if _, ok := assetAmounts[coin.Asset]; !ok {
+				return nil, fmt.Errorf("unexpected asset %s not found in tracking map (legacy swap queue)", coin.Asset)
+			}
+			coinAmount := math.NewIntFromBigInt(coin.Amount.BigInt())
+			assetAmounts[coin.Asset] = assetAmounts[coin.Asset].Sub(coinAmount)
+		}
+	}
+
+	// Step 4: Subtract advanced swap queue items
+	advSwapQueueIterator := vm.k.GetAdvSwapQueueItemIterator(ctx)
+	defer advSwapQueueIterator.Close()
+	for ; advSwapQueueIterator.Valid(); advSwapQueueIterator.Next() {
+		var msg types.MsgSwap
+		if err := vm.k.Cdc().Unmarshal(advSwapQueueIterator.Value(), &msg); err != nil {
+			ctx.Logger().Error("fail to unmarshal adv swap queue item", "error", err)
+			continue
+		}
+		// Subtract the source asset coin from the calculation
+		if !msg.Tx.Coins.IsEmpty() {
+			coin := msg.Tx.Coins[0]
+			// Skip trade/secured assets
+			if coin.Asset.IsTradeAsset() || coin.Asset.IsSecuredAsset() {
+				continue
+			}
+			if _, ok := assetAmounts[coin.Asset]; !ok {
+				return nil, fmt.Errorf("unexpected asset %s not found in tracking map (advanced swap queue)", coin.Asset)
+			}
+			coinAmount := math.NewIntFromBigInt(coin.Amount.BigInt())
+			assetAmounts[coin.Asset] = assetAmounts[coin.Asset].Sub(coinAmount)
+		}
+	}
+
+	// Step 5: Subtract trade and secured assets using total supply
+	// For each asset we're tracking, check total supply of trade and secured versions
+	// Create sorted list of assets for deterministic iteration
+	assets := make([]common.Asset, 0, len(assetAmounts))
+	// analyze-ignore(map-iteration) - extracting keys to sort them immediately after
+	for asset := range assetAmounts {
+		assets = append(assets, asset)
+	}
+	sort.SliceStable(assets, func(i, j int) bool {
+		return assets[i].String() < assets[j].String()
+	})
+
+	for _, asset := range assets {
+		// Check total supply of trade asset
+		tradeAsset := asset.GetTradeAsset()
+		tu, err := mgr.Keeper().GetTradeUnit(ctx, tradeAsset)
+		if err == nil && tu.Units.GT(math.ZeroUint()) {
+			tradeAmount := math.NewIntFromBigInt(tu.Units.BigInt())
+			assetAmounts[asset] = assetAmounts[asset].Sub(tradeAmount)
+		}
+
+		// Check total supply of secured asset
+		securedAsset := asset.GetSecuredAsset()
+		if securedSupply := mgr.Keeper().GetTotalSupply(ctx, securedAsset); securedSupply.GT(math.ZeroUint()) {
+			securedAmount := math.NewIntFromBigInt(securedSupply.BigInt())
+			assetAmounts[asset] = assetAmounts[asset].Sub(securedAmount)
+		}
+	}
+
+	// Step 6: Subtract scheduled outbounds (skip inactive vaults)
+	// Get the current block height and check forward blocks for scheduled txouts
+	maxOffset := vm.k.GetConfigInt64(ctx, constants.MaxTxOutOffset)
+	for i := int64(0); i <= maxOffset; i++ {
+		height := ctx.BlockHeight() + i
+		txOut, err := vm.k.GetTxOut(ctx, height)
+		if err != nil {
+			return nil, fmt.Errorf("fail to get txout for height %d: %w", height, err)
+		}
+		for _, item := range txOut.TxArray {
+			// Skip outbounds from inactive vaults (e.g., pending refunds)
+			// We only subtract outbounds from active vaults since we only added active vault balances
+			vault, err := vm.k.GetVault(ctx, item.VaultPubKey)
+			if err != nil {
+				ctx.Logger().Error("fail to get vault for scheduled txout", "pubkey", item.VaultPubKey, "error", err)
+				continue
+			}
+			if vault.Status == InactiveVault {
+				continue
+			}
+
+			if !item.Coin.IsEmpty() {
+				if _, ok := assetAmounts[item.Coin.Asset]; !ok {
+					return nil, fmt.Errorf("unexpected asset %s not found in tracking map (scheduled txout)", item.Coin.Asset)
+				}
+				itemAmount := math.NewIntFromBigInt(item.Coin.Amount.BigInt())
+				assetAmounts[item.Coin.Asset] = assetAmounts[item.Coin.Asset].Sub(itemAmount)
+			}
+		}
+	}
+
+	// Convert map to slice of assetAmount, returning ALL amounts (positive, negative, and zero)
+	// Use the already-sorted assets list for deterministic ordering
+	result := make([]assetAmount, 0, len(assetAmounts))
+	for _, asset := range assets {
+		result = append(result, assetAmount{
+			Asset:  asset,
+			Amount: assetAmounts[asset],
+		})
+	}
+
+	return result, nil
+}
+
+// processOverSolvency checks for over-solvency periodically and processes it
+func (vm *NetworkMgrVCUR) processOverSolvency(ctx cosmos.Context, mgr Manager) error {
+	// Check interval configuration first - skip if not configured or invalid
+	overSolvencyInterval := vm.k.GetConfigInt64(ctx, constants.OverSolvencyCheckInterval)
+	if overSolvencyInterval <= 0 {
+		return nil // Interval not configured, skip processing
+	}
+
+	// Check if it's time to run the over-solvency check
+	if !IsPeriodLastBlock(ctx, overSolvencyInterval) {
+		return nil // Not time yet, exit early
+	}
+
+	// Skip processing if churn is in progress (retiring vaults exist)
+	// to avoid calculations during vault migration
+	retiringVaults, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
+	if err != nil {
+		return fmt.Errorf("failed to get retiring vaults: %w", err)
+	}
+	if len(retiringVaults) > 0 {
+		return nil // Churn in progress, skip processing
+	}
+
+	// Calculate network solvency (both over and under-solvency)
+	solvencyAmounts, err := vm.calculateNetworkSolvency(ctx, mgr)
+	if err != nil {
+		return fmt.Errorf("failed to calculate network solvency: %w", err)
+	}
+
+	// Filter to only process assets with positive amounts (over-solvent)
+	// We can't swap assets we don't have (negative/under-solvent amounts)
+	overSolventAssets := make([]assetAmount, 0)
+	for _, assetAmt := range solvencyAmounts {
+		if assetAmt.Amount.IsPositive() {
+			overSolventAssets = append(overSolventAssets, assetAmt)
+		}
+	}
+
+	if len(overSolventAssets) == 0 {
+		return nil // No over-solvency, nothing to do
+	}
+
+	// Get the mimir setting for how much to swap to reserve
+	overSolvencyBps := vm.k.GetConfigInt64(ctx, constants.OverSolvencyToReserveBps)
+	if overSolvencyBps < 0 {
+		overSolvencyBps = 0
+	}
+	if overSolvencyBps > int64(constants.MaxBasisPts) {
+		overSolvencyBps = int64(constants.MaxBasisPts)
+	}
+
+	// Build event data
+	assetOverSolvencies := make([]types.AssetOverSolvency, 0, len(overSolventAssets))
+	for _, assetAmt := range overSolventAssets {
+		// Convert signed Int to unsigned Uint for the amount
+		overSolventAmount := math.NewUintFromBigInt(assetAmt.Amount.BigInt())
+
+		// Calculate how much to swap to reserve using safe share
+		swapAmount := common.GetSafeShare(math.NewUint(uint64(overSolvencyBps)), math.NewUint(constants.MaxBasisPts), overSolventAmount)
+
+		assetOverSolvencies = append(assetOverSolvencies, types.AssetOverSolvency{
+			Asset:               assetAmt.Asset,
+			OverSolventAmount:   overSolventAmount,
+			SwapToReserveAmount: swapAmount,
+		})
+
+		// If mimir is > 0, create swap to reserve
+		if overSolvencyBps > 0 && !swapAmount.IsZero() {
+			if err := vm.createSwapToReserve(ctx, mgr, assetAmt.Asset, swapAmount); err != nil {
+				ctx.Logger().Error("failed to create swap to reserve", "asset", assetAmt.Asset, "amount", swapAmount, "error", err)
+			}
+		}
+	}
+
+	// Emit event (only if there are over-solvent assets)
+	if len(assetOverSolvencies) > 0 {
+		evt := types.NewEventVaultOverSolvency(assetOverSolvencies, overSolvencyBps)
+		if err := vm.eventMgr.EmitEvent(ctx, evt); err != nil {
+			ctx.Logger().Error("failed to emit vault over-solvency event", "error", err)
+		}
+	}
+
+	return nil
+}
+
+// createSwapToReserve creates a swap from the over-solvent asset to RUNE and sends to reserve
+func (vm *NetworkMgrVCUR) createSwapToReserve(ctx cosmos.Context, mgr Manager, asset common.Asset, amount math.Uint) error {
+	// Only create over-solvency swaps when advanced swap queue is enabled
+	if !mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		return nil
+	}
+
+	// Create a synthetic transaction for the swap
+	// Use the reserve module address as the sender/destination
+	reserveAddr := mgr.Keeper().GetModuleAccAddress(ReserveName)
+
+	// Get chain-appropriate address format for FromAddress/ToAddress
+	// This ensures future address parsing won't break for different chain types
+	chain := asset.GetChain()
+
+	// Get address from an active vault for the chain
+	// This ensures we use a valid address format for the chain
+	activeVaults, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
+	if err != nil {
+		return fmt.Errorf("failed to get active vaults: %w", err)
+	}
+
+	var chainAddr common.Address
+	for _, vault := range activeVaults {
+		if vault.HasAsset(asset) {
+			addr, addrErr := vault.PubKey.GetAddress(chain)
+			if addrErr != nil {
+				ctx.Logger().Error("failed to get vault address for chain", "chain", chain, "error", addrErr)
+				continue
+			}
+			chainAddr = addr
+			break
+		}
+	}
+
+	// Fallback to reserve address if no vault found
+	// Using NoAddress would fail ValidateBasic() since Tx.Valid() requires non-empty FromAddress/ToAddress
+	if chainAddr.IsEmpty() {
+		chainAddr = common.Address(reserveAddr.String())
+	}
+
+	// Get max gas coin for the chain, with fallback to 1 unit of gas asset
+	maxGasCoin, _, err := mgr.GasMgr().GetGasDetails(ctx, chain)
+	if err != nil {
+		ctx.Logger().Error("failed to get gas details for over-solvency swap", "chain", chain, "error", err)
+	}
+	if err != nil || maxGasCoin.IsEmpty() {
+		maxGasCoin = common.NewCoin(chain.GetGasAsset(), cosmos.OneUint())
+	}
+
+	// Create a unique transaction ID for this internal swap
+	// Generate a deterministic 64-character hex hash for chain compatibility
+	hashInput := fmt.Sprintf("OVERSOLVENCY-%s-%d", asset.String(), ctx.BlockHeight())
+	hash := sha256.Sum256([]byte(hashInput))
+	txID := common.TxID(hex.EncodeToString(hash[:]))
+
+	// Create the swap message using streaming swap (interval=1, quantity=1)
+	// This ensures the swap executes as a streaming swap with minimal slippage impact
+	msg := types.MsgSwap{
+		Version: types.SwapVersion_v2, // Use V2 to prevent legacy streaming logic
+		Tx: common.Tx{
+			ID:          txID,
+			Chain:       chain,
+			FromAddress: chainAddr,
+			ToAddress:   chainAddr,
+			Coins: common.Coins{
+				common.NewCoin(asset, amount),
+			},
+			Gas: common.Gas{
+				maxGasCoin,
+			},
+			Memo: fmt.Sprintf("SWAP:THOR.RUNE:%s", reserveAddr.String()),
+		},
+		TargetAsset:          common.RuneAsset(),
+		Destination:          common.Address(reserveAddr.String()),
+		TradeTarget:          cosmos.ZeroUint(),
+		AffiliateAddress:     common.NoAddress,
+		AffiliateBasisPoints: cosmos.ZeroUint(),
+		StreamInterval:       1, // Execute as streaming swap with 1 block interval
+		StreamQuantity:       1, // Execute in 1 swap (all at once)
+		Signer:               reserveAddr,
+		State: &types.SwapState{
+			Interval:   1,
+			Quantity:   1,
+			Count:      0,
+			LastHeight: 0,
+			Deposit:    amount,
+			In:         cosmos.ZeroUint(),
+			Out:        cosmos.ZeroUint(),
+		},
+	}
+
+	ctx.Logger().Info("creating over-solvency swap",
+		"txID", txID,
+		"asset", asset,
+		"amount", amount,
+		"coins_amount", msg.Tx.Coins[0].Amount,
+		"state_deposit", msg.State.Deposit,
+		"state_in", msg.State.In,
+		"state_out", msg.State.Out,
+		"stream_interval", msg.StreamInterval,
+		"stream_quantity", msg.StreamQuantity,
+	)
+
+	// Add to advanced swap queue
+	if err := mgr.Keeper().SetAdvSwapQueueItem(ctx, msg); err != nil {
+		return fmt.Errorf("failed to add swap to advanced queue: %w", err)
+	}
+	ctx.Logger().Info("added over-solvency swap to advanced queue", "txID", txID)
 
 	return nil
 }

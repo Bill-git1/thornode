@@ -150,6 +150,8 @@ func NewConstantValue() *ConstantVals {
 			TCYClaimingHalt:                     1,                  // enable/disable tcy claiming
 			ReserveMaxCap:                       0,                  // maximum reserve balance before EmissionCurve is overridden, 0 = disabled
 			MaxDepositTxIDRetries:               100,                // maximum retries for deposit txid auto-increment to avoid collisions
+			OverSolvencyToReserveBps:            0,                  // basis points (0-10000) of over-solvent liquidity to swap to RUNE and transfer to reserve
+			OverSolvencyCheckInterval:           600,                // interval in blocks for over-solvency checks (approximately 30 days)
 			MaxRetiredVaultRecoveryAttempts:     100,                // maximum retries for retired vault recovery refunds
 		},
 		boolValues: map[ConstantName]bool{

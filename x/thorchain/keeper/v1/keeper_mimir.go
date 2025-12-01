@@ -120,6 +120,7 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 		"AdvSwapQueueRapidSwapMax",
 		"EnableADVSwapQueue",
 		"StreamingLimitSwapMaxAge",
+		constants.OverSolvencyCheckInterval.String(),
 		constants.MimirKeyScheduledMigration,
 		constants.MaxRetiredVaultRecoveryAttempts.String(),
 	}

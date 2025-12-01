@@ -315,6 +315,11 @@ service Query {
     option (google.api.http).get = "/thorchain/vaults/pubkeys";
   }
 
+  rpc VaultSolvency(QueryVaultSolvencyRequest)
+      returns (QueryVaultSolvencyResponse) {
+    option (google.api.http).get = "/thorchain/vaults/solvency";
+  }
+
   rpc TxStages(QueryTxStagesRequest) returns (QueryTxStagesResponse) {
     option (google.api.http).get = "/thorchain/tx/stages/{tx_id}";
   }

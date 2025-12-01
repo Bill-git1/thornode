@@ -159,6 +159,7 @@ Class | Method | HTTP request | Description
 *VaultsApi* | [**Asgard**](docs/VaultsApi.md#asgard) | **Get** /thorchain/vaults/asgard | 
 *VaultsApi* | [**Vault**](docs/VaultsApi.md#vault) | **Get** /thorchain/vault/{pubkey} | 
 *VaultsApi* | [**VaultPubkeys**](docs/VaultsApi.md#vaultpubkeys) | **Get** /thorchain/vaults/pubkeys | 
+*VaultsApi* | [**VaultSolvency**](docs/VaultsApi.md#vaultsolvency) | **Get** /thorchain/vaults/solvency | 
 *VaultsApi* | [**Yggdrasil**](docs/VaultsApi.md#yggdrasil) | **Get** /thorchain/vaults/yggdrasil | 
 
 
@@ -274,6 +275,8 @@ Class | Method | HTTP request | Description
  - [VaultInfo](docs/VaultInfo.md)
  - [VaultPubkeysResponse](docs/VaultPubkeysResponse.md)
  - [VaultRouter](docs/VaultRouter.md)
+ - [VaultSolvencyAsset](docs/VaultSolvencyAsset.md)
+ - [VaultSolvencyResponse](docs/VaultSolvencyResponse.md)
  - [VersionResponse](docs/VersionResponse.md)
  - [YggdrasilVault](docs/YggdrasilVault.md)
 

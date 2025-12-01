@@ -69,11 +69,16 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 	mem, isSwapMemo := memo.(SwapMemo)
 	target := msg.TargetAsset
 	if isSwapMemo {
+		// Prevent swaps to module addresses to protect system invariants,
+		// except for swaps to RUNE destined for the reserve (for over-solvency clearing).
 		destAccAddr, err := mem.Destination.AccAddress()
-		// A network module address would be resolvable,
-		// so if not resolvable it should not be a network module address.
 		if err == nil && IsModuleAccAddress(h.mgr.Keeper(), destAccAddr) {
-			return fmt.Errorf("a network module cannot be the final destination of a swap memo")
+			// Allow swaps to RUNE (any asset -> RUNE) destined for reserve module (for over-solvency clearing)
+			isSwapToRuneForReserve := target.IsRune() &&
+				destAccAddr.Equals(h.mgr.Keeper().GetModuleAccAddress(ReserveName))
+			if !isSwapToRuneForReserve {
+				return fmt.Errorf("a network module cannot be the final destination of a swap memo")
+			}
 		}
 
 		if target.IsSyntheticAsset() && h.mgr.Keeper().GetConfigInt64(ctx, constants.ManualSwapsToSynthDisabled) > 0 {

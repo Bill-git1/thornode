@@ -694,3 +694,23 @@ message EventFailedOutboundRecovery {
             "gitlab.com/thorchain/thornode/v3/common.Address" ];
   string memo = 5;
 }
+
+message AssetOverSolvency {
+  common.Asset asset = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"
+  ];
+  string over_solvent_amount = 2 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
+  string swap_to_reserve_amount = 3 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
+}
+
+message EventVaultOverSolvency {
+  repeated AssetOverSolvency assets = 1 [ (gogoproto.nullable) = false ];
+  int64 over_solvency_basis_points = 2;
+}

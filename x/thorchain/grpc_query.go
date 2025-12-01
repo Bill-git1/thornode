@@ -458,6 +458,14 @@ func (s *queryServer) VaultsPubkeys(c context.Context, req *types.QueryVaultsPub
 	return s.queryVaultsPubkeys(ctx, req)
 }
 
+func (s *queryServer) VaultSolvency(c context.Context, req *types.QueryVaultSolvencyRequest) (*types.QueryVaultSolvencyResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryVaultSolvency(ctx, req)
+}
+
 func (s *queryServer) TxStages(c context.Context, req *types.QueryTxStagesRequest) (*types.QueryTxStagesResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

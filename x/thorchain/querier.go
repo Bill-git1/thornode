@@ -310,6 +310,35 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 	return &resp, nil
 }
 
+func (qs queryServer) queryVaultSolvency(ctx cosmos.Context, _ *types.QueryVaultSolvencyRequest) (*types.QueryVaultSolvencyResponse, error) {
+	// Get the network manager to calculate solvency
+	networkMgr, ok := qs.mgr.NetworkMgr().(*NetworkMgrVCUR)
+	if !ok {
+		return nil, fmt.Errorf("network manager is not the correct type")
+	}
+
+	// Calculate network solvency (both over and under-solvency)
+	solvencyAmounts, err := networkMgr.calculateNetworkSolvency(ctx, qs.mgr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate network solvency: %w", err)
+	}
+
+	// Build response with solvency per asset
+	// Positive amounts indicate over-solvency, negative amounts indicate under-solvency
+	resp := &types.QueryVaultSolvencyResponse{
+		Assets: make([]*types.VaultSolvencyAsset, 0, len(solvencyAmounts)),
+	}
+
+	for _, assetAmt := range solvencyAmounts {
+		resp.Assets = append(resp.Assets, &types.VaultSolvencyAsset{
+			Asset:  assetAmt.Asset,
+			Amount: assetAmt.Amount,
+		})
+	}
+
+	return resp, nil
+}
+
 func (qs queryServer) queryRUNEPool(ctx cosmos.Context, _ *types.QueryRunePoolRequest) (*types.QueryRunePoolResponse, error) {
 	// gather pol data
 	pol, err := qs.mgr.Keeper().GetPOL(ctx)

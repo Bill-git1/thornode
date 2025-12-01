@@ -990,6 +990,31 @@ paths:
           description: OK
       tags:
       - Vaults
+  /thorchain/vaults/solvency:
+    get:
+      description: Returns aggregate vault solvency showing over-solvent or under-solvent
+        amounts per asset.
+      operationId: vaultSolvency
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaultSolvencyResponse'
+          description: OK
+      tags:
+      - Vaults
   /thorchain/network:
     get:
       description: Returns network overview statistics.
@@ -5636,6 +5661,39 @@ components:
       - asgard
       - inactive
       - yggdrasil
+      type: object
+    VaultSolvencyResponse:
+      example:
+        assets:
+        - amount: "1000000000"
+          asset: BTC.BTC
+        - amount: "1000000000"
+          asset: BTC.BTC
+      properties:
+        assets:
+          items:
+            $ref: '#/components/schemas/VaultSolvencyAsset'
+          type: array
+      required:
+      - assets
+      type: object
+    VaultSolvencyAsset:
+      example:
+        amount: "1000000000"
+        asset: BTC.BTC
+      properties:
+        asset:
+          description: Asset identifier
+          example: BTC.BTC
+          type: string
+        amount:
+          description: "Solvency amount for the asset. Positive values indicate over-solvency,\
+            \ negative values indicate under-solvency."
+          example: "1000000000"
+          type: string
+      required:
+      - amount
+      - asset
       type: object
     NetworkResponse:
       example:

@@ -183,9 +183,13 @@ func (tos *TxOutStorageVCUR) takeAffiliateFee(ctx cosmos.Context, mgr Manager, t
 	}
 
 	// Get inbound tx
+	// Skip affiliate fee for protocol-generated swaps that have no observed transaction
 	inboundVoter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
-	if err != nil || inboundVoter.Tx.Tx.Memo == "" {
-		return toi.Coin.Amount, fmt.Errorf("fail to get observe tx in voter: %w", err)
+	if err != nil {
+		return toi.Coin.Amount, nil
+	}
+	if inboundVoter.Tx.Tx.Memo == "" {
+		return toi.Coin.Amount, nil
 	}
 
 	memo, err := ParseMemoWithTHORNames(ctx, tos.keeper, inboundVoter.Tx.Tx.Memo)

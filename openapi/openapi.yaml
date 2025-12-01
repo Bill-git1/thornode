@@ -609,6 +609,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/VaultPubkeysResponse"
 
+  /thorchain/vaults/solvency:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns aggregate vault solvency showing over-solvent or under-solvent amounts per asset.
+      operationId: vaultSolvency
+      tags:
+        - Vaults
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VaultSolvencyResponse"
+
   # ------------------------------ network ------------------------------
 
   /thorchain/network:
@@ -3755,6 +3771,31 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/VaultInfo"
+
+    VaultSolvencyResponse:
+      type: object
+      required:
+        - assets
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/VaultSolvencyAsset"
+
+    VaultSolvencyAsset:
+      type: object
+      required:
+        - asset
+        - amount
+      properties:
+        asset:
+          type: string
+          example: "BTC.BTC"
+          description: Asset identifier
+        amount:
+          type: string
+          example: "1000000000"
+          description: Solvency amount for the asset. Positive values indicate over-solvency, negative values indicate under-solvency.
 
     NetworkResponse:
       type: object
