@@ -77,7 +77,7 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 			}
 
 			// skip consolidate inbounds and trade/secured asset deposits
-			if tx.Tx.Memo != "" { // saver deposits have empty memo
+			if tx.Tx.Memo != "" { // skip memoless
 				memoParts := strings.Split(tx.Tx.Memo, ":")
 				memoType, err := memo.StringToTxType(memoParts[0])
 				if err != nil {
@@ -133,12 +133,66 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 				log.Panic().Err(err).Msg("unable to store seen large unconfirmed inbound")
 			}
 
+			// denormalize memoless reference
+			formattedMemo := fmt.Sprintf("`%s`", tx.Tx.Memo)
+			if tx.Tx.Memo == "" {
+				// get decimals to determine if we need to normalize
+				decimals := int64(common.THORChainDecimals)
+				if tx.Tx.Coins[0].Asset.IsGasAsset() {
+					decimals = tx.Tx.Coins[0].Asset.Chain.GetGasAssetDecimal()
+				} else {
+					pool := openapi.Pool{}
+					err = util.ThornodeCachedRetryGet(fmt.Sprintf("thorchain/pool/%s", tx.Tx.Coins[0].Asset), block.Header.Height, &pool)
+					if err != nil {
+						log.Panic().Err(err).Msg("failed to get pool")
+					}
+					if pool.Decimals != nil {
+						decimals = *pool.Decimals
+					}
+				}
+
+				// normalize the amount to extract the reference
+				amount := tx.Tx.Coins[0].Amount.Uint64()
+				if decimals < int64(common.THORChainDecimals) {
+					divisor := int64(1)
+					for i := decimals; i < int64(common.THORChainDecimals); i++ {
+						divisor *= 10
+					}
+					amount /= uint64(divisor)
+				}
+
+				refCount := util.GetConfigInt64(block.Header.Height, constants.MemolessTxnRefCount)
+				txnRefLength := len(fmt.Sprintf("%d", refCount))
+				modulus := uint64(1)
+				for i := 0; i < txnRefLength; i++ {
+					modulus *= 10
+				}
+
+				// extract reference from amount
+				refNum := amount % modulus
+
+				if refNum > 0 && refCount > 0 {
+					registration := openapi.ReferenceMemoResponse{}
+					err = util.ThornodeCachedRetryGet(
+						fmt.Sprintf("thorchain/memo/%s/%d", tx.Tx.Coins[0].Asset, refNum),
+						block.Header.Height,
+						&registration,
+					)
+					if err != nil {
+						log.Warn().Err(err).Msg("failed to get memo reference")
+					}
+					if registration.Memo != "" {
+						formattedMemo = fmt.Sprintf("`%s` (memoless: %d)", registration.Memo, refNum)
+					}
+				}
+			}
+
 			// build notification
 			title := "Large Unconfirmed Inbound"
 			fields := util.NewOrderedMap()
 			fields.Set("Chain", tx.Tx.Chain.String())
 			fields.Set("Hash", tx.Tx.ID.String())
-			fields.Set("Memo", fmt.Sprintf("`%s`", tx.Tx.Memo))
+			fields.Set("Memo", formattedMemo)
 			fields.Set("Confirmation Time", util.FormatDuration(confirmDuration))
 			fields.Set("Amount", fmt.Sprintf(
 				"%f %s (%s)",

@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
 )
@@ -318,4 +319,23 @@ func IsThorchainModule(address string) bool {
 		"sthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38v3kkv6": true,
 	}
 	return thorchainModulesAddresses[address]
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Config
+////////////////////////////////////////////////////////////////////////////////////////
+
+// GetConfigInt64 mirrors the thornode GetConfigInt64 function to first lookup the
+// corresponding mimir value, and fallback to the constant value.
+func GetConfigInt64(height int64, key constants.ConstantName) int64 {
+	mimir := map[string]int64{}
+	err := ThornodeCachedRetryGet("thorchain/mimir", height, &mimir)
+	if err != nil {
+		log.Panic().Err(err).Msg("failed to get mimirs")
+	}
+	value, ok := mimir[strings.ToUpper(key.String())]
+	if ok {
+		return value
+	}
+	return constants.NewConstantValue().GetInt64Value(key)
 }
