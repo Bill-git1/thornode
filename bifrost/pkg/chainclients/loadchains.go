@@ -50,7 +50,7 @@ func LoadChains(thorKeys *thorclient.Keys,
 		case common.BTCChain, common.BCHChain, common.LTCChain, common.DOGEChain:
 			return utxo.NewClient(thorKeys, chain, server, thorchainBridge, m)
 		case common.TRONChain:
-			return tron.NewTronClient(thorKeys, chain, server, thorchainBridge, m)
+			return tron.NewTronClient(thorKeys, chain, server, thorchainBridge, m, pubKeyValidator, poolMgr)
 		case common.XRPChain:
 			return xrp.NewClient(thorKeys, chain, server, thorchainBridge, m)
 		case common.SOLChain:

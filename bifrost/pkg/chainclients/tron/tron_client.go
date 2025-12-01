@@ -28,6 +28,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/tron/api"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/tron/rpc"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
@@ -76,10 +77,16 @@ func NewTronClient(
 	server *tctss.TssServer,
 	bridge thorclient.ThorchainBridge,
 	metrics *tcmetrics.Metrics,
+	pubkeyMgr pubkeymanager.PubKeyValidator,
+	poolMgr thorclient.PoolManager,
 ) (*TronClient, error) {
 	var err error
 
 	logger := log.With().Str("module", config.ChainID.String()).Logger()
+
+	if pubkeyMgr == nil {
+		return nil, errors.New("pubkey manager is nil")
+	}
 
 	tokens := tokenlist.GetEVMTokenList(config.ChainID).Tokens
 
@@ -135,6 +142,7 @@ func NewTronClient(
 	client.tronScanner, err = NewTronBlockScanner(
 		config,
 		client.bridge,
+		pubkeyMgr,
 		client.ReportSolvency,
 	)
 	if err != nil {

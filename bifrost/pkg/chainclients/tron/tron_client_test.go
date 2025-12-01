@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/tron/rpc"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
 
@@ -137,8 +138,10 @@ func (s *TronTestSuite) SetUpSuite(c *C) {
 		},
 	}
 
+	pubkeyMgr := &pubkeymanager.MockPoolAddressValidator{}
+
 	scanner, err := NewTronBlockScanner(
-		chainConfig, bridge, func(int64) error { return nil },
+		chainConfig, bridge, pubkeyMgr, func(int64) error { return nil },
 	)
 	c.Assert(err, IsNil)
 

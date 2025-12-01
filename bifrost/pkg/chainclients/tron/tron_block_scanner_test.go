@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/tron/api"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
 	"gitlab.com/thorchain/thornode/v3/config"
@@ -42,9 +43,12 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 	)
 	c.Assert(err, IsNil)
 
+	pubkeyMgr := &pubkeymanager.MockPoolAddressValidator{}
+
 	s.scanner, err = NewTronBlockScanner(
 		chainConfig,
 		bridge,
+		pubkeyMgr,
 		func(h int64) error { return nil },
 	)
 	c.Assert(err, IsNil)

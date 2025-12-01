@@ -33,14 +33,6 @@ func (s *HandlerCommonOutboundSuite) TestIsOutboundFakeGasTX(c *C) {
 	}
 	c.Assert(isOutboundFakeGasTx(theftTx), Equals, false)
 
-	coins = common.Coins{
-		common.NewCoin(common.BTCAsset, cosmos.NewUint(1)),
-	}
-	theftTx2 := common.ObservedTx{
-		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "OUT:123"),
-	}
-	c.Assert(isOutboundFakeGasTx(theftTx2), Equals, false) // Wrong chain (BTC not EVM)
-
 	// Test with wrong memo format (not self-referential)
 	coins = common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),

@@ -15,11 +15,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/tron/api"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
 	"gitlab.com/thorchain/thornode/v3/config"
+	memo "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 )
 
 var (
@@ -40,6 +42,7 @@ type TronBlockScanner struct {
 	config                config.BifrostBlockScannerConfiguration
 	logger                zerolog.Logger
 	bridge                thorclient.ThorchainBridge
+	pubkeyMgr             pubkeymanager.PubKeyValidator
 	api                   *api.TronApi
 	whitelist             map[string]tokenlist.ERC20Token
 	abi                   abi.ABI
@@ -53,6 +56,7 @@ type TronBlockScanner struct {
 func NewTronBlockScanner(
 	cfg config.BifrostChainConfiguration,
 	bridge thorclient.ThorchainBridge,
+	pubkeyMgr pubkeymanager.PubKeyValidator,
 	reportSolvency ReportSolvency,
 ) (*TronBlockScanner, error) {
 	logger := log.Logger.With().
@@ -83,6 +87,7 @@ func NewTronBlockScanner(
 		whitelist:      whitelist,
 		api:            api.NewTronApi(cfg.APIHost, cfg.BlockScanner.HTTPRequestTimeout),
 		bridge:         bridge,
+		pubkeyMgr:      pubkeyMgr,
 		refBlocks:      []RefBlock{},
 		refAddress:     refAddress,
 		reportSolvency: reportSolvency,
@@ -204,8 +209,13 @@ func (s *TronBlockScanner) processTxs(
 			continue
 		}
 
-		// discard unsuccessful txs
+		// check for failed outbound transactions from vaults
 		if rawTx.Ret[0].ContractRet != "SUCCESS" {
+			// process failed transactions that originated from a vault
+			txInItem := s.getTxInFromFailedTransaction(&rawTx, height)
+			if txInItem != nil {
+				txInItems = append(txInItems, txInItem)
+			}
 			continue
 		}
 
@@ -343,6 +353,76 @@ func (s *TronBlockScanner) processTxs(
 	}
 
 	return txInItems, nil
+}
+
+// getTxInFromFailedTransaction processes a failed transaction and returns a TxInItem if it
+// originated from a vault. This allows the vault accounting to be updated for gas spent on
+// failed outbound transactions.
+func (s *TronBlockScanner) getTxInFromFailedTransaction(
+	rawTx *api.Transaction,
+	height int64,
+) *types.TxInItem {
+	raw := rawTx.RawData.Contract[0]
+
+	// get sender address
+	sender, err := api.ConvertAddress(raw.Parameter.Value.OwnerAddress)
+	if err != nil {
+		s.logger.Err(err).Msg("failed to convert sender address")
+		return nil
+	}
+
+	// check if the sender is a vault address
+	ok, cif := s.pubkeyMgr.IsValidPoolAddress(sender, s.config.ChainID)
+	if !ok || cif.IsEmpty() {
+		return nil
+	}
+
+	// get destination address
+	var dest string
+	switch raw.Type {
+	case "TransferContract":
+		dest, err = api.ConvertAddress(raw.Parameter.Value.ToAddress)
+		if err != nil {
+			s.logger.Err(err).Msg("failed to convert destination address")
+			return nil
+		}
+	case "TriggerSmartContract":
+		dest, err = api.ConvertAddress(raw.Parameter.Value.ContractAddress)
+		if err != nil {
+			s.logger.Err(err).Msg("failed to convert contract address")
+			return nil
+		}
+	default:
+		return nil
+	}
+
+	// get fee
+	info, err := s.api.GetTransactionInfo(rawTx.TxId)
+	if err != nil {
+		s.logger.Err(err).Msg("failed to get transaction info")
+		return nil
+	}
+
+	gasAmount := math.NewUint(info.Fee).Mul(math.NewUint(100))
+	if gasAmount.IsZero() {
+		gasAmount = math.NewUint(1)
+	}
+	gas := common.Gas{{
+		Amount:   gasAmount,
+		Asset:    common.TRXAsset,
+		Decimals: 6,
+	}}
+
+	return &types.TxInItem{
+		Tx:          rawTx.TxId,
+		BlockHeight: height,
+		// memo is the OUT:<txid> with self-reference to indicate failed outbound
+		Memo:   memo.NewOutboundMemo(common.TxID(rawTx.TxId)).String(),
+		Sender: sender,
+		To:     dest,
+		Coins:  common.NewCoins(common.NewCoin(common.TRXAsset, math.NewUint(1))),
+		Gas:    gas,
+	}
 }
 
 func (s *TronBlockScanner) decodeTRC20Input(
