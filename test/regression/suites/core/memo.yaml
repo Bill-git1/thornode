@@ -160,6 +160,7 @@ asserts:
   - .height == "7"
   - .registration_hash == "{{ native_txid -1 }}"
   - .registered_by == "{{ addr_thor_fox }}"
+  - .used_by_txs == null or (.used_by_txs | length == 0)
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/memo/{{ native_txid -1 }}
@@ -170,6 +171,7 @@ asserts:
   - .height == "7"
   - .registration_hash == "{{ native_txid -1 }}"
   - .registered_by == "{{ addr_thor_fox }}"
+  - .used_by_txs == null or (.used_by_txs | length == 0)
 ---
 ########################################################################################
 # test that memo is utilized by direct reference
@@ -310,6 +312,16 @@ asserts:
   - .height == "7"
   - .registration_hash == "{{ native_txid -5 }}"
   - .registered_by == "{{ addr_thor_fox }}"
+---
+########################################################################################
+# verify used_by_txs contains both transaction hashes that used the reference memo
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/memo/ETH.ETH/00001
+asserts:
+  - .used_by_txs | length == 2
+  - .used_by_txs | contains(["{{ observe_txid 2 }}"])
+  - .used_by_txs | contains(["{{ observe_txid 4 }}"])
 ---
 ########################################################################################
 # test registering a reference memo for a different asset creates a new entry

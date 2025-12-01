@@ -28,6 +28,8 @@ message QueryReferenceMemoResponse {
   bytes registered_by = 6
       [ (gogoproto.casttype) =
             "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
+  repeated string used_by_txs = 7
+      [ (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID" ];
 }
 
 message QueryReferenceMemoByHashRequest {
@@ -48,6 +50,8 @@ message QueryReferenceMemoByHashResponse {
   bytes registered_by = 6
       [ (gogoproto.casttype) =
             "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
+  repeated string used_by_txs = 7
+      [ (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID" ];
 }
 
 message QueryReferenceMemoPreflightRequest {

@@ -31,6 +31,7 @@ func (qs queryServer) queryReferenceMemo(ctx cosmos.Context, req *types.QueryRef
 		Height:           memo.Height,
 		RegistrationHash: memo.RegistrationHash,
 		RegisteredBy:     memo.RegisteredBy,
+		UsedByTxs:        memo.UsedByTxs,
 	}, nil
 }
 
@@ -56,6 +57,7 @@ func (qs queryServer) queryReferenceMemoByHash(ctx cosmos.Context, req *types.Qu
 		Height:           memo.Height,
 		RegistrationHash: memo.RegistrationHash,
 		RegisteredBy:     memo.RegisteredBy,
+		UsedByTxs:        memo.UsedByTxs,
 	}, nil
 }
 

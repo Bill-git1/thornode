@@ -7249,6 +7249,9 @@ components:
       example:
         reference: "20002"
         registered_by: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+        used_by_txs:
+        - AF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C8
+        - BF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C9
         memo: =:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe:1000:0:100
         asset: BTC.BTC
         registration_hash: AF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C8
@@ -7278,6 +7281,14 @@ components:
           description: the address that registered this reference memo
           example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
           type: string
+        used_by_txs:
+          description: list of transaction hashes that have used this reference memo
+          example:
+          - AF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C8
+          - BF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C9
+          items:
+            type: string
+          type: array
       required:
       - asset
       - height
@@ -7285,6 +7296,7 @@ components:
       - reference
       - registered_by
       - registration_hash
+      - used_by_txs
       type: object
     ReferenceMemoPreflightResponse:
       example:

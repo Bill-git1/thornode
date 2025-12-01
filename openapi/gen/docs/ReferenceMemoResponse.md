@@ -10,12 +10,13 @@ Name | Type | Description | Notes
 **Height** | **string** | the block height when this reference memo was registered | 
 **RegistrationHash** | **string** | the transaction hash where this reference memo was registered | 
 **RegisteredBy** | **string** | the address that registered this reference memo | 
+**UsedByTxs** | **[]string** | list of transaction hashes that have used this reference memo | 
 
 ## Methods
 
 ### NewReferenceMemoResponse
 
-`func NewReferenceMemoResponse(asset string, memo string, reference string, height string, registrationHash string, registeredBy string, ) *ReferenceMemoResponse`
+`func NewReferenceMemoResponse(asset string, memo string, reference string, height string, registrationHash string, registeredBy string, usedByTxs []string, ) *ReferenceMemoResponse`
 
 NewReferenceMemoResponse instantiates a new ReferenceMemoResponse object
 This constructor will assign default values to properties that have it defined,
@@ -148,6 +149,26 @@ and a boolean to check if the value has been set.
 `func (o *ReferenceMemoResponse) SetRegisteredBy(v string)`
 
 SetRegisteredBy sets RegisteredBy field to given value.
+
+
+### GetUsedByTxs
+
+`func (o *ReferenceMemoResponse) GetUsedByTxs() []string`
+
+GetUsedByTxs returns the UsedByTxs field if non-nil, zero value otherwise.
+
+### GetUsedByTxsOk
+
+`func (o *ReferenceMemoResponse) GetUsedByTxsOk() (*[]string, bool)`
+
+GetUsedByTxsOk returns a tuple with the UsedByTxs field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetUsedByTxs
+
+`func (o *ReferenceMemoResponse) SetUsedByTxs(v []string)`
+
+SetUsedByTxs sets UsedByTxs field to given value.
 
 
 

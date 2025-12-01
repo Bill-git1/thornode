@@ -28,13 +28,15 @@ type ReferenceMemoResponse struct {
 	RegistrationHash string `json:"registration_hash"`
 	// the address that registered this reference memo
 	RegisteredBy string `json:"registered_by"`
+	// list of transaction hashes that have used this reference memo
+	UsedByTxs []string `json:"used_by_txs"`
 }
 
 // NewReferenceMemoResponse instantiates a new ReferenceMemoResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewReferenceMemoResponse(asset string, memo string, reference string, height string, registrationHash string, registeredBy string) *ReferenceMemoResponse {
+func NewReferenceMemoResponse(asset string, memo string, reference string, height string, registrationHash string, registeredBy string, usedByTxs []string) *ReferenceMemoResponse {
 	this := ReferenceMemoResponse{}
 	this.Asset = asset
 	this.Memo = memo
@@ -42,6 +44,7 @@ func NewReferenceMemoResponse(asset string, memo string, reference string, heigh
 	this.Height = height
 	this.RegistrationHash = registrationHash
 	this.RegisteredBy = registeredBy
+	this.UsedByTxs = usedByTxs
 	return &this
 }
 
@@ -197,6 +200,30 @@ func (o *ReferenceMemoResponse) SetRegisteredBy(v string) {
 	o.RegisteredBy = v
 }
 
+// GetUsedByTxs returns the UsedByTxs field value
+func (o *ReferenceMemoResponse) GetUsedByTxs() []string {
+	if o == nil {
+		var ret []string
+		return ret
+	}
+
+	return o.UsedByTxs
+}
+
+// GetUsedByTxsOk returns a tuple with the UsedByTxs field value
+// and a boolean to check if the value has been set.
+func (o *ReferenceMemoResponse) GetUsedByTxsOk() ([]string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.UsedByTxs, true
+}
+
+// SetUsedByTxs sets field value
+func (o *ReferenceMemoResponse) SetUsedByTxs(v []string) {
+	o.UsedByTxs = v
+}
+
 func (o ReferenceMemoResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -216,6 +243,9 @@ func (o ReferenceMemoResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["registered_by"] = o.RegisteredBy
+	}
+	if true {
+		toSerialize["used_by_txs"] = o.UsedByTxs
 	}
 	return json.Marshal(toSerialize)
 }
