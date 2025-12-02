@@ -165,6 +165,8 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 // BeginBlock called when a block get proposed
 func (am AppModule) BeginBlock(goCtx context.Context) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	ctx = ctx.WithLogger(ctx.Logger().With("height", ctx.BlockHeight()))
+
 	votes := ctx.CometInfo().GetLastCommit().Votes()
 	var existingValidators []string
 	for i := range votes.Len() {
@@ -173,7 +175,7 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 		existingValidators = append(existingValidators, addr.String())
 	}
 
-	ctx.Logger().Debug("BeginBlock", "height", ctx.BlockHeight())
+	ctx.Logger().Debug("BeginBlock")
 	// Check/Update the network version before checking the local version
 	if err := am.mgr.LoadManagerIfNecessary(ctx); err != nil {
 		ctx.Logger().Error("fail to get managers", "error", err)
@@ -211,7 +213,9 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 // EndBlock called when a block get committed
 func (am AppModule) EndBlock(goCtx context.Context) ([]abci.ValidatorUpdate, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	ctx.Logger().Debug("End Block", "height", ctx.BlockHeight())
+	ctx = ctx.WithLogger(ctx.Logger().With("height", ctx.BlockHeight()))
+
+	ctx.Logger().Debug("End Block")
 
 	if err := am.mgr.SwapQ().EndBlock(ctx, am.mgr); err != nil {
 		ctx.Logger().Error("fail to process swap queue", "error", err)

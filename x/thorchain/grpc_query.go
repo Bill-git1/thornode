@@ -27,6 +27,7 @@ func NewQueryServerImpl(mgr *Mgrs, txConfig client.TxConfig, kbs cosmos.KeybaseS
 
 func (s *queryServer) unwrapSdkContext(c context.Context) sdk.Context {
 	ctx := sdk.UnwrapSDKContext(c)
+	ctx = ctx.WithLogger(ctx.Logger().With("height", ctx.BlockHeight()))
 	if s.regInit {
 		return ctx
 	}
