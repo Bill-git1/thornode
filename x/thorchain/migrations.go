@@ -69,3 +69,8 @@ func (m Migrator) Migrate9to10(ctx sdk.Context) error {
 func (m Migrator) Migrate10to11(ctx sdk.Context) error {
 	return nil
 }
+
+// Migrate11to12 migrates from version 11 to 12.
+func (m Migrator) Migrate11to12(ctx sdk.Context) error {
+	return nil
+}

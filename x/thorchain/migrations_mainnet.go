@@ -291,3 +291,105 @@ func (m Migrator) Migrate9to10(ctx sdk.Context) error {
 func (m Migrator) Migrate10to11(ctx sdk.Context) error {
 	return nil
 }
+
+// Migrate11to12 migrates from version 11 to 12.
+func (m Migrator) Migrate11to12(ctx sdk.Context) error {
+	// loads the manager for this migration
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	// avax.usdc asset
+	avaxUSDC, err := common.NewAsset("AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E")
+	if err != nil {
+		return fmt.Errorf("failed to parse AVAX.USDC asset: %w", err)
+	}
+
+	// records to be removed
+	removeLPs := []LiquidityProvider{
+		// https://thornode-v2.ninerealms.com/cosmos/tx/v1beta1/txs/5BF8911A9DD947EC1EE7E990085ECB21DD7E395F152B5137F7CD73B76E46870A
+		{
+			RuneAddress:  "thor1pe0pspu4ep85gxr5h9l6k49g024vemtr80hg4c",
+			AssetAddress: "0x03c42ab083bd46202ee430AfC4D3dd8eD8c76c07",
+		},
+		// https://thornode-v2.ninerealms.com/cosmos/tx/v1beta1/txs/248CE4B07E6A63E8CA3E111754849DD560FA9F4BF83BF2FD0B0B40947633B1B9
+		{
+			RuneAddress:  "",
+			AssetAddress: "0x467a0ec2d2f23f0bb165eb7e44a9b16b12f5a7b4",
+		},
+		// affiliate position for the prior add liquidity transaction
+		{
+			RuneAddress:  "thor122h9hlrugzdny9ct95z6g7afvpzu34s73uklju",
+			AssetAddress: "",
+		},
+	}
+
+	// get the pool
+	pool, err := m.mgr.Keeper().GetPool(ctx, avaxUSDC)
+	if err != nil {
+		return fmt.Errorf("failed to get AVAX.USDC pool: %w", err)
+	}
+
+	for _, lp := range removeLPs {
+		// fetch the record
+		lp, err = m.mgr.Keeper().GetLiquidityProvider(ctx, avaxUSDC, lp.GetAddress())
+		if err != nil {
+			ctx.Logger().Error("failed to get liquidity provider ",
+				"error", err,
+				"rune_address", lp.RuneAddress,
+				"asset_address", lp.AssetAddress)
+			continue
+		}
+
+		// remove the units from the pool
+		pool.LPUnits = common.SafeSub(pool.LPUnits, lp.Units)
+		ctx.Logger().Info("adjusted pool LP units",
+			"asset", avaxUSDC.String(),
+			"removed_units", lp.Units.String(),
+			"new_pool_lp_units", pool.LPUnits.String())
+
+		// remove the record
+		m.mgr.Keeper().RemoveLiquidityProvider(ctx, lp)
+		ctx.Logger().Info("removed bad liquidity provider record",
+			"asset", avaxUSDC.String(),
+			"rune_address", lp.RuneAddress,
+			"asset_address", lp.AssetAddress,
+		)
+	}
+
+	// save the updated pool
+	if err := m.mgr.Keeper().SetPool(ctx, pool); err != nil {
+		return fmt.Errorf("failed to save updated pool: %w", err)
+	}
+
+	// remove obsolete/typo mimir keys
+	obsoleteMimirs := []string{
+		"HALTRADING",
+		"ADR012",
+		"ADR020",
+		"ADR18",
+		"DEPRECATEILP",
+		"FULLIMPLOSSPROTECTIONBLOCKS",
+		"ILPCUTOFF",
+		"KILLSWITCHSTART",
+		"PROPOSAL6",
+		"VOTEDOFM",
+		"VOTELENDING",
+		"VOTEMAXSYNTHSFORSAVERSYIELD",
+		"ENABLEAVAXCHAIN",
+		"ENABLEBSC",
+		"ENABLESAVINGSVAULTS",
+		"ADD-CHAIN-BASE",
+		"ADD-CHAIN-XRP",
+	}
+
+	for _, key := range obsoleteMimirs {
+		if err := m.mgr.Keeper().DeleteMimir(ctx, key); err != nil {
+			ctx.Logger().Error("failed to delete obsolete mimir", "key", key, "error", err)
+			continue
+		}
+		ctx.Logger().Info("deleted obsolete mimir", "key", key)
+	}
+
+	return nil
+}
