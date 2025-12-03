@@ -75,13 +75,18 @@ func newPipeline(concurrency int64) (*pipeline, error) {
 		return nil, fmt.Errorf("concurrency must be greater than 0")
 	}
 
+	// grant inactive vaults half the concurrency of active/retiring vaults
+	inactiveConcurrency := concurrency / 2
+	if inactiveConcurrency < 1 {
+		inactiveConcurrency = 1
+	}
+
 	return &pipeline{
 		concurrency: concurrency,
 		vaultStatusConcurrency: map[types.VaultStatus]semaphore{
 			types.VaultStatus_ActiveVault:   make(semaphore, int(concurrency)),
 			types.VaultStatus_RetiringVault: make(semaphore, int(concurrency)),
-			// TODO: consider reducing to 1 after 3.12 migrations
-			types.VaultStatus_InactiveVault: make(semaphore, int(concurrency)),
+			types.VaultStatus_InactiveVault: make(semaphore, int(inactiveConcurrency)),
 		},
 		vaultChainLock: make(map[vaultChain]chan struct{}),
 	}, nil
