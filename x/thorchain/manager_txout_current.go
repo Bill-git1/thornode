@@ -350,8 +350,66 @@ func (tos *TxOutStorageVCUR) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager,
 	return tos.addToBlockOut(ctx, mgr, toi, height)
 }
 
+// selectFallbackVault selects a vault to assign an outbound to when no vault has sufficient
+// available balance. This allows the outbound to enter the recovery flow (slasher will
+// reschedule or trigger reverse swap) rather than silently dropping the funds.
+// The vault with the highest balance of the required asset is selected, as long as it has
+// minimum gas to attempt signing.
+// Note: vaults passed here may have had pending outbounds deducted, so we fetch original
+// balances from the keeper to make selection decisions based on actual vault holdings.
+func (tos *TxOutStorageVCUR) selectFallbackVault(ctx cosmos.Context, toi TxOutItem, maxGasCoin common.Coin, vaults Vaults) Vault {
+	var bestVault Vault
+	bestAmount := cosmos.ZeroUint()
+
+	for _, vault := range vaults {
+		// Skip if vault is frozen for this chain
+		if len(vault.Frozen) > 0 {
+			chains, err := common.NewChains(vault.Frozen)
+			if err != nil {
+				ctx.Logger().Error("failed to convert chains", "error", err)
+				continue
+			}
+			if chains.Has(toi.Chain) {
+				continue
+			}
+		}
+
+		// Get the original vault from keeper to check actual balances
+		// (not the pending-outbound-deducted balances)
+		originalVault, err := tos.keeper.GetVault(ctx, vault.PubKey)
+		if err != nil {
+			ctx.Logger().Error("failed to get vault from keeper", "error", err)
+			continue
+		}
+
+		// Must have minimum gas asset to attempt signing (use original balance)
+		gasAsset := originalVault.GetCoin(toi.Chain.GetGasAsset())
+		if gasAsset.IsEmpty() || gasAsset.Amount.LT(maxGasCoin.Amount) {
+			continue
+		}
+
+		// Must have some amount of the required asset (use original balance)
+		vaultCoinAmount := originalVault.GetCoin(toi.Coin.Asset).Amount
+		if vaultCoinAmount.IsZero() {
+			continue
+		}
+
+		// Select the vault with the highest balance of the required asset
+		if vaultCoinAmount.GT(bestAmount) {
+			bestAmount = vaultCoinAmount
+			bestVault = originalVault
+		}
+	}
+
+	return bestVault
+}
+
 func (tos *TxOutStorageVCUR) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmount cosmos.Uint, maxGasCoin common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
 	var outputs []TxOutItem
+
+	// Save original vaults before any filtering for potential fallback selection.
+	// We need this because the sort logic below may filter out vaults with zero available balance.
+	originalVaults := vaults
 
 	// When there is more than one vault, sort the vaults by
 	// (as an integer) how many vaults of that size
@@ -455,6 +513,48 @@ func (tos *TxOutStorageVCUR) DiscoverOutbounds(ctx cosmos.Context, transactionFe
 			toi.Coin.Amount = remainingAmount
 		}
 	}
+
+	// If we still have remaining amount, handle it based on whether we have partial outputs.
+	// This allows the outbound to enter the recovery flow (slasher will reschedule or trigger reverse swap)
+	// rather than silently dropping the funds.
+	if !toi.Coin.Amount.IsZero() {
+		if len(outputs) == 0 {
+			// No outputs were created - select a fallback vault.
+			// Use originalVaults (not filtered by available balance) to find a vault that has the asset.
+			fallbackVault := tos.selectFallbackVault(ctx, toi, maxGasCoin, originalVaults)
+			if !fallbackVault.PubKey.IsEmpty() {
+				ctx.Logger().Info("selecting fallback vault for outbound with insufficient available balance",
+					"vault", fallbackVault.PubKey.String(),
+					"asset", toi.Coin.Asset.String(),
+					"amount", toi.Coin.Amount.String())
+				toi.VaultPubKey = fallbackVault.PubKey
+				toi.VaultPubKeyEddsa = fallbackVault.PubKeyEddsa
+				outputs = append(outputs, toi)
+				toi.Coin.Amount = cosmos.ZeroUint()
+			}
+		} else {
+			// Partial outputs exist but there's a remainder that couldn't be allocated.
+			// Add the remainder to the smallest output - this will cause that outbound to fail
+			// during signing (insufficient vault balance) and be rescheduled through the normal
+			// recovery flow until a vault has sufficient balance.
+			smallestIdx := 0
+			smallestAmount := outputs[0].Coin.Amount
+			for i := 1; i < len(outputs); i++ {
+				if outputs[i].Coin.Amount.LT(smallestAmount) {
+					smallestIdx = i
+					smallestAmount = outputs[i].Coin.Amount
+				}
+			}
+			ctx.Logger().Info("adding remainder to smallest output for recovery flow",
+				"vault", outputs[smallestIdx].VaultPubKey.String(),
+				"asset", toi.Coin.Asset.String(),
+				"original_amount", outputs[smallestIdx].Coin.Amount.String(),
+				"remainder", toi.Coin.Amount.String())
+			outputs[smallestIdx].Coin.Amount = outputs[smallestIdx].Coin.Amount.Add(toi.Coin.Amount)
+			toi.Coin.Amount = cosmos.ZeroUint()
+		}
+	}
+
 	return outputs, toi.Coin.Amount
 }
 

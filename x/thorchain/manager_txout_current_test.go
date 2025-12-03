@@ -1112,3 +1112,317 @@ func (s *TxOutStoreVCURSuite) TestSplitCloutRuneValueExceedingClouts(c *check.C)
 	c.Check(amountFromClout2.Equal(cosmos.NewUint(40)), check.Equals, true)
 	c.Check(remainingRune.Equal(cosmos.NewUint(40)), check.Equals, true)
 }
+
+func (s TxOutStoreVCURSuite) TestSelectFallbackVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Create three vaults with different ETH balances
+	vault1 := GetRandomVault()
+	vault1.Type = AsgardVault
+	vault1.Status = ActiveVault
+	vault1.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)), // Highest ETH balance
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault1), IsNil)
+
+	vault2 := GetRandomVault()
+	vault2.Type = AsgardVault
+	vault2.Status = ActiveVault
+	vault2.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault2), IsNil)
+
+	vault3 := GetRandomVault()
+	vault3.Type = AsgardVault
+	vault3.Status = ActiveVault
+	vault3.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(75*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault3), IsNil)
+
+	txOutStore := newTxOutStorageVCUR(mgr.Keeper(), mgr.GetConstants(), mgr.EventMgr(), mgr.GasMgr())
+
+	// Create a TxOutItem requesting more ETH than any single vault has
+	toi := TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    GetRandomTxHash(),
+		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)), // More than any vault has
+	}
+
+	maxGasCoin := common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))
+	vaults := Vaults{vault1, vault2, vault3}
+
+	// Test: selectFallbackVault should pick the vault with the highest balance
+	fallbackVault := txOutStore.selectFallbackVault(ctx, toi, maxGasCoin, vaults)
+	c.Assert(fallbackVault.PubKey.Equals(vault1.PubKey), Equals, true, Commentf("Expected vault1 (highest balance) to be selected"))
+}
+
+func (s TxOutStoreVCURSuite) TestSelectFallbackVaultSkipsFrozenChain(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Create a vault with highest balance but frozen for ETH chain
+	vault1 := GetRandomVault()
+	vault1.Type = AsgardVault
+	vault1.Status = ActiveVault
+	vault1.Frozen = []string{common.ETHChain.String()}
+	vault1.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault1), IsNil)
+
+	// Create a vault with lower balance but not frozen
+	vault2 := GetRandomVault()
+	vault2.Type = AsgardVault
+	vault2.Status = ActiveVault
+	vault2.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault2), IsNil)
+
+	txOutStore := newTxOutStorageVCUR(mgr.Keeper(), mgr.GetConstants(), mgr.EventMgr(), mgr.GasMgr())
+
+	toi := TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    GetRandomTxHash(),
+		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
+	}
+
+	maxGasCoin := common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))
+	vaults := Vaults{vault1, vault2}
+
+	// Test: selectFallbackVault should skip the frozen vault and pick vault2
+	fallbackVault := txOutStore.selectFallbackVault(ctx, toi, maxGasCoin, vaults)
+	c.Assert(fallbackVault.PubKey.Equals(vault2.PubKey), Equals, true, Commentf("Expected vault2 (not frozen) to be selected"))
+}
+
+func (s TxOutStoreVCURSuite) TestSelectFallbackVaultSkipsInsufficientGas(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Request a non-gas asset (use a token on ETH)
+	ethToken, err := common.NewAsset("ETH.USDC-0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")
+	c.Assert(err, IsNil)
+
+	// Create a vault with highest USDC balance but insufficient gas (no ETH)
+	vault1 := GetRandomVault()
+	vault1.Type = AsgardVault
+	vault1.Status = ActiveVault
+	vault1.Coins = common.Coins{
+		common.NewCoin(ethToken, cosmos.NewUint(100*common.One)), // High USDC but no ETH for gas
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault1), IsNil)
+
+	// Create a vault with lower USDC balance but has ETH for gas
+	vault2 := GetRandomVault()
+	vault2.Type = AsgardVault
+	vault2.Status = ActiveVault
+	vault2.Coins = common.Coins{
+		common.NewCoin(ethToken, cosmos.NewUint(50*common.One)),        // Lower USDC
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One)), // Has ETH for gas
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault2), IsNil)
+
+	txOutStore := newTxOutStorageVCUR(mgr.Keeper(), mgr.GetConstants(), mgr.EventMgr(), mgr.GasMgr())
+
+	toi := TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    GetRandomTxHash(),
+		Coin:      common.NewCoin(ethToken, cosmos.NewUint(200*common.One)),
+	}
+
+	// Require significant gas (in ETH, the gas asset)
+	maxGasCoin := common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))
+	vaults := Vaults{vault1, vault2}
+
+	// Test: selectFallbackVault should skip vault1 (no ETH for gas) and pick vault2
+	fallbackVault := txOutStore.selectFallbackVault(ctx, toi, maxGasCoin, vaults)
+	c.Assert(fallbackVault.PubKey.Equals(vault2.PubKey), Equals, true, Commentf("Expected vault2 (has gas) to be selected"))
+}
+
+func (s TxOutStoreVCURSuite) TestSelectFallbackVaultReturnsEmptyWhenNoValidVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Create a vault frozen for ETH
+	vault1 := GetRandomVault()
+	vault1.Type = AsgardVault
+	vault1.Status = ActiveVault
+	vault1.Frozen = []string{common.ETHChain.String()}
+	vault1.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault1), IsNil)
+
+	// Create a vault without the required asset
+	vault2 := GetRandomVault()
+	vault2.Type = AsgardVault
+	vault2.Status = ActiveVault
+	vault2.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(50*common.One)), // Wrong asset
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault2), IsNil)
+
+	txOutStore := newTxOutStorageVCUR(mgr.Keeper(), mgr.GetConstants(), mgr.EventMgr(), mgr.GasMgr())
+
+	toi := TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    GetRandomTxHash(),
+		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
+	}
+
+	maxGasCoin := common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))
+	vaults := Vaults{vault1, vault2}
+
+	// Test: selectFallbackVault should return empty vault when no valid vault
+	fallbackVault := txOutStore.selectFallbackVault(ctx, toi, maxGasCoin, vaults)
+	c.Assert(fallbackVault.PubKey.IsEmpty(), Equals, true, Commentf("Expected empty vault when no valid fallback"))
+}
+
+func (s TxOutStoreVCURSuite) TestDiscoverOutboundsFallbackVault(c *C) {
+	// Test that DiscoverOutbounds uses fallback vault when no vault has enough available balance.
+	// This simulates a scenario where pending outbounds have reduced the effective available balance.
+	SetupConfigForTest()
+	w := getHandlerTestWrapper(c, 1, true, true)
+
+	// Create a vault with some ETH
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One)),
+	}
+	c.Assert(w.keeper.SetVault(w.ctx, vault), IsNil)
+
+	acc1 := GetRandomValidatorNode(NodeActive)
+	acc2 := GetRandomValidatorNode(NodeActive)
+	acc3 := GetRandomValidatorNode(NodeActive)
+	c.Assert(w.keeper.SetNodeAccount(w.ctx, acc1), IsNil)
+	c.Assert(w.keeper.SetNodeAccount(w.ctx, acc2), IsNil)
+	c.Assert(w.keeper.SetNodeAccount(w.ctx, acc3), IsNil)
+
+	inTxID := GetRandomTxHash()
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
+			Tx:             GetRandomTx(),
+			Status:         common.Status_incomplete,
+			BlockHeight:    1,
+			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
+			KeysignMs:      0,
+			FinaliseHeight: 1,
+		},
+	})
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
+	// Test the selectFallbackVault function directly since the TryAddTxOutItem flow
+	// is more complex to test (requires setting up proper pending outbound tracking).
+	// The unit tests above verify selectFallbackVault works correctly,
+	// and this test verifies that DiscoverOutbounds calls it when no outputs are created.
+
+	txOutStore := newTxOutStorageVCUR(w.keeper, w.mgr.GetConstants(), w.mgr.EventMgr(), w.mgr.GasMgr())
+
+	// Create a TxOutItem for testing
+	toi := TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    inTxID,
+		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)), // More than vault has
+	}
+
+	// Create vaults with zero available balance (simulating pending outbound deduction)
+	vaultWithZeroAvailable := vault
+	vaultWithZeroAvailable.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()), // Zero after pending deduction
+	}
+	vaults := Vaults{vaultWithZeroAvailable}
+
+	maxGasCoin := common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))
+
+	// Call DiscoverOutbounds with a vault that has zero available balance
+	outputs, remaining := txOutStore.DiscoverOutbounds(w.ctx, cosmos.NewUint(1000), maxGasCoin, toi, vaults)
+
+	// Should have created one output using the fallback vault (which gets original balance from keeper)
+	c.Assert(outputs, HasLen, 1, Commentf("Expected 1 output from fallback vault, got %d", len(outputs)))
+	c.Assert(outputs[0].VaultPubKey.Equals(vault.PubKey), Equals, true, Commentf("Expected output to use original vault"))
+	// The remaining should be zero because the entire amount was assigned to the fallback vault
+	c.Assert(remaining.IsZero(), Equals, true, Commentf("Expected zero remaining, got %s", remaining.String()))
+}
+
+func (s TxOutStoreVCURSuite) TestDiscoverOutboundsRemainderAddedToSmallestOutput(c *C) {
+	// Test that when partial outputs exist but there's a remainder, the remainder
+	// is added to the smallest output to trigger the recovery flow.
+	ctx, mgr := setupManagerForTest(c)
+
+	// Create two vaults with different ETH balances that together can't cover the requested amount
+	vault1 := GetRandomVault()
+	vault1.Type = AsgardVault
+	vault1.Status = ActiveVault
+	vault1.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(30*common.One)), // Smaller balance
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault1), IsNil)
+
+	vault2 := GetRandomVault()
+	vault2.Type = AsgardVault
+	vault2.Status = ActiveVault
+	vault2.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One)), // Larger balance
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault2), IsNil)
+
+	txOutStore := newTxOutStorageVCUR(mgr.Keeper(), mgr.GetConstants(), mgr.EventMgr(), mgr.GasMgr())
+
+	// Request more ETH than both vaults combined have
+	// Total available: 30 + 50 = 80 ETH, requesting 100 ETH
+	toi := TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    GetRandomTxHash(),
+		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+
+	maxGasCoin := common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))
+	transactionFee := cosmos.NewUint(1000)
+
+	// The vaults are sorted by vaults-necessary (smallest number first means larger vaults first)
+	// vault2 (50 ETH) should be used first, then vault1 (30 ETH)
+	// After both: 50 + ~29 = ~79 ETH covered (minus fees), ~21 ETH remainder
+	vaults := Vaults{vault1, vault2}
+
+	outputs, remaining := txOutStore.DiscoverOutbounds(ctx, transactionFee, maxGasCoin, toi, vaults)
+
+	// Should have 2 outputs (both vaults used)
+	c.Assert(outputs, HasLen, 2, Commentf("Expected 2 outputs, got %d", len(outputs)))
+
+	// Find which output is from vault1 (smaller balance, should get remainder added)
+	var vault1Output, vault2Output *TxOutItem
+	for i := range outputs {
+		if outputs[i].VaultPubKey.Equals(vault1.PubKey) {
+			vault1Output = &outputs[i]
+		} else if outputs[i].VaultPubKey.Equals(vault2.PubKey) {
+			vault2Output = &outputs[i]
+		}
+	}
+	c.Assert(vault1Output, NotNil, Commentf("Expected output from vault1"))
+	c.Assert(vault2Output, NotNil, Commentf("Expected output from vault2"))
+
+	// vault2 output should be its available balance (50 ETH minus gas reservation)
+	expectedVault2Amount := cosmos.NewUint(49 * common.One) // 50 - 1 for max gas
+	c.Assert(vault2Output.Coin.Amount.Equal(expectedVault2Amount), Equals, true,
+		Commentf("Expected vault2 amount %s, got %s", expectedVault2Amount.String(), vault2Output.Coin.Amount.String()))
+
+	// vault1 output should have the remainder added to it
+	// Original: 100 - 49 = 51 ETH needed
+	// vault1 available: 29 ETH (30 - 1 for max gas)
+	// So vault1 takes 29, leaving 22 ETH remainder
+	// That 22 ETH remainder should be added to vault1's output (the smaller one)
+	// So vault1 output should be 29 + 22 = 51 ETH
+	expectedVault1Amount := cosmos.NewUint(51 * common.One)
+	c.Assert(vault1Output.Coin.Amount.Equal(expectedVault1Amount), Equals, true,
+		Commentf("Expected vault1 amount %s (with remainder), got %s", expectedVault1Amount.String(), vault1Output.Coin.Amount.String()))
+
+	// Remaining should be zero since we added the remainder to the smallest output
+	c.Assert(remaining.IsZero(), Equals, true, Commentf("Expected zero remaining, got %s", remaining.String()))
+}
