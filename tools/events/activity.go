@@ -665,7 +665,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 
 		// add the delta
 		delta := usdValue - inboundUSDValue
-		deltaBasisPoints := uint64(float64(delta) / inboundUSDValue * 10000)
+		deltaBasisPoints := int64(float64(delta) / inboundUSDValue * 10000)
 		deltaStr := fmt.Sprintf("%s (%.02f%%)", util.FormatUSD(delta), float64(delta)/inboundUSDValue*100)
 		if int(delta) > 0 {
 			// red triangle if perceived value increased

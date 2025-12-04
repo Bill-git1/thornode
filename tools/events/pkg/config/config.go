@@ -116,7 +116,7 @@ type Config struct {
 		// alert will fire if both thresholds are met.
 		SwapDelta struct {
 			USDValue    uint64 `mapstructure:"usd_value"`
-			BasisPoints uint64 `mapstructure:"basis_points"`
+			BasisPoints int64  `mapstructure:"basis_points"`
 		} `mapstructure:"swap_delta"`
 
 		Security struct {
