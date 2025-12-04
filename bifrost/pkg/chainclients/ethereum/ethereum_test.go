@@ -422,7 +422,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	e.ethScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-	pubkeys := pubkeyMgr.GetAlgoPubKeys(common.SigningAlgoSecp256k1)
+	pubkeys := pubkeyMgr.GetAlgoPubKeys(common.SigningAlgoSecp256k1, true)
 	addr, err := pubkeys[len(pubkeys)-1].GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 

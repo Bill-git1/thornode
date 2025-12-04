@@ -149,6 +149,11 @@ bifrost:
         max_healthy_lag: 30m
         transaction_batch_size: 500
         reference_address: ""
+        solana:
+          scan_interval: 15s
+          scan_inactive_vaults: false
+          fee_update_interval: 100
+          fee_sample_slots: 10
 
       # the following defaults must be defined to override with environment
       chain_host: ""

@@ -66,8 +66,9 @@ func (s *SolRPC) GetTransaction(signature string) (*TransactionResult, error) {
 	params := []interface{}{
 		signature,
 		map[string]interface{}{
-			"commitment": "finalized",
-			"encoding":   "json",
+			"commitment":                     "finalized",
+			"encoding":                       "json",
+			"maxSupportedTransactionVersion": 0,
 		},
 	}
 

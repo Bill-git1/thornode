@@ -640,6 +640,7 @@ func (b *thorchainBridge) getVaultPubkeys() ([]byte, error) {
 }
 
 // GetPubKeys retrieve vault pub keys and their relevant smart contracts
+// Returns both active and inactive vaults
 func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 	buf, err := b.getVaultPubkeys()
 	if err != nil {
@@ -650,34 +651,53 @@ func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 		return nil, fmt.Errorf("fail to unmarshal pubkeys: %w", err)
 	}
 	var addressPairs []PubKeyContractAddressPair
-	for _, v := range append(result.Asgard, result.Inactive...) {
+
+	// anonymous function to process a vault and add its pubkeys to addressPairs
+	processVault := func(v openapi.VaultInfo, inactive bool) {
 		membership := []common.PubKey{}
 		for _, item := range v.Membership {
 			membership = append(membership, common.PubKey(item))
 		}
+
+		// process eddsa pubkey if present
 		if v.PubKeyEddsa != nil && *v.PubKeyEddsa != "" {
 			kp := PubKeyContractAddressPair{
 				PubKey:     common.PubKey(*v.PubKeyEddsa),
 				Contracts:  make(map[common.Chain]common.Address),
 				Algo:       common.SigningAlgoEd25519,
 				Membership: membership,
+				Inactive:   inactive,
 			}
 			for _, item := range v.Routers {
 				kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
 			}
 			addressPairs = append(addressPairs, kp)
 		}
+
+		// process secp256k1 pubkey
 		kp := PubKeyContractAddressPair{
 			PubKey:     common.PubKey(v.PubKey),
 			Contracts:  make(map[common.Chain]common.Address),
 			Algo:       common.SigningAlgoSecp256k1,
 			Membership: membership,
+			Inactive:   inactive,
 		}
 		for _, item := range v.Routers {
 			kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
 		}
 		addressPairs = append(addressPairs, kp)
 	}
+
+	// process active vaults
+	for _, v := range result.Asgard {
+		processVault(v, false)
+	}
+
+	// process inactive vaults
+	for _, v := range result.Inactive {
+		processVault(v, true)
+	}
+
 	return addressPairs, nil
 }
 
@@ -819,6 +839,7 @@ type PubKeyContractAddressPair struct {
 	Contracts  map[common.Chain]common.Address
 	Algo       common.SigningAlgo
 	Membership []common.PubKey
+	Inactive   bool
 }
 
 // GetContractAddress retrieve the contract address from asgard

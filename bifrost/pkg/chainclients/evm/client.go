@@ -374,7 +374,7 @@ func (c *EVMClient) getSmartContractAddr(pubkey common.PubKey) common.Address {
 }
 
 func (c *EVMClient) getSmartContractByAddress(addr common.Address) common.Address {
-	for _, pk := range c.pubkeyMgr.GetAlgoPubKeys(c.cfg.ChainID.GetSigningAlgo()) {
+	for _, pk := range c.pubkeyMgr.GetAlgoPubKeys(c.cfg.ChainID.GetSigningAlgo(), true) {
 		evmAddr, err := pk.GetAddress(c.cfg.ChainID)
 		if err != nil {
 			c.logger.Warn().

@@ -35,8 +35,6 @@ import (
 const (
 	baseFeePerSigLamports = 5000 // "Base" fee per signature of a transaction
 
-	netFeeUpdateInterval = 100 // update network fee every 100 slots
-
 	transactionQueryLimit = 1000 // maximum number of transactions to query in a single request
 
 	maxConcurrentTxQueries = 5 // maximum number of concurrent tx queries to the RPC node
@@ -162,11 +160,11 @@ func (s *SOLScanner) Start() {
 	s.lastHeightMu.Unlock()
 
 	// initialize the network fee slot multiple to the closest multiple of NetFeeUpdateInterval beneath the initial slot
-	s.netFeeSlotMultiple = initialSlot / netFeeUpdateInterval
+	s.netFeeSlotMultiple = initialSlot / s.cfg.Solana.FeeUpdateInterval
 
 	// attempt to initialize the network fee. In simtest environment, we will not have enough tx history
 	// so the initial netfee will be sent upon first tx(s) observation
-	if err := s.checkRecentBlocksAndUpdateNetworkFee(s.netFeeSlotMultiple * netFeeUpdateInterval); err != nil {
+	if err := s.checkRecentBlocksAndUpdateNetworkFee(s.netFeeSlotMultiple * s.cfg.Solana.FeeUpdateInterval); err != nil {
 		s.logger.Error().Err(err).Msg("failed to check recent blocks and update network fee")
 	}
 
@@ -196,7 +194,7 @@ func (s *SOLScanner) scan() {
 	}
 
 	var vaultAddrs []string
-	for _, vault := range s.pubKeyMgr.GetAlgoPubKeys(common.SigningAlgoEd25519) {
+	for _, vault := range s.pubKeyMgr.GetAlgoPubKeys(common.SigningAlgoEd25519, s.cfg.Solana.ScanInactiveVaults) {
 		vaultAddrSol, err := vault.GetAddress(common.SOLChain)
 		if err != nil {
 			s.logger.Error().Err(err).Msg("failed to get vault address")
@@ -212,7 +210,7 @@ func (s *SOLScanner) scan() {
 		return
 	}
 
-	if currentSlot > (s.netFeeSlotMultiple+1)*netFeeUpdateInterval {
+	if currentSlot > (s.netFeeSlotMultiple+1)*s.cfg.Solana.FeeUpdateInterval {
 		var thorRate uint64
 		_, thorRate, err = s.bridge.GetNetworkFee(common.SOLChain)
 		if err != nil {
@@ -223,8 +221,8 @@ func (s *SOLScanner) scan() {
 
 		// we crossed the threshold for updating the network fee, so check the last N blocks
 		//  up to the rounded slot for deterministic behavior across nodes.
-		s.netFeeSlotMultiple = currentSlot / netFeeUpdateInterval
-		if err = s.checkRecentBlocksAndUpdateNetworkFee(s.netFeeSlotMultiple * netFeeUpdateInterval); err != nil {
+		s.netFeeSlotMultiple = currentSlot / s.cfg.Solana.FeeUpdateInterval
+		if err = s.checkRecentBlocksAndUpdateNetworkFee(s.netFeeSlotMultiple * s.cfg.Solana.FeeUpdateInterval); err != nil {
 			s.logger.Error().Err(err).Msg("failed to check recent blocks and update network fee")
 		}
 	}
@@ -233,8 +231,17 @@ func (s *SOLScanner) scan() {
 	lastSlot := s.lastHeight
 	s.lastHeightMu.RUnlock()
 
-	if currentSlot == lastSlot {
-		time.Sleep(200 * time.Millisecond)
+	// skip if rpc slot is behind last scanned slot
+	if currentSlot <= lastSlot {
+		time.Sleep(s.cfg.Solana.ScanInterval)
+		return
+	}
+
+	// coalesce scan to configured scan interval
+	solanaBlockTime := time.Duration(common.SOLChain.ApproximateBlockMilliseconds()) * time.Millisecond
+	lag := time.Duration(currentSlot-lastSlot) * solanaBlockTime
+	if lag < s.cfg.Solana.ScanInterval {
+		time.Sleep(s.cfg.Solana.ScanInterval)
 		return
 	}
 
@@ -471,8 +478,8 @@ func (s *SOLScanner) checkRecentBlocksAndUpdateNetworkFee(slot uint64) error {
 	var lastSlot uint64
 
 	var firstSlot uint64
-	if slot > 100 {
-		firstSlot = slot - 100
+	if slot > s.cfg.Solana.FeeSampleSlots {
+		firstSlot = slot - s.cfg.Solana.FeeSampleSlots
 	}
 
 	blocks, err := s.solRpc.GetBlockHeights(firstSlot, slot)
@@ -506,8 +513,8 @@ func (s *SOLScanner) checkRecentBlocksAndUpdateNetworkFee(slot uint64) error {
 			lastSlot = b
 		}
 
-		txIn := s.getTxIn(b, block.Transactions)
-		numTxs += len(txIn.TxArray)
+		numTxsInBlock := s.calculateFeeRatesFromTransactions(block.Transactions)
+		numTxs += numTxsInBlock
 
 		if numTxs > s.cfg.GasCacheBlocks {
 			// We have enough transactions to calculate the network fee
@@ -639,9 +646,6 @@ func (s *SOLScanner) getTxIn(slot uint64, transactions []*rpc.TransactionResult)
 		ConfirmationRequired: 1, // Assuming 1 confirmation is required
 	}
 
-	// Stores each transaction's fee rate (lamports per signature)
-	txFeeRates := []uint64{}
-
 	for _, txn := range transactions {
 		// Skip transactions with no signatures or no fee
 		if len(txn.Transaction.Signatures) == 0 || txn.Meta.Fee == 0 {
@@ -654,27 +658,6 @@ func (s *SOLScanner) getTxIn(slot uint64, transactions []*rpc.TransactionResult)
 		}
 
 		txIn.TxArray = append(txIn.TxArray, txItem)
-
-		// Calculate the fee rate (lamports per signature)
-		numSigs := uint64(len(txn.Transaction.Signatures))
-		// baseFee := BaseFeePerSigLamports * numSigs
-		feeRate := txn.Meta.Fee / numSigs
-		if feeRate < baseFeePerSigLamports {
-			feeRate = baseFeePerSigLamports
-		}
-
-		txFeeRates = append(txFeeRates, feeRate)
-	}
-
-	switch {
-	case len(txFeeRates) == 1:
-		s.feeRateCache = append(s.feeRateCache, txFeeRates[0])
-	case len(txFeeRates) > 1:
-		medianFeeRate := calculateMedian(txFeeRates)
-		s.feeRateCache = append(s.feeRateCache, medianFeeRate)
-	case len(txFeeRates) == 0:
-		// If no transactions in the block, just add the base fee
-		s.feeRateCache = append(s.feeRateCache, baseFeePerSigLamports)
 	}
 
 	return txIn
@@ -688,6 +671,50 @@ func calculateMedian(arr []uint64) uint64 {
 		return (arr[n/2-1] + arr[n/2]) / 2
 	}
 	return arr[n/2]
+}
+
+// calculateFeeRatesFromTransactions extracts fee rates from transactions for network fee calculation.
+// Unlike getTxIn, this does not validate transactions or filter for THORChain inbounds.
+// It processes ALL transactions in the block to get an accurate network fee measurement.
+func (s *SOLScanner) calculateFeeRatesFromTransactions(transactions []*rpc.TransactionResult) int {
+	txFeeRates := []uint64{}
+
+	for _, txn := range transactions {
+		// skip transactions with no signatures or no fee
+		if len(txn.Transaction.Signatures) == 0 || txn.Meta.Fee == 0 {
+			continue
+		}
+
+		// skip failed transactions
+		if txn.Meta.Err != nil {
+			continue
+		}
+
+		// calculate the fee rate (lamports per signature)
+		numSigs := uint64(len(txn.Transaction.Signatures))
+		feeRate := txn.Meta.Fee / numSigs
+
+		// rate may underestimate in cases like multi-sig transactions, floor to base fee
+		if feeRate < baseFeePerSigLamports {
+			feeRate = baseFeePerSigLamports
+		}
+
+		txFeeRates = append(txFeeRates, feeRate)
+	}
+
+	// update the fee rate cache
+	switch {
+	case len(txFeeRates) == 1:
+		s.feeRateCache = append(s.feeRateCache, txFeeRates[0])
+	case len(txFeeRates) > 1:
+		medianFeeRate := calculateMedian(txFeeRates)
+		s.feeRateCache = append(s.feeRateCache, medianFeeRate)
+	case len(txFeeRates) == 0:
+		// if no transactions in the block, just add the base fee
+		s.feeRateCache = append(s.feeRateCache, baseFeePerSigLamports)
+	}
+
+	return len(txFeeRates)
 }
 
 // Create a TxInItem for a SOL transfer transaction. This function will only return a
@@ -758,6 +785,14 @@ func (s *SOLScanner) getTxInItem(txn *rpc.TransactionResult, blockHeight int64) 
 			fromAccount = txn.Transaction.Message.AccountKeys[fromIdx]
 			toAccount = txn.Transaction.Message.AccountKeys[toIdx]
 
+			// verify prebalance is greater than postbalance to avoid underflow
+			if txn.Meta.PreBalances[fromIdx] < txn.Meta.PostBalances[fromIdx] {
+				s.logger.Debug().
+					Str("txid", txn.Transaction.Signatures[0]).
+					Msg("skipping tx with prebalance less than postbalance")
+				return nil
+			}
+
 			amountMoved = txn.Meta.PreBalances[fromIdx] - txn.Meta.PostBalances[fromIdx]
 
 			// Adjust for fee if fromAccount is the fee payer
@@ -781,8 +816,8 @@ func (s *SOLScanner) getTxInItem(txn *rpc.TransactionResult, blockHeight int64) 
 		return nil
 	}
 
-	solCoin := common.NewCoin(common.SOLAsset, convertLamportsToTHORChain(int64(amountMoved)))
-	gasCoin := common.NewCoin(common.SOLAsset, convertLamportsToTHORChain(int64(fee)))
+	solCoin := common.NewCoin(common.SOLAsset, convertLamportsToTHORChain(amountMoved))
+	gasCoin := common.NewCoin(common.SOLAsset, convertLamportsToTHORChain(fee))
 	solCoin.Decimals = 9
 	gasCoin.Decimals = 9
 
@@ -799,8 +834,8 @@ func (s *SOLScanner) getTxInItem(txn *rpc.TransactionResult, blockHeight int64) 
 
 // --------------------------------- helpers ---------------------------------
 
-// Function to convert amountMoved (lamports) to sdk.Uintt
-func convertLamportsToTHORChain(amountMoved int64) sdk.Uint {
-	amountMovedBig := big.NewInt(amountMoved)
-	return sdk.NewUintFromBigInt(amountMovedBig.Quo(amountMovedBig, big.NewInt(10)))
+// Function to convert lamports to sdk.Uint
+func convertLamportsToTHORChain(lamports uint64) sdk.Uint {
+	lamportsBig := new(big.Int).SetUint64(lamports)
+	return sdk.NewUintFromBigInt(lamportsBig.Quo(lamportsBig, big.NewInt(10)))
 }

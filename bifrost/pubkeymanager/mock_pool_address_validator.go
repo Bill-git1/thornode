@@ -14,8 +14,11 @@ func NewMockPoolAddressValidator() *MockPoolAddressValidator {
 	return &MockPoolAddressValidator{}
 }
 
-func (mpa *MockPoolAddressValidator) GetPubKeys() common.PubKeys                         { return nil }
-func (mpa *MockPoolAddressValidator) GetAlgoPubKeys(_ common.SigningAlgo) common.PubKeys { return nil }
+func (mpa *MockPoolAddressValidator) GetPubKeys() common.PubKeys { return nil }
+func (mpa *MockPoolAddressValidator) GetAlgoPubKeys(_ common.SigningAlgo, _ bool) common.PubKeys {
+	return nil
+}
+
 func (mpa *MockPoolAddressValidator) GetSignPubKeys() common.PubKeys {
 	pubKey, _ := common.NewPubKey(MockPubkey)
 	return common.PubKeys{pubKey}

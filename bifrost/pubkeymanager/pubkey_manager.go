@@ -28,7 +28,7 @@ type PubKeyValidator interface {
 	GetSignPubKeys() common.PubKeys
 	GetNodePubKey(algo common.SigningAlgo) common.PubKey
 	GetPubKeys() common.PubKeys
-	GetAlgoPubKeys(algo common.SigningAlgo) common.PubKeys
+	GetAlgoPubKeys(algo common.SigningAlgo, includeInactive bool) common.PubKeys
 	RegisterCallback(callback OnNewPubKey)
 	GetContracts(chain common.Chain) []common.Address
 	GetContract(chain common.Chain, pk common.PubKey) common.Address
@@ -41,6 +41,7 @@ type pubKeyInfo struct {
 	Signer      bool
 	NodeAccount bool
 	Algo        common.SigningAlgo
+	Inactive    bool
 }
 
 // PubKeyManager manager an always up to date pubkeys , which implement PubKeyValidator interface
@@ -106,12 +107,15 @@ func (pkm *PubKeyManager) GetPubKeys() common.PubKeys {
 }
 
 // GetAlgoPubKeys return all the public keys managed by this PubKeyManager
-func (pkm *PubKeyManager) GetAlgoPubKeys(algo common.SigningAlgo) common.PubKeys {
+func (pkm *PubKeyManager) GetAlgoPubKeys(algo common.SigningAlgo, includeInactive bool) common.PubKeys {
 	pkm.rwMutex.RLock()
 	defer pkm.rwMutex.RUnlock()
 	var pubkeys common.PubKeys
 	for _, pk := range pkm.pubkeys {
 		if pk.Algo != algo {
+			continue
+		}
+		if !includeInactive && pk.Inactive {
 			continue
 		}
 		pubkeys = append(pubkeys, pk.PubKey)
@@ -163,16 +167,22 @@ func (pkm *PubKeyManager) hasPubKeyNoLock(pk common.PubKey) bool {
 
 // AddPubKey add the given public key to internal storage
 func (pkm *PubKeyManager) AddPubKey(pk common.PubKey, signer bool, algo common.SigningAlgo) {
+	pkm.addPubKeyInternal(pk, signer, algo, false)
+}
+
+// addPubKeyInternal add the given public key to internal storage with inactive flag
+func (pkm *PubKeyManager) addPubKeyInternal(pk common.PubKey, signer bool, algo common.SigningAlgo, inactive bool) {
 	pkm.rwMutex.Lock()
 	defer pkm.rwMutex.Unlock()
 
 	if pkm.hasPubKeyNoLock(pk) {
-		// pubkey already exists, update the signer... but only if signer is true
-		if signer {
-			for i, pubkey := range pkm.pubkeys {
-				if pk.Equals(pubkey.PubKey) {
+		// pubkey already exists, update the signer and inactive status
+		for i, pubkey := range pkm.pubkeys {
+			if pk.Equals(pubkey.PubKey) {
+				if signer {
 					pkm.pubkeys[i].Signer = signer
 				}
+				pkm.pubkeys[i].Inactive = inactive
 			}
 		}
 	} else {
@@ -183,6 +193,7 @@ func (pkm *PubKeyManager) AddPubKey(pk common.PubKey, signer bool, algo common.S
 			Signer:      signer,
 			NodeAccount: false,
 			Contracts:   map[common.Chain]common.Address{},
+			Inactive:    inactive,
 		})
 		pkm.fireCallback(pk)
 	}
@@ -250,7 +261,7 @@ func (pkm *PubKeyManager) fetchPubKeys(prune bool) {
 				break
 			}
 		}
-		pkm.AddPubKey(pk.PubKey, signer, pk.Algo)
+		pkm.addPubKeyInternal(pk.PubKey, signer, pk.Algo, pk.Inactive)
 		pubkeys = append(pubkeys, pk.PubKey)
 	}
 	pkm.updateContractAddresses(addressPairs)

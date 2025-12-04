@@ -946,6 +946,22 @@ type BifrostBlockScannerConfiguration struct {
 	// ReferenceAddress is needed for calculating TRC20 fees on Tron blockchain
 	// The default address is pre-funded with 1 TRX & 1 USDT, see config.yaml
 	ReferenceAddress string `mapstructure:"reference_address"`
+
+	// Solana contains Solana-specific scanner configuration.
+	Solana struct {
+		// ScanInterval is the duration between each scan of the vaults.
+		ScanInterval time.Duration `mapstructure:"scan_interval"`
+
+		// ScanInactiveVaults indicates whether to scan inactive vaults. This is most likely
+		// cost-prohibitive on Solana due to the cost of provider RPC calls.
+		ScanInactiveVaults bool `mapstructure:"scan_inactive_vaults"`
+
+		// FeeUpdateInterval is the number of slots between network fee updates.
+		FeeUpdateInterval uint64 `mapstructure:"fee_update_interval"`
+
+		// FeeSampleSlots is the number of slots to sample for network fee calculation.
+		FeeSampleSlots uint64 `mapstructure:"fee_sample_slots"`
+	} `mapstructure:"solana"`
 }
 
 type BifrostClientConfiguration struct {
