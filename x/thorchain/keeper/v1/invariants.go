@@ -325,8 +325,9 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 							swap.State.Deposit.String()))
 					}
 
-					// Check count doesn't exceed quantity
-					if swap.State.Count > swap.State.Quantity {
+					// Check count doesn't exceed quantity (skip for limit swaps - they can exceed
+					// quantity when sub-swaps fail due to insufficient balance)
+					if swap.State.Count > swap.State.Quantity && !swap.IsLimitSwap() {
 						broken = true
 						msg = append(msg, fmt.Sprintf(
 							"%s: state.count %d > state.quantity %d",

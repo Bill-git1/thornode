@@ -470,7 +470,41 @@ func (p *parser) getCoin(idx int, required bool, def common.Coin) common.Coin {
 	p.incRequired(required)
 	coinStr := p.get(idx)
 
-	// Parse using cosmos.ParseCoins
+	// Check if the coin string contains special separators for trade assets (~),
+	// synths (/), or secured assets (-). These are not valid in cosmos.ParseCoins
+	// but are valid THORChain assets that need custom parsing via common.ParseCoin.
+	if strings.ContainsAny(coinStr, "~/-") {
+		// common.ParseCoin expects format "<amount> <asset>" with a space,
+		// but memo format is "<amount><asset>" without a space.
+		// Find where digits end and insert a space.
+		i := 0
+		for i < len(coinStr) && (coinStr[i] >= '0' && coinStr[i] <= '9') {
+			i++
+		}
+
+		if i == 0 || i == len(coinStr) {
+			if required || coinStr != "" {
+				p.addErr(fmt.Errorf("cannot parse '%s' as coin: invalid format", coinStr))
+			}
+			return def
+		}
+
+		// Insert space between amount and asset
+		coinStrWithSpace := coinStr[:i] + " " + coinStr[i:]
+
+		// Use common.ParseCoin which handles trade assets, synths, and secured assets
+		coin, err := common.ParseCoin(coinStrWithSpace)
+		if err != nil {
+			if required || coinStr != "" {
+				p.addErr(fmt.Errorf("cannot parse '%s' as coin: %w", coinStr, err))
+			}
+			return def
+		}
+
+		return coin
+	}
+
+	// Use standard cosmos.ParseCoins for regular assets (backward compatibility)
 	coins, err := cosmos.ParseCoins(coinStr)
 	if err != nil {
 		if required || coinStr != "" {

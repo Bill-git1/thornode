@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"fmt"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
@@ -104,6 +106,10 @@ func (s *TradeMgrVCUR) Withdrawal(ctx cosmos.Context, asset common.Asset, amount
 	// tokensToClaim is the exact amount to be withdrawn from those unitsToClaim,
 	// capped at the account's assetAvailable.
 	tokensToClaim := common.GetSafeShare(unitsToClaim, tr.Units, assetAvailable)
+
+	if tokensToClaim.IsZero() {
+		return cosmos.ZeroUint(), fmt.Errorf("insufficient trade asset balance for %s: requested %s, available %s", asset, amount, assetAvailable)
+	}
 
 	tu.Units = common.SafeSub(tu.Units, unitsToClaim)
 	tr.Units = common.SafeSub(tr.Units, unitsToClaim)

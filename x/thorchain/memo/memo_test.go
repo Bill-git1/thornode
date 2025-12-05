@@ -323,6 +323,17 @@ func (s *MemoSuite) TestParseWithAbbreviated(c *C) {
 	c.Check(modMemo.Target.Equals(common.NewCoin(common.ETHAsset, cosmos.NewUint(1003))), Equals, true)
 	c.Check(modMemo.ModifiedTargetAmount.Uint64(), Equals, uint64(900))
 
+	// Test modify limit swap with trade assets
+	memo, err = ParseMemoWithTHORNames(ctx, k, "m=<:10000000BTC~BTC:50000000ETH~ETH:40000000")
+	c.Assert(err, IsNil)
+	modMemo, ok = memo.(ModifyLimitSwapMemo)
+	c.Assert(ok, Equals, true)
+	btcTradeAsset, _ := common.NewAsset("BTC~BTC")
+	ethTradeAsset, _ := common.NewAsset("ETH~ETH")
+	c.Check(modMemo.Source.Equals(common.NewCoin(btcTradeAsset, cosmos.NewUint(10000000))), Equals, true)
+	c.Check(modMemo.Target.Equals(common.NewCoin(ethTradeAsset, cosmos.NewUint(50000000))), Equals, true)
+	c.Check(modMemo.ModifiedTargetAmount.Uint64(), Equals, uint64(40000000))
+
 	memo, err = ParseMemoWithTHORNames(ctx, k, "REFUND:MUKVQILIHIAUSEOVAXBFEZAJKYHFJYHRUUYGQJZGFYBYVXCXYNEMUOAIQKFQLLCX")
 	c.Assert(err, IsNil)
 	c.Check(memo.IsType(TxRefund), Equals, true)

@@ -154,6 +154,10 @@ func (s *SecuredAssetMgrVCUR) Withdraw(
 	// Calculate share tokens to redeem (burn) as a percentage of the total account balance
 	burnAmt := common.GetSafeShare(amount, assetAvailable, shareBalance)
 
+	if burnAmt.IsZero() {
+		return common.NoCoin, fmt.Errorf("insufficient secured asset balance for %s: requested %s, available %s", asset, amount, assetAvailable)
+	}
+
 	coin := common.NewCoin(asset, burnAmt)
 	coins := common.NewCoins(coin)
 

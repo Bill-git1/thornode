@@ -1099,6 +1099,81 @@ func (s AdvSwapQueueVCURSuite) TestCheckWithFeeSwap(c *C) {
 	}
 	result = vm.checkWithFeeSwap(ctx, mgr, pools, msg)
 	c.Assert(result, Equals, false)
+
+	// Test 7: Streaming limit swap with quantity > 1
+	// This tests that checkWithFeeSwap correctly uses NextSize() for validation
+	msg = types.MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(5*common.One))}, // 5 ETH total deposit
+		},
+		TargetAsset:          common.BTCAsset,
+		TradeTarget:          cosmos.NewUint(20000000), // 0.2 BTC total target
+		AffiliateBasisPoints: cosmos.ZeroUint(),
+		SwapType:             types.SwapType_limit,
+		State: &types.SwapState{
+			Quantity:  5,                              // 5 sub-swaps
+			Deposit:   cosmos.NewUint(5 * common.One), // 5 ETH deposit
+			In:        cosmos.ZeroUint(),              // nothing swapped yet
+			Out:       cosmos.ZeroUint(),              // nothing emitted yet
+			Withdrawn: cosmos.ZeroUint(),              // nothing withdrawn yet
+			Count:     0,                              // first sub-swap
+		},
+	}
+	// NextSize() will return (1 ETH, 0.04 BTC) for the first sub-swap
+	// With ETH at 10 RUNE/ETH and BTC at 200 RUNE/BTC:
+	// - 1 ETH should emit approximately 0.0495 BTC (before fees)
+	// - This should pass since 0.0495 > 0.04
+	result = vm.checkWithFeeSwap(ctx, mgr, pools, msg)
+	c.Assert(result, Equals, true)
+
+	// Test 8: Streaming swap where sub-swap doesn't meet proportional target
+	msg = types.MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(5*common.One))}, // 5 ETH total
+		},
+		TargetAsset:          common.BTCAsset,
+		TradeTarget:          cosmos.NewUint(50000000), // 0.5 BTC total (too high to achieve)
+		AffiliateBasisPoints: cosmos.ZeroUint(),
+		SwapType:             types.SwapType_limit,
+		State: &types.SwapState{
+			Quantity:  5,                              // 5 sub-swaps
+			Deposit:   cosmos.NewUint(5 * common.One), // 5 ETH deposit
+			In:        cosmos.ZeroUint(),
+			Out:       cosmos.ZeroUint(),
+			Withdrawn: cosmos.ZeroUint(),
+			Count:     0,
+		},
+	}
+	// NextSize() will return (1 ETH, 0.1 BTC) for each sub-swap
+	// - 1 ETH should emit approximately 0.0495 BTC
+	// - This should fail since 0.0495 < 0.1
+	result = vm.checkWithFeeSwap(ctx, mgr, pools, msg)
+	c.Assert(result, Equals, false)
+
+	// Test 9: Streaming swap on later sub-swap (count > 0)
+	msg = types.MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))}, // 10 ETH total
+		},
+		TargetAsset:          common.BTCAsset,
+		TradeTarget:          cosmos.NewUint(40000000), // 0.4 BTC total
+		AffiliateBasisPoints: cosmos.ZeroUint(),
+		SwapType:             types.SwapType_limit,
+		State: &types.SwapState{
+			Quantity:  10,                              // 10 sub-swaps
+			Deposit:   cosmos.NewUint(10 * common.One), // 10 ETH deposit
+			In:        cosmos.NewUint(3 * common.One),  // 3 ETH already swapped
+			Out:       cosmos.NewUint(12000000),        // 0.12 BTC already emitted
+			Withdrawn: cosmos.ZeroUint(),
+			Count:     3, // 4th sub-swap (0-indexed, so count=3)
+		},
+	}
+	// NextSize() will return (1 ETH, 0.04 BTC) for the next sub-swap
+	// - Remaining: 7 ETH, targeting 0.28 BTC
+	// - This sub-swap: 1 ETH, targeting 0.04 BTC
+	// - Should emit approximately 0.0495 BTC, which passes 0.04 target
+	result = vm.checkWithFeeSwap(ctx, mgr, pools, msg)
+	c.Assert(result, Equals, true)
 }
 
 func (s AdvSwapQueueVCURSuite) TestDiscoverLimitSwaps(c *C) {

@@ -320,14 +320,17 @@ func (vm *SwapQueueAdvVCUR) checkWithFeeSwap(ctx cosmos.Context, mgr Manager, po
 		panic(err)
 	}
 
+	// Get the next swap size and proportional target for streaming swaps
+	swapSize, proportionalTarget := msg.NextSize()
+
 	// account for affiliate fee
-	source := msg.Tx.Coins[0]
+	source := common.NewCoin(msg.Tx.Coins[0].Asset, swapSize)
 	if !msg.AffiliateBasisPoints.IsZero() {
 		maxBasisPoints := cosmos.NewUint(10_000)
 		source.Amount = common.GetSafeShare(common.SafeSub(maxBasisPoints, msg.AffiliateBasisPoints), maxBasisPoints, source.Amount)
 	}
 
-	target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
+	target := common.NewCoin(msg.TargetAsset, proportionalTarget)
 	var emit cosmos.Uint
 	switch {
 	case !source.IsRune() && !target.IsRune():
@@ -356,7 +359,6 @@ func (vm *SwapQueueAdvVCUR) checkWithFeeSwap(ctx cosmos.Context, mgr Manager, po
 	}
 
 	// Check if this would be the last swap by temporarily simulating the state after this swap
-	swapSize, _ := msg.NextSize()
 	wouldBeLastSwap := false
 	if msg.SwapType == MarketSwap {
 		// For market swaps, check if count+1 >= quantity. We do >= instead of == just in case
