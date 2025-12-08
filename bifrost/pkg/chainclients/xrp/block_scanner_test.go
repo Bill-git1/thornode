@@ -100,7 +100,42 @@ func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
 		logger: log.Logger.With().Str("module", "blockscanner").Str("chain", common.XRPChain.String()).Logger(),
 	}
 
-	tx := map[string]any{
+	// 1. Decisively below threshold: 0.5 XRP (500,000 drops)
+	txBelow := map[string]any{
+		"tx_json": map[string]any{
+			"Account":         "rs3xN42EFLE23gUDG2Rw4rwxhR9MnjwZKQ",
+			"Destination":     "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm",
+			"Fee":             "20",
+			"SigningPubKey":   "03dd7eb4b0479d2898cabdd4ccfd30f2277e57cb9c13ccabb8ec5170ed13dd149a",
+			"TransactionType": "Payment",
+		},
+		"hash": "HASH_BELOW",
+		"meta": map[string]any{
+			"TransactionResult": "tesSUCCESS",
+			"delivered_amount":  "500000", // 0.5 XRP
+		},
+		"validated": true,
+	}
+
+	// 2. One drop below threshold: 0.999999 XRP (999,999 drops)
+	txOneDropBelow := map[string]any{
+		"tx_json": map[string]any{
+			"Account":         "rs3xN42EFLE23gUDG2Rw4rwxhR9MnjwZKQ",
+			"Destination":     "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm",
+			"Fee":             "20",
+			"SigningPubKey":   "03dd7eb4b0479d2898cabdd4ccfd30f2277e57cb9c13ccabb8ec5170ed13dd149a",
+			"TransactionType": "Payment",
+		},
+		"hash": "HASH_ONE_DROP_BELOW",
+		"meta": map[string]any{
+			"TransactionResult": "tesSUCCESS",
+			"delivered_amount":  "999999", // 0.999999 XRP
+		},
+		"validated": true,
+	}
+
+	// 3. Exact threshold: 1.0 XRP (1,000,000 drops)
+	txExact := map[string]any{
 		"tx_json": map[string]any{
 			"Account":     "rs3xN42EFLE23gUDG2Rw4rwxhR9MnjwZKQ",
 			"Destination": "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm",
@@ -115,19 +150,21 @@ func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
 			"SigningPubKey":   "03dd7eb4b0479d2898cabdd4ccfd30f2277e57cb9c13ccabb8ec5170ed13dd149a",
 			"TransactionType": "Payment",
 		},
-		"hash": "0123456789ABCDEF",
+		"hash": "HASH_EXACT",
 		"meta": map[string]any{
 			"TransactionResult": "tesSUCCESS",
-			"delivered_amount":  "1000000",
+			"delivered_amount":  "1000000", // 1.0 XRP
 		},
 		"validated": true,
 	}
 
-	txInItems, err := blockScanner.processTxs(1, []transaction.FlatTransaction{tx})
+	txInItems, err := blockScanner.processTxs(1, []transaction.FlatTransaction{txBelow, txOneDropBelow, txExact})
 	c.Assert(err, IsNil)
 
-	// proccessTxs should filter out everything besides the valid Payments
+	// processTxs should filter out the first two transactions (below threshold)
+	// and only return the third one (exact threshold)
 	c.Assert(len(txInItems), Equals, 1)
+	c.Assert(txInItems[0].Tx, Equals, "HASH_EXACT")
 	c.Assert(txInItems[0].Memo, Equals, "hello")
 }
 

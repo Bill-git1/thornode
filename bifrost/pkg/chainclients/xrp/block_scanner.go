@@ -270,6 +270,10 @@ func (c *XrpBlockScanner) processTxs(height int64, rawTxs []transaction.FlatTran
 			continue
 		}
 		coins := common.Coins{coin}
+		if coin.Amount.LT(c.cfg.ChainID.DustThreshold()) {
+			c.logger.Debug().Str("tx_hash", hash).Msg("dropping tx below dust threshold")
+			continue
+		}
 
 		txIn = append(txIn, &types.TxInItem{
 			Tx:          hash,
