@@ -37,6 +37,7 @@
 
   - [Vault Behaviors](bifrost/vault-behaviors.md)
   - [Oracles](bifrost/oracle.md)
+  - [TSS](bifrost/tss.md)
 
 - [Chain Clients](chain-clients/README.md)
 

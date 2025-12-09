@@ -15,6 +15,9 @@ assets_version = "3.0.2"    # do not edit: managed by `mdbook-admonish install`
 
 [preprocessor.embed]
 
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
 [output.html]
 default-theme = "latte"
 preferred-dark-theme = "coal"
@@ -26,6 +29,7 @@ additional-css = [
   "./theme/mdbook-admonish.css",
   "./theme/catppuccin-admonish.css",
 ]
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
 
 # Used for link checking
 # [output.linkcheck]

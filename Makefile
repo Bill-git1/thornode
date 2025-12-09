@@ -137,7 +137,9 @@ docs-init:
 	@cargo install mdbook-admonish --version 1.18.0
 	@cargo install mdbook-katex --version 0.9.4
 	@cargo install mdbook-embed --version 0.2.0
+	@cargo install mdbook-mermaid --version 0.14.0
 	@cd docs && mdbook-admonish install --css-dir theme
+	@cd docs && mdbook-mermaid install
 
 docs-generate: docs-init
 	@cd docs && mdbook build -d ../public

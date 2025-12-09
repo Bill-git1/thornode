@@ -47,18 +47,22 @@ This dynamic selection prioritizes security, distributes inbound load across vau
 
 ## TSS Signing
 
-THORChain uses **Threshold Signature Scheme (TSS)** to enable vault signing without ever reconstructing the private key. This allows a group of validator nodes to jointly sign transactions in a secure, decentralised manner. This mechanism is efficient and assumes that at least 67% of signing nodes act honestly and have access to accurate chain state.
+THORChain uses [**Threshold Signature Scheme (TSS)**](tss.md) to enable vault signing without ever reconstructing the private key. This allows a group of validator nodes to jointly sign transactions in a secure, decentralised manner. This mechanism is efficient and assumes that at least 67% of signing nodes act honestly and have access to accurate chain state.
 
-### Signing Process
+### Outbound Tx Signing Process
 
 When THORChain determines that an outbound transaction needs to be executed, the following steps occur:
 
+> **Note**: This section provides a vault-centric view of the signing process. For the detailed cryptographic keysign implementation (message preparation, party coordination, multi-round protocol, signature assembly), see [TSS Implementation - Keysign Process](tss.md#message-signing-keysign-process).
+
 1. **Vault Selection**: The vault responsible for holding the funds is selected. This is typically an active Asgard vault shared among the current validator set.
-2. **Key Sign Request**: A `MsgTssKeysignFail` or `MsgTssKeysignRetry` may be involved if retries are required. Otherwise, a signing ceremony begins.
-3. **TSS Ceremony**:
-   - Each node in the vault contributes its encrypted share of the private key (generated during a previous keygen).
-   - These shares are combined in a multi-round protocol to generate a valid signature.
-   - A supermajority threshold of shares is required to complete the signature. This ensures decentralization and fault tolerance.
+2. **Keysign Request**: A `MsgTssKeysignFail` or `MsgTssKeysignRetry` may be involved if retries are required. Otherwise, a signing ceremony begins.
+3. **TSS Signing Ceremony**:
+   - Transaction data is hashed and prepared for signing
+   - Each node loads its encrypted key share (generated during DKG)
+   - Nodes execute a multi-round threshold signing protocol
+   - Signature shares are combined to produce a valid signature (R, S components)
+   - Supermajority (≥67%) threshold required for signature completion
 4. **Broadcast and Attestation**:
    - The node that assembles the final signature broadcasts the outbound transaction to the external chain.
    - That node then submits a `MsgObservedTxOut`, attesting that the outbound transaction was seen on-chain.
@@ -72,7 +76,8 @@ When THORChain determines that an outbound transaction needs to be executed, the
 - **No Single Point of Failure**: No individual node can sign on its own or access the full private key.
 - **Threshold Safety**: If a minority of nodes are malicious or offline, signing still proceeds.
 - **Attestation-Based Finality**: Transaction finality is based on validator consensus, not external verification.
-- **Slashing Incentives**: Nodes that submit false outbound attestations (e.g., reporting a fake or incorrect transaction hash) are slashable. This protects against dishonest behavior and enforces honest participation (see [Slashing Mechanics](#slashing-mechanics)).
+- **Blame Attribution**: TSS fault detection identifies misbehaving nodes during ceremonies. See [TSS Blame and Monitoring](tss.md#blame-process) for detailed diagnostics.
+- **Slashing Incentives**: Nodes that submit false outbound attestations are penalized (see [Slashing Mechanics](#slashing-mechanics)).
 
 ### Retry and Timeout Logic
 
@@ -121,7 +126,7 @@ After each churn, funds must be migrated from retiring vaults to newly created o
 ### Finalization and State Updates
 
 - After all funds are migrated and a vault holds zero assets, it is marked `Inactive` and no longer used.
-- Migrations are signed signed using the vault’s TSS key, just like standard outbound transactions.
+- Migrations are signed using the vault's TSS key, just like standard outbound transactions.
 
 ## UTXO Consolidation
 
@@ -131,7 +136,7 @@ On UTXO-based chains (e.g., BTC, LTC, BCH, DOGE), vaults accumulate many unspent
 - Slowing down TSS signing due to more signatures being required per transaction,
 - Running into chain-level limits (e.g., BTC limits ~20 unconfirmed “ancestor” UTXOs per transaction chain).
 
-THORChain’s TSS engine parallelizes signing, but when too many UTXOs are consumed at once, it can lead to extremely long or stuck signing ceremonies.
+THORChain's TSS engine parallelizes signing, but when too many UTXOs are consumed at once, it can lead to extremely long or stuck signing ceremonies.
 
 ### Consolidation Process
 
@@ -199,13 +204,14 @@ THORChain uses two distinct slashing mechanisms to incentivize correct behavior 
 
 ### Slash Points (Reward Reduction)
 
-These reduce a node’s block rewards without impacting bonded capital.
+These reduce a node's block rewards without impacting bonded capital. Each slash point reduces rewards by one block.
 
-- **Missed block signing**: Nodes accrue `MissBlockSignSlashPoints` if they miss signing a block.
-- **Double signing**: Results in `DoubleBlockSignSlashPoints`.
-- **Not observing or signing outbounds**: Adds slash points and may lead to rescheduling.
+**Applied for:**
 
-Each slash point reduces rewards by one block.
+- **Missed block signing**: `MissBlockSignSlashPoints` per missed block
+- **Double block signing**: `DoubleBlockSignSlashPoints` for signing two blocks at same height
+- **TSS keysign failure**: `FailKeysignSlashPoints` + jailing when blamed for ceremony failure
+- **Not observing outbounds**: Adds slash points and may lead to transaction rescheduling
 
 ### Bond Slashing (Capital Penalty)
 

@@ -834,3 +834,9 @@
   --warning-border: #fab387;
   --color-scheme: dark;
 }
+
+/* Mermaid diagram centering */
+.mermaid {
+  display: flex;
+  justify-content: center;
+}
