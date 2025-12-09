@@ -673,7 +673,7 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 			_, emit, handleErr := swapHandler.RunWithEmit(cacheCtx, &msg)
 			if handleErr != nil {
 				// Don't commit - this discards all state changes
-				ctx.Logger().Error("fail to handle completed streaming limit swap", "error", handleErr)
+				ctx.Logger().Error("fail to execute streaming swap interval", "error", handleErr)
 				msg.State.FailedSwaps = append(msg.State.FailedSwaps, msg.State.Count)
 				msg.State.FailedSwapReasons = append(msg.State.FailedSwapReasons, handleErr.Error())
 				settleMsg = handleErr.Error()
