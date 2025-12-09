@@ -6,6 +6,7 @@
 
 - [Swap Guide](swap-guide/quickstart-guide.md)
 
+  - [Memoless Swaps](swap-guide/memoless-swaps.md)
   - [Advanced Swap Queue](swap-guide/advanced-swap-queue.md)
   - [Fees and Wait Times](swap-guide/fees-and-wait-times.md)
 
@@ -52,6 +53,7 @@
 
 - [Protocol Mechanics](concepts/protocol-mechanics.md)
 
+  - [Economic Model](concepts/economic-model.md)
   - [Incentive Pendulum](concepts/incentive-pendulum.md)
   - [Network Halts](concepts/network-halts.md)
   - [Constants and Mimirs](mimir.md)

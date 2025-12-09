@@ -86,6 +86,10 @@ Claiming and Staking of $TCY can be enabled and disabled using flags.
 
 **Trade Accounts Pause** `TradeAccountsEnabled = 1` - Adding to and withdrawing from the Trade Account is enabled.
 
+### Memoless Transactions
+
+**Memoless Halt** `HaltMemoless = 1` - Emergency halt that disables all memoless transaction functionality, including both registration of new reference memos and usage of existing ones. When enabled, transactions using reference memos will be rejected.
+
 ## Monitoring Mimir Keys
 
 ```bash
@@ -118,3 +122,4 @@ curl https://thornode.thorchain.org/thorchain/mimir
 | `TCYUnstakingHalt`            | Halt unstaking of TCY                   | Global        | Disable TCY unstaking                              |
 | `TCYClaimingHalt`             | Halt TCY claiming                       | Global        | Prevent TCY claims from THORFi deposits            |
 | `TradeAccountsEnabled`        | Enable/disable Trade Accounts           | Global        | Allow/disallow Trade Account usage                 |
+| `HaltMemoless`                | Halt memoless transactions              | Global        | Disable memoless tx registration and usage         |

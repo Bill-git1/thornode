@@ -128,8 +128,8 @@ Ensure the transaction’s `gas_rate` is sufficient for inclusion in the next bl
 ETH is sent and received as an internal transaction. Your wallet may not be set to read internal balances and transactions.
 ```
 
-```admonish danger
-EIP-7702 abstracted accounts are currently not supported by THORChain. This includes all type-4 transactions and transactions from abstracted account wallets. Using this pattern or its variations will lead to loss of funds.
+```admonish info
+EIP-7702 (Prague upgrade) is supported on all EVM chains. THORChain uses the Prague signer which supports type-4 transactions and EIP-7702 account abstraction features.
 ```
 
 ### BFT Chains

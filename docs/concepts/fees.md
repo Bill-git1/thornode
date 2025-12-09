@@ -94,7 +94,7 @@ See the [Affiliate Fee Guide](../affiliate-guide/affiliate-fee-guide.md) for mor
 
 The Outbound Fee is what THORChain charges to deliver the final asset to the user on the destination chain. It covers the actual L1 gas costs (paid by nodes), and helps sustain the network's infrastructure — including TSS signing, compute, and state management.
 
-To ensure long-term sustainability, the outbound fee is marked up by a dynamic value called the **Outbound Fee Multiplier (OFM)**. This allows the protocol to collect slightly more than it spends, building a buffer (or "surplus") of RUNE to cover fluctuations in network cost.
+To ensure long-term sustainability, the outbound fee is marked up by a dynamic value called the **Outbound Fee Multiplier (OFM)**. This allows the protocol, specifically the Reserve, to collect slightly more than it spends, building a buffer (or "surplus") of RUNE to cover fluctuations in network cost. See [Reserve Outflows](./economic-model.md#reserve-outflows) for more information.
 
 ### Why It's Dynamic
 
@@ -117,11 +117,11 @@ outboundFee = txSize × gasRate × Outbound Fee Multiplier (OFM)
 - The `gasRate` and `txSize` come from live on-chain data
 - The **OFM** ranges from **1.0x to 3.0x** and is dynamically calculated using the following [Mimir values](https://thornode.ninerealms.com/thorchain/mimir):
 
-| Mimir Key                             | Description                                            | Default        |
-| ------------------------------------- | ------------------------------------------------------ | -------------- |
-| `TARGETOUTBOUNDFEESURPLUSRUNE`        | Target surplus (in RUNE) the protocol aims to maintain | `5,000 RUNE`   |
-| `MAXOUTBOUNDFEEMULTIPLIERBASISPOINTS` | Max fee multiplier in basis points                     | `30000` = 3.0x |
-| `MINOUTBOUNDFEEMULTIPLIERBASISPOINTS` | Min fee multiplier in basis points                     | `1000` = 1.0x  |
+| Mimir Key                             | Description                        | Default        |
+| ------------------------------------- | ---------------------------------- | -------------- |
+| `TARGETOUTBOUNDFEESURPLUSRUNE`        | Target surplus (in RUNE) per asset | `10,000 RUNE`  |
+| `MAXOUTBOUNDFEEMULTIPLIERBASISPOINTS` | Max fee multiplier in basis points | `30000` = 3.0x |
+| `MINOUTBOUNDFEEMULTIPLIERBASISPOINTS` | Min fee multiplier in basis points | `100` = 0.01x  |
 
 ```admonish info
 Values can change. Current OFM values are published at [`/thorchain/network`](https://thornode.ninerealms.com/thorchain/network)
@@ -129,13 +129,14 @@ Values can change. Current OFM values are published at [`/thorchain/network`](ht
 
 ### How the OFM works
 
-- THORChain tracks the **gas fees spent** and **fees withheld** for each chain
+- THORChain tracks the **gas fees spent** and **fees withheld** per asset
 - The **surplus** is defined as:
 
   ```text
   surplus = feesWithheld - feesSpent
   ```
 
+- The surplus is tracked independently per asset
 - If the surplus exceeds the target, the multiplier drops toward the min
 - If below target, the multiplier rises toward the max
 - This ensures the network collects enough to cover real costs without overcharging users
@@ -144,7 +145,7 @@ Values can change. Current OFM values are published at [`/thorchain/network`](ht
 OFM = Max - ((surplus / targetSurplus) × (Max - Min))
 ```
 
-It is recalculated every block, per chain and per asset.
+It is recalculated every block, per asset.
 
 - Final fee is returned by:
 

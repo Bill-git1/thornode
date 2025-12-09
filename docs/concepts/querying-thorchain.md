@@ -7,9 +7,11 @@ Below are the list of supported Address Formats. Not using this risks loss of fu
 | Chain            | Supported Address Format                                         | Notes                                                                                           |
 | ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | BTC              | P2WSH /w Bech32 (preferred), P2WPKH /w Bech32, P2PKH, P2SH, P2TR | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
-| ETH              | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
-| BSC              | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
-| AVAX             | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
+| ETH              | EIP-55 (supports EIP-7702)                                       | Do not swap to smart contract addresses.                                                        |
+| BSC              | EIP-55 (supports EIP-7702)                                       | Do not swap to smart contract addresses.                                                        |
+| AVAX             | EIP-55 (supports EIP-7702)                                       | Do not swap to smart contract addresses.                                                        |
+| BASE             | EIP-55 (supports EIP-7702)                                       | Do not swap to smart contract addresses.                                                        |
+| TRON             | Base58                                                           | Do not swap to smart contract addresses.                                                        |
 | DOGE             | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
 | LTC              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
 | BCH              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |

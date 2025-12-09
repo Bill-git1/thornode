@@ -7,6 +7,10 @@ THORChain allows native L1 Swaps. On-chain [Memos](../concepts/memos.md) are use
 Let's demonstrate decentralised, non-custodial cross-chain swaps. In this example, we will build a transaction that instructs THORChain to swap native Bitcoin to native Ethereum in one transaction.
 
 ```admonish info
+For chains with limited memo space (like Bitcoin's 80-byte OP_RETURN), see the [Memoless Swaps Guide](./memoless-swaps.md#memoless-swap-checklist) for reference memo registration and amount encoding.
+```
+
+```admonish info
 The following examples use a free, hosted API provided by [Nine Realms](https://twitter.com/ninerealms_cap). If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md).
 ```
 

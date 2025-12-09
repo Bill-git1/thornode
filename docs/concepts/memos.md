@@ -449,9 +449,9 @@ Donate to the THORChain Reserve.
 
 Memoless transactions allow users to register a memo on THORChain and then reference it in future transactions using a short reference number encoded in the transaction amount. This enables transactions on chains with limited memo space (like Bitcoin's 80-byte OP_RETURN limit) by eliminating the need to include lengthy memos.
 
-For detailed integration information, see [Memoless Transactions](../memoless-transactions.md) and [Wallet Integration Guide](../wallet-integration-memoless.md).
+For detailed information, see [Memoless Transactions](../swap-guide/memoless-swaps.md).
 
-#### Register Reference Memo
+#### Registering a Reference Memo
 
 Register a memo for future memoless transactions.
 
@@ -459,62 +459,59 @@ Register a memo for future memoless transactions.
 
 | Parameter   | Notes                                                   | Conditions                                           |
 | ----------- | ------------------------------------------------------- | ---------------------------------------------------- |
-| Payload     | THOR.RUNE                                               | [Dust thresholds](#dust-thresholds) must be met.     |
+| Payload     | THOR.RUNE                                               | Use `MsgDeposit`.                                    |
 | `REFERENCE` | The reference memo registration handler.                | Also `reference`                                     |
 | `:ASSET`    | The [asset identifier](asset-notation.md) for the memo. | Must be an active asset on THORChain.                |
 | `:MEMO`     | The memo to register for memoless transactions.         | Any valid THORChain memo (swap, add liquidity, etc.) |
 
-**Transaction Flow:**
-
-1. User sends RUNE with `REFERENCE:BTC.BTC:=:ETH.ETH:0xADDRESS` memo
-2. THORChain assigns a reference number (e.g., 20002)
-3. User can now use this reference for future BTC transactions
-
-#### Use Reference Memo (Explicit)
+#### Use Reference Memo
 
 Use a previously registered reference memo explicitly in a transaction.
 
 **`R:REFERENCE`**
 
-| Parameter    | Notes                                              | Conditions                                     |
-| ------------ | -------------------------------------------------- | ---------------------------------------------- |
-| Payload      | The asset for the memoless transaction.            | Must match the asset registered in the memo.   |
-| `R`          | The reference memo usage handler.                  | Also `r`                                       |
-| `:REFERENCE` | The reference number assigned during registration. | Must be a valid, non-expired reference number. |
+| Parameter    | Notes                                              | Conditions                                                                                    |
+| ------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Payload      | The asset for the memoless transaction.            | Must match the asset registered in the memo. [Dust thresholds](#dust-thresholds) must be met. |
+| `R`          | The reference memo usage handler.                  | Also `r`                                                                                      |
+| `:REFERENCE` | The reference number assigned during registration. | Must be a valid, non-expired reference number.                                                |
 
-#### Use Reference Memo (Amount-Encoded)
+**Important**: Before broadcasting, **always** call `GET /thorchain/memo/check/{asset}/{amount}` to validate:
 
-For truly memoless transactions, the reference ID is encoded in the transaction amount itself, eliminating the need for any memo.
+- Reference exists and is not expired
+- Usage limit not exceeded
+- Memoless functionality not halted
 
-**Transaction Amount Encoding:**
+**Transaction Flow:**
 
-The reference number is embedded in the last digits of the transaction amount. Native assets with greater than 8 decimals should encode the reference in the last digits of the amount when normalized to 8 decimals:
+1. User sends RUNE with `REFERENCE:BTC.BTC:=:ETH.ETH:0xADDRESS` memo
+2. THORChain assigns a reference number (e.g., 20002)
+3. User can now use this reference for future BTC transactions. Reference expires post [`MemolessTxnTTL`](../mimir.md#memoless-transactions), approx. 6 hours
 
-- **BTC (8 decimals)**: Send `0.00020003 BTC` → Reference `20003`
-- **ETH (18 decimals)**: Send `0.00020003 ETH` → Reference `20003`
-- **ATOM (6 decimals)**: Send `0.020003 ATOM` → Reference `20003`
+See [Memoless Swaps](../swap-guide/memoless-swaps.md) for detailed information.
 
-**How It Works:**
+#### Encoding Examples
 
-1. User registers memo with `REFERENCE:BTC.BTC:=:ETH.ETH:0xADDRESS`
-2. THORChain assigns reference `20003`
-3. User sends `0.00020003 BTC` with **empty memo**
-4. THORChain extracts `20003` from the amount and resolves the registered memo
-5. Swap executes as if user sent the full memo
+**Bitcoin Example (8 decimals):**
 
-**Important Considerations:**
+- Reference: 20002
+- Want to send: 0.05 BTC = 5000000
+- Amount: 5000000 + 20002 = 5020002 satoshis
+- Verification: 5020002 % 100000 = 20002 ✓
 
-- The reference number must be encoded in the **normalized amount** (after decimal conversion)
-- Zero references (e.g., `0.00020000 BTC`) are rejected as invalid
-- The reference must exist and not be expired at transaction observation time
-- Transactions observed before the reference registration height are rejected
+**Lower Decimal Asset Example - USDC (6 decimals):**
+
+- Reference: 20002
+- Want to send: 1500 units = 1500000000
+- Amount: 1,500,000,000 + 20002 = 1,500,020,002 native units
+- Verification: 1,500,020,002 % 100000 = 20002 ✓
 
 **Configuration:**
 
 - **TTL (Time To Live)**: `MemolessTxnTTL` - Reference memos expire after a configurable number of blocks (default: 3600 blocks ≈ 6 hours)
 - **Reference Range**: `MemolessTxnRefCount` - Reference numbers range from 1 to this value (default: 99999)
-- **Cost**: `MemolessTxnCost` - Optional RUNE cost for registering reference memos (default: 0). Only charged on successful registration.
-- **Max Usage**: `MemolessTxnMaxUse` - Maximum number of times a reference can be used (default: 0 = unlimited)
+- **Cost**: `MemolessTxnCost` - Additional protocol-level fee, currently set to 0
+- **Max Usage**: `MemolessTxnMaxUse` - Maximum number of times a reference can be used (default: 1)
 - **HaltMemoless**: Operational mimir to emergency halt all memoless functionality
 
 **Examples:**
@@ -542,6 +539,28 @@ Usage (Amount-Encoded):
 - `GET /thorchain/memo/{asset}/{reference}` - Retrieve memo by asset and reference number
 - `GET /thorchain/memo/{registration_hash}` - Retrieve memo by registration transaction hash
 - `GET /thorchain/memo/check/{asset}/{amount}` - Pre-flight check: preview reference from amount and check availability
+
+#### Reference Memo Lifecycle
+
+Reference memos progress through distinct states from creation to expiration:
+
+| **State**     | **Condition**                                    | **API Response**           | **User Action**  |
+| ------------- | ------------------------------------------------ | -------------------------- | ---------------- |
+| **CREATED**   | `Height > 0`                                     | Returns reference details  | Can start using  |
+| **ACTIVE**    | `Height + TTL > current`<br>AND<br>`usage < max` | Returns valid memo         | Normal usage     |
+| **USED**      | `UsedByTxs` contains TxIDs                       | Returns memo + usage count | Monitor limits   |
+| **EXHAUSTED** | `usage >= MemolessTxnMaxUse`                     | Returns empty → refund     | Must re-register |
+| **EXPIRED**   | `Height + TTL < current`                         | Returns 404/empty → refund | Must re-register |
+| **HALTED**    | `HaltMemoless` mimir > 0                         | Returns empty → refund     | Wait for unhalt  |
+
+#### Emergency Halt System
+
+**HaltMemoless Mimir**:
+
+- **Purpose**: Emergency brake for security issues or bugs
+- **Effect**: ALL memoless transactions rejected instantly
+- **Monitoring**: Check [mimir endpoint](https://thornode.ninerealms.com/thorchain/mimir)
+- **Procedures**: See [Emergency Procedures](https://docs.thorchain.org/thornodes/emergency-procedures) for network halt operations
 
 **Pre-Flight Checking:**
 

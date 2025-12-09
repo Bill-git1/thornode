@@ -53,6 +53,14 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `SynthSlipMinBps`: Minimum synth asset swap fee in basis points
 - `DerivedSlipMinBps`: Minimum derived asset swap fee in basis points
 
+## Memoless Transactions
+
+- `MemolessTxnTTL`\*: Number of blocks before a registered reference memo expires (default: 3600 blocks ≈ 6 hours)
+- `MemolessTxnRefCount`\*: Maximum number of reference IDs available per chain (default: 99,999). Reference numbers range from 1 to this value.
+- `MemolessTxnCost`\*: Optional RUNE cost for registering reference memos (default: 0, in 1e8 notation). Only charged on successful registration.
+- `MemolessTxnMaxUse`\*: Maximum number of times a reference can be used before being invalidated (default: 1). Set to 0 for unlimited usage.
+- `HaltMemoless`#: Emergency halt for all memoless transaction functionality (registration and usage)
+
 ## TCY Management
 
 - `MinRuneForTCYStakeDistribution`: Minimum RUNE required in the TCY fund to be eligible for distribution (default: 2,100 RUNE (210000000000 in 1e8 notation))
@@ -114,9 +122,11 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `TNSRegisterFee`: Registration fee for new THORName, in RUNE
 - `TNSFeeOnSale`: fee for TNS sale in basis points
 - `TNSFeePerBlock`: per block cost for TNS, in RUNE
-- `PreferredAssetOutboundFeeMultiplier`\*: The multiplier of the current preferred asset outbound fee, if RUNE balance > multiplier \* outbound_fee, a preferred asset swap is triggered
-- `MinOutboundFeeMultiplierBasisPoints`\*: Minimum multiplier applied to base outbound fee charged to user, in basis points
-- `MaxOutboundFeeMultiplierBasisPoints`: Maximum multiplier applied to base outbound fee charged to user, in basis points
+- `MinimumL1OutboundFeeUSD`: Minimum L1 outbound fee in USD (1e8 notation)
+- `TargetOutboundFeeSurplusRune`\*: Target RUNE surplus per asset (withheld - spent) for outbound fee calculations (1e8 notation)
+- `MaxOutboundFeeMultiplierBasisPoints`\*: Maximum outbound fee multiplier in basis points
+- `MinOutboundFeeMultiplierBasisPoints`\*: Minimum outbound fee multiplier in basis points
+- `PreferredAssetOutboundFeeMultiplier`\*: Multiplier of preferred asset outbound fee for triggering preferred asset swaps
 
 ### Solvency Checker
 
@@ -163,6 +173,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 ## Economics
 
 - `EmissionCurve`\*: How quickly rune is emitted from the reserve in block rewards
+- `ReserveMaxCap`\*: Maximum reserve balance (in 1e8 notation) before EmissionCurve is automatically overridden to default (6). Set to 0 to disable. This prevents excessive emissions when the reserve grows too large.
 - `MaxAvailablePools`: Maximum number of pools allowed on the network. Gas pools (native pools) are excluded from this.
 - `MinRunePoolDepth`\*: Minimum number of RUNE to be considered to become active
 - `PoolCycle`\*: Number of blocks the network will churn the pools (add/remove new available pools)
