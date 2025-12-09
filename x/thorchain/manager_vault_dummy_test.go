@@ -46,3 +46,7 @@ func (vm *NetworkMgrDummy) UpdateNetwork(ctx cosmos.Context, constAccessor const
 func (vm *NetworkMgrDummy) RecallChainFunds(ctx cosmos.Context, chain common.Chain, mgr Manager, excludeNodeKeys common.PubKeys) error {
 	return nil
 }
+
+func (vm *NetworkMgrDummy) SwapToReserveIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error {
+	return nil
+}

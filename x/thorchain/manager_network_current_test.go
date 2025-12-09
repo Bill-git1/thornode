@@ -1919,3 +1919,164 @@ func (s *NetworkManagerVCURTestSuite) TestProcessPostChurnSolvencyEdgeCases(c *C
 	c.Assert(err, IsNil)
 	// Should not create any swaps when set to 0
 }
+
+func (s *NetworkManagerVCURTestSuite) TestSwapToReserveIncome(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create an active vault with BTC asset
+	vaultPubKey := GetRandomPubKey()
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, vaultPubKey, common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup: Create a pool for BTC
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.BalanceRune = cosmos.NewUint(2000 * common.One) // 2:1 RUNE:BTC ratio
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Test 1: Process L1 asset (BTC) as income
+	coin := common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))
+	err := nmgr.SwapToReserveIncome(ctx, mgr, coin)
+	c.Assert(err, IsNil)
+
+	// Verify swap was created in the queue (fee tracking happens during swap execution)
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		iter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		defer iter.Close()
+		var foundSwap bool
+		for ; iter.Valid(); iter.Next() {
+			var msg types.MsgSwap
+			unmarshalErr := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &msg)
+			c.Assert(unmarshalErr, IsNil)
+			if msg.Tx.Coins[0].Asset.Equals(common.BTCAsset) {
+				foundSwap = true
+				c.Assert(msg.Tx.Coins[0].Amount.Equal(coin.Amount), Equals, true)
+				c.Assert(msg.TargetAsset.Equals(common.RuneAsset()), Equals, true)
+			}
+		}
+		c.Assert(foundSwap, Equals, true, Commentf("swap should have been created in queue"))
+	}
+
+	// Test 2: Process RUNE directly to reserve
+	FundModule(c, ctx, mgr.Keeper(), AsgardName, 100*common.One)
+	runeCoin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(50*common.One))
+	reserveBalanceBefore := mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
+
+	err = nmgr.SwapToReserveIncome(ctx, mgr, runeCoin)
+	c.Assert(err, IsNil)
+
+	// Verify RUNE was transferred to reserve
+	reserveBalanceAfter := mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
+	c.Assert(reserveBalanceAfter.Sub(reserveBalanceBefore).Equal(runeCoin.Amount), Equals, true)
+
+	// Test 3: Zero amount should return nil without error
+	zeroCoin := common.NewCoin(common.BTCAsset, cosmos.ZeroUint())
+	err = nmgr.SwapToReserveIncome(ctx, mgr, zeroCoin)
+	c.Assert(err, IsNil)
+
+	// Test 4: Empty coin should return nil without error
+	emptyCoin := common.Coin{}
+	err = nmgr.SwapToReserveIncome(ctx, mgr, emptyCoin)
+	c.Assert(err, IsNil)
+
+	// Test 5: Asset with no pool/vault still creates swap (will fail during execution)
+	noPoolCoin := common.NewCoin(common.LTCAsset, cosmos.NewUint(10*common.One))
+	err = nmgr.SwapToReserveIncome(ctx, mgr, noPoolCoin)
+	c.Assert(err, IsNil) // No error at creation time - swap is queued for later execution
+}
+
+func (s *NetworkManagerVCURTestSuite) TestSwapToReserveIncomeTradeAsset(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create an active vault with BTC asset
+	vaultPubKey := GetRandomPubKey()
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, vaultPubKey, common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup: Create a pool for BTC (L1)
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.BalanceRune = cosmos.NewUint(3000 * common.One) // 3:1 RUNE:BTC ratio
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Test: Process trade asset - swap created for later execution
+	tradeAsset := common.BTCAsset.GetTradeAsset()
+	tradeCoin := common.NewCoin(tradeAsset, cosmos.NewUint(5*common.One))
+	err := nmgr.SwapToReserveIncome(ctx, mgr, tradeCoin)
+	c.Assert(err, IsNil)
+
+	// Verify swap was created (fee tracking happens during swap execution)
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		iter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		defer iter.Close()
+		var foundSwap bool
+		for ; iter.Valid(); iter.Next() {
+			var msg types.MsgSwap
+			unmarshalErr := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &msg)
+			c.Assert(unmarshalErr, IsNil)
+			if msg.Tx.Coins[0].Asset.Equals(tradeAsset) {
+				foundSwap = true
+				c.Assert(msg.Tx.Coins[0].Amount.Equal(tradeCoin.Amount), Equals, true)
+				c.Assert(msg.TargetAsset.Equals(common.RuneAsset()), Equals, true)
+			}
+		}
+		c.Assert(foundSwap, Equals, true, Commentf("swap should have been created in queue"))
+	}
+}
+
+func (s *NetworkManagerVCURTestSuite) TestSwapToReserveIncomeSecuredAsset(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create an active vault with BTC asset
+	vaultPubKey := GetRandomPubKey()
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, vaultPubKey, common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup: Create a pool for BTC (L1)
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.BalanceRune = cosmos.NewUint(4000 * common.One) // 4:1 RUNE:BTC ratio
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Test: Process secured asset - swap created for later execution
+	securedAsset := common.BTCAsset.GetSecuredAsset()
+	securedCoin := common.NewCoin(securedAsset, cosmos.NewUint(2*common.One))
+	err := nmgr.SwapToReserveIncome(ctx, mgr, securedCoin)
+	c.Assert(err, IsNil)
+
+	// Verify swap was created (fee tracking happens during swap execution)
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		iter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		defer iter.Close()
+		var foundSwap bool
+		for ; iter.Valid(); iter.Next() {
+			var msg types.MsgSwap
+			unmarshalErr := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &msg)
+			c.Assert(unmarshalErr, IsNil)
+			if msg.Tx.Coins[0].Asset.Equals(securedAsset) {
+				foundSwap = true
+				c.Assert(msg.Tx.Coins[0].Amount.Equal(securedCoin.Amount), Equals, true)
+				c.Assert(msg.TargetAsset.Equals(common.RuneAsset()), Equals, true)
+			}
+		}
+		c.Assert(foundSwap, Equals, true, Commentf("swap should have been created in queue"))
+	}
+}

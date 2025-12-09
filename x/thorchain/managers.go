@@ -130,6 +130,7 @@ type NetworkManager interface {
 	UpdateNetwork(ctx cosmos.Context, constAccessor constants.ConstantValues, gasManager GasManager, eventMgr EventManager) error
 	SpawnDerivedAsset(ctx cosmos.Context, asset common.Asset, mgr Manager)
 	CalcAnchor(_ cosmos.Context, _ Manager, _ common.Asset) (cosmos.Uint, cosmos.Uint, cosmos.Uint)
+	SwapToReserveIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error
 }
 
 // PoolManager interface define the contract of PoolManager

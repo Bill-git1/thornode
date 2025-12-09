@@ -2449,10 +2449,11 @@ func (vm *NetworkMgrVCUR) processOverSolvency(ctx cosmos.Context, mgr Manager) e
 			SwapToReserveAmount: swapAmount,
 		})
 
-		// If mimir is > 0, create swap to reserve
+		// If mimir is > 0, process as system income (track fee and create swap to reserve)
 		if overSolvencyBps > 0 && !swapAmount.IsZero() {
-			if err := vm.createSwapToReserve(ctx, mgr, assetAmt.Asset, swapAmount); err != nil {
-				ctx.Logger().Error("failed to create swap to reserve", "asset", assetAmt.Asset, "amount", swapAmount, "error", err)
+			coin := common.NewCoin(assetAmt.Asset, swapAmount)
+			if err := vm.SwapToReserveIncome(ctx, mgr, coin); err != nil {
+				ctx.Logger().Error("failed to process over-solvency income", "asset", assetAmt.Asset, "amount", swapAmount, "error", err)
 			}
 		}
 	}
@@ -2578,5 +2579,34 @@ func (vm *NetworkMgrVCUR) createSwapToReserve(ctx cosmos.Context, mgr Manager, a
 	}
 	ctx.Logger().Info("added over-solvency swap to advanced queue", "txID", txID)
 
+	return nil
+}
+
+// SwapToReserveIncome processes any coin as system income by:
+// - For RUNE: transferring directly to reserve
+// - For non-RUNE: creating swap to reserve (fee tracked during swap execution)
+func (vm *NetworkMgrVCUR) SwapToReserveIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error {
+	if coin.IsEmpty() || coin.Amount.IsZero() {
+		return nil
+	}
+
+	// RUNE: direct transfer to reserve
+	if coin.IsRune() {
+		if err := mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(coin)); err != nil {
+			return fmt.Errorf("fail to send RUNE to reserve: %w", err)
+		}
+		ctx.Logger().Info("processed RUNE income to reserve", "amount", coin.Amount)
+		return nil
+	}
+
+	// Non-RUNE: create swap to reserve (fee tracked during swap execution)
+	if err := vm.createSwapToReserve(ctx, mgr, coin.Asset, coin.Amount); err != nil {
+		return fmt.Errorf("fail to create swap to reserve: %w", err)
+	}
+
+	ctx.Logger().Info("processed asset income to reserve",
+		"asset", coin.Asset,
+		"amount", coin.Amount,
+	)
 	return nil
 }
