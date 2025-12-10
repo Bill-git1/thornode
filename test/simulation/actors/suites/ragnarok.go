@@ -2,6 +2,7 @@ package suites
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 
 	acommon "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
@@ -13,16 +14,16 @@ import (
 // Ragnarok
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func Ragnarok() *Actor {
-	a := NewActor("Ragnarok")
+func Ragnarok(rng *rand.Rand) *Actor {
+	a := NewActor("Ragnarok", rng)
 
 	// ragnarok all gas asset pools (should apply to tokens implicitly)
 	for _, chain := range acommon.SimChains {
-		a.Children[core.NewRagnarokPoolActor(chain.GetGasAsset())] = true
+		a.Children[core.NewRagnarokPoolActor(chain.GetGasAsset(), rng)] = true
 	}
 
 	// verify pool removals
-	verify := NewActor("Ragnarok-Verify")
+	verify := NewActor("Ragnarok-Verify", rng)
 	verify.Ops = append(verify.Ops, func(config *OpConfig) OpResult {
 		pools, err := thornode.GetPools()
 		if err != nil {

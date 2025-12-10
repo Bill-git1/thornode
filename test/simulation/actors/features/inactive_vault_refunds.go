@@ -2,6 +2,7 @@ package features
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -18,11 +19,11 @@ import (
 // InactiveVaultRefunds
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func InactiveVaultRefunds() *Actor {
-	a := NewActor("Feature-InactiveVaultRefunds")
+func InactiveVaultRefunds(rng *rand.Rand) *Actor {
+	a := NewActor("Feature-InactiveVaultRefunds", rng)
 
 	for _, asset := range acommon.SimChains {
-		a.Children[NewInactiveVaultRefundActor(asset.GetGasAsset())] = true
+		a.Children[NewInactiveVaultRefundActor(asset.GetGasAsset(), rng)] = true
 	}
 
 	return a
@@ -41,9 +42,9 @@ type InactiveVaultRefundActor struct {
 	inboundTxid string
 }
 
-func NewInactiveVaultRefundActor(asset common.Asset) *Actor {
+func NewInactiveVaultRefundActor(asset common.Asset, rng *rand.Rand) *Actor {
 	a := &InactiveVaultRefundActor{
-		Actor: *NewActor(fmt.Sprintf("InactiveVaultRefund-%s", asset)),
+		Actor: *NewActor(fmt.Sprintf("InactiveVaultRefund-%s", asset), rng),
 		asset: asset,
 	}
 

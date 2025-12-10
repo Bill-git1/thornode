@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -19,9 +20,9 @@ type SolvencyCheckActor struct {
 	Actor
 }
 
-func NewSolvencyCheckActor() *Actor {
+func NewSolvencyCheckActor(rng *rand.Rand) *Actor {
 	a := &SolvencyCheckActor{
-		Actor: *NewActor("SolvencyCheck"),
+		Actor: *NewActor("SolvencyCheck", rng),
 	}
 
 	a.Ops = append(a.Ops, a.checkSolvency)

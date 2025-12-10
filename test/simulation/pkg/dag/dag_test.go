@@ -1,6 +1,7 @@
 package dag
 
 import (
+	rand "math/rand/v2"
 	"testing"
 
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
@@ -13,7 +14,7 @@ type DAGSuite struct{}
 
 var _ = Suite(&DAGSuite{})
 
-func (s *DAGSuite) TestExecute(c *C) {
+func (s *DAGSuite) TestExecute(c *C, rng *rand.Rand) {
 	// bump count once on each operation
 	count := 0
 	op := func(config *OpConfig) OpResult {
@@ -22,13 +23,13 @@ func (s *DAGSuite) TestExecute(c *C) {
 	}
 
 	// create nodes
-	root := NewActor("root")
-	child1 := NewActor("child1")
-	child2 := NewActor("child2")
-	child3 := NewActor("child3")
-	grandchild1 := NewActor("grandchild1")
-	grandchild2 := NewActor("grandchild2")
-	grandchild3 := NewActor("grandchild3")
+	root := NewActor("root", rng)
+	child1 := NewActor("child1", rng)
+	child2 := NewActor("child2", rng)
+	child3 := NewActor("child3", rng)
+	grandchild1 := NewActor("grandchild1", rng)
+	grandchild2 := NewActor("grandchild2", rng)
+	grandchild3 := NewActor("grandchild3", rng)
 
 	// add operations
 	descendants := []*Actor{child1, child2, child3, grandchild1, grandchild2, grandchild3}
@@ -45,7 +46,7 @@ func (s *DAGSuite) TestExecute(c *C) {
 	child3.Children[grandchild3] = true
 
 	// execute
-	Execute(nil, root, 1)
+	Execute(nil, root, 1, rng)
 
 	// should have executed op 6 times
 	c.Assert(count, Equals, 6)

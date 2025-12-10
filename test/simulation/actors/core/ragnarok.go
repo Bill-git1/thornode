@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 	"time"
 
 	atypes "gitlab.com/thorchain/thornode/v3/api/types"
@@ -21,9 +22,9 @@ type RagnarokPoolActor struct {
 	asset common.Asset
 }
 
-func NewRagnarokPoolActor(asset common.Asset) *Actor {
+func NewRagnarokPoolActor(asset common.Asset, rng *rand.Rand) *Actor {
 	a := &RagnarokPoolActor{
-		Actor: *NewActor(fmt.Sprintf("Ragnarok-%s", asset)),
+		Actor: *NewActor(fmt.Sprintf("Ragnarok-%s", asset), rng),
 		asset: asset,
 	}
 	a.Timeout = 5 * time.Minute

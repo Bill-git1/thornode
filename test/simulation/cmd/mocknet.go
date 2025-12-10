@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"math/big"
+	rand "math/rand/v2"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -77,7 +79,7 @@ var (
 // Init
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func InitConfig(parallelism int, seed bool) *OpConfig {
+func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 	if parallelism > len(mocknetUserMnemonics) {
 		log.Error().
 			Int("parallelism", parallelism).
@@ -182,12 +184,37 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 
 	// wait for all users to be created
 	wg.Wait()
+	// sort users deterministically
+	mu.Lock()
+	sort.Slice(c.Users, func(ux_idx, uy_idx int) bool {
+		return c.Users[ux_idx].Name() < c.Users[uy_idx].Name()
+	})
+	rng.Shuffle(len(c.Users), func(ux_idx, uy_idx int) {
+		ux := c.Users[ux_idx]
+		c.Users[ux_idx] = c.Users[uy_idx]
+		c.Users[uy_idx] = ux
+	})
+	mu.Unlock()
 
 	// fund all user accounts from master
 	master := NewUser(mocknetMasterMnemonic, liteClientConstructors)
 
-	// log all configured tokens, their decimals, and master balance
+	// sort chains deterministically
+	chains := make([]common.Chain, 0, len(liteClientConstructors))
 	for chain := range liteClientConstructors {
+		chains = append(chains, chain)
+	}
+	sort.Slice(chains, func(cx_idx, cy_idx int) bool {
+		return chains[cx_idx] < chains[cy_idx]
+	})
+	rng.Shuffle(len(chains), func(cx_idx, cy_idx int) {
+		cx := chains[cx_idx]
+		chains[cx_idx] = chains[cy_idx]
+		chains[cy_idx] = cx
+	})
+
+	// log all configured tokens, their decimals, and master balance
+	for _, chain := range chains {
 		account, err := master.ChainClients[chain].GetAccount(nil)
 		if err != nil {
 			log.Fatal().Stringer("chain", chain).Err(err).Msg("failed to get master account")

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 	"time"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -20,9 +21,9 @@ type MimirActor struct {
 	value int64
 }
 
-func NewMimirActor(key string, value int64) *Actor {
+func NewMimirActor(key string, value int64, rng *rand.Rand) *Actor {
 	a := &MimirActor{
-		Actor: *NewActor(fmt.Sprintf("Mimir %s=%d", key, value)),
+		Actor: *NewActor(fmt.Sprintf("Mimir %s=%d", key, value), rng),
 		key:   key,
 		value: value,
 	}

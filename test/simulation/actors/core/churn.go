@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 	"time"
 
 	"gitlab.com/thorchain/thornode/v3/api/types"
@@ -20,9 +21,9 @@ type ChurnActor struct {
 	Actor
 }
 
-func NewChurnActor() *Actor {
+func NewChurnActor(rng *rand.Rand) *Actor {
 	a := &ChurnActor{
-		Actor: *NewActor("Churn"),
+		Actor: *NewActor("Churn", rng),
 	}
 	a.Timeout = 5 * time.Minute
 

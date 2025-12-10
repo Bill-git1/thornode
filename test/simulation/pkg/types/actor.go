@@ -1,6 +1,7 @@
 package types
 
 import (
+	"math/rand/v2"
 	"sync/atomic"
 	"time"
 
@@ -55,15 +56,18 @@ type Actor struct {
 	parents map[*Actor]bool
 
 	state *atomic.Uint32
+
+	rng *rand.Rand
 }
 
 // NewActor will create a new actor with the provided name.
-func NewActor(name string) *Actor {
+func NewActor(name string, rng *rand.Rand) *Actor {
 	return &Actor{
 		Name:     name,
 		Children: map[*Actor]bool{},
 		parents:  map[*Actor]bool{},
 		state:    &atomic.Uint32{},
+		rng:      rand.New(rng),
 	}
 }
 

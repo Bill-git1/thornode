@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 
 	"github.com/hashicorp/go-multierror"
 
@@ -29,9 +30,9 @@ type DualLPActor struct {
 	l1Amount    cosmos.Uint
 }
 
-func NewDualLPActor(asset common.Asset) *Actor {
+func NewDualLPActor(asset common.Asset, rng *rand.Rand) *Actor {
 	a := &DualLPActor{
-		Actor: *NewActor(fmt.Sprintf("DualLP-%s", asset)),
+		Actor: *NewActor(fmt.Sprintf("DualLP-%s", asset), rng),
 		asset: asset,
 	}
 

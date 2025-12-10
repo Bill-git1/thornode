@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 	"sort"
 	"strings"
 	"sync"
@@ -31,9 +32,9 @@ type ArbActor struct {
 	originalPools map[string]types.Pool
 }
 
-func NewArbActor() *Actor {
+func NewArbActor(rng *rand.Rand) *Actor {
 	a := &ArbActor{
-		Actor:         *NewActor("Arbitrage"),
+		Actor:         *NewActor("Arbitrage", rng),
 		originalPools: make(map[string]types.Pool),
 	}
 	a.Timeout = time.Hour

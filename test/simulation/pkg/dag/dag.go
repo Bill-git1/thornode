@@ -3,9 +3,9 @@ package dag
 
 import (
 	"bytes"
-	"crypto/rand"
-	"math/big"
+	rand "math/rand/v2"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -16,7 +16,7 @@ import (
 
 // Execute executes the actor DAG from the provided root. It is precondition that the
 // root actor points to a proper DAG and contains no cycles.
-func Execute(c *OpConfig, root *Actor, parallelism int) {
+func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 	// determine the total number of actors in dag
 	seen := map[*Actor]bool{}
 	root.WalkDepthFirst(func(a *Actor) bool {
@@ -100,15 +100,15 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 		}
 
 		// randomly select an actor to execute
-		random, err := rand.Int(rand.Reader, big.NewInt(int64(len(ready))))
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to generate random number")
-		}
+		random := rng.Int64N(int64(len(ready)))
 		readySlice := make([]*Actor, 0, len(ready))
 		for a := range ready {
 			readySlice = append(readySlice, a)
 		}
-		a := readySlice[random.Int64()]
+		sort.Slice(readySlice, func(ax_idx, ay_idx int) bool {
+			return readySlice[ax_idx].Name < readySlice[ay_idx].Name
+		})
+		a := readySlice[random]
 
 		// execute actor
 		infoLog.Str("actor", a.Name).Msg("executing actor")
@@ -129,7 +129,7 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 				TimeFormat: time.TimeOnly,
 			}))
 
-			err = a.Execute(c)
+			err := a.Execute(c)
 			if err != nil {
 				os.Stderr.Write([]byte("\n\nFailed actor logs:\n" + buf.String() + "\n\n"))
 

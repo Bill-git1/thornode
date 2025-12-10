@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"math/big"
+	rand "math/rand/v2"
 	"strings"
 	"time"
 
@@ -41,9 +42,9 @@ type SwapActor struct {
 	maxExpected sdkmath.Uint
 }
 
-func NewSwapActor(from, to common.Asset) *Actor {
+func NewSwapActor(from, to common.Asset, rng *rand.Rand) *Actor {
 	a := &SwapActor{
-		Actor: *NewActor(fmt.Sprintf("Swap %s => %s", from, to)),
+		Actor: *NewActor(fmt.Sprintf("Swap %s => %s", from, to), rng),
 		from:  from,
 		to:    to,
 	}

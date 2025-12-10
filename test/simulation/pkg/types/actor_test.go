@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	rand "math/rand/v2"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -13,12 +14,12 @@ type ActorSuite struct{}
 
 var _ = Suite(&ActorSuite{})
 
-func (s *ActorSuite) TestInit(c *C) {
-	root := NewActor("root")
-	child1 := NewActor("child1")
-	child2 := NewActor("child2")
-	grandchild1 := NewActor("grandchild1")
-	grandchild2 := NewActor("grandchild2")
+func (s *ActorSuite) TestInit(c *C, rng *rand.Rand) {
+	root := NewActor("root", rng)
+	child1 := NewActor("child1", rng)
+	child2 := NewActor("child2", rng)
+	grandchild1 := NewActor("grandchild1", rng)
+	grandchild2 := NewActor("grandchild2", rng)
 
 	root.Children[child1] = true
 	root.Children[child2] = true
@@ -36,12 +37,12 @@ func (s *ActorSuite) TestInit(c *C) {
 	c.Assert(grandchild2.parents, DeepEquals, map[*Actor]bool{child2: true})
 }
 
-func (s *ActorSuite) TestWalkDepthFirst(c *C) {
-	root := NewActor("root")
-	child1 := NewActor("child1")
-	child2 := NewActor("child2")
-	grandchild1 := NewActor("grandchild1")
-	grandchild2 := NewActor("grandchild2")
+func (s *ActorSuite) TestWalkDepthFirst(c *C, rng *rand.Rand) {
+	root := NewActor("root", rng)
+	child1 := NewActor("child1", rng)
+	child2 := NewActor("child2", rng)
+	grandchild1 := NewActor("grandchild1", rng)
+	grandchild2 := NewActor("grandchild2", rng)
 
 	root.Children[child1] = true
 	root.Children[child2] = true
@@ -66,19 +67,19 @@ func (s *ActorSuite) TestWalkDepthFirst(c *C) {
 	c.Assert(visited, DeepEquals, expected)
 }
 
-func (s *ActorSuite) TestWalkDepthFirstFail(c *C) {
+func (s *ActorSuite) TestWalkDepthFirstFail(c *C, rng *rand.Rand) {
 	opFail := func(config *OpConfig) OpResult {
 		return OpResult{Continue: false, Finish: true, Error: errors.New("foo")}
 	}
 
-	root := NewActor("root")
-	child1 := NewActor("child1")
-	child2 := NewActor("child2")
+	root := NewActor("root", rng)
+	child1 := NewActor("child1", rng)
+	child2 := NewActor("child2", rng)
 	child2.Ops = []Op{opFail}
-	child3 := NewActor("child3")
-	grandchild1 := NewActor("grandchild1")
-	grandchild2 := NewActor("grandchild2")
-	grandchild3 := NewActor("grandchild3")
+	child3 := NewActor("child3", rng)
+	grandchild1 := NewActor("grandchild1", rng)
+	grandchild2 := NewActor("grandchild2", rng)
+	grandchild3 := NewActor("grandchild3", rng)
 
 	root.Children[child1] = true
 	root.Children[child2] = true

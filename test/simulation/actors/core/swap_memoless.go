@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 	"strconv"
 	"time"
 
@@ -39,10 +40,10 @@ type SwapMemolessActor struct {
 	signedSwap       []byte
 }
 
-func NewSwapMemolessActor(from, to common.Asset, memolessType MemolessType) *Actor {
+func NewSwapMemolessActor(from, to common.Asset, memolessType MemolessType, rng *rand.Rand) *Actor {
 	a := &SwapMemolessActor{
 		SwapActor: SwapActor{
-			Actor: *NewActor(fmt.Sprintf("SwapMemoless %s => %s", from, to)),
+			Actor: *NewActor(fmt.Sprintf("SwapMemoless %s => %s", from, to), rng),
 			from:  from,
 			to:    to,
 		},

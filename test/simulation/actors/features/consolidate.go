@@ -2,6 +2,7 @@ package features
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -15,13 +16,13 @@ import (
 // Consolidate
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func Consolidate() *Actor {
-	a := NewActor("Consolidate")
+func Consolidate(rng *rand.Rand) *Actor {
+	a := NewActor("Consolidate", rng)
 
-	a.Children[NewConsolidateActor(common.BTCAsset, 10)] = true
-	a.Children[NewConsolidateActor(common.BCHAsset, 10)] = true
-	a.Children[NewConsolidateActor(common.DOGEAsset, 10)] = true
-	a.Children[NewConsolidateActor(common.LTCAsset, 10)] = true
+	a.Children[NewConsolidateActor(common.BTCAsset, 10, rng)] = true
+	a.Children[NewConsolidateActor(common.BCHAsset, 10, rng)] = true
+	a.Children[NewConsolidateActor(common.DOGEAsset, 10, rng)] = true
+	a.Children[NewConsolidateActor(common.LTCAsset, 10, rng)] = true
 
 	return a
 }
@@ -40,9 +41,9 @@ type ConsolidateActor struct {
 	scanHeight       int64
 }
 
-func NewConsolidateActor(asset common.Asset, consolidateCount int64) *Actor {
+func NewConsolidateActor(asset common.Asset, consolidateCount int64, rng *rand.Rand) *Actor {
 	a := &ConsolidateActor{
-		Actor:            *NewActor(fmt.Sprintf("Feature-Consolidate-%s", asset)),
+		Actor:            *NewActor(fmt.Sprintf("Feature-Consolidate-%s", asset), rng),
 		asset:            asset,
 		consolidateCount: consolidateCount,
 	}

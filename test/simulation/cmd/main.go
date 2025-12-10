@@ -1,7 +1,11 @@
 package main
 
 import (
+	crypto_rand "crypto/rand"
+	"encoding/hex"
 	"io"
+	"math/big"
+	"math/rand/v2"
 	"net/http"
 	"os"
 	"strconv"
@@ -132,12 +136,31 @@ func main() {
 		time.Sleep(time.Second)
 	}
 
-	// combine all actor dags for the complete test run
-	root := NewActor("Root")
+	var randSeed [32]byte
+	randSeedHex := os.Getenv("RANDOM_SEED_HEX")
+	if randSeedHex == "" {
+		_, err := io.ReadFull(crypto_rand.Reader, randSeed[:])
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to generate random seed")
+		}
+	} else {
+		randSeedBytes, err := hex.DecodeString(randSeedHex)
+		if err != nil || len(randSeedBytes) > 32 {
+			log.Fatal().Err(err).Msg("failed to parse RANDOM_SEED_HEX")
+		}
+		for byte_idx, byte_value := range randSeedBytes {
+			randSeed[32-len(randSeedBytes)+byte_idx] = byte_value
+		}
+	}
+	log.Info().Msgf("Random seed set to `%s`", new(big.Int).SetBytes(randSeed[:]).Text(16))
+	rng := rand.New(rand.NewChaCha8(randSeed))
 
-	appendIfEnabled := func(key string, constructor func() *Actor) {
+	// combine all actor dags for the complete test run
+	root := NewActor("Root", rng)
+
+	appendIfEnabled := func(key string, constructor func(rng *rand.Rand) *Actor) {
 		if enabledStages[key] || enabledStages["all"] {
-			root.Append(constructor())
+			root.Append(constructor(rng))
 		}
 	}
 	appendIfEnabled("bootstrap", suites.Bootstrap)
@@ -160,7 +183,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to parse PARALLELISM")
 	}
 
-	cfg := InitConfig(parallelismInt, enabledStages["seed"] || enabledStages["all"])
+	cfg := InitConfig(parallelismInt, enabledStages["seed"] || enabledStages["all"], rng)
 
 	// start watchers
 	enabledWatchers := []*Watcher{
@@ -179,5 +202,5 @@ func main() {
 	}
 
 	// run the simulation
-	dag.Execute(cfg, root, parallelismInt)
+	dag.Execute(cfg, root, parallelismInt, rng)
 }
