@@ -812,12 +812,16 @@ type BifrostChainConfiguration struct {
 		// This is overridden at runtime by the `MaxUTXOsToSpend` mimir value.
 		MaxUTXOsToSpend int64 `mapstructure:"max_utxos_to_spend"`
 
-		// MaxMempoolAncestors is the maximum number of unconfirmed ancestors a UTXO can
-		// have before it is excluded from selection. This prevents the "too-long-mempool-chain"
-		// error when broadcasting transactions. Bitcoin, Litecoin, and Dogecoin have a default
-		// limit of 25 ancestors. Note: GetMempoolEntry's ancestorcount includes the transaction
-		// itself, so set this to 25 (not 24). Bitcoin Cash removed ancestor limits in May 2021,
-		// so BCH should set this to 0 (no limit). Set to 0 to disable ancestor checking.
+		// MaxMempoolAncestors is the maximum number of unconfirmed ancestors or descendants
+		// a UTXO can have before it is excluded from selection. This prevents the
+		// "too-long-mempool-chain" error when broadcasting transactions. Bitcoin, Litecoin,
+		// and Dogecoin have a default limit of 25 for both ancestors and descendants.
+		// Note: GetMempoolEntry's ancestorcount and descendantcount include the transaction
+		// itself, so set this to 25 (not 24). Additionally, UTXOs are excluded if the combined
+		// chain length (ancestorcount + descendantcount - 1) would exceed the limit when adding
+		// our transaction, since Bitcoin Core validates the entire transaction package.
+		// Bitcoin Cash removed ancestor/descendant limits in May 2021, so BCH should set this
+		// to 0 (no limit). Set to 0 to disable checking.
 		MaxMempoolAncestors int64 `mapstructure:"max_mempool_ancestors"`
 	} `mapstructure:"utxo"`
 }
@@ -841,8 +845,8 @@ func (b *BifrostChainConfiguration) Validate() {
 	// Validate MaxMempoolAncestors for UTXO chains
 	switch b.ChainID {
 	case common.BTCChain, common.LTCChain, common.DOGEChain:
-		// Bitcoin, Litecoin, and Dogecoin have a mempool ancestor limit of 25
-		// Config value should be <= 25 (GetMempoolEntry's ancestorcount includes the tx itself)
+		// Bitcoin, Litecoin, and Dogecoin have a mempool ancestor/descendant limit of 25
+		// Config value should be <= 25 (GetMempoolEntry counts include the tx itself)
 		if b.UTXO.MaxMempoolAncestors > 25 {
 			log.Fatal().
 				Str("chain", b.ChainID.String()).
