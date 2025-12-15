@@ -11,15 +11,15 @@ security@thorchain.org
 
 Encrypting submissions is strongly encouraged, using either `age` or old-school GPG:
 
-[age](https://github.com/FiloSottile/age) public key: age1vd0x57puspryxucnksuq0v8crlecszwqk38zfcze6fnhaxyt743sndg8dc
+[age](https://github.com/FiloSottile/age) public key: age1cf6rqud3rz47v227r8zs3z65wj5ey9wqy0eehmcwsm6esvyue3vqvaavg9
 
 GPG key:
 
 ```text
-pub   ed25519 2024-08-19 [SC] [expires: 2027-08-19]
-      05251E070F12FFFDE5E20112FE7986187823DD91
+pub   ed25519 2025-12-15 [SC] [expires: 2028-12-14]
+      B2AAA7A4D276F5F9674C7A4D36CBECE1C28BE080
 uid           ThorSec <security@thorchain.org>
-sub   cv25519 2024-08-19 [E] [expires: 2027-08-19]
+sub   cv25519 2025-12-15 [E] [expires: 2028-12-14]
 ```
 
 ## Categories
