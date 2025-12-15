@@ -212,7 +212,7 @@ func init() {
 	config.Thresholds.RuneTransferValue = 1_000_000
 	config.Thresholds.SwapDelta.USDValue = 50_000
 	config.Thresholds.SwapDelta.BasisPoints = 1000
-	config.Thresholds.Security.USDValue = 3_000_000
+	config.Thresholds.Security.USDValue = 10_000_000
 	config.Thresholds.SwapSlipBasisPoints = 100
 	config.Thresholds.TORAnchorDriftBasisPoints = 500
 	config.Thresholds.MaxRescheduledAge = 3 * 24 * time.Hour
