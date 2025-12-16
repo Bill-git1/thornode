@@ -311,6 +311,19 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				age := ctx.BlockHeight() - voter.FinalisedHeight
 				attempts := age / signingTransPeriod
 				if attempts >= maxOutboundAttempts {
+					// Skip treasury recovery if there's already an outbound associated or
+					// at least one observation of the outbound (outbound is in progress)
+					hasOutboundAssociated := len(voter.OutTxs) > 0
+					outboundObservations := mgr.Keeper().GetObservedLink(ctx, toi.InHash)
+					hasOutboundObservation := len(outboundObservations) > 0
+					if hasOutboundAssociated || hasOutboundObservation {
+						ctx.Logger().Info("skipping treasury recovery, outbound in progress",
+							"hash", toi.InHash,
+							"has_outbound", hasOutboundAssociated,
+							"has_observation", hasOutboundObservation)
+						continue
+					}
+
 					// For user-facing outbounds (refund, outbound, ragnarok), send to treasury recovery
 					if memo.IsOutbound() {
 						treasuryErr := s.sendFailedOutboundToTreasury(ctx, mgr, toi, vault, memo)
