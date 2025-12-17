@@ -44,7 +44,7 @@ const (
 	defaultObserveReconcileInterval = 15 * time.Second
 
 	// defaultAskPeers is the number of random peers to ask for their attestation state on startup.
-	defaultAskPeers = 3
+	defaultAskPeers = 10
 
 	// defaultAskPeersDelay is the delay before asking peers for their attestation state on startup.
 	defaultAskPeersDelay = 5 * time.Second

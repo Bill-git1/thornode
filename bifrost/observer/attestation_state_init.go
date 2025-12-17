@@ -43,7 +43,7 @@ func (s *AttestationGossip) askForAttestationState(ctx context.Context) {
 	rand.Shuffle(len(peersWithoutMe), func(i, j int) {
 		peersWithoutMe[i], peersWithoutMe[j] = peersWithoutMe[j], peersWithoutMe[i]
 	})
-	numPeers := 3
+	numPeers := s.config.AskPeers
 	if len(peersWithoutMe) < numPeers {
 		numPeers = len(peersWithoutMe)
 	}

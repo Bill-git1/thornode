@@ -425,8 +425,15 @@ func (b *EnshrinedBifrost) MarkQuorumTxAttestationsConfirmed(ctx context.Context
 
 	go b.broadcastQuorumTxEvent(qtx)
 
-	found := b.quorumTxCache.MarkAttestationsConfirmed(
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := sdkCtx.BlockHeight()
+
+	// Use atomic method to prevent race condition between MarkAttestationsConfirmed and AddToBlock.
+	// This ensures AddItem cannot check recentBlockItems between these two operations.
+	found := b.quorumTxCache.MarkAttestationsConfirmedAndAddToBlock(
 		qtx,
+		height,
+		cachedBlocks,
 		b.logger,
 		(*common.QuorumTx).Equals,
 		(*common.QuorumTx).GetAttestations,
@@ -447,12 +454,6 @@ func (b *EnshrinedBifrost) MarkQuorumTxAttestationsConfirmed(ctx context.Context
 			"hash", cmpObsTx.Tx.ID,
 		)
 	}
-
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	height := sdkCtx.BlockHeight()
-
-	b.quorumTxCache.AddToBlock(height, qtx)
-	b.quorumTxCache.CleanOldBlocks(height, cachedBlocks)
 }
 
 func (b *EnshrinedBifrost) broadcastQuorumNetworkFeeEvent(nf *common.QuorumNetworkFee) {
@@ -476,8 +477,14 @@ func (b *EnshrinedBifrost) MarkQuorumNetworkFeeAttestationsConfirmed(ctx context
 
 	go b.broadcastQuorumNetworkFeeEvent(qnf)
 
-	found := b.networkFeeCache.MarkAttestationsConfirmed(
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := sdkCtx.BlockHeight()
+
+	// Use atomic method to prevent race condition between MarkAttestationsConfirmed and AddToBlock.
+	found := b.networkFeeCache.MarkAttestationsConfirmedAndAddToBlock(
 		qnf,
+		height,
+		cachedBlocks,
 		b.logger,
 		(*common.QuorumNetworkFee).Equals,
 		(*common.QuorumNetworkFee).GetAttestations,
@@ -502,12 +509,6 @@ func (b *EnshrinedBifrost) MarkQuorumNetworkFeeAttestationsConfirmed(ctx context
 			"tx_rate", cmpNf.TransactionRate,
 		)
 	}
-
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	height := sdkCtx.BlockHeight()
-
-	b.networkFeeCache.AddToBlock(height, qnf)
-	b.networkFeeCache.CleanOldBlocks(height, cachedBlocks)
 }
 
 func (b *EnshrinedBifrost) broadcastQuorumSolvencyEvent(s *common.QuorumSolvency) {
@@ -531,8 +532,14 @@ func (b *EnshrinedBifrost) MarkQuorumSolvencyAttestationsConfirmed(ctx context.C
 
 	go b.broadcastQuorumSolvencyEvent(qs)
 
-	found := b.solvencyCache.MarkAttestationsConfirmed(
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := sdkCtx.BlockHeight()
+
+	// Use atomic method to prevent race condition between MarkAttestationsConfirmed and AddToBlock.
+	found := b.solvencyCache.MarkAttestationsConfirmedAndAddToBlock(
 		qs,
+		height,
+		cachedBlocks,
 		b.logger,
 		(*common.QuorumSolvency).Equals,
 		(*common.QuorumSolvency).GetAttestations,
@@ -557,12 +564,6 @@ func (b *EnshrinedBifrost) MarkQuorumSolvencyAttestationsConfirmed(ctx context.C
 			"pub_key", cmpS.PubKey,
 		)
 	}
-
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	height := sdkCtx.BlockHeight()
-
-	b.solvencyCache.AddToBlock(height, qs)
-	b.solvencyCache.CleanOldBlocks(height, cachedBlocks)
 }
 
 func (b *EnshrinedBifrost) broadcastQuorumErrataTxEvent(qe *common.QuorumErrataTx) {
@@ -586,8 +587,14 @@ func (b *EnshrinedBifrost) MarkQuorumErrataTxAttestationsConfirmed(ctx context.C
 
 	go b.broadcastQuorumErrataTxEvent(qe)
 
-	found := b.errataCache.MarkAttestationsConfirmed(
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := sdkCtx.BlockHeight()
+
+	// Use atomic method to prevent race condition between MarkAttestationsConfirmed and AddToBlock.
+	found := b.errataCache.MarkAttestationsConfirmedAndAddToBlock(
 		qe,
+		height,
+		cachedBlocks,
 		b.logger,
 		(*common.QuorumErrataTx).Equals,
 		(*common.QuorumErrataTx).GetAttestations,
@@ -608,12 +615,6 @@ func (b *EnshrinedBifrost) MarkQuorumErrataTxAttestationsConfirmed(ctx context.C
 			"id", cmpEr.Id,
 		)
 	}
-
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	height := sdkCtx.BlockHeight()
-
-	b.errataCache.AddToBlock(height, qe)
-	b.errataCache.CleanOldBlocks(height, cachedBlocks)
 }
 
 func (b *EnshrinedBifrost) broadcastQuorumPriceFeedBatchEvent(qpfb *common.QuorumPriceFeedBatch) {

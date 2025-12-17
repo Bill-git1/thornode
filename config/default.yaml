@@ -44,7 +44,7 @@ bifrost:
     late_observe_timeout: 5m
     non_quorum_timeout: 10h
     min_time_between_attestations: 30s
-    ask_peers: 3
+    ask_peers: 10
     ask_peers_delay: 5s
     max_batch_size: 100
     batch_interval: 2s
