@@ -331,6 +331,12 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 	}
 
 	swp := msg.GetStreamingSwap()
+
+	// for advanced swap queue, copy the current count from msg.State
+	if msg.State != nil {
+		swp.Count = msg.State.Count
+	}
+
 	// Only create streaming swap records for actual streaming swaps (not limit swaps)
 	if msg.IsLegacyStreaming() && !msg.IsLimitSwap() {
 		if h.mgr.Keeper().StreamingSwapExists(ctx, msg.Tx.ID) {

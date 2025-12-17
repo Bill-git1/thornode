@@ -7019,7 +7019,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "213",
-        "streaming_swap_count": "1",
+        "streaming_swap_count": "2",
         "streaming_swap_quantity": "2",
         "swap_slip": "213",
         "swap_target": "0",
