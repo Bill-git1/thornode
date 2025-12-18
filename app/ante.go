@@ -24,7 +24,7 @@ import (
 type HandlerOptions struct {
 	ante.HandlerOptions
 
-	WasmConfig *wasmtypes.WasmConfig
+	NodeConfig *wasmtypes.NodeConfig
 	WasmKeeper *wasmkeeper.Keeper
 
 	TXCounterStoreService corestoretypes.KVStoreService
@@ -45,7 +45,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 	if options.SignModeHandler == nil {
 		return nil, errors.New("sign mode handler is required for ante builder")
 	}
-	if options.WasmConfig == nil {
+	if options.NodeConfig == nil {
 		return nil, errors.New("wasm config is required for ante builder")
 	}
 	if options.WasmKeeper == nil {
@@ -67,7 +67,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		// replace gas meter immediately after setting up ctx
 		thorchain.NewGasDecorator(options.THORChainKeeper),
 
-		wasmkeeper.NewLimitSimulationGasDecorator(options.WasmConfig.SimulationGasLimit), // after setup context to enforce limits early
+		wasmkeeper.NewLimitSimulationGasDecorator(options.NodeConfig.SimulationGasLimit), // after setup context to enforce limits early
 		wasmkeeper.NewCountTXDecorator(options.TXCounterStoreService),
 		wasmkeeper.NewGasRegisterDecorator(options.WasmKeeper.GetGasRegister()),
 

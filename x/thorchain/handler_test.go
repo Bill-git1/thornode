@@ -150,7 +150,7 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 		runtime.NewKVStoreService(keyWasm),
 		ak, bk,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, wasmDir,
-		wasmtypes.DefaultWasmConfig(), wasmkeeper.BuiltInCapabilities(),
+		wasmtypes.DefaultNodeConfig(), wasmtypes.VMConfig{}, wasmkeeper.BuiltInCapabilities(),
 		authtypes.NewModuleAddress(ModuleName).String(),
 	)
 

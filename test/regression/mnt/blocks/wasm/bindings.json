@@ -1401,7 +1401,7 @@
         },
         "result": {
           "code": 1,
-          "log": "failed to execute message; message index: 0: dispatch: submessages: cannot use MsgSend for Module transactions, use MsgDeposit instead",
+          "log": "failed to execute message; message index: 0: cannot use MsgSend for Module transactions, use MsgDeposit instead",
           "gas_wanted": "-1",
           "gas_used": "0",
           "events": [

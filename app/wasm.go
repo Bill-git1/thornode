@@ -9,20 +9,21 @@ import (
 	wasmvmtypes "github.com/CosmWasm/wasmvm/v2/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/gogoproto/proto"
 	apitypes "gitlab.com/thorchain/thornode/v3/api/types"
 )
 
 var wasmAcceptedQueries = wasmkeeper.AcceptedQueries{
-	"/types.Query/Network":           &apitypes.QueryNetworkResponse{},
-	"/types.Query/LiquidityProvider": &apitypes.QueryLiquidityProviderResponse{},
-	"/types.Query/MimirWithKey":      &apitypes.QueryMimirWithKeyResponse{},
-	"/types.Query/Node":              &apitypes.QueryNodeResponse{},
-	"/types.Query/OutboundFee":       &apitypes.QueryOutboundFeeResponse{},
-	"/types.Query/Pool":              &apitypes.QueryPoolResponse{},
-	"/types.Query/QuoteSwap":         &apitypes.QueryQuoteSwapResponse{},
-	"/types.Query/SecuredAsset":      &apitypes.QuerySecuredAssetResponse{},
-	"/types.Query/OraclePrice":       &apitypes.QueryOraclePriceResponse{},
-	"/types.Query/SwapQueue":         &apitypes.QuerySwapQueueResponse{},
+	"/types.Query/Network":           func() proto.Message { return &apitypes.QueryNetworkResponse{} },
+	"/types.Query/LiquidityProvider": func() proto.Message { return &apitypes.QueryLiquidityProviderResponse{} },
+	"/types.Query/MimirWithKey":      func() proto.Message { return &apitypes.QueryMimirWithKeyResponse{} },
+	"/types.Query/Node":              func() proto.Message { return &apitypes.QueryNodeResponse{} },
+	"/types.Query/OutboundFee":       func() proto.Message { return &apitypes.QueryOutboundFeeResponse{} },
+	"/types.Query/Pool":              func() proto.Message { return &apitypes.QueryPoolResponse{} },
+	"/types.Query/QuoteSwap":         func() proto.Message { return &apitypes.QueryQuoteSwapResponse{} },
+	"/types.Query/SecuredAsset":      func() proto.Message { return &apitypes.QuerySecuredAssetResponse{} },
+	"/types.Query/OraclePrice":       func() proto.Message { return &apitypes.QueryOraclePriceResponse{} },
+	"/types.Query/SwapQueue":         func() proto.Message { return &apitypes.QuerySwapQueueResponse{} },
 }
 
 // Support slightly larger wasm files

@@ -374,7 +374,7 @@ func NewChainApp(
 	)
 
 	wasmDir := filepath.Join(homePath, "data") // "wasm" subdirectory created here
-	wasmConfig, err := wasm.ReadWasmConfig(appOpts)
+	nodeConfig, err := wasm.ReadNodeConfig(appOpts)
 	if err != nil {
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
 	}
@@ -409,7 +409,8 @@ func NewChainApp(
 		app.MsgServiceRouter(),
 		app.BaseApp.GRPCQueryRouter(),
 		wasmDir,
-		wasmConfig,
+		nodeConfig,
+		wasmtypes.VMConfig{},
 		wasmkeeper.BuiltInCapabilities(),
 		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
 		wasmOpts...,
@@ -617,7 +618,7 @@ func NewChainApp(
 				SigGasConsumer:  SigGasConsumer,
 			},
 			THORChainKeeper:       app.ThorchainKeeper,
-			WasmConfig:            &wasmConfig,
+			NodeConfig:            &nodeConfig,
 			WasmKeeper:            &app.WasmKeeper,
 			TXCounterStoreService: runtime.NewKVStoreService(keys[wasmtypes.StoreKey]),
 		},

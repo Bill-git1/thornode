@@ -79,7 +79,7 @@ func initAppConfig() (string, interface{}) {
 
 	type CustomAppConfig struct {
 		serverconfig.Config
-		Wasm     wasmtypes.WasmConfig    `mapstructure:"wasm"`
+		Wasm     wasmtypes.NodeConfig    `mapstructure:"wasm"`
 		EBifrost ebifrost.EBifrostConfig `mapstructure:"ebifrost"`
 	}
 
@@ -103,7 +103,7 @@ func initAppConfig() (string, interface{}) {
 
 	customAppConfig := CustomAppConfig{
 		Config: *srvCfg,
-		Wasm:   wasmtypes.DefaultWasmConfig(),
+		Wasm:   wasmtypes.DefaultNodeConfig(),
 	}
 
 	customAppTemplate := serverconfig.DefaultConfigTemplate
