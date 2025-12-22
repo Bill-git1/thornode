@@ -13,6 +13,98 @@ type TxOutStoreVCURSuite struct{}
 
 var _ = Suite(&TxOutStoreVCURSuite{})
 
+func (s TxOutStoreVCURSuite) TestTakeAffiliateFee(c *C) {
+	w := getHandlerTestWrapper(c, 1, true, true)
+	txOutStore := newTxOutStorageVCUR(w.keeper, w.mgr.GetConstants(), w.mgr.EventMgr(), w.mgr.GasMgr())
+
+	// Test Case 1: Standard memo - should return error if parsing fails (e.g. invalid type) or handle correctly
+	// Here we test the specific case where we pass the preferred asset swap memo, which usually fails parsing
+	// but should be ignored by takeAffiliateFee
+
+	toi := TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    GetRandomTxHash(),
+		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+		Memo:      PreferredAssetSwapMemoPrefix + "-ETH.ETH", // "THOR-PREFERRED-ASSET-ETH.ETH"
+	}
+
+	// Mock the inbound transaction that this outbound is related to
+	// The takeAffiliateFee method looks up the INBOUND transaction to get the memo
+	voter := NewObservedTxVoter(toi.InHash, common.ObservedTxs{
+		common.ObservedTx{
+			Tx: common.Tx{
+				ID:    toi.InHash,
+				Chain: common.ETHChain,
+				Coins: common.Coins{
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+				},
+				Memo: toi.Memo, // The inbound memo is what matters
+			},
+		},
+	})
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
+	// Execute takeAffiliateFee
+	amount, err := txOutStore.takeAffiliateFee(w.ctx, w.mgr, toi)
+
+	// Verify results
+	c.Assert(err, IsNil, Commentf("Should not error on preferred asset swap memo"))
+	c.Assert(amount.Equal(toi.Coin.Amount), Equals, true, Commentf("Amount should be unchanged"))
+}
+
+func (s TxOutStoreVCURSuite) TestIsAffiliateFeeExempt(c *C) {
+	w := getHandlerTestWrapper(c, 1, true, true)
+	txOutStore := newTxOutStorageVCUR(w.keeper, w.mgr.GetConstants(), w.mgr.EventMgr(), w.mgr.GasMgr())
+
+	testCases := []struct {
+		name     string
+		memo     string
+		expected bool
+	}{
+		{
+			name:     "Refund memo",
+			memo:     "REFUND:TxHash",
+			expected: true,
+		},
+		{
+			name:     "Migrate memo",
+			memo:     "MIGRATE:100",
+			expected: true,
+		},
+		{
+			name:     "Preferred Asset Swap memo",
+			memo:     "THOR-PREFERRED-ASSET-ETH.ETH",
+			expected: true,
+		},
+		{
+			name:     "Preferred Asset Swap memo exact",
+			memo:     constants.MemoPrefixPreferredAssetSwap,
+			expected: true,
+		},
+		{
+			name:     "Swap memo",
+			memo:     "SWAP:ETH.ETH",
+			expected: false,
+		},
+		{
+			name:     "Empty memo",
+			memo:     "",
+			expected: false,
+		},
+		{
+			name:     "Random memo",
+			memo:     "HELLO",
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		result := txOutStore.isAffiliateFeeExempt(tc.memo)
+		c.Assert(result, Equals, tc.expected, Commentf("Failed case: %s", tc.name))
+	}
+}
+
 func (s TxOutStoreVCURSuite) TestAddGasFees(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	tx := GetRandomObservedTx()

@@ -173,12 +173,18 @@ func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, to
 	return success, err
 }
 
+// isAffiliateFeeExempt returns true if the memo indicates a transaction type that is exempt from affiliate fees
+func (tos *TxOutStorageVCUR) isAffiliateFeeExempt(memo string) bool {
+	return strings.HasPrefix(memo, constants.MemoPrefixRefund) ||
+		strings.HasPrefix(memo, constants.MemoPrefixMigrate) ||
+		strings.HasPrefix(memo, constants.MemoPrefixPreferredAssetSwap)
+}
+
 // takeAffiliateFee - take affiliate fee from outbound amount using the inbound memo.
 // should not skim fees for refunds. returns the outbound amount less the affiliate
 // fee(s)
 func (tos *TxOutStorageVCUR) takeAffiliateFee(ctx cosmos.Context, mgr Manager, toi TxOutItem) (cosmos.Uint, error) {
-	// no affiliate fee for refunds or migrate txs
-	if strings.Split(toi.Memo, ":")[0] == constants.MemoPrefixRefund || strings.Split(toi.Memo, ":")[0] == constants.MemoPrefixMigrate {
+	if tos.isAffiliateFeeExempt(toi.Memo) {
 		return toi.Coin.Amount, nil
 	}
 
