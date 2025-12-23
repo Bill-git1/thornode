@@ -9,6 +9,8 @@ If you believe you have found an issue, please submit a writeup to:
 
 security@thorchain.org
 
+Fallback (in case of issues with the above): security@sodalabs.xyz
+
 Encrypting submissions is strongly encouraged, using either `age` or old-school GPG:
 
 [age](https://github.com/FiloSottile/age) public key: age1cf6rqud3rz47v227r8zs3z65wj5ey9wqy0eehmcwsm6esvyue3vqvaavg9
