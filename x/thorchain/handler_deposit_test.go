@@ -322,3 +322,111 @@ func getSwapQueueItem(ctx cosmos.Context, mgr Manager, txID common.TxID, index i
 	// If not found in regular queue, try advanced queue
 	return mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, index)
 }
+
+func (s *HandlerDepositSuite) TestMemolessNativeDeposit(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	mgr := NewDummyMgrWithKeeper(k)
+	handler := NewDepositHandler(mgr)
+
+	// Set up pool for BTC
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	addr := GetRandomBech32Addr()
+	FundAccount(c, ctx, k, addr, 1000*common.One)
+
+	// Register a reference memo for RUNE swaps
+	btcAddr := GetRandomBTCAddress()
+	refMemo := NewReferenceMemo(common.RuneNative, fmt.Sprintf("=:BTC.BTC:%s", btcAddr), "00001", 90)
+	refMemo.RegisteredBy = addr
+	refMemo.RegistrationHash, _ = common.NewTxID("ABC123")
+	k.SetReferenceMemo(ctx, refMemo)
+
+	// Test 1: Memoless deposit with amount encoding reference 00001
+	// Amount ends in 00001 (e.g., 100000001) to encode reference
+	amount := cosmos.NewUint(100000001) // Last 5 digits: 00001
+	coins := common.Coins{common.NewCoin(common.RuneNative, amount)}
+
+	msg := NewMsgDeposit(coins, "", addr) // Empty memo
+	c.Assert(msg, NotNil)
+
+	result, err := handler.handle(ctx, *msg, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+
+	// The handler should have generated "r:00001" and resolved it to the swap memo
+	// Verify via the swap queue (swap should be queued)
+	// Note: This is a basic test; full integration would verify the swap executes correctly
+}
+
+func (s *HandlerDepositSuite) TestExtractReferenceFromNativeAmount(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+	handler := NewDepositHandler(mgr)
+
+	// Test 1: Extract reference from amount
+	ref, err := handler.extractReferenceFromNativeAmount(ctx, 100000042)
+	c.Assert(err, IsNil)
+	c.Assert(ref, Equals, "00042")
+
+	// Test 2: Extract reference with different value
+	ref, err = handler.extractReferenceFromNativeAmount(ctx, 123456789)
+	c.Assert(err, IsNil)
+	c.Assert(ref, Equals, "56789")
+
+	// Test 3: Zero amount should error
+	_, err = handler.extractReferenceFromNativeAmount(ctx, 0)
+	c.Assert(err, NotNil)
+
+	// Test 4: Amount divisible by modulus should error (zero reference)
+	// With modulus 100000, an amount like 500000000 would give reference 00000
+	_, err = handler.extractReferenceFromNativeAmount(ctx, 500000000)
+	c.Assert(err, NotNil)
+	c.Assert(strings.Contains(err.Error(), "zero reference"), Equals, true)
+}
+
+func (s *HandlerDepositSuite) TestMemolessNativeDepositReferenceResolution(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	mgr := NewDummyMgrWithKeeper(k)
+	handler := NewDepositHandler(mgr)
+
+	// Set up pool for BTC
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	addr := GetRandomBech32Addr()
+	FundAccount(c, ctx, k, addr, 1000*common.One)
+
+	// Register a reference memo with explicit reference "r:00123"
+	btcAddr := GetRandomBTCAddress()
+	refMemo := NewReferenceMemo(common.RuneNative, fmt.Sprintf("=:BTC.BTC:%s", btcAddr), "00123", 90)
+	refMemo.RegisteredBy = addr
+	refMemo.RegistrationHash, _ = common.NewTxID("DEF456")
+	k.SetReferenceMemo(ctx, refMemo)
+
+	// Test: Deposit with explicit reference memo "r:00123"
+	amount := cosmos.NewUint(50 * common.One)
+	coins := common.Coins{common.NewCoin(common.RuneNative, amount)}
+
+	msg := NewMsgDeposit(coins, "r:00123", addr) // Explicit reference memo
+	c.Assert(msg, NotNil)
+
+	result, err := handler.handle(ctx, *msg, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+
+	// The handler should have resolved "r:00123" to "=:BTC.BTC:bc1qyyy"
+	// and queued a swap
+}

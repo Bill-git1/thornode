@@ -900,3 +900,149 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
+---
+########################################################################################
+# test memoless with native RUNE - register reference memo
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "0"
+    asset: "rune"
+memo: "reference:RUNE:=:BTC.BTC:{{ addr_btc_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/memo/THOR.RUNE/00001
+asserts:
+  - .asset == "THOR.RUNE"
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}"
+  - .reference == "00001"
+  - .registered_by == "{{ addr_thor_fox }}"
+---
+########################################################################################
+# test using RUNE reference memo with explicit reference r:00001
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "50000000"
+    asset: "rune"
+memo: "r:00001"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.memo|startswith("OUT:")
+---
+type: check
+endpoint: http://localhost:1317/thorchain/tx/details/{{ native_txid -1 }}
+asserts:
+  - .tx.tx.memo == "=:BTC.BTC:{{ addr_btc_fox }}"
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 18 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "38276"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "OUT:{{ native_txid -1 }}"
+    block_height: 35
+    finalise_height: 35
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0
+---
+########################################################################################
+# register a second RUNE reference memo for amount-encoded test
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "0"
+    asset: "rune"
+memo: "reference:RUNE:=:BTC.BTC:{{ addr_btc_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/memo/THOR.RUNE/00002
+asserts:
+  - .asset == "THOR.RUNE"
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}"
+  - .reference == "00002"
+  - .registered_by == "{{ addr_thor_fox }}"
+---
+########################################################################################
+# test using RUNE reference memo with amount-encoded reference (empty memo)
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "100000002"
+    asset: "rune"
+memo: ""
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.memo|startswith("OUT:")
+---
+type: check
+endpoint: http://localhost:1317/thorchain/tx/details/{{ native_txid -1 }}
+asserts:
+  - .tx.tx.memo == "=:BTC.BTC:{{ addr_btc_fox }}"
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 19 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "83377"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "OUT:{{ native_txid -1 }}"
+    block_height: 37
+    finalise_height: 37
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0

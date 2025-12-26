@@ -12,7 +12,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
           },
-          "sequence": "28"
+          "sequence": "30"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -72,7 +72,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "Aw/2MBvAhnLEifCInxlpTjCXxV0I/nE8pI5jNI+Zblx6"
           },
-          "sequence": "9"
+          "sequence": "13"
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
@@ -133,7 +133,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "296969672850",
+              "amount": "297132555212",
               "denom": "rune"
             }
           ]
@@ -142,7 +142,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34999736065444",
+              "amount": "34999730780512",
               "denom": "rune"
             }
           ]
@@ -151,7 +151,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2499982000000",
+              "amount": "2499823999998",
               "denom": "rune"
             }
           ]
@@ -169,7 +169,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5003314261706",
+              "amount": "5003314664278",
               "denom": "rune"
             }
           ]
@@ -227,7 +227,7 @@
           "height": "15"
         }
       ],
-      "last_signed_height": "44",
+      "last_signed_height": "50",
       "liquidity_providers": [
         {
           "asset": "BTC.BTC",
@@ -280,8 +280,8 @@
       "network": {
         "LPIncomeSplit": "9406",
         "NodeIncomeSplit": "594",
-        "bond_reward_rune": "3330261706",
-        "total_bond_units": "45"
+        "bond_reward_rune": "3330664278",
+        "total_bond_units": "51"
       },
       "network_fees": [
         {
@@ -336,7 +336,7 @@
       "observed_tx_out_voters": null,
       "outbound_fee_spent_rune": [
         {
-          "amount": "145594115",
+          "amount": "167698311",
           "asset": "BTC.BTC"
         },
         {
@@ -346,7 +346,7 @@
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "689698071629",
+          "amount": "689713549900",
           "asset": "BTC.BTC"
         },
         {
@@ -358,8 +358,8 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "96270406",
-          "balance_rune": "106208444197",
+          "balance_asset": "96128753",
+          "balance_rune": "106368644871",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -370,7 +370,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "931730115",
-          "balance_rune": "107814381645",
+          "balance_rune": "107815897281",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -381,7 +381,7 @@
           "LP_units": "100000000000",
           "asset": "GAIA.ATOM",
           "balance_asset": "60000100",
-          "balance_rune": "82946847008",
+          "balance_rune": "82948013060",
           "decimals": "6",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -481,6 +481,28 @@
           "used_by_txs": [
             "0000000000000000000000000000000000000000000000000000000000000008"
           ]
+        },
+        {
+          "asset": "THOR.RUNE",
+          "height": "46",
+          "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "reference": "00001",
+          "registered_by": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "registration_hash": "28546DCB74DDC85C4F1577E96180A8D698CEC891FCE43D3A2017912F7823B99C",
+          "used_by_txs": [
+            "1E0A0947B5E22575AAFC999C8556750694223CD52118571F4A8CF4DED381DCD7"
+          ]
+        },
+        {
+          "asset": "THOR.RUNE",
+          "height": "49",
+          "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "reference": "00002",
+          "registered_by": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "registration_hash": "CADBA9B85FB73339CE37B57558A8DA4862BAA0BD9E3C59D35E91167D1FF78F07",
+          "used_by_txs": [
+            "30A0FF6CD0A1194C7DD7797763BF98793485E4B63801310D181A45673D85DFAC"
+          ]
         }
       ],
       "reserve_contributors": null,
@@ -510,7 +532,7 @@
         {
           "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
           "reclaimed": "0",
-          "score": "35932199357",
+          "score": "35932257976",
           "spent": "0"
         },
         {
@@ -523,6 +545,12 @@
           "address": "cosmos13wrmhnh2qe98rjse30pl7u6jxszjjwl4t2v05e",
           "reclaimed": "0",
           "score": "35704023161",
+          "spent": "0"
+        },
+        {
+          "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "reclaimed": "0",
+          "score": "58618",
           "spent": "0"
         }
       ],
@@ -546,7 +574,7 @@
           ],
           "coins": [
             {
-              "amount": "96270406",
+              "amount": "96128753",
               "asset": "BTC.BTC",
               "decimals": "8"
             },
@@ -565,7 +593,7 @@
           "membership": [
             "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
           ],
-          "outbound_tx_count": "10",
+          "outbound_tx_count": "12",
           "pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
           "routers": null,
           "status": "ActiveVault",
@@ -621,5 +649,5 @@
       }
     }
   },
-  "initial_height": 46
+  "initial_height": 52
 }

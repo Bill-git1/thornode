@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/blang/semver"
 	tmtypes "github.com/cometbft/cometbft/types"
@@ -126,6 +127,19 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 
 	handler := NewInternalHandler(h.mgr)
 
+	// Add memo for memoless transactions (generate reference from amount)
+	if len(msg.Coins) > 0 && strings.TrimSpace(msg.Memo) == "" {
+		refAsset := msg.Coins[0].Asset
+		var referenceID string
+		referenceID, err = h.extractReferenceFromNativeAmount(ctx, msg.Coins[0].Amount.Uint64())
+		if err != nil {
+			return nil, fmt.Errorf("memoless native deposit failed: %w", err)
+		}
+		refMemo := NewReferenceReadMemo(referenceID)
+		msg.Memo = refMemo.CreateMemo() // Sets "r:XXXXX"
+		ctx.Logger().Info("generated reference memo for memoless native deposit", "reference", referenceID, "asset", refAsset)
+	}
+
 	memo, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
 	if err != nil {
 		return nil, ErrInternal(err, "invalid memo")
@@ -168,6 +182,24 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 	to, err := h.mgr.Keeper().GetModuleAddress(targetModule)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get to address: %w", err)
+	}
+
+	// Resolve reference memo if needed before processing
+	if len(msg.Coins) > 0 && memo.GetType() == TxReferenceReadMemo {
+		asset := msg.Coins[0].Asset
+		// Create a temporary tx for resolution context
+		tempTx := common.NewTx(txID, from, to, msg.Coins, common.Gas{}, msg.Memo)
+		// Use current block height as observation height for native deposits (instant finality)
+		resolvedMemo := fetchMemoFromReference(ctx, h.mgr, asset, tempTx, ctx.BlockHeight())
+		preMemo := msg.Memo
+		msg.Memo = resolvedMemo
+		ctx.Logger().Info("reference memo conversion for native deposit", "pre", preMemo, "post", msg.Memo, "asset", asset)
+
+		// Re-parse the resolved memo
+		memo, err = ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
+		if err != nil {
+			return nil, ErrInternal(err, "invalid resolved memo")
+		}
 	}
 
 	tx := common.NewTx(txID, from, to, coinsInMsg, common.Gas{}, msg.Memo)
@@ -269,6 +301,45 @@ func (h DepositHandler) addSwapDirectV3_0_0(ctx cosmos.Context, msg MsgSwap) {
 	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, msg, 0); err != nil {
 		ctx.Logger().Error("fail to add swap to queue", "error", err)
 	}
+}
+
+// extractReferenceFromNativeAmount extracts the reference ID from a native asset transaction amount.
+// All native assets use common.THORChainDecimals (8 decimals), so no pool lookup is needed.
+func (h DepositHandler) extractReferenceFromNativeAmount(ctx cosmos.Context, amount uint64) (string, error) {
+	if amount == 0 {
+		return "", fmt.Errorf("zero amount in transaction for reference generation")
+	}
+
+	baseEnd := h.mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnRefCount)
+	txnRefLength := len(fmt.Sprintf("%d", baseEnd))
+
+	// Prevent overflow: uint64 max is ~1.8e19, so max safe length is 19 digits
+	const maxRefLength = 19
+	if txnRefLength > maxRefLength {
+		return "", fmt.Errorf("reference length %d exceeds maximum %d to prevent overflow", txnRefLength, maxRefLength)
+	}
+
+	// Calculate modulus based on reference length (10^txnRefLength)
+	var modulus uint64 = 1
+	if baseEnd > 0 {
+		for i := 0; i < txnRefLength; i++ {
+			modulus *= 10
+		}
+	}
+
+	// Native assets already use THORChain decimals (8), so no normalization needed
+	// Extract reference from the amount directly
+	refNum := amount % modulus
+
+	// Zero references are not allowed as they would create ambiguous reference IDs.
+	// This occurs when the amount is exactly divisible by the modulus
+	// (e.g., 50000000 with modulus 100 → ref 0).
+	// Users should adjust their amount slightly to avoid this edge case.
+	if refNum == 0 {
+		return "", fmt.Errorf("zero reference from amount is invalid: amount %d is divisible by modulus %d", amount, modulus)
+	}
+
+	return leadingZeros(txnRefLength, fmt.Sprintf("%d", refNum)), nil
 }
 
 // DepositAnteHandler called by the ante handler to gate mempool entry
