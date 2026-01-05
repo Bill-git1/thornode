@@ -654,7 +654,7 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		estimatedGas = gasLimitForAggregator
 
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.AggregatorMaxGasMultiplier))
-	} else if !txOutItem.Coins[0].Asset.IsGasAsset() {
+	} else if len(txOutItem.Coins) > 0 && !txOutItem.Coins[0].Asset.IsGasAsset() {
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.TokenMaxGasMultiplier))
 	}
 
@@ -716,24 +716,32 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	if tx.VaultPubKey.IsEmpty() {
 		return nil, nil, nil, fmt.Errorf("vault public key is empty")
 	}
-
-	memo, err := mem.ParseMemo(common.LatestVersion, tx.Memo)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("fail to parse memo(%s):%w", tx.Memo, err)
+	if len(tx.Coins) == 0 {
+		return nil, nil, nil, fmt.Errorf("coins is empty")
 	}
 
-	if memo.IsInbound() {
-		return nil, nil, nil, fmt.Errorf("inbound memo should not be used for outbound tx")
-	}
-
-	if len(tx.Memo) == 0 {
-		return nil, nil, nil, fmt.Errorf("can't sign tx when it doesn't have memo")
+	// GetMemo returns OriginalMemo for memoless outbounds
+	// For truly memoless transactions (no Memo or OriginalMemo), default to TxOutbound
+	memoForParsing := tx.GetMemo()
+	var memo mem.Memo
+	if memoForParsing == "" {
+		memo = mem.NewOutboundMemo(tx.InHash)
+	} else {
+		var err error
+		memo, err = mem.ParseMemo(common.LatestVersion, memoForParsing)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to parse memo(%s):%w", memoForParsing, err)
+		}
+		if memo.IsInbound() {
+			return nil, nil, nil, fmt.Errorf("inbound memo should not be used for outbound tx")
+		}
 	}
 
 	// the nonce is stored as the transaction checkpoint, if it is set deserialize it
 	// so we only retry with the same nonce to avoid double spend
 	var nonce uint64
 	var fromAddr common.Address
+	var err error
 	fromAddr, err = tx.VaultPubKey.GetAddress(c.cfg.ChainID)
 	if tx.Checkpoint != nil {
 		if err = json.Unmarshal(tx.Checkpoint, &nonce); err != nil {

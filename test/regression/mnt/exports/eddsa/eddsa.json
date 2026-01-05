@@ -286,7 +286,7 @@
                   "decimals": "9"
                 }
               ],
-              "memo": "OUT:30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
+              "original_memo": "OUT:30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
               "to_address": "9V9sN1SyQgHCq9c3tbTRNEwaVRhTJPPZ3KZDtZqepUGK",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
               "vault_pub_key_eddsa": "tthorpub1zcjduepqytyuhhzn286vccztkdns982ad0snfa68k3zjlcm2j2ae6rffhxssu9zuek"
@@ -416,7 +416,7 @@
                   "decimals": "9"
                 }
               ],
-              "memo": "OUT:30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
+              "original_memo": "OUT:30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
               "to_address": "9V9sN1SyQgHCq9c3tbTRNEwaVRhTJPPZ3KZDtZqepUGK",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
               "vault_pub_key_eddsa": "tthorpub1zcjduepqytyuhhzn286vccztkdns982ad0snfa68k3zjlcm2j2ae6rffhxssu9zuek"

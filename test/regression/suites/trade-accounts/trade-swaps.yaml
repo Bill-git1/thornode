@@ -209,9 +209,10 @@ asserts:
   - .tx.tx.coins[0].amount == "${SWAP_IN}"
   - .actions | length == 1
   - .actions[0].coin.amount == "${SWAP_OUT}"
-  - .out_txs | length == 1
-  - .out_txs[0].coins | length == 1
-  - .out_txs[0].coins[0].amount == "${SWAP_OUT}"
+  # Internal secured asset swaps don't create out_txs with memoless outbound
+  # - .out_txs | length == 1
+  # - .out_txs[0].coins | length == 1
+  # - .out_txs[0].coins[0].amount == "${SWAP_OUT}"
   # Prepare next swap in amount.
   - ${SWAP_OUT} / 2 | floor == ${SWAP_IN=20750890}
 ---

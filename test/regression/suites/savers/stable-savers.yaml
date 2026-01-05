@@ -60,7 +60,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .[0].memo == "REFUND:{{ observe_txid 1 }}"
+  - .[0].original_memo == "REFUND:{{ observe_txid 1 }}"
   - .[0].coin.amount == "${OUT_AMOUNT=936000000}"
 ---
 type: tx-observed-out
@@ -173,7 +173,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].memo == "OUT:{{ observe_txid 4 }}"
+  - .[0].original_memo == "OUT:{{ observe_txid 4 }}"
   - .[0].coin.amount == "${OUT_AMOUNT=907051900}"
 ---
 type: tx-observed-out

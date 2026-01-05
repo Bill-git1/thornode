@@ -395,18 +395,23 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	if tx.VaultPubKey.IsEmpty() {
 		return nil, nil, nil, fmt.Errorf("vault public key is empty")
 	}
-
-	if len(tx.Memo) == 0 {
-		return nil, nil, nil, fmt.Errorf("can't sign tx when it doesn't have memo")
+	if len(tx.Coins) == 0 {
+		return nil, nil, nil, fmt.Errorf("coins is empty")
 	}
 
-	memo, err := mem.ParseMemo(common.LatestVersion, tx.Memo)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("fail to parse memo(%s):%w", tx.Memo, err)
-	}
-
-	if memo.IsInbound() {
-		return nil, nil, nil, fmt.Errorf("inbound memo should not be used for outbound tx")
+	// GetMemo returns OriginalMemo for memoless outbounds
+	// For truly memoless transactions (no Memo or OriginalMemo), default to TxOutbound
+	memoForParsing := tx.GetMemo()
+	var memoType mem.TxType = mem.TxOutbound // default to outbound for memoless
+	if memoForParsing != "" {
+		memo, err := mem.ParseMemo(common.LatestVersion, memoForParsing)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to parse memo(%s):%w", memoForParsing, err)
+		}
+		if memo.IsInbound() {
+			return nil, nil, nil, fmt.Errorf("inbound memo should not be used for outbound tx")
+		}
+		memoType = memo.GetType()
 	}
 
 	contractAddr := c.getSmartContractAddr(tx.VaultPubKey)
@@ -435,7 +440,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	dest := ecommon.HexToAddress(tx.ToAddress.String())
 	var data []byte
 
-	switch memo.GetType() {
+	switch memoType {
 	case mem.TxOutbound, mem.TxRefund, mem.TxRagnarok:
 		if tx.Aggregator == "" {
 			data, err = c.vaultABI.Pack("transferOut", dest, ecommon.HexToAddress(tokenAddr), value, tx.Memo)
@@ -443,7 +448,6 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 				return nil, nil, nil, fmt.Errorf("fail to create data to call smart contract(transferOut): %w", err)
 			}
 		} else {
-			memoType := memo.GetType()
 			if memoType == mem.TxRefund || memoType == mem.TxRagnarok {
 				return nil, nil, nil, fmt.Errorf("%s can't use transferOutAndCall", memoType)
 			}
@@ -641,7 +645,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		estimatedGas = gasLimitForAggregator
 
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.AggregatorMaxGasMultiplier))
-	} else if !tx.Coins[0].Asset.IsGasAsset() {
+	} else if len(tx.Coins) > 0 && !tx.Coins[0].Asset.IsGasAsset() {
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.TokenMaxGasMultiplier))
 	}
 

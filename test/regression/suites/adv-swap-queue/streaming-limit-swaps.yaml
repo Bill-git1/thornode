@@ -152,8 +152,8 @@ count: 11 # Wait past max age
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|map(select(.memo | contains("REFUND:${TXID_3}")))|length == 1
-  - .|map(select(.memo | contains("REFUND:${TXID_3}")) | .coin.asset)|.[0] == "BTC.BTC"
+  - .|map(select(.original_memo | contains("REFUND:${TXID_3}")))|length == 1
+  - .|map(select(.original_memo | contains("REFUND:${TXID_3}")) | .coin.asset)|.[0] == "BTC.BTC"
 ---
 # Clear the refund outbound
 type: tx-observed-out
@@ -215,8 +215,8 @@ count: 11 # Wait for expiration
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|map(select(.memo | contains("REFUND:${TXID_5}")))|length == 1
-  - .|map(select(.memo | contains("REFUND:${TXID_5}")) | .to_address)|.[0] == "{{ addr_btc_cat }}"
+  - .|map(select(.original_memo | contains("REFUND:${TXID_5}")))|length == 1
+  - .|map(select(.original_memo | contains("REFUND:${TXID_5}")) | .to_address)|.[0] == "{{ addr_btc_cat }}"
 ---
 # Clear the refund outbound
 type: tx-observed-out
@@ -286,8 +286,8 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|map(select(.memo | contains("REFUND:${TXID_9}")))|length == 1
-  - .|map(select(.memo | contains("REFUND:${TXID_9}")) | .coin.asset)|.[0] == "BTC.BTC"
+  - .|map(select(.original_memo | contains("REFUND:${TXID_9}")))|length == 1
+  - .|map(select(.original_memo | contains("REFUND:${TXID_9}")) | .coin.asset)|.[0] == "BTC.BTC"
 ---
 # Clear the refund outbound
 type: tx-observed-out
@@ -422,7 +422,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 2
   - any(.in_hash == "${TXID_10}" and .coin.asset == "ETH.ETH") # Partial swap output
-  - any(.memo | contains("REFUND:${TXID_10}")) # Refund of remaining BTC
+  - any(.original_memo | contains("REFUND:${TXID_10}")) # Refund of remaining BTC
   - .[0].coin.amount == "${OUT_AMOUNT_1=13263434}"
   - .[1].coin.amount == "${OUT_AMOUNT_2=1742999}"
 ---

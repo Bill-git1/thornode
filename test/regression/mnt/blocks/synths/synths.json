@@ -1367,7 +1367,7 @@
         "max_gas_amount_0": "10000",
         "max_gas_asset_0": "BTC.BTC",
         "max_gas_decimals_0": "8",
-        "memo": "OUT:413FF66BECE6CC21959B033177F140219A08BE83B2247716BA6B8EDC4DC5C507",
+        "memo": "",
         "mode": "EndBlock",
         "module_name": "",
         "out_hash": "",

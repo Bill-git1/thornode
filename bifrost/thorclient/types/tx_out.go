@@ -16,6 +16,7 @@ type TxOutItem struct {
 	VaultPubKey           common.PubKey  `json:"vault_pubkey"`
 	Coins                 common.Coins   `json:"coins"`
 	Memo                  string         `json:"memo"`
+	OriginalMemo          string         `json:"original_memo,omitempty"`
 	MaxGas                common.Gas     `json:"max_gas"`
 	GasRate               int64          `json:"gas_rate"`
 	InHash                common.TxID    `json:"in_hash"`
@@ -32,6 +33,15 @@ type TxOutItem struct {
 func (tx TxOutItem) Hash() string {
 	str := fmt.Sprintf("%s|%s|%s|%s|%s|%s", tx.Chain, tx.ToAddress, tx.VaultPubKey, tx.Coins, tx.Memo, tx.InHash)
 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
+}
+
+// GetMemo returns the memo to use for parsing/validation purposes.
+// For memoless outbounds, this returns OriginalMemo since Memo is empty.
+func (tx TxOutItem) GetMemo() string {
+	if tx.Memo == "" && tx.OriginalMemo != "" {
+		return tx.OriginalMemo
+	}
+	return tx.Memo
 }
 
 // CacheHash return a hash that doesn't include VaultPubKey , thus this one can be used as cache key for txOutItem across different vaults
@@ -105,6 +115,7 @@ type TxArrayItem struct {
 	VaultPubKey           common.PubKey  `json:"vault_pub_key,omitempty"`
 	Coin                  common.Coin    `json:"coin"`
 	Memo                  string         `json:"memo,omitempty"`
+	OriginalMemo          string         `json:"original_memo,omitempty"`
 	MaxGas                common.Gas     `json:"max_gas"`
 	GasRate               int64          `json:"gas_rate,omitempty"`
 	InHash                common.TxID    `json:"in_hash,omitempty"`
@@ -124,6 +135,7 @@ func (tx TxArrayItem) TxOutItem(height int64) TxOutItem {
 		VaultPubKey:           tx.VaultPubKey,
 		Coins:                 common.Coins{tx.Coin},
 		Memo:                  tx.Memo,
+		OriginalMemo:          tx.OriginalMemo,
 		MaxGas:                tx.MaxGas,
 		GasRate:               tx.GasRate,
 		InHash:                tx.InHash,

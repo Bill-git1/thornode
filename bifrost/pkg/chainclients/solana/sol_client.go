@@ -362,11 +362,11 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		return nil, nil, nil, errors.New("vault public key is empty")
 	}
 
-	if len(tx.Memo) == 0 {
-		return nil, nil, nil, errors.New("can't sign tx when it doesn't have memo")
-	}
+	// GetMemo returns OriginalMemo for memoless outbounds
+	// For truly memoless transactions (no Memo or OriginalMemo), default to TxOutbound
+	memoForParsing := tx.GetMemo()
 
-	solTx, err := c.CreateTx(tx)
+	solTx, err := c.CreateTx(tx, memoForParsing)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to create tx: %w", err)
 	}
@@ -448,19 +448,26 @@ func (c *SOLClient) signTransaction(solTx types.Transaction, txOut stypes.TxOutI
 
 // CreateTx builds a solana transfer function from a TxOutItem using the transaction
 // specification (https://solana.com/docs/core/transactions#manual-sol-transfer)
-func (c *SOLClient) CreateTx(tx stypes.TxOutItem) (types.Transaction, error) {
+func (c *SOLClient) CreateTx(tx stypes.TxOutItem, memoForParsing string) (types.Transaction, error) {
 	recentBlockhash := c.solScanner.getRecentBlockHash()
 	if recentBlockhash == "" {
 		return types.Transaction{}, errors.New("recent blockhash is empty")
 	}
 
-	// Validation
-	memo, err := mem.ParseMemo(common.LatestVersion, tx.Memo)
-	if err != nil {
-		return types.Transaction{}, fmt.Errorf("fail to parse memo(%s):%w", tx.Memo, err)
-	}
-	if memo.IsInbound() {
-		return types.Transaction{}, errors.New("inbound memo should not be used for outbound tx")
+	// Validation - use memoForParsing (which may be OriginalMemo for memoless outbounds)
+	// For truly memoless transactions, default to TxOutbound
+	var memo mem.Memo
+	if memoForParsing == "" {
+		memo = mem.NewOutboundMemo(tx.InHash)
+	} else {
+		var err error
+		memo, err = mem.ParseMemo(common.LatestVersion, memoForParsing)
+		if err != nil {
+			return types.Transaction{}, fmt.Errorf("fail to parse memo(%s):%w", memoForParsing, err)
+		}
+		if memo.IsInbound() {
+			return types.Transaction{}, errors.New("inbound memo should not be used for outbound tx")
+		}
 	}
 	if len(tx.Coins) != 1 {
 		return types.Transaction{}, fmt.Errorf("only support one coin per transaction, received: %d", len(tx.Coins))

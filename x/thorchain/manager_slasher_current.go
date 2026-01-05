@@ -201,6 +201,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	var resultErr error
 	maxOutboundAttempts := mgr.Keeper().GetConfigInt64(ctx, constants.MaxOutboundAttempts)
 	signingTransPeriod := mgr.Keeper().GetConfigInt64(ctx, constants.SigningTransactionPeriod)
+	enableMemolessOutbound := mgr.Keeper().GetConfigInt64(ctx, constants.EnableMemolessOutbound)
+
 	if ctx.BlockHeight() < signingTransPeriod {
 		return nil
 	}
@@ -258,7 +260,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				}
 			}
 
-			memo, _ := ParseMemoWithTHORNames(ctx, s.keeper, toi.Memo) // ignore err
+			memo, _ := ParseMemoWithTHORNames(ctx, s.keeper, toi.GetMemo()) // ignore err
 			if memo.IsInternal() {
 				// there is a different mechanism for rescheduling outbound
 				// transactions for migration transactions
@@ -396,7 +398,11 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						vault = active.SortBy(mainCoin.Asset)[0]
 					}
 				} else {
-					rep := int(toi.InHash.Int64() + ctx.BlockHeight()/signingTransPeriod)
+					// Use InHash for vault selection if available, otherwise use block height.
+					// For internal protocol transactions (ragnarok, migrations, etc.), InHash
+					// is set to BlankTxID since there is no associated inbound transaction.
+					inHashValue := toi.InHash.Int64()
+					rep := int(inHashValue + ctx.BlockHeight()/signingTransPeriod)
 					if vault.PubKey.Equals(available[rep%len(available)].PubKey) {
 						// looks like the new vault is going to be the same as the
 						// old vault, increment rep to ensure a differ asgard is
@@ -463,6 +469,9 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				ctx.Logger().Error("fail to add outbound to queue", "error", "coin is not rune and does not have an associated pool")
 				continue
 			}
+
+			// Apply memoless outbound logic before rescheduling
+			applyMemolessOutboundLogic(mgr.GetVersion(), &toi, enableMemolessOutbound)
 
 			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, toi, rescheduleHeight)
 			if err != nil {

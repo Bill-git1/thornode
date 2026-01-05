@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **MaxGas** | [**[]Coin**](Coin.md) |  | 
 **GasRate** | Pointer to **int64** |  | [optional] 
 **Memo** | Pointer to **string** |  | [optional] 
+**OriginalMemo** | Pointer to **string** |  | [optional] 
 **Aggregator** | Pointer to **string** | whitelisted DEX Aggregator contract address | [optional] 
 **AggregatorTargetAsset** | Pointer to **string** | target asset for the aggregator contract to attempt a swap to | [optional] 
 **AggregatorTargetLimit** | Pointer to **string** | the minimum number of tokens the swapper wants to receive of the output asset | [optional] 
@@ -293,6 +294,31 @@ SetMemo sets Memo field to given value.
 `func (o *TxOutItem) HasMemo() bool`
 
 HasMemo returns a boolean if a field has been set.
+
+### GetOriginalMemo
+
+`func (o *TxOutItem) GetOriginalMemo() string`
+
+GetOriginalMemo returns the OriginalMemo field if non-nil, zero value otherwise.
+
+### GetOriginalMemoOk
+
+`func (o *TxOutItem) GetOriginalMemoOk() (*string, bool)`
+
+GetOriginalMemoOk returns a tuple with the OriginalMemo field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetOriginalMemo
+
+`func (o *TxOutItem) SetOriginalMemo(v string)`
+
+SetOriginalMemo sets OriginalMemo field to given value.
+
+### HasOriginalMemo
+
+`func (o *TxOutItem) HasOriginalMemo() bool`
+
+HasOriginalMemo returns a boolean if a field has been set.
 
 ### GetAggregator
 

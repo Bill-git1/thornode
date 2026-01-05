@@ -96,7 +96,7 @@ txs:
       gas:
         - amount: "21000"
           asset: "ETH.ETH"
-      memo: ""
+      memo: "=:BTC.BTC:bc1qxhmdufsvnuaaaer4ynz88fspdsxq2h9e9cetdj" # inbound swap memo on outbound - should trigger slashing
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}

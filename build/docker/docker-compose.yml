@@ -627,6 +627,10 @@ services:
       RPC_PORT: "9650"
 
   # ------------------------------ tron ------------------------------
+  # The fullnode must wait for the supernode to be healthy before starting.
+  # Without this, both nodes try to connect simultaneously, triggering DUPLICATE_PEER
+  # detection which closes both connections. The fullnode ends up with 0 peers and
+  # fails to sync blocks, causing simulation tests to timeout waiting for tron.
 
   tron-supernode:
     profiles:
@@ -637,12 +641,34 @@ services:
       - "./mocknet:/mocknet"
     environment:
       TRON_NODE_TYPE: mocknet-supernode
+    healthcheck:
+      # Wait for supernode to produce block 1 before fullnode connects
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sf",
+          "-X",
+          "POST",
+          "-H",
+          "Content-Type: application/json",
+          "-d",
+          '{"num":1}',
+          "http://localhost:8090/wallet/getblockbynum",
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
 
   tron-fullnode:
     profiles:
       - mocknet
       - mocknet-cluster
     image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0-1
+    depends_on:
+      tron-supernode:
+        condition: service_healthy
     links:
       - tron-supernode:supernode
     volumes:

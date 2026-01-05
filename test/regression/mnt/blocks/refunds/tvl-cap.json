@@ -339,7 +339,7 @@
               "max_gas_amount_0": "10000",
               "max_gas_asset_0": "BTC.BTC",
               "max_gas_decimals_0": "8",
-              "memo": "REFUND:0000000000000000000000000000000000000000000000000000000000000001",
+              "memo": "",
               "module_name": "",
               "msg_index": "0",
               "out_hash": "",

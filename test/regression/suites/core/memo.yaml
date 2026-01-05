@@ -36,7 +36,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 1 }}"
-  - .[0]|.memo == "OUT:{{ observe_txid 1 }}|hello world"
+  - .[0]|.original_memo == "OUT:{{ observe_txid 1 }}|hello world"
   - .[0]|.coin.amount == "${OUT_AMOUNT=40861780}"
 ---
 type: tx-observed-out
@@ -98,8 +98,8 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 3 }}"
-  - .[0]|.memo == "REFUND:{{ observe_txid 3 }}|hello wo"
-  - .[0]|.memo|length == 80 # memo is truncated to chain-specific max
+  - .[0]|.original_memo == "REFUND:{{ observe_txid 3 }}|hello wo"
+  - .[0]|.original_memo|length == 80 # memo is truncated to chain-specific max
   - .[0]|.coin.amount == "${OUT_AMOUNT=4993000}"
 ---
 type: tx-observed-out
@@ -546,7 +546,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 10 }}"
-  - .[0]|.memo|startswith("REFUND:")
+  - .[0]|.original_memo|startswith("REFUND:")
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -689,7 +689,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 12 }}"
-  - .[0]|.memo|startswith("OUT:")
+  - .[0]|.original_memo|startswith("OUT:")
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -796,7 +796,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 14 }}"
-  - .[0]|.memo|startswith("OUT:")
+  - .[0]|.original_memo|startswith("OUT:")
 ---
 # Verify tx details endpoint returns full resolved memo (not reference memo)
 type: check
@@ -864,7 +864,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 16 }}"
-  - .[0]|.memo|startswith("REFUND:")
+  - .[0]|.original_memo|startswith("REFUND:")
 ---
 # Verify tx details endpoint shows that refund transaction has empty memo (usage exceeded)
 type: check
@@ -939,7 +939,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.memo|startswith("OUT:")
+  - .[0]|.original_memo|startswith("OUT:")
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/tx/details/{{ native_txid -1 }}
@@ -1012,7 +1012,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.memo|startswith("OUT:")
+  - .[0]|.original_memo|startswith("OUT:")
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/tx/details/{{ native_txid -1 }}

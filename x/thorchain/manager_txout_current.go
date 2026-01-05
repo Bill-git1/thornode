@@ -271,7 +271,6 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 	outboundHeight := ctx.BlockHeight()
 	cloutApplied := cosmos.ZeroUint()
 	if !toi.Chain.IsTHORChain() && !toi.InHash.IsEmpty() && !toi.InHash.Equals(common.BlankTxID) {
-		toi.Memo = outputs[0].Memo
 		voter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
 		if err != nil {
 			ctx.Logger().Error("fail to get observe tx in voter", "error", err)
@@ -279,7 +278,7 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 		}
 
 		var targetHeight int64
-		targetHeight, cloutApplied, err = tos.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
+		targetHeight, cloutApplied, err = tos.CalcTxOutHeight(ctx, mgr.GetVersion(), outputs[0])
 		if err != nil {
 			ctx.Logger().Error("failed to calc target block height for txout item", "error", err)
 		}
@@ -595,6 +594,11 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			}
 		}
 	}
+
+	// Apply memoless outbound logic if enabled
+	enableMemolessOutbound := tos.keeper.GetConfigInt64(ctx, constants.EnableMemolessOutbound)
+	applyMemolessOutboundLogic(tos.keeper.GetVersion(), &toi, enableMemolessOutbound)
+
 	if toi.ToAddress.IsEmpty() {
 		return outputs, cosmos.ZeroUint(), fmt.Errorf("empty to address, can't send out")
 	}
@@ -604,8 +608,10 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 	// BCH chain will convert legacy address to new format automatically , thus when observe it back can't be associated with the original inbound
 	// so here convert the legacy address to new format
+	var newBCHAddress common.Address
+	var err error
 	if toi.Chain.Equals(common.BCHChain) {
-		newBCHAddress, err := common.ConvertToNewBCHAddressFormat(toi.ToAddress)
+		newBCHAddress, err = common.ConvertToNewBCHAddressFormat(toi.ToAddress)
 		if err != nil {
 			return outputs, cosmos.ZeroUint(), fmt.Errorf("fail to convert BCH address to new format: %w", err)
 		}
@@ -711,7 +717,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 		}
 
 		// If the memo is unparsable, or Ragnarok, don't deduct an outbound fee.
-		memo, err := ParseMemoWithTHORNames(ctx, tos.keeper, outputs[i].Memo)
+		memo, err := ParseMemoWithTHORNames(ctx, tos.keeper, outputs[i].GetMemo())
 		feeDeduction := (err == nil && !memo.IsType(TxRagnarok))
 
 		// THORChain txouts by nature allow fee deduction, but InactiveVault outbounds
@@ -922,7 +928,7 @@ func (tos *TxOutStorageVCUR) addToBlockOut(ctx cosmos.Context, mgr Manager, item
 	if err != nil {
 		ctx.Logger().Error("fail to get vault", "error", err)
 	}
-	memo, _ := ParseMemo(mgr.GetVersion(), item.Memo) // ignore err
+	memo, _ := ParseMemo(mgr.GetVersion(), item.GetMemo()) // ignore err
 	labels := []metrics.Label{
 		telemetry.NewLabel("vault_type", vault.Type.String()),
 		telemetry.NewLabel("pubkey", item.VaultPubKey.String()),
@@ -1036,7 +1042,7 @@ func (tos *TxOutStorageVCUR) splitClout(ctx cosmos.Context, swapperCloutLimit, c
 func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.Version, toi TxOutItem) (int64, cosmos.Uint, error) {
 	// non-outbound transactions are skipped. This is so this code does not
 	// affect internal transactions (ie consolidation and migrate txs)
-	memo, _ := ParseMemo(version, toi.Memo) // ignore err
+	memo, _ := ParseMemo(version, toi.GetMemo()) // ignore err
 	if !memo.IsType(TxRefund) && !memo.IsType(TxOutbound) {
 		return ctx.BlockHeight(), cosmos.ZeroUint(), nil
 	}
@@ -1210,7 +1216,7 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 		toi.ToAddress,
 		common.Coins{toi.Coin},
 		common.Gas{common.NewCoin(common.RuneAsset(), outboundTxFee)},
-		toi.Memo,
+		toi.GetMemo(),
 	)
 
 	active, err := tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)

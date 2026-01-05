@@ -16,32 +16,27 @@ func (s TxSuite) TestTxID(c *C) {
 		Id      string
 		IsValid bool
 		ToUpper bool
-		Int64   int64
 	}{
 		{
 			// Cosmos
 			Id:      "A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49",
 			IsValid: true,
 			ToUpper: true,
-			Int64:   1668910921, // 63798F49
 		}, {
 			// Cosmos indexed
 			Id:      "A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49-1",
 			IsValid: true,
 			ToUpper: true,
-			Int64:   932770961, // 3798F49 + 1
 		}, {
 			// Cosmos indexed, big number
 			Id:      "A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49-97836",
 			IsValid: true,
 			ToUpper: true,
-			Int64:   4103175724, // F49 + 17E2C
 		}, {
 			// EVM
 			Id:      "0xb41cf456e942f3430681298c503def54b79a96e3373ef9d44ea314d7eae41952",
 			IsValid: true,
 			ToUpper: true,
-			Int64:   3940817234, // EAE41952
 		}, {
 			// Bogus
 			Id:      "bogus",

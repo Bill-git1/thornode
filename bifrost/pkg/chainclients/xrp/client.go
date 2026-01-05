@@ -392,6 +392,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, c
 
 	msg.Sequence = uint32(meta.SeqNumber)
 	msg.Fee = fee
+	// For memoless outbounds, skip adding memo to the transaction
 	if tx.Memo != "" {
 		msg.BaseTx.Memos = []txtypes.MemoWrapper{
 			{
@@ -400,8 +401,6 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, c
 				},
 			},
 		}
-	} else {
-		return nil, nil, nil, fmt.Errorf("tx out memo is empty")
 	}
 
 	txBytes, err := c.signMsg(msg, tx.VaultPubKey)

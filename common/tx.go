@@ -2,11 +2,11 @@ package common
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/big"
+	"math"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -67,40 +67,18 @@ func (tx TxID) Int64() int64 {
 		return 0
 	}
 
-	txIdStr := tx.String()
-
-	var indexHex string
-
-	if regexIsCosmosIndexed.MatchString(txIdStr) {
-		parts := strings.Split(txIdStr, "-")
-		if len(parts) != 2 {
-			panic("Failed to convert tx id to int64: " + tx.String())
-		}
-
-		txIdStr = parts[0]
-
-		index, err := strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			panic("Failed to parse index: " + tx.String())
-		}
-
-		indexHex = fmt.Sprintf("%x", index)
+	s := tx.String()
+	if len(s) < 8 {
+		panic("tx id too short: " + s)
 	}
 
-	charsRemain := 8 - len(indexHex)
+	b := []byte(s)
+	last := b[len(b)-8:]
 
-	last8Chars := txIdStr[len(txIdStr)-charsRemain:] + indexHex
+	n := binary.BigEndian.Uint64(last)
+	n &= math.MaxInt64 // ensure non-negative
 
-	if len(last8Chars) != 8 {
-		panic("Failed to convert tx id to int64: amount of chars != 8: " + last8Chars)
-	}
-
-	// using last8 chars to prevent negative int64
-	val, success := new(big.Int).SetString(last8Chars, 16)
-	if !success {
-		panic("Failed to convert")
-	}
-	return val.Int64()
+	return int64(n)
 }
 
 // IsEmpty return true when the tx represent empty string

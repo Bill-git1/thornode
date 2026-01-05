@@ -334,7 +334,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:0000000000000000000000000000000000000000000000000000000000000008",
+              "original_memo": "REFUND:0000000000000000000000000000000000000000000000000000000000000008",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -424,7 +424,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000a",
+              "original_memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000a",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -514,7 +514,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000b",
+              "original_memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000b",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -603,7 +603,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000c",
+              "original_memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000c",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -756,7 +756,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:0000000000000000000000000000000000000000000000000000000000000008",
+              "original_memo": "REFUND:0000000000000000000000000000000000000000000000000000000000000008",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -783,7 +783,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000a",
+              "original_memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000a",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -810,7 +810,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000b",
+              "original_memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000b",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -836,7 +836,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000c",
+              "original_memo": "REFUND:000000000000000000000000000000000000000000000000000000000000000c",
               "to_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }

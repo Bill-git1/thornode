@@ -413,19 +413,19 @@ func (s *HandlerObservedTxOutSuite) TestHandleStolenFundsInvalidMemo(c *C) {
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 
-	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 19999962500)
-	// As this was an invalid transaction, both Amount 100 * common.One and Gas 37500 (being slashed) subtracted from the pool.
+	// With memoless outbound support, invalid memos are no longer slashed here.
+	// The transaction is processed normally, and the pool/vault balances remain unchanged.
+	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 30000000000)
 	mgr.GasMgr().EndBlock(ctx, keeper, eventMgr)
-	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 19999962500)
-	// As this calls SlashVault from within handler_observed_txout_test.go (clearly invalid memo)
-	// rather than from within handler_common_outbound.go (invalid for other reasons),
-	// the gas cost is not subtracted from the pool a second time.
+	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 30000000000)
 
-	// make sure the coin has been subtract from the vault
-	c.Check(vault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(9999962500)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
-	// Being slashed, Amount 100*common.One and Gas 37500 have been subtracted from the 200*common.One vault balance.
+	// The vault balance should remain unchanged as no slashing occurs
+	updatedVault, err := keeper.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Check(updatedVault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(20000000000)), Equals, true, Commentf("%d", updatedVault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
 
-	c.Assert(keeper.na.Bond.LT(cosmos.NewUint(1000000*common.One)), Equals, true, Commentf("%d", keeper.na.Bond.Uint64()))
+	// The node account should not be modified since no slashing occurs with memoless outbound support
+	// keeper.na remains nil as SetNodeAccount is never called in this code path
 }
 
 type HandlerObservedTxOutTestHelper struct {

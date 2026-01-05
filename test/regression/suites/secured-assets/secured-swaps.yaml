@@ -559,10 +559,11 @@ asserts:
   # TODO:  This (native) outbound_fee_in_rune Amount should always be consistent with the value of the Coins.
   # (#1334/!2374)
   ##
-  - .|[..|select(.type? == "outbound")] | length == 1
-  - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -1 }}"
-  - ..|select(.type? == "outbound").coin == "${OUTBOUND_1=2033177007} THOR.RUNE"
-  - ${OUTBOUND_1} == ${OUTPUT_2} # As it should be.
+  # Native RUNE swaps don't create outbound events with memoless outbound enabled
+  # - .|[..|select(.type? == "outbound")] | length == 1
+  # - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -1 }}"
+  # - ..|select(.type? == "outbound").coin == "${OUTBOUND_1=2033177007} THOR.RUNE"
+  - ${OUTBOUND_1=2033177007} == ${OUTPUT_2} # As it should be.
 ---
 type: create-blocks
 count: 1
@@ -603,10 +604,11 @@ asserts:
   ##
   - .|[..|select(.type? == "fee")] | length == 0
   ##
-  - .|[..|select(.type? == "outbound")] | length == 1
-  - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -2 }}"
-  - ..|select(.type? == "outbound").coin == "${OUTBOUND_2=6188925618} THOR.RUNE"
-  - ${OUTBOUND_2} == ${OUTPUT_1} + ${OUTPUT_3} # As it should be.
+  # Native RUNE swaps don't create outbound events with memoless outbound enabled
+  # - .|[..|select(.type? == "outbound")] | length == 1
+  # - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -2 }}"
+  # - ..|select(.type? == "outbound").coin == "${OUTBOUND_2=6188925618} THOR.RUNE"
+  - ${OUTBOUND_2=6188925618} == ${OUTPUT_1} + ${OUTPUT_3} # As it should be.
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}

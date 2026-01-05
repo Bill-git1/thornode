@@ -171,6 +171,7 @@ const (
 	BondLockupPeriod
 	BurnSynths
 	DefaultPoolStatus
+	EnableMemolessOutbound
 	ManualSwapsToSynthDisabled
 	MaximumLiquidityRune
 	MintSynths

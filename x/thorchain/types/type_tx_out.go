@@ -1,7 +1,9 @@
 package types
 
 import (
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -79,6 +81,23 @@ func (toi TxOutItem) GetModuleName() string {
 		return AsgardName
 	}
 	return toi.ModuleName
+}
+
+func (toi TxOutItem) GetMemo() string {
+	if toi.OriginalMemo != "" {
+		return toi.OriginalMemo
+	}
+	return toi.Memo
+}
+
+// Hash returns a sha256 hash that uniquely represents the TxOutItem.
+// This matches bifrost/thorclient/types/tx_out.go TxOutItem.Hash() to ensure
+// THORNode and Bifrost use the same deterministic ordering when processing outbounds.
+func (toi TxOutItem) Hash() string {
+	// Bifrost uses Coins (slice) which formats as "<amount> <asset>" for single coin.
+	// THORNode uses Coin (singular) which has the same String() format.
+	str := fmt.Sprintf("%s|%s|%s|%s|%s|%s", toi.Chain, toi.ToAddress, toi.VaultPubKey, toi.Coin, toi.Memo, toi.InHash)
+	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
 }
 
 // NewTxOut creates a new TxOut.

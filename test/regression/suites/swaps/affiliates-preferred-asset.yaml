@@ -219,7 +219,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].memo == "OUT:{{ native_txid -1 }}"
+  - .[0].original_memo == "OUT:{{ native_txid -1 }}"
   - .[0].coin.amount == "${OUT_AMOUNT=21148371}"
 ---
 # Observe the main swap outbound.

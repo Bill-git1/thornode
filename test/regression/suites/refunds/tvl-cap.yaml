@@ -50,4 +50,4 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.coin.amount == "4999993000"
-  - .[0]|.memo == "REFUND:{{ observe_txid 1 }}"
+  - .[0]|.original_memo == "REFUND:{{ observe_txid 1 }}"

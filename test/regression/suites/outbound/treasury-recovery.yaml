@@ -127,7 +127,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length >= 1
-  - .|map(select(.memo | startswith("REFUND:"))) | length >= 1
+  - .|map(select(.original_memo | startswith("REFUND:"))) | length >= 1
 ---
 # Let the refund fail twice (MaxOutboundAttempts = 2)
 # Wait for first failure (SigningTransactionPeriod + 1 for processing)

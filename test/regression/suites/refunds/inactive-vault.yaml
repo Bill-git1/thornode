@@ -168,7 +168,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0].memo | contains("REFUND:")
+  - .[0].original_memo | contains("REFUND:")
   - .[0].max_gas | length == 1
   - .[0] | .coin.asset == .max_gas[0].asset
   - .[0] | (.coin.amount|tonumber) + (.max_gas[0].amount|tonumber) == ${INBOUND_AMOUNT}

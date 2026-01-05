@@ -191,7 +191,7 @@ func (s *SolTestSuite) TestCreateAndSerializeTx(c *C) {
 	e.solScanner.recentBlockHash = "asdfasdf"
 
 	// Create TX
-	tx, err := e.CreateTx(stypes.TxOutItem{
+	txOutItem := stypes.TxOutItem{
 		Chain:            common.SOLChain,
 		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
 		VaultPubKey:      "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
@@ -204,7 +204,8 @@ func (s *SolTestSuite) TestCreateAndSerializeTx(c *C) {
 		},
 		GasRate: 1,
 		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
-	})
+	}
+	tx, err := e.CreateTx(txOutItem, txOutItem.GetMemo())
 	c.Assert(err, IsNil)
 	c.Assert(tx, NotNil)
 

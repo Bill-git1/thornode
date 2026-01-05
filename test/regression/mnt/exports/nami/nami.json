@@ -311,7 +311,7 @@
                   "decimals": "6"
                 }
               ],
-              "memo": "OUT:0000000000000000000000000000000000000000000000000000000000000002",
+              "original_memo": "OUT:0000000000000000000000000000000000000000000000000000000000000002",
               "to_address": "cosmos100000000000000000000000000000000708mjz",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
               "vault_pub_key_eddsa": "tthorpub1zcjduepqzupdpx7334mjeuuggnvxv3ctkghu0qcz2eml30tgu9ukw58z6uusmmxmys"
@@ -460,7 +460,7 @@
                   "decimals": "6"
                 }
               ],
-              "memo": "OUT:0000000000000000000000000000000000000000000000000000000000000002",
+              "original_memo": "OUT:0000000000000000000000000000000000000000000000000000000000000002",
               "to_address": "cosmos100000000000000000000000000000000708mjz",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
               "vault_pub_key_eddsa": "tthorpub1zcjduepqzupdpx7334mjeuuggnvxv3ctkghu0qcz2eml30tgu9ukw58z6uusmmxmys"

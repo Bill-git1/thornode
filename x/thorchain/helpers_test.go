@@ -1304,3 +1304,117 @@ func (s *HelperSuite) TestLeadingZeros(c *C) {
 	// The function should return an empty string regardless of the input string.
 	c.Assert(leadingZeros(0, "12345"), Equals, "")
 }
+
+func (s *HelperSuite) TestApplyMemolessOutboundLogic(c *C) {
+	// Generate random transaction hashes for testing
+	txHash1 := GetRandomTxHash()
+	txHash2 := GetRandomTxHash()
+	txHash3 := GetRandomTxHash()
+	txHash4 := GetRandomTxHash()
+	txHash5 := GetRandomTxHash()
+	txHash6 := GetRandomTxHash()
+	refundHash := GetRandomTxHash()
+
+	tests := []struct {
+		name                   string
+		memo                   string
+		originalMemo           string
+		aggregator             string
+		enableMemolessOutbound int64
+		expectedMemo           string
+		expectedOriginalMemo   string
+	}{
+		// Memoless enabled scenarios
+		{
+			name:                   "basic memo clearing - regular memo gets cleared",
+			memo:                   fmt.Sprintf("OUT:%s", txHash1),
+			originalMemo:           "",
+			aggregator:             "",
+			enableMemolessOutbound: 1,
+			expectedMemo:           "",
+			expectedOriginalMemo:   fmt.Sprintf("OUT:%s", txHash1),
+		},
+		{
+			name:                   "MIGRATE prefix preservation",
+			memo:                   "MIGRATE:123",
+			originalMemo:           "",
+			aggregator:             "",
+			enableMemolessOutbound: 1,
+			expectedMemo:           "MIGRATE:123",
+			expectedOriginalMemo:   "MIGRATE:123",
+		},
+		{
+			name:                   "RAGNAROK prefix preservation",
+			memo:                   "RAGNAROK:456",
+			originalMemo:           "",
+			aggregator:             "",
+			enableMemolessOutbound: 1,
+			expectedMemo:           "RAGNAROK:456",
+			expectedOriginalMemo:   "RAGNAROK:456",
+		},
+		{
+			name:                   "aggregator preservation",
+			memo:                   fmt.Sprintf("OUT:%s", txHash2),
+			originalMemo:           "",
+			aggregator:             "0x123",
+			enableMemolessOutbound: 1,
+			expectedMemo:           fmt.Sprintf("OUT:%s", txHash2),
+			expectedOriginalMemo:   fmt.Sprintf("OUT:%s", txHash2),
+		},
+		{
+			name:                   "passthrough data preservation",
+			memo:                   fmt.Sprintf("OUT:%s|extra|data", txHash3),
+			originalMemo:           "",
+			aggregator:             "",
+			enableMemolessOutbound: 1,
+			expectedMemo:           fmt.Sprintf("OUT:%s|extra|data", txHash3),
+			expectedOriginalMemo:   fmt.Sprintf("OUT:%s|extra|data", txHash3),
+		},
+		{
+			name:                   "original memo persistence - not overwritten",
+			memo:                   fmt.Sprintf("OUT:%s", txHash4),
+			originalMemo:           fmt.Sprintf("OUT:%s", txHash5),
+			aggregator:             "",
+			enableMemolessOutbound: 1,
+			expectedMemo:           "",
+			expectedOriginalMemo:   fmt.Sprintf("OUT:%s", txHash5),
+		},
+		// Memoless disabled scenarios
+		{
+			name:                   "memo restoration when disabled",
+			memo:                   "",
+			originalMemo:           fmt.Sprintf("OUT:%s", txHash6),
+			aggregator:             "",
+			enableMemolessOutbound: 0,
+			expectedMemo:           fmt.Sprintf("OUT:%s", txHash6),
+			expectedOriginalMemo:   fmt.Sprintf("OUT:%s", txHash6),
+		},
+		{
+			name:                   "no restoration when original memo empty",
+			memo:                   fmt.Sprintf("REFUND:%s", refundHash),
+			originalMemo:           "",
+			aggregator:             "",
+			enableMemolessOutbound: 0,
+			expectedMemo:           fmt.Sprintf("REFUND:%s", refundHash),
+			expectedOriginalMemo:   fmt.Sprintf("REFUND:%s", refundHash),
+		},
+	}
+
+	for _, tt := range tests {
+		c.Logf("Running test: %s", tt.name)
+
+		// Create TxOutItem with test data
+		toi := TxOutItem{
+			Memo:         tt.memo,
+			OriginalMemo: tt.originalMemo,
+			Aggregator:   tt.aggregator,
+		}
+
+		// Apply the memoless outbound logic
+		applyMemolessOutboundLogic(GetCurrentVersion(), &toi, tt.enableMemolessOutbound)
+
+		// Verify results
+		c.Assert(toi.Memo, Equals, tt.expectedMemo, Commentf("Test: %s - Memo mismatch", tt.name))
+		c.Assert(toi.OriginalMemo, Equals, tt.expectedOriginalMemo, Commentf("Test: %s - OriginalMemo mismatch", tt.name))
+	}
+}

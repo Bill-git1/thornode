@@ -1569,3 +1569,41 @@ func isCancelTx(tx ObservedTx) bool {
 
 	return true
 }
+
+// applyMemolessOutboundLogic applies the memoless outbound logic to a TxOutItem
+// It modifies the memo based on enableMemolessOutbound setting and memo type
+// The function is safe to call multiple times on the same TxOutItem
+func applyMemolessOutboundLogic(version semver.Version, toi *TxOutItem, enableMemolessOutbound int64) {
+	// Store original memo if not already set (prevents overwriting on multiple calls)
+	if toi.OriginalMemo == "" {
+		toi.OriginalMemo = toi.Memo
+	}
+
+	// If feature is disabled, restore memo from original_memo
+	if enableMemolessOutbound <= 0 {
+		if toi.OriginalMemo != "" {
+			toi.Memo = toi.OriginalMemo
+		}
+		return
+	}
+
+	// Feature is enabled - apply memoless logic
+	memo, err := ParseMemo(version, toi.OriginalMemo)
+	if err != nil {
+		// If memo parsing fails, preserve the original memo
+		toi.Memo = toi.OriginalMemo
+		return
+	}
+
+	switch {
+	case toi.Aggregator != "", strings.Contains(toi.OriginalMemo, "|"):
+		// Utilizes dex agg or data passthrough, preserve memo
+		toi.Memo = toi.OriginalMemo
+	case memo.GetType().IsOutboundMemoless():
+		// Outbound memo type supports memoless, clear the memo
+		toi.Memo = ""
+	default:
+		// For all other memo types, preserve the original memo
+		toi.Memo = toi.OriginalMemo
+	}
+}

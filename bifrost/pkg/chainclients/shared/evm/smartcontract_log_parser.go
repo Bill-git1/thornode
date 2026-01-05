@@ -211,14 +211,18 @@ func (scp *SmartContractLogParser) GetTxInItem(logs []*etypes.Log, txInItem *typ
 				scp.logger.Err(err).Msg("fail to parse transfer out event")
 				continue
 			}
-			m, err := memo.ParseMemo(common.LatestVersion, transferOutEvt.Memo)
-			if err != nil {
-				scp.logger.Err(err).Str("memo", transferOutEvt.Memo).Msg("failed to parse transferOutEvent memo")
-				continue
-			}
-			if !m.IsOutbound() && !m.IsType(memo.TxMigrate) {
-				scp.logger.Error().Str("memo", transferOutEvt.Memo).Msg("incorrect memo for transferOutEvent")
-				continue
+			// For memoless outbounds, the memo is empty - treat as valid outbound
+			if transferOutEvt.Memo != "" {
+				var m memo.Memo
+				m, err = memo.ParseMemo(common.LatestVersion, transferOutEvt.Memo)
+				if err != nil {
+					scp.logger.Err(err).Str("memo", transferOutEvt.Memo).Msg("failed to parse transferOutEvent memo")
+					continue
+				}
+				if !m.IsOutbound() && !m.IsType(memo.TxMigrate) {
+					scp.logger.Error().Str("memo", transferOutEvt.Memo).Msg("incorrect memo for transferOutEvent")
+					continue
+				}
 			}
 			asset, err := scp.assetResolver(transferOutEvt.Asset.String())
 			if err != nil {

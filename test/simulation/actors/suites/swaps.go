@@ -68,6 +68,16 @@ func Swaps(rng *rand.Rand) *Actor {
 			a.Children[core.NewSwapActor(common.BTCAsset, pool, rng)] = true
 		}
 
+		// always swap to/from GAIA and TRON to ensure memoless outbound coverage
+		if pool.Chain == common.GAIAChain {
+			a.Children[core.NewSwapActor(common.BTCAsset, pool, rng)] = true
+			a.Children[core.NewSwapActor(pool, common.ETHAsset, rng)] = true
+		}
+		if pool.Chain == common.TRONChain {
+			a.Children[core.NewSwapActor(common.ETHAsset, pool, rng)] = true
+			a.Children[core.NewSwapActor(pool, common.BTCAsset, rng)] = true
+		}
+
 		// choose a random (other) pool to swap to
 		j := rng.IntN(len(swapPools))
 		for j == i {

@@ -349,7 +349,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "OUT:69A1E2025E1E45D051F31CB5B770F31A169907AD040BFD1C2A2D2F409EFCF11F",
+              "original_memo": "OUT:69A1E2025E1E45D051F31CB5B770F31A169907AD040BFD1C2A2D2F409EFCF11F",
               "to_address": "0x1b03d088612a00df0049634e9cc8684d622cada2",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -511,7 +511,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "OUT:69A1E2025E1E45D051F31CB5B770F31A169907AD040BFD1C2A2D2F409EFCF11F",
+              "original_memo": "OUT:69A1E2025E1E45D051F31CB5B770F31A169907AD040BFD1C2A2D2F409EFCF11F",
               "to_address": "0x1b03d088612a00df0049634e9cc8684d622cada2",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }

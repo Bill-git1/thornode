@@ -241,7 +241,7 @@
         "max_gas_amount_0": "500",
         "max_gas_asset_0": "SOL.SOL",
         "max_gas_decimals_0": "9",
-        "memo": "OUT:30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
+        "memo": "",
         "mode": "EndBlock",
         "module_name": "",
         "out_hash": "",

@@ -273,7 +273,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "OUT:54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
+              "original_memo": "OUT:54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
               "to_address": "bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             },
@@ -292,7 +292,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "OUT:54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
+              "original_memo": "OUT:54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
               "to_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
             }
           ],
@@ -435,7 +435,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "OUT:54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
+              "original_memo": "OUT:54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
               "to_address": "bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }

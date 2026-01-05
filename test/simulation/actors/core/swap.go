@@ -386,7 +386,14 @@ func (a *SwapActor) verifyOutbound(config *OpConfig) OpResult {
 	}
 
 	// verify action is not refund
-	if strings.HasPrefix(*details.Actions[0].Memo, "REFUND:") {
+	// For memoless outbounds, Memo may be nil but OriginalMemo contains the actual memo
+	actionMemo := ""
+	if details.Actions[0].Memo != nil {
+		actionMemo = *details.Actions[0].Memo
+	} else if details.Actions[0].OriginalMemo != nil {
+		actionMemo = *details.Actions[0].OriginalMemo
+	}
+	if strings.HasPrefix(actionMemo, "REFUND:") {
 		return OpResult{
 			Error:  fmt.Errorf("expected action to not be a refund"),
 			Finish: true,

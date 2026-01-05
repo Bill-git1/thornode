@@ -2247,7 +2247,7 @@ func (qs queryServer) queryTxStatus(ctx cosmos.Context, req *types.QueryTxStatus
 				Chain:     voter.Actions[i].Chain.String(),
 				ToAddress: voter.Actions[i].ToAddress.String(),
 				Coin:      &voter.Actions[i].Coin,
-				Refund:    strings.HasPrefix(voter.Actions[i].Memo, "REFUND"),
+				Refund:    strings.HasPrefix(voter.Actions[i].GetMemo(), "REFUND"),
 			}
 		}
 	}
@@ -3359,6 +3359,7 @@ func castTxOutItem(toi TxOutItem, height int64) *types.QueryTxOutItem {
 		MaxGas:                toi.MaxGas,
 		GasRate:               toi.GasRate,
 		Memo:                  toi.Memo,
+		OriginalMemo:          toi.OriginalMemo,
 		Aggregator:            toi.Aggregator,
 		AggregatorTargetAsset: toi.AggregatorTargetAsset,
 		AggregatorTargetLimit: toi.AggregatorTargetLimit.String(),

@@ -180,11 +180,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 3
-  - .[0].memo == "OUT:{{ native_txid -3 }}"
+  - .[0].original_memo == "OUT:{{ native_txid -3 }}"
   - .[0].coin.amount == "${OUT_AMOUNT=4476796200}"
-  - .[1].memo == "OUT:{{ native_txid -2 }}"
+  - .[1].original_memo == "OUT:{{ native_txid -2 }}"
   - .[1].coin.amount == "${OUT_AMOUNT}"
-  - .[2].memo == "OUT:{{ native_txid -1 }}"
+  - .[2].original_memo == "OUT:{{ native_txid -1 }}"
   - .[2].coin.amount == "${OUT_AMOUNT}"
 ---
 type: tx-observed-out

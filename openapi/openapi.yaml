@@ -2821,6 +2821,9 @@ components:
         memo:
           type: string
           example: "OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA"
+        original_memo:
+          type: string
+          example: "=:BTC.BTC:bc1q0lwf0ycw4gkh8v6y8g9yqwxvqnvm24kvdezgpg"
         aggregator:
           type: string
           description: whitelisted DEX Aggregator contract address

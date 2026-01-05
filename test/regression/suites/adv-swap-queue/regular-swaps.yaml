@@ -195,7 +195,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 5 }}"
-  - .[0].memo == "REFUND:{{ observe_txid 5 }}"
+  - .[0].original_memo == "REFUND:{{ observe_txid 5 }}"
   - .[0].to_address == "{{ addr_btc_fox }}"
   - .[0].coin.amount == "${REFUND_AMOUNT=993000}"
 ---
@@ -514,7 +514,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].memo == "REFUND:{{ observe_txid 15 }}"
+  - .[0].original_memo == "REFUND:{{ observe_txid 15 }}"
   - .[0].to_address == "{{ addr_btc_fox }}"
   - .[0].coin.amount == "${LIMIT_REFUND=993000}"
 ---

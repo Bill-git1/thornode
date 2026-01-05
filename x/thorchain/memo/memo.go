@@ -188,6 +188,15 @@ func (tx TxType) IsOutbound() bool {
 	}
 }
 
+func (tx TxType) IsOutboundMemoless() bool {
+	switch tx {
+	case TxOutbound, TxRefund:
+		return true
+	default:
+		return false
+	}
+}
+
 func (tx TxType) IsInternal() bool {
 	switch tx {
 	case TxMigrate, TxConsolidate:

@@ -488,3 +488,272 @@ func (s *HandlerObservedTxHelpersSuite) TestUnfinalizedHeightUsedInFetchMemoFrom
 	resolvedMemoWithHeight = fetchMemoFromReference(ctx, mgr, common.BTCAsset, voter.Tx.Tx, voter.Height)
 	c.Assert(resolvedMemoWithHeight, Equals, "") // Should fail due to height validation
 }
+
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundDeterministicOrdering(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Set signing transaction period
+	mgr.Keeper().SetMimir(ctx, constants.SigningTransactionPeriod.String(), 300)
+
+	// Create vault pubkey
+	vaultPubKey := GetRandomPubKey()
+
+	// Create two TxOutItems with identical on-chain fields but different memos/InHashes
+	// These would look identical on-chain in a memoless transaction
+	inHash1, _ := common.NewTxID("1111111111111111111111111111111111111111111111111111111111111111")
+	inHash2, _ := common.NewTxID("2222222222222222222222222222222222222222222222222222222222222222")
+
+	item1 := TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: vaultPubKey,
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+		Memo:        "OUT:" + inHash1.String(),
+		InHash:      inHash1,
+		GasRate:     100,
+		MaxGas:      common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))},
+	}
+
+	item2 := TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   item1.ToAddress, // Same ToAddress
+		VaultPubKey: vaultPubKey,     // Same VaultPubKey
+		Coin:        item1.Coin,      // Same Coin
+		Memo:        "OUT:" + inHash2.String(),
+		InHash:      inHash2,
+		GasRate:     100,
+		MaxGas:      common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))},
+	}
+
+	// Compute hashes to determine which one Bifrost would sign first
+	hash1 := item1.Hash()
+	hash2 := item2.Hash()
+
+	// Determine which item has the lower hash (Bifrost signs this one first)
+	var firstItem, secondItem TxOutItem
+	if hash1 < hash2 {
+		firstItem = item1
+		secondItem = item2
+	} else {
+		firstItem = item2
+		secondItem = item1
+	}
+
+	// Set block height for context
+	ctx = ctx.WithBlockHeight(100)
+
+	// Add both TxOutItems at the same height
+	txOut := NewTxOut(100)
+	// Add in reverse order to ensure ordering is not just array order
+	txOut.TxArray = append(txOut.TxArray, secondItem)
+	txOut.TxArray = append(txOut.TxArray, firstItem)
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	// Create an observed tx that matches both items (memoless on-chain)
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			Chain:     common.ETHChain,
+			ToAddress: item1.ToAddress,
+			Coins:     common.Coins{item1.Coin},
+			Memo:      "", // Empty memo (memoless)
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	// findOriginalMemoForOutbound should return the memo from the item with the lowest hash
+	// (the one Bifrost would sign first)
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, firstItem.Memo, Commentf("Expected memo from item with lower hash"))
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundSingleMatch(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Set signing transaction period
+	mgr.Keeper().SetMimir(ctx, constants.SigningTransactionPeriod.String(), 300)
+
+	// Create vault pubkey
+	vaultPubKey := GetRandomPubKey()
+	inHash, _ := common.NewTxID("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+	item := TxOutItem{
+		Chain:        common.ETHChain,
+		ToAddress:    GetRandomETHAddress(),
+		VaultPubKey:  vaultPubKey,
+		Coin:         common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+		Memo:         "OUT:" + inHash.String(),
+		OriginalMemo: "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890",
+		InHash:       inHash,
+		GasRate:      100,
+		MaxGas:       common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))},
+	}
+
+	// Set block height for context
+	ctx = ctx.WithBlockHeight(100)
+
+	// Add TxOutItem
+	txOut := NewTxOut(100)
+	txOut.TxArray = append(txOut.TxArray, item)
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	// Create an observed tx that matches the item
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			Chain:     common.ETHChain,
+			ToAddress: item.ToAddress,
+			Coins:     common.Coins{item.Coin},
+			Memo:      "", // Empty memo (memoless)
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	// Should return OriginalMemo when set
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, item.OriginalMemo)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundNoMatch(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Set signing transaction period
+	mgr.Keeper().SetMimir(ctx, constants.SigningTransactionPeriod.String(), 300)
+
+	// Create vault pubkey
+	vaultPubKey := GetRandomPubKey()
+
+	// Set block height for context
+	ctx = ctx.WithBlockHeight(100)
+
+	// Don't add any TxOutItems
+
+	// Create an observed tx
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			Chain:     common.ETHChain,
+			ToAddress: GetRandomETHAddress(),
+			Coins:     common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000))},
+			Memo:      "", // Empty memo (memoless)
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	// Should return empty string when no match
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, "")
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundEmptyCoins(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Create an observed tx with empty coins
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			Chain:     common.ETHChain,
+			ToAddress: GetRandomETHAddress(),
+			Coins:     common.Coins{}, // Empty coins
+			Memo:      "",
+		},
+		ObservedPubKey: GetRandomPubKey(),
+	}
+
+	// Should return empty string for empty coins
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, "")
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundAcrossMultipleHeights(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Set signing transaction period
+	mgr.Keeper().SetMimir(ctx, constants.SigningTransactionPeriod.String(), 300)
+
+	// Create vault pubkey
+	vaultPubKey := GetRandomPubKey()
+
+	// Create two TxOutItems at different heights with identical on-chain fields
+	inHash1, _ := common.NewTxID("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+	inHash2, _ := common.NewTxID("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+
+	toAddr := GetRandomETHAddress()
+	coin := common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000))
+
+	item1 := TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   toAddr,
+		VaultPubKey: vaultPubKey,
+		Coin:        coin,
+		Memo:        "OUT:" + inHash1.String(),
+		InHash:      inHash1,
+		GasRate:     100,
+		MaxGas:      common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))},
+	}
+
+	item2 := TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   toAddr,
+		VaultPubKey: vaultPubKey,
+		Coin:        coin,
+		Memo:        "OUT:" + inHash2.String(),
+		InHash:      inHash2,
+		GasRate:     100,
+		MaxGas:      common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))},
+	}
+
+	// Set block height for context
+	ctx = ctx.WithBlockHeight(100)
+
+	// Add item1 at height 90, item2 at height 95
+	// Bifrost should sign item1 first (lower height)
+	txOut90 := NewTxOut(90)
+	txOut90.TxArray = append(txOut90.TxArray, item1)
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut90), IsNil)
+
+	txOut95 := NewTxOut(95)
+	txOut95.TxArray = append(txOut95.TxArray, item2)
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut95), IsNil)
+
+	// Create an observed tx that matches both items
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			Chain:     common.ETHChain,
+			ToAddress: toAddr,
+			Coins:     common.Coins{coin},
+			Memo:      "", // Empty memo (memoless)
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	// Should return memo from item at lower height (item1 at height 90)
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, item1.Memo)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestTxOutItemHashConsistency(c *C) {
+	// Test that txOutItemHash produces consistent results matching Bifrost's formula
+	inHash, _ := common.NewTxID("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+	item := TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: GetRandomPubKey(),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+		Memo:        "OUT:" + inHash.String(),
+		InHash:      inHash,
+	}
+
+	// Hash should be deterministic
+	hash1 := item.Hash()
+	hash2 := item.Hash()
+	c.Assert(hash1, Equals, hash2)
+
+	// Hash should be 64 characters (SHA256 hex)
+	c.Assert(len(hash1), Equals, 64)
+
+	// Different memo should produce different hash
+	item2 := item
+	inHash2, _ := common.NewTxID("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+	item2.Memo = "OUT:" + inHash2.String()
+	item2.InHash = inHash2
+	hash3 := item2.Hash()
+	c.Assert(hash1, Not(Equals), hash3)
+}

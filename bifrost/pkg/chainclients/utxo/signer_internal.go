@@ -445,7 +445,8 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		c.log.Fatal().Msg("unsupported chain")
 	}
 
-	if len(nullDataScripts) == 0 {
+	// For memoless outbounds, allow empty nullDataScripts
+	if len(nullDataScripts) == 0 && len(tx.Memo) != 0 {
 		return nil, nil, fmt.Errorf("no null data scripts generated, memo will not be included in the transaction")
 	}
 
@@ -470,9 +471,16 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 	}
 
 	// Parse the memo to be able to identify Migrate or Consolidate outbounds.
-	memo, err := mem.ParseMemo(common.LatestVersion, tx.Memo)
-	if err != nil {
-		return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
+	// Use GetMemo() which returns OriginalMemo for memoless outbounds
+	memoForParsing := tx.GetMemo()
+	var memo mem.Memo
+	if memoForParsing == "" {
+		memo = mem.NewOutboundMemo(tx.InHash)
+	} else {
+		memo, err = mem.ParseMemo(common.LatestVersion, memoForParsing)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
+		}
 	}
 
 	// if the total gas spend is more than max gas , then we have to take away some from the amount pay to customer

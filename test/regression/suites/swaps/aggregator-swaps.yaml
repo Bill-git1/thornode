@@ -49,6 +49,7 @@ asserts:
       ],
       "gas_rate": 120,
       "memo": "OUT:34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
+      "original_memo": "OUT:34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
       "aggregator": "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
       "aggregator_target_asset": "0x6f67873ebc41ed88B08A9265Bd16480f819e4348",
       "aggregator_target_limit": "0",
@@ -69,6 +70,7 @@ asserts:
           "amount": "82004267"
         },
         "memo": "OUT:34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
+        "original_memo": "OUT:34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
         "max_gas": [
           {
             "asset": "ETH.ETH",
@@ -83,5 +85,4 @@ asserts:
         "aggregator_target_limit": "0",
         "clout_spent": "0"
       }
-
-  - .signature == "tDY+4ydD8Jruk6lBQ5CGAopyemisZm0iC1SBmQAI3BZwm3xZ21FoUYBGhlTXKG3xbcxRTLjNdI7LGHGCTJ+ksg=="
+  - .signature == "N1nQajpYIF04JuAx3VhrVQDtwTdqMgl/FHBfTn8MVJBl/20oM5in2KaxQLMLoCAWg0xjKykx57cuS34zabP6DA=="

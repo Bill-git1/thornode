@@ -29,6 +29,7 @@ func init() {
 		MinimumBondInRune:                   100_000_000, // 1 rune
 		MemolessTxnTTL:                      100,
 		MemolessTxnMaxUse:                   5, // higher limit for testing
+		EnableMemolessOutbound:              1, // Enable memoless outbound for mocknet testing
 		ValidatorMaxRewardRatio:             3,
 		FundMigrationInterval:               15,
 		LiquidityLockUpBlocks:               0,

@@ -3,6 +3,7 @@ package thorchain
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -545,7 +546,7 @@ func handleObservedTxOutQuorum(
 
 	// if memo isn't valid or its an inbound memo, slash the vault
 	memo, _ := ParseMemoWithTHORNames(ctx, k, tx.Tx.Memo)
-	if memo.IsEmpty() || memo.IsInbound() {
+	if memo.IsInbound() {
 		vault, err := k.GetVault(ctx, tx.ObservedPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to get vault", "error", err)
@@ -573,6 +574,15 @@ func handleObservedTxOutQuorum(
 
 	txOut := voter.GetTx(activeNodeAccounts) // get consensus tx, in case our for loop is incorrect
 	txOut.Tx.Memo = tx.Tx.Memo
+
+	// For memoless outbounds, look up the original memo from the scheduled TxOutItem
+	if txOut.Tx.Memo == "" {
+		if originalMemo := findOriginalMemoForOutbound(ctx, mgr, tx); originalMemo != "" {
+			txOut.Tx.Memo = originalMemo
+			ctx.Logger().Info("resolved memoless outbound", "original_memo", originalMemo, "txid", tx.Tx.ID)
+		}
+	}
+
 	m, err := processOneTxIn(ctx, k, *txOut, signer)
 	if err != nil || tx.Tx.Chain.IsEmpty() {
 		ctx.Logger().Error("fail to process txOut",
@@ -677,6 +687,116 @@ func handleObservedTxOutQuorum(
 	ctx.Logger().Info("tx out processed", "chain", tx.Tx.Chain, "id", tx.Tx.ID, "finalized", tx.IsFinal())
 
 	return nil
+}
+
+// matchedOutbound holds a matching TxOutItem with its height and hash for sorting
+type matchedOutbound struct {
+	height int64
+	item   TxOutItem
+	hash   string
+}
+
+// findOriginalMemoForOutbound searches the TxOut queue for a matching scheduled outbound
+// and returns its OriginalMemo. This is needed for memoless outbounds where the on-chain
+// memo is empty but we need the original memo to properly link the outbound to its inbound.
+//
+// When multiple TxOutItems match (e.g., two outbounds with identical on-chain fields but
+// different memos), this function uses deterministic ordering matching Bifrost's signer
+// (see bifrost/signer/storage.go:200-204) to ensure THORNode picks the same one Bifrost signed.
+func findOriginalMemoForOutbound(ctx cosmos.Context, mgr Manager, tx common.ObservedTx) string {
+	// Check coins early to avoid unnecessary iteration
+	if len(tx.Tx.Coins) == 0 {
+		return ""
+	}
+
+	k := mgr.Keeper()
+	signingTransPeriod := k.GetConfigInt64(ctx, constants.SigningTransactionPeriod)
+
+	// Search recent TxOut blocks for matching TxOutItem
+	// Use the same range logic as handler_common_outbound.go
+	earliestHeight := ctx.BlockHeight() - signingTransPeriod
+	if earliestHeight < 1 {
+		earliestHeight = 1
+	}
+
+	// A TxOutItem might be rescheduled (by LackSigning) rounded up to nearest multiple of RescheduleCoalesceBlocks,
+	// so check backwards from that future nearest multiple.
+	latestHeight := ctx.BlockHeight()
+	rescheduleCoalesceBlocks := k.GetConfigInt64(ctx, constants.RescheduleCoalesceBlocks)
+	if rescheduleCoalesceBlocks > 1 {
+		overBlocks := latestHeight % rescheduleCoalesceBlocks
+		if overBlocks != 0 {
+			latestHeight += rescheduleCoalesceBlocks - overBlocks
+		}
+	}
+
+	// Collect all matching TxOutItems
+	var matches []matchedOutbound
+
+	for height := earliestHeight; height <= latestHeight; height++ {
+		txOut, err := k.GetTxOut(ctx, height)
+		if err != nil {
+			continue
+		}
+		for _, item := range txOut.TxArray {
+			// Skip if already has an OutHash (already processed)
+			if !item.OutHash.IsEmpty() {
+				continue
+			}
+			if !item.Chain.Equals(tx.Tx.Chain) {
+				continue
+			}
+			if !item.ToAddress.Equals(tx.Tx.ToAddress) {
+				continue
+			}
+			// Check both regular and EdDSA vault pubkeys (same as handler_common_outbound.go)
+			if !item.VaultPubKey.Equals(tx.ObservedPubKey) && !item.VaultPubKeyEddsa.Equals(tx.ObservedPubKey) {
+				continue
+			}
+			if !item.Coin.Asset.Equals(tx.Tx.Coins[0].Asset) {
+				continue
+			}
+			// Check coin amount matches (with some flexibility for gas)
+			// Similar to handler_common_outbound.go logic
+			matchCoin := tx.Tx.Coins.EqualsEx(common.Coins{item.Coin})
+			if !matchCoin && item.Coin.Asset.Equals(item.Chain.GetGasAsset()) {
+				asset := item.Chain.GetGasAsset()
+				intendToSpend := item.Coin.Amount.Add(item.MaxGas.ToCoins().GetCoin(asset).Amount)
+				actualSpend := tx.Tx.Coins.GetCoin(asset).Amount.Add(tx.Tx.Gas.ToCoins().GetCoin(asset).Amount)
+				if intendToSpend.Equal(actualSpend) {
+					matchCoin = true
+				}
+			}
+			if !matchCoin {
+				continue
+			}
+			// Found a match - add to list for deterministic sorting
+			matches = append(matches, matchedOutbound{
+				height: height,
+				item:   item,
+				hash:   item.Hash(),
+			})
+		}
+	}
+
+	if len(matches) == 0 {
+		return ""
+	}
+
+	// Sort by height (ascending), then by hash (ascending)
+	// This matches Bifrost's deterministic ordering in signer/storage.go:200-204
+	sort.SliceStable(matches, func(i, j int) bool {
+		return matches[i].hash < matches[j].hash
+	})
+	sort.SliceStable(matches, func(i, j int) bool {
+		return matches[i].height < matches[j].height
+	})
+
+	// Return memo from first match (what Bifrost would sign first)
+	if matches[0].item.OriginalMemo != "" {
+		return matches[0].item.OriginalMemo
+	}
+	return matches[0].item.Memo
 }
 
 // fetchMemoFromReference fetches memo from reference if it's a memoless transaction
