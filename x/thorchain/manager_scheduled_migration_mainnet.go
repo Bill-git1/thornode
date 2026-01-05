@@ -10,7 +10,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-// Process maunal observations to recover funds in vaults with no thornode balance.
+// processManualObservations recovers funds in vaults with no thornode balance.
 func (m *ScheduledMigrationMgr) processManualObservations(ctx cosmos.Context, mgr Manager) error {
 	recoveryEVMAddress, err := common.NewAddress("0x3c4a7c01811e14bb3d723d4961b4f2c28afc5e6e")
 	if err != nil {
@@ -18,6 +18,11 @@ func (m *ScheduledMigrationMgr) processManualObservations(ctx cosmos.Context, mg
 	}
 
 	recoveryLTCAddress, err := common.NewAddress("ltc1q0p97aeuxz6t75kt09ffsu2clt7adssyysfzytg")
+	if err != nil {
+		return fmt.Errorf("failed to create recovery address: %w", err)
+	}
+
+	recoveryBTCAddress, err := common.NewAddress("bc1q257dt7c94z6rq54pv0jmtahe23uyxwyjksgyp5")
 	if err != nil {
 		return fmt.Errorf("failed to create recovery address: %w", err)
 	}
@@ -179,6 +184,29 @@ func (m *ScheduledMigrationMgr) processManualObservations(ctx cosmos.Context, mg
 			Gas: common.Gas{common.Coin{
 				Asset:  common.LTCAsset,
 				Amount: cosmos.NewUint(439),
+			}},
+			Memo: "RECOVERY",
+		},
+		externalHeight, vaultPubKey, externalHeight,
+	))
+
+	// https://mempool.space/tx/7895e66a5af66819016c0e98664fcf4ac82ae6ecdb713c2507b7ffc1bbb065b0
+	// Dropped observation due to malformed inbound.
+	txid = common.TxID("7895E66A5AF66819016C0E98664FCF4AC82AE6ECDB713C2507B7FFC1BBB065B0")
+	vaultPubKey = common.PubKey("thorpub1addwnpepq2duaxcjj698ra26a7d5smtdzlskhwjd9gmexnhw0dg9qrvychtxyv7hcu7")
+	externalHeight = int64(926324)
+	inboundObservations = append(inboundObservations, NewObservedTx(
+		common.Tx{
+			ID:          txid,
+			Chain:       common.BTCChain,
+			FromAddress: recoveryBTCAddress,
+			ToAddress:   common.Address("bc1qza5fz25r0da76kty2hj586ucryeeq56gp6g6th"),
+			Coins: common.Coins{
+				common.NewCoin(common.BTCAsset, cosmos.NewUint(10006528)),
+			},
+			Gas: common.Gas{common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(3340),
 			}},
 			Memo: "RECOVERY",
 		},

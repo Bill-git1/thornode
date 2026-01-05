@@ -391,5 +391,20 @@ func (m Migrator) Migrate11to12(ctx sdk.Context) error {
 		ctx.Logger().Info("deleted obsolete mimir", "key", key)
 	}
 
+	// refund 43F310A416A4ED8CF8B645B1EBBB5E25FB89F9777A4350F7023DEB62B90EA3AD
+	refundRune := common.NewCoin(common.RuneNative, cosmos.NewUint(40000000000))
+	userAddr, err := common.NewAddress("thor1dvvr4kdeurs8fdwgrql6je7l2v9ma73dp50n7m")
+	if err != nil {
+		return err
+	}
+	userAccAddr, err := userAddr.AccAddress()
+	if err != nil {
+		return err
+	}
+	err = m.mgr.Keeper().SendFromModuleToAccount(ctx, ReserveName, userAccAddr, common.NewCoins(refundRune))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
