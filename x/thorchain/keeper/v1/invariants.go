@@ -303,49 +303,63 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 		for ; advSwapIter.Valid(); advSwapIter.Next() {
 			var swap MsgSwap
 			k.Cdc().MustUnmarshal(advSwapIter.Value(), &swap)
-			// For advanced queue, check if it's a streaming swap (quantity > 1)
 			if swap.State != nil && swap.IsStreaming() {
 				v2StreamingSwaps = append(v2StreamingSwaps, swap)
+			}
+		}
 
-				// Validate V2 (advanced queue) streaming swaps using their embedded State
-				for _, swap := range v2StreamingSwaps {
-					if swap.State == nil {
-						broken = true
-						msg = append(msg, fmt.Sprintf("%s: advanced swap missing state", swap.Tx.ID.String()))
-						continue
-					}
+		// Validate V2 (advanced queue) streaming swaps using their embedded State
+		for _, swap := range v2StreamingSwaps {
+			if swap.State == nil {
+				broken = true
+				msg = append(msg, fmt.Sprintf("%s: advanced swap missing state", swap.Tx.ID.String()))
+				continue
+			}
 
-					// Check that coin amount matches deposit in state
-					if len(swap.Tx.Coins) > 0 && !swap.Tx.Coins[0].Amount.Equal(swap.State.Deposit) {
-						broken = true
-						msg = append(msg, fmt.Sprintf(
-							"%s: swap.coin %s != state.deposit %s",
-							swap.Tx.ID.String(),
-							swap.Tx.Coins[0].Amount,
-							swap.State.Deposit.String()))
-					}
+			// Check that coin amount matches deposit in state
+			if len(swap.Tx.Coins) == 0 {
+				broken = true
+				msg = append(msg, fmt.Sprintf("%s: advanced swap missing coins", swap.Tx.ID.String()))
+				continue
+			} else if !swap.Tx.Coins[0].Amount.Equal(swap.State.Deposit) {
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"%s: swap.coin %s != state.deposit %s",
+					swap.Tx.ID.String(),
+					swap.Tx.Coins[0].Amount,
+					swap.State.Deposit.String()))
+			}
 
-					// Check count doesn't exceed quantity (skip for limit swaps - they can exceed
-					// quantity when sub-swaps fail due to insufficient balance)
-					if swap.State.Count > swap.State.Quantity && !swap.IsLimitSwap() {
-						broken = true
-						msg = append(msg, fmt.Sprintf(
-							"%s: state.count %d > state.quantity %d",
-							swap.Tx.ID.String(),
-							swap.State.Count,
-							swap.State.Quantity))
-					}
+			// Check count doesn't exceed quantity
+			// For limit swaps, check successful count; for market streaming swaps, check total count
+			var countToCheck uint64
+			var countLabel string
+			if swap.IsLimitSwap() {
+				countToCheck = swap.SuccessCount()
+				countLabel = "state.success_count"
+			} else {
+				countToCheck = swap.State.Count
+				countLabel = "state.count"
+			}
 
-					// Check In doesn't exceed Deposit
-					if swap.State.In.GT(swap.State.Deposit) {
-						broken = true
-						msg = append(msg, fmt.Sprintf(
-							"%s: state.in %s > state.deposit %s",
-							swap.Tx.ID.String(),
-							swap.State.In.String(),
-							swap.State.Deposit.String()))
-					}
-				}
+			if countToCheck > swap.State.Quantity {
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"%s: %s %d > state.quantity %d",
+					swap.Tx.ID.String(),
+					countLabel,
+					countToCheck,
+					swap.State.Quantity))
+			}
+
+			// Check In doesn't exceed Deposit
+			if swap.State.In.GT(swap.State.Deposit) {
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"%s: state.in %s > state.deposit %s",
+					swap.Tx.ID.String(),
+					swap.State.In.String(),
+					swap.State.Deposit.String()))
 			}
 		}
 
@@ -376,41 +390,46 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 		}
 
 		// Validate V1 streaming swaps against StreamingSwap records
+		v1SwapMap := make(map[string]MsgSwap, len(v1StreamingSwaps))
+		for _, swap := range v1StreamingSwaps {
+			v1SwapMap[swap.Tx.ID.String()] = swap
+		}
+
 		for _, stream := range streams {
-			found := false
-			for _, swap := range v1StreamingSwaps {
-				if !swap.Tx.ID.Equals(stream.TxID) {
-					continue
-				}
-				found = true
-				if !swap.Tx.Coins[0].Amount.Equal(stream.Deposit) {
-					broken = true
-					msg = append(msg, fmt.Sprintf(
-						"%s: swap.coin %s != stream.deposit %s",
-						stream.TxID.String(),
-						swap.Tx.Coins[0].Amount,
-						stream.Deposit.String()))
-				}
-				if stream.Count > stream.Quantity {
-					broken = true
-					msg = append(msg, fmt.Sprintf(
-						"%s: stream.count %d > stream.quantity %d",
-						stream.TxID.String(),
-						stream.Count,
-						stream.Quantity))
-				}
-				if stream.In.GT(stream.Deposit) {
-					broken = true
-					msg = append(msg, fmt.Sprintf(
-						"%s: stream.in %s > stream.deposit %s",
-						stream.TxID.String(),
-						stream.In.String(),
-						stream.Deposit.String()))
-				}
-			}
+			swap, found := v1SwapMap[stream.TxID.String()]
 			if !found {
 				broken = true
 				msg = append(msg, fmt.Sprintf("swap not found for stream: %s", stream.TxID.String()))
+				continue
+			}
+
+			if len(swap.Tx.Coins) == 0 {
+				broken = true
+				msg = append(msg, fmt.Sprintf("%s: swap missing coins", stream.TxID.String()))
+				continue
+			} else if !swap.Tx.Coins[0].Amount.Equal(stream.Deposit) {
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"%s: swap.coin %s != stream.deposit %s",
+					stream.TxID.String(),
+					swap.Tx.Coins[0].Amount,
+					stream.Deposit.String()))
+			}
+			if stream.Count > stream.Quantity {
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"%s: stream.count %d > stream.quantity %d",
+					stream.TxID.String(),
+					stream.Count,
+					stream.Quantity))
+			}
+			if stream.In.GT(stream.Deposit) {
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"%s: stream.in %s > stream.deposit %s",
+					stream.TxID.String(),
+					stream.In.String(),
+					stream.Deposit.String()))
 			}
 		}
 
