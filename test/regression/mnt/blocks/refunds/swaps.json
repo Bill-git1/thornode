@@ -200,7 +200,7 @@
         "id": "AB00068CEEC699AC2DE88AE6874517B4CB30679D6B8CF057E435C572876CFD20",
         "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:100000000",
         "mode": "EndBlock",
-        "reason": "emit asset 980290 less than price limit 100000000",
+        "reason": "emit asset 973290 less than price limit 100000000",
         "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "refund"
       },
@@ -1959,7 +1959,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000003",
         "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:100000000",
         "mode": "EndBlock",
-        "reason": "emit asset 41504307 less than price limit 100000000",
+        "reason": "emit asset 40864307 less than price limit 100000000",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
@@ -4831,7 +4831,7 @@
         "id": "EE06762C8AF94DB265D29E0FA509CE15ADE6A04E128C1B6A489732F75B6817C0",
         "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:1000000",
         "mode": "EndBlock",
-        "reason": "emit asset 980316 less than price limit 1000000",
+        "reason": "emit asset 973315 less than price limit 1000000",
         "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "refund"
       },

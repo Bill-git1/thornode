@@ -214,7 +214,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000001",
         "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877/bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal:100000000000",
         "mode": "EndBlock",
-        "reason": "emit asset 41501780 less than price limit 100000000000",
+        "reason": "emit asset 40861780 less than price limit 100000000000",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
@@ -775,7 +775,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000003",
         "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877/bc1badaddress:100000000000",
         "mode": "EndBlock",
-        "reason": "emit asset 41504307 less than price limit 100000000000",
+        "reason": "emit asset 40864307 less than price limit 100000000000",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
@@ -1336,7 +1336,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
         "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877/:100000000000",
         "mode": "EndBlock",
-        "reason": "emit asset 41506834 less than price limit 100000000000",
+        "reason": "emit asset 40866834 less than price limit 100000000000",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
@@ -1897,7 +1897,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000007",
         "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877/0x1b03d088612a00df0049634e9cc8684d622cada2:100000000000",
         "mode": "EndBlock",
-        "reason": "emit asset 41509360 less than price limit 100000000000",
+        "reason": "emit asset 40869360 less than price limit 100000000000",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },

@@ -6039,7 +6039,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "CCEF5C86C42C450B8DE84E965DC435D8EB7EC40BEB9A02BC77BC08E8C39CD5FF",
+      "data_hash": "25D6CAB3CAE41FC7309D993F87339691C95729D34147888D19BAE2688EC7C834",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -6107,7 +6107,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
         "liquidity_fee": "10312238",
         "liquidity_fee_in_rune": "10312238",
-        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:38666695/1/5",
+        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:37500000/1/5",
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "107",
@@ -6126,14 +6126,14 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
         "liquidity_fee": "67327",
         "liquidity_fee_in_rune": "8275046",
-        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:38666695/1/5",
+        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:37500000/1/5",
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "86",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "5",
         "swap_slip": "86",
-        "swap_target": "7733339",
+        "swap_target": "7500000",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "swap"
       },
@@ -6223,7 +6223,7 @@
     ],
     "txs": [
       {
-        "hash": "48D1326C7AD1146ED2DFBA111B74B407E1F0647AA365F3B2F30BB82ED594DE37",
+        "hash": "EF7E5E3CD2A7401617928F263DB6FA3FEC17B1FB38E5BFD5DB6F78028FB5B47E",
         "tx": {
           "auth_info": {
             "fee": {
@@ -6285,7 +6285,7 @@
                         }
                       ],
                       "id": "0000000000000000000000000000000000000000000000000000000000000005",
-                      "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:38666695/1/5",
+                      "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:37500000/1/5",
                       "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
                     }
                   }
@@ -6298,7 +6298,7 @@
             "unordered": false
           },
           "signatures": [
-            "sVEfqUUkuPOpNsTHm9PRzWPNf3vDk+LWF1Z9URc3n2U+3lKxEW36pk+MiWt5IlArtxtp60+Mfad+PlnyMNgJ4g=="
+            "tfTiNG2Zy/T+1yHDX529HTT0qUM1HApWdc8HhhSk/yMKte32rXoj3VrF0Ftpdw+vAbP9DB757WCibSdlt+ut5g=="
           ]
         },
         "result": {
@@ -6311,7 +6311,7 @@
               "type": "tx"
             },
             {
-              "signature": "sVEfqUUkuPOpNsTHm9PRzWPNf3vDk+LWF1Z9URc3n2U+3lKxEW36pk+MiWt5IlArtxtp60+Mfad+PlnyMNgJ4g==",
+              "signature": "tfTiNG2Zy/T+1yHDX529HTT0qUM1HApWdc8HhhSk/yMKte32rXoj3VrF0Ftpdw+vAbP9DB757WCibSdlt+ut5g==",
               "type": "tx"
             },
             {
@@ -6324,7 +6324,7 @@
             {
               "msg_index": "0",
               "source": "6000000 BTC.BTC",
-              "target": "38666695 ETH.ETH",
+              "target": "37500000 ETH.ETH",
               "txid": "0000000000000000000000000000000000000000000000000000000000000005",
               "type": "limit_swap"
             }
@@ -6839,16 +6839,16 @@
         "coin": "4800000 BTC.BTC",
         "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
-        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:38666695/1/5",
+        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:37500000/1/5",
         "mode": "EndBlock",
-        "reason": "emit asset 7472050 less than price limit 7726587",
+        "reason": "emit asset 7344025 less than price limit 7434914",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
       {
         "count": "5",
         "deposit": "6000000 BTC.BTC",
-        "failed_swap_reasons": "emit asset 7472050 less than price limit 7726587\n emit asset 7472050 less than price limit 7726587\n emit asset 7472050 less than price limit 7726587\n emit asset 7472050 less than price limit 7726587",
+        "failed_swap_reasons": "emit asset 7344025 less than price limit 7434914\n emit asset 7344025 less than price limit 7434914\n emit asset 7344025 less than price limit 7434914\n emit asset 7344025 less than price limit 7434914",
         "failed_swaps": "1, 2, 3, 4",
         "in": "1200000 BTC.BTC",
         "interval": "1",

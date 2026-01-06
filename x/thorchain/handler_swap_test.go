@@ -342,7 +342,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	)
 	msgSwapPriceProtection := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, observerAddr)
 	result, _, err = handler.handleWithEmit(ctx, *msgSwapPriceProtection)
-	c.Assert(err.Error(), Equals, errors.New("emit asset 192233756 less than price limit 200000000").Error())
+	c.Assert(err.Error(), Equals, errors.New("emit asset 192196256 less than price limit 200000000").Error())
 	c.Assert(result, IsNil)
 
 	poolTCAN := NewPool()
@@ -353,7 +353,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	poolTCAN.BalanceRune = cosmos.NewUint(2349500000)
 	c.Assert(mgr.Keeper().SetPool(ctx, poolTCAN), IsNil)
 	dogeAddr := GetRandomDOGEAddress()
-	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+dogeAddr.String()+":121893238")
+	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+dogeAddr.String()+":121855738")
 	c.Assert(err, IsNil)
 	txIn := NewObservedTx(
 		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
@@ -363,7 +363,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 			common.Gas{
 				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
 			},
-			"swap:DOGE.DOGE:"+signerDOGEAddr.String()+":121893238",
+			"swap:DOGE.DOGE:"+signerDOGEAddr.String()+":121855738",
 		),
 		1,
 		GetRandomPubKey(), 1,

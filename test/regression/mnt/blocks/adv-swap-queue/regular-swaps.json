@@ -4588,7 +4588,7 @@
         "id": "000000000000000000000000000000000000000000000000000000000000000f",
         "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:100000000",
         "mode": "EndBlock",
-        "reason": "emit asset 9508148 less than price limit 100000000",
+        "reason": "emit asset 8867956 less than price limit 100000000",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },

@@ -268,7 +268,7 @@ asserts:
   - .|length == 0
 ---
 ########################################################################################
-# streaming swap to ETH.ETH (2/5 conversion)
+# streaming swap to ETH.ETH (1/4 conversion)
 ########################################################################################
 type: create-blocks
 count: 1
@@ -288,7 +288,7 @@ txs:
       gas:
         - amount: "10000"
           asset: "BTC.BTC"
-      memo: "=:${OUTOUT_ASSET=ETH.ETH}:${DESTINATION={{ addr_eth_fox }}}:38666695/1/5"
+      memo: "=:${OUTOUT_ASSET=ETH.ETH}:${DESTINATION={{ addr_eth_fox }}}:37500000/1/5"
     block_height: 6
     finalise_height: 6
     observed_pub_key: {{ pubkey_dog }}

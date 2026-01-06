@@ -99,11 +99,26 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		return cosmos.ZeroUint(), swapEvents, swapErr
 	}
 	swapEvents = append(swapEvents, swapEvt)
-	if !swapTarget.IsZero() && assetAmount.LT(swapTarget) {
-		// **NOTE** this error string is utilized by the adv swap queue manager to
-		// catch the error. DO NOT change this error string without updating
-		// the adv swap queue manager as well
-		return cosmos.ZeroUint(), swapEvents, fmt.Errorf("emit asset %s less than price limit %s", assetAmount, swapTarget)
+	if !swapTarget.IsZero() {
+		checkAmount := assetAmount
+		// deduct L1 outbound fee to ensure user receives their limit amount after fees
+		if !target.IsNative() {
+			outboundFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, target, false)
+			if err == nil && !outboundFee.IsZero() {
+				feeToDeduct := outboundFee
+				// for streaming swaps, each sub-swap bears proportional share of the fee
+				if swp.Quantity > 0 {
+					feeToDeduct = outboundFee.QuoUint64(swp.Quantity)
+				}
+				checkAmount = common.SafeSub(assetAmount, feeToDeduct)
+			}
+		}
+		if checkAmount.LT(swapTarget) {
+			// **NOTE** this error string is utilized by the adv swap queue manager to
+			// catch the error. DO NOT change this error string without updating
+			// the adv swap queue manager as well
+			return cosmos.ZeroUint(), swapEvents, fmt.Errorf("emit asset %s less than price limit %s", checkAmount, swapTarget)
+		}
 	}
 	// emit asset is zero
 	if assetAmount.IsZero() {
