@@ -27,9 +27,7 @@ func newSwapQueueAdvVCUR(k keeper.Keeper) *SwapQueueAdvVCUR {
 }
 
 // FetchQueue - grabs all swap queue items from the kvstore and returns them
-// For iteration 0: returns all market + limit swaps
-// For iteration 1+: returns market swaps only if they have partners + all limit swaps
-func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradePairs, pools Pools, todo tradePairs, iteration int64) (swapItems, error) { // nolint
+func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradePairs, pools Pools, todo tradePairs) (swapItems, error) { // nolint
 	items := make(swapItems, 0)
 
 	// if the network is doing a pool cycle, no swaps are executed this
@@ -75,59 +73,7 @@ func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tr
 		items = append(items, newItems...)
 	}
 
-	// For iteration 0, return all swaps (current behavior)
-	if iteration == 0 {
-		return items, nil
-	}
-
-	// For iteration 1+, apply partner matching for market swaps
-	return vm.applyPartnerMatching(items), nil
-}
-
-// applyPartnerMatching filters swaps for iterations 1+ by requiring market swaps to have partners.
-// For rapid swap iterations beyond the first, market swaps are only included if they can be
-// paired with other swaps (partners), while limit swaps are always included.
-// This function assumes that allSwaps is ordered market first, limit second.
-func (vm *SwapQueueAdvVCUR) applyPartnerMatching(allSwaps swapItems) swapItems {
-	result := make(swapItems, 0)
-	remaining := make(swapItems, len(allSwaps))
-	copy(remaining, allSwaps)
-
-	// Use map for O(1) lookup instead of O(n) HasItem calls
-	resultMap := make(map[string]bool)
-
-	for _, item := range allSwaps {
-		// if the item already exists in result, partner already found, skip
-		if resultMap[item.GetHash().String()] {
-			continue
-		}
-
-		if item.msg.IsLimitSwap() {
-			result = append(result, item)
-			resultMap[item.GetHash().String()] = true
-			continue
-		}
-
-		for i := 0; i < len(remaining); i++ {
-			partner := vm.getPartner(item.msg, &remaining)
-			if partner == nil {
-				break
-			}
-
-			// if result already has this partner, go again
-			if resultMap[partner.GetHash().String()] {
-				continue
-			}
-
-			result = append(result, item)
-			resultMap[item.GetHash().String()] = true
-			result = append(result, *partner)
-			resultMap[partner.GetHash().String()] = true
-			break
-		}
-	}
-
-	return result
+	return items, nil
 }
 
 func (vm *SwapQueueAdvVCUR) isSwapReady(ctx cosmos.Context, msg MsgSwap) bool {
@@ -620,11 +566,17 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 	limitSwapCount := int64(0)
 	completedSwapCount := int64(0)
 
-	// Rapid swap iterations
+	// Rapid swap iterations - exit early if no swaps succeeded on previous iteration
+	prevIterationSuccess := int64(0)
 	for iteration := int64(0); iteration < rapidSwapMax; iteration++ {
+		// Exit early if previous iteration had no successful swaps (pool state unchanged)
+		if iteration > 0 && prevIterationSuccess == 0 {
+			break
+		}
+
 		iterationCount = iteration + 1
 
-		swaps, err := vm.FetchQueue(ctx, mgr, pairs, pools, todo, iteration)
+		swaps, err := vm.FetchQueue(ctx, mgr, pairs, pools, todo)
 		if err != nil {
 			ctx.Logger().Error("fail to fetch swap queue from store", "error", err)
 			return err
@@ -642,6 +594,7 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 		}
 		swaps = swaps.Sort()
 
+		iterationSuccess := int64(0)
 		for i := int64(0); i < vm.getTodoNum(int64(len(swaps)), minSwapsPerBlock, maxSwapsPerBlock); i++ {
 			pick := swaps[i]
 			var msg MsgSwap
@@ -672,6 +625,13 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 			var settleMsg string
 			_, emit, handleErr := swapHandler.RunWithEmit(cacheCtx, &msg)
 			if handleErr != nil {
+				// On iteration 1+ (second rapid swap iteration and beyond), failed market swaps
+				// should not count as attempts. This prevents rapid swaps from burning through
+				// all subswaps of a streaming swap in a single block - it behaves like rapid
+				// swaps don't exist when swaps can't execute ("escalator becomes stairs").
+				if iteration > 0 && msg.IsMarketSwap() {
+					continue
+				}
 				// Don't commit - this discards all state changes
 				ctx.Logger().Error("fail to execute streaming swap interval", "error", handleErr)
 				msg.State.FailedSwaps = append(msg.State.FailedSwaps, msg.State.Count)
@@ -681,6 +641,7 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 				// Success - commit the changes
 				commit()
 				settleMsg = "swap has been completed"
+				iterationSuccess++
 
 				// Update state for successful swap
 				msg.State.In = msg.State.In.Add(msg.Tx.Coins[0].Amount)
@@ -709,6 +670,9 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 				completedSwapCount++
 			}
 		}
+
+		// Track success for early exit on next iteration
+		prevIterationSuccess = iterationSuccess
 	}
 
 	// Log the number of iterations completed
@@ -1050,31 +1014,4 @@ func (vm *SwapQueueAdvVCUR) telem(input cosmos.Uint) float32 {
 	}
 	i := input.Uint64()
 	return float32(i) / 100000000
-}
-
-// isOppositeDirection checks if two swaps are in opposite directions
-// We use the layer1 asset so that trade/secured assets can get partnered with a layer1 asset
-func (vm *SwapQueueAdvVCUR) isOppositeDirection(swap1, swap2 MsgSwap) bool {
-	if len(swap1.Tx.Coins) == 0 || len(swap2.Tx.Coins) == 0 {
-		return false
-	}
-	swap1Source := swap1.Tx.Coins[0].Asset.GetLayer1Asset()
-	swap1Target := swap1.TargetAsset.GetLayer1Asset()
-	swap2Source := swap2.Tx.Coins[0].Asset.GetLayer1Asset()
-	swap2Target := swap2.TargetAsset.GetLayer1Asset()
-	return swap1Source.Equals(swap2Target) && swap1Target.Equals(swap2Source)
-}
-
-// getPartner finds and removes a partner (opposite direction swap) for the given market swap
-// Returns the partner swap and the remaining swaps with the partner removed
-func (vm *SwapQueueAdvVCUR) getPartner(marketSwap MsgSwap, remainingSwaps *swapItems) *swapItem {
-	for i, swap := range *remainingSwaps {
-		if vm.isOppositeDirection(marketSwap, swap.msg) {
-			// Found a partner, remove it from remaining swaps and return it
-			partner := swap
-			*remainingSwaps = append((*remainingSwaps)[:i], (*remainingSwaps)[i+1:]...)
-			return &partner
-		}
-	}
-	return nil
 }
