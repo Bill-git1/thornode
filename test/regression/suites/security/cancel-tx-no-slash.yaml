@@ -37,7 +37,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_dog }} # vault-to-vault
       coins:
-        - amount: "1" # dust amount for validation, treated as zero for cancel
+        - amount: "1000" # dust amount for validation, treated as zero for cancel
           asset: "ETH.ETH"
           decimals: 8
       gas:

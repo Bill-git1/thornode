@@ -377,7 +377,7 @@ params:
 asserts:
   - .memo == "=:b:{{ addr_btc_fox }}:942001:{{ addr_thor_pig }}:500"
   - .expected_amount_out|tonumber == 948612
-  - .recommended_min_amount_in == "2016003"
+  - .recommended_min_amount_in == "2019150"
   - .fees.affiliate == "50295"
   - .fees.liquidity == "20478"
   - .fees.outbound == "7000"
@@ -500,7 +500,7 @@ params:
 asserts:
   - .memo == "=:r:{{ addr_thor_fox }}:${LIMIT=882362456}:xx:500"
   - .expected_amount_out|tonumber == 913209710
-  - .recommended_min_amount_in == "2016003"
+  - .recommended_min_amount_in == "2019150"
   - .fees.affiliate == "48063669"
   - .fees.liquidity == "9517558"
   - .fees.outbound == "0"
@@ -910,7 +910,7 @@ params:
   amount: 1000000000
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:ETH.USDC:{{ addr_eth_fox }}"  # Should use shortened form, not full contract address
+  - .memo == "=:ETH.USDC:{{ addr_eth_fox }}" # Should use shortened form, not full contract address
 ---
 ########################################################################################
 # Test insufficient funds, return error with recommended_min_amount_in

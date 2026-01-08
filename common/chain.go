@@ -312,12 +312,22 @@ func (c Chain) DustThreshold() cosmos.Uint {
 	switch c {
 	case BTCChain:
 		return cosmos.NewUint(1_000)
-	case LTCChain, BCHChain, ZECChain:
+	case LTCChain:
+		return cosmos.NewUint(100_000)
+	case BCHChain, ZECChain:
 		return cosmos.NewUint(10_000)
 	case DOGEChain:
 		return cosmos.NewUint(100_000_000)
-	case ETHChain, AVAXChain, GAIAChain, BSCChain, BASEChain:
-		return cosmos.OneUint()
+	case ETHChain, BASEChain:
+		return cosmos.NewUint(1_000)
+	case AVAXChain:
+		return cosmos.NewUint(100_000)
+	case BSCChain:
+		return cosmos.NewUint(10_000)
+	case GAIAChain:
+		return cosmos.NewUint(1_000_000)
+	case NOBLEChain:
+		return cosmos.NewUint(1_000_000)
 	case XRPChain:
 		// XRP's dust threshold is being set to 1 XRP. This is the base reserve requirement on XRP's ledger.
 		// It is set to this value for two reasons:
@@ -328,6 +338,8 @@ func (c Chain) DustThreshold() cosmos.Uint {
 		return cosmos.NewUint(One) // 1 XRP
 	case SOLChain:
 		return cosmos.NewUint(100_000) // 0.001 SOL
+	case TRONChain:
+		return cosmos.NewUint(10_000_000)
 	default:
 		return cosmos.ZeroUint()
 	}

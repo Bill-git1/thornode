@@ -856,8 +856,20 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 	txGasPrice := receipt.EffectiveGasPrice
 
 	txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed, nil)
+
+	// drop non-cancel transactions below dust threshold
+	isCancel := txInItem.Sender == txInItem.To
+	if !isCancel &&
+		len(txInItem.Coins) == 1 &&
+		txInItem.Coins[0].Asset.Equals(e.cfg.ChainID.GetGasAsset()) &&
+		txInItem.Coins[0].Amount.LT(e.cfg.ChainID.DustThreshold()) {
+
+		e.logger.Debug().Str("hash", tx.Hash().Hex()).Msg("dropping tx below dust threshold")
+		return nil, nil
+	}
+
 	if txInItem.Coins.IsEmpty() {
-		if txInItem.Sender == txInItem.To {
+		if isCancel {
 			// When the Sender and To is the same then there's no balance chance whatever the Coins,
 			// and for Tx-received Valid() a non-zero Amount is needed to observe
 			// the transaction fees (THORChain gas cost) of unstuck.go's cancel transactions.

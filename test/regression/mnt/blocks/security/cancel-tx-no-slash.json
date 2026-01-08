@@ -267,7 +267,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "00D7DA8F871FFC85E14797B384BFDFD3ED09D168D1284C7E47C420D4875D9BEF",
+      "data_hash": "584D114F7D5DB9326A0EE419FC01535276D7449FE74532222FF7510878489DA9",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -397,7 +397,7 @@
     ],
     "txs": [
       {
-        "hash": "C7FD0D576298882AACC94B17D24F7A9AFDC3002D18C6B3A4F6253B08088A62C2",
+        "hash": "0F61E79EB244A35B6809B28FE5693732DA585E33D5CEB411309A31DB951E5EBA",
         "tx": {
           "auth_info": {
             "fee": {
@@ -445,7 +445,7 @@
                       "chain": "ETH",
                       "coins": [
                         {
-                          "amount": "1",
+                          "amount": "1000",
                           "asset": "ETH.ETH",
                           "decimals": "8"
                         }
@@ -472,7 +472,7 @@
             "unordered": false
           },
           "signatures": [
-            "7CWoNNn+8QRPTPPTUrUewLTpXZ58QLeQeQtBxTRNpO03SWZ6XrAYsqGEiOG1womkK7Veo/Jedi3iCGahKRceqw=="
+            "TuxmiYaEhS83Mo5bryqYaBnI213W/trRchG6zbmZAGITJ/+v+U5bFlOi3IpRsm2VOUxgM3Dn7mS0IjF2gKgLDw=="
           ]
         },
         "result": {
@@ -485,7 +485,7 @@
               "type": "tx"
             },
             {
-              "signature": "7CWoNNn+8QRPTPPTUrUewLTpXZ58QLeQeQtBxTRNpO03SWZ6XrAYsqGEiOG1womkK7Veo/Jedi3iCGahKRceqw==",
+              "signature": "TuxmiYaEhS83Mo5bryqYaBnI213W/trRchG6zbmZAGITJ/+v+U5bFlOi3IpRsm2VOUxgM3Dn7mS0IjF2gKgLDw==",
               "type": "tx"
             },
             {

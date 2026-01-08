@@ -312,6 +312,14 @@ func (s *TronBlockScanner) processTxs(
 			continue
 		}
 
+		// filter gas asset transactions below dust threshold
+		if len(coins) == 1 && coins[0].Asset.Equals(s.config.ChainID.GetGasAsset()) {
+			if coins[0].Amount.LT(s.config.ChainID.DustThreshold()) {
+				logger.Debug().Msg("dropping tx below dust threshold")
+				continue
+			}
+		}
+
 		memo, err := hex.DecodeString(rawTx.RawData.Data)
 		if err != nil {
 			logger.Warn().Msg("Decode data failed")

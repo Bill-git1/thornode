@@ -493,6 +493,14 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 				continue
 			}
 
+			// filter gas asset transactions below dust threshold
+			if len(coins) == 1 && coins[0].Asset.Equals(c.cfg.ChainID.GetGasAsset()) {
+				if coins[0].Amount.LT(c.cfg.ChainID.DustThreshold()) {
+					c.logger.Debug().Str("tx_hash", hash).Msg("dropping tx below dust threshold")
+					continue
+				}
+			}
+
 			// Convert cosmos gas to thorchain coins (taking into account gas asset decimal precision)
 			gasFees := common.Gas{}
 			for _, fee := range fees {

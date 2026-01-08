@@ -47,7 +47,7 @@ asserts:
 # Cancel tx has:
 # 1. to_address and from_address are both the vault address (vault-to-vault)
 # 2. No memo
-# 3. Amount = 1 (DustThreshold - cancel tx has 0 on chain, bifrost converts to 1)
+# 3. Amount = 1000 (DustThreshold - cancel tx has 0 on chain, bifrost converts to DustThreshold)
 # 4. Gas asset (ETH.ETH)
 # 5. Very high gas (200000000) that exceeds PauseOnSlashThreshold
 # This simulates a stuck transaction being cancelled with high gas costs
@@ -62,7 +62,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_dog }}
       coins:
-        - amount: "1" # DustThreshold - cancel tx has 0 on chain but bifrost converts to DustThreshold
+        - amount: "1000" # DustThreshold - cancel tx has 0 on chain but bifrost converts to DustThreshold
           asset: "ETH.ETH"
           decimals: 8
       gas:
