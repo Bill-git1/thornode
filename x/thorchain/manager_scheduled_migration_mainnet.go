@@ -11,6 +11,10 @@ import (
 )
 
 // processManualObservations recovers funds in vaults with no thornode balance.
+// Note: This function is naturally idempotent - if scheduled migrations are triggered
+// multiple times, duplicate observations cause no change in vault balances or triggered
+// actions. This was demonstrated in 3.14 when scheduled migrations ran multiple times
+// with no adverse effects. Therefore, no explicit idempotency protection is needed.
 func (m *ScheduledMigrationMgr) processManualObservations(ctx cosmos.Context, mgr Manager) error {
 	recoveryEVMAddress, err := common.NewAddress("0x3c4a7c01811e14bb3d723d4961b4f2c28afc5e6e")
 	if err != nil {
