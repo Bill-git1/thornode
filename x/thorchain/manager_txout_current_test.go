@@ -75,12 +75,12 @@ func (s TxOutStoreVCURSuite) TestIsAffiliateFeeExempt(c *C) {
 		{
 			name:     "Preferred Asset Swap memo",
 			memo:     "THOR-PREFERRED-ASSET-ETH.ETH",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "Preferred Asset Swap memo exact",
 			memo:     constants.MemoPrefixPreferredAssetSwap,
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "Swap memo",
@@ -100,7 +100,53 @@ func (s TxOutStoreVCURSuite) TestIsAffiliateFeeExempt(c *C) {
 	}
 
 	for _, tc := range testCases {
-		result := txOutStore.isAffiliateFeeExempt(tc.memo)
+		result := txOutStore.isAffiliateFeeExemptOutbound(tc.memo)
+		c.Assert(result, Equals, tc.expected, Commentf("Failed case: %s", tc.name))
+	}
+
+	testCases = []struct {
+		name     string
+		memo     string
+		expected bool
+	}{
+		{
+			name:     "Refund memo",
+			memo:     "REFUND:TxHash",
+			expected: false,
+		},
+		{
+			name:     "Migrate memo",
+			memo:     "MIGRATE:100",
+			expected: false,
+		},
+		{
+			name:     "Preferred Asset Swap memo",
+			memo:     "THOR-PREFERRED-ASSET-ETH.ETH",
+			expected: true,
+		},
+		{
+			name:     "Preferred Asset Swap memo exact",
+			memo:     constants.MemoPrefixPreferredAssetSwap,
+			expected: true,
+		},
+		{
+			name:     "Swap memo",
+			memo:     "SWAP:ETH.ETH",
+			expected: false,
+		},
+		{
+			name:     "Empty memo",
+			memo:     "",
+			expected: true,
+		},
+		{
+			name:     "Random memo",
+			memo:     "HELLO",
+			expected: false,
+		},
+	}
+	for _, tc := range testCases {
+		result := txOutStore.isAffiliateFeeExemptInbound(tc.memo)
 		c.Assert(result, Equals, tc.expected, Commentf("Failed case: %s", tc.name))
 	}
 }
