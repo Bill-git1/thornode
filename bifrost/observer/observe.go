@@ -379,26 +379,66 @@ func (o *Observer) sendDeck(ctx context.Context) {
 		}
 
 		final := chainClient.ConfirmationCountReady(*deck)
-		o.sendToQuorumChecker(deck, final, k.height)
+		invalidIndices := o.sendToQuorumChecker(deck, final, k.height)
+
+		// Remove invalid transactions from deck
+		if len(invalidIndices) > 0 {
+			// Sort indices in descending order to remove from highest to lowest
+			// This preserves indices during removal
+			for i := 0; i < len(invalidIndices); i++ {
+				for j := i + 1; j < len(invalidIndices); j++ {
+					if invalidIndices[i] < invalidIndices[j] {
+						invalidIndices[i], invalidIndices[j] = invalidIndices[j], invalidIndices[i]
+					}
+				}
+			}
+
+			firstItemRemoved := false
+			for _, idx := range invalidIndices {
+				if idx >= 0 && idx < len(deck.TxArray) {
+					if idx == 0 {
+						firstItemRemoved = true
+					}
+					o.logger.Info().Msgf("removing invalid tx (%s) from ondeck", deck.TxArray[idx].Tx)
+					deck.TxArray = slices.Delete(deck.TxArray, idx, idx+1)
+				}
+			}
+
+			if len(deck.TxArray) == 0 {
+				o.logger.Debug().Msgf("deck is empty after removing invalid txs, removing from ondeck")
+				delete(o.onDeck, k)
+				if err := o.storage.RemoveTx(deck, k.height); err != nil {
+					o.logger.Error().Err(err).Msg("fail to remove tx from storage")
+				}
+			} else {
+				// Update confirmation required if first item was removed
+				if firstItemRemoved && len(deck.TxArray) > 0 {
+					deck.ConfirmationRequired = k.height - deck.TxArray[0].BlockHeight
+				}
+				if err := o.storage.AddOrUpdateTx(deck); err != nil {
+					o.logger.Error().Err(err).Msg("fail to update tx in storage")
+				}
+			}
+		}
 	}
 }
 
-func (o *Observer) sendToQuorumChecker(deck *types.TxIn, finalised bool, finaliseHeight int64) {
-	txs, err := o.getThorchainTxIns(deck, finalised, finaliseHeight)
+func (o *Observer) sendToQuorumChecker(deck *types.TxIn, finalised bool, finaliseHeight int64) []int {
+	txs, invalidIndices, err := o.getThorchainTxIns(deck, finalised, finaliseHeight)
 	if err != nil {
 		o.logger.Error().Err(err).Msg("fail to convert txin to thorchain txins")
-		return
+		return nil
 	}
 
 	if len(txs) == 0 {
-		// no tx to send
-		return
+		// no tx to send, but return invalid indices so they can be cleaned up
+		return invalidIndices
 	}
 
 	inbound, outbound, err := o.thorchainBridge.GetInboundOutbound(txs)
 	if err != nil {
 		o.logger.Error().Err(err).Msg("fail to get inbound and outbound txs")
-		return
+		return invalidIndices
 	}
 
 	for _, tx := range inbound {
@@ -412,6 +452,8 @@ func (o *Observer) sendToQuorumChecker(deck *types.TxIn, finalised bool, finalis
 			o.logger.Err(err).Msg("fail to send outbound tx to thorchain")
 		}
 	}
+
+	return invalidIndices
 }
 
 func (o *Observer) processTxIns() {
@@ -649,26 +691,32 @@ BlockLoop:
 
 // getThorchainTxIns convert to the type thorchain expected
 // maybe in later THORNode can just refactor this to use the type in thorchain
-func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseHeight int64) (common.ObservedTxs, error) {
+func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseHeight int64) (common.ObservedTxs, []int, error) {
 	obsTxs := make(common.ObservedTxs, 0, len(txIn.TxArray))
+	invalidIndices := make([]int, 0)
 	o.logger.Debug().Msgf("len %d", len(txIn.TxArray))
-	for _, item := range txIn.TxArray {
+	for i, item := range txIn.TxArray {
 		if item.CommittedUnFinalised && !finalized {
 			// we have already committed this tx in the un-finalized state,
 			// and the tx is not yet final, so we should not send it again.
 			continue
 		}
+		isInvalid := false
 		if item.Coins.IsEmpty() {
 			o.logger.Info().Msgf("item(%+v) , coins are empty , so ignore", item)
-			continue
+			isInvalid = true
 		}
 		if len([]byte(item.Memo)) > constants.MaxMemoSize {
 			o.logger.Info().Msgf("tx (%s) memo (%s) too long", item.Tx, item.Memo)
-			continue
+			isInvalid = true
 		}
 
 		if len(item.To) == 0 {
 			o.logger.Info().Msgf("tx (%s) to address is empty,ignore it", item.Tx)
+			isInvalid = true
+		}
+		if isInvalid {
+			invalidIndices = append(invalidIndices, i)
 			continue
 		}
 		o.logger.Debug().Str("tx-hash", item.Tx).Msg("txInItem")
@@ -677,6 +725,7 @@ func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseH
 		if err != nil {
 			o.errCounter.WithLabelValues("fail_to_parse_tx_hash", blockHeight).Inc()
 			o.logger.Err(err).Msgf("fail to parse tx hash, %s is invalid", item.Tx)
+			invalidIndices = append(invalidIndices, i)
 			continue
 		}
 		sender, err := common.NewAddress(item.Sender)
@@ -684,6 +733,7 @@ func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseH
 			o.errCounter.WithLabelValues("fail_to_parse_sender", item.Sender).Inc()
 			// log the error , and ignore the transaction, since the address is not valid
 			o.logger.Err(err).Msgf("fail to parse sender, %s is invalid sender address", item.Sender)
+			invalidIndices = append(invalidIndices, i)
 			continue
 		}
 
@@ -691,6 +741,7 @@ func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseH
 		if err != nil {
 			o.errCounter.WithLabelValues("fail_to_parse_to", item.To).Inc()
 			o.logger.Err(err).Msgf("fail to parse to, %s is invalid to address", item.To)
+			invalidIndices = append(invalidIndices, i)
 			continue
 		}
 
@@ -700,6 +751,7 @@ func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseH
 		if err != nil {
 			o.errCounter.WithLabelValues("fail to parse observed pool address", item.ObservedVaultPubKey.String()).Inc()
 			o.logger.Err(err).Msgf("fail to parse observed pool address: %s", item.ObservedVaultPubKey.String())
+			invalidIndices = append(invalidIndices, i)
 			continue
 		}
 		height := item.BlockHeight
@@ -715,7 +767,7 @@ func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseH
 		obsTx.AggregatorTargetLimit = item.AggregatorTargetLimit
 		obsTxs = append(obsTxs, obsTx)
 	}
-	return obsTxs, nil
+	return obsTxs, invalidIndices, nil
 }
 
 func (o *Observer) processSolvencyQueue(ctx context.Context) {

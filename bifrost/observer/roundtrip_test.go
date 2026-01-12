@@ -154,8 +154,9 @@ func TestObserverRoundTrip(t *testing.T) {
 	for _, tx := range dbTxs {
 		final := false
 
-		obsTxs, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
+		obsTxs, invalidIndices, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
 		require.NoError(t, txErr)
+		require.Empty(t, invalidIndices, "expected no invalid transactions in test data")
 
 		inbound, outbound, getErr := bridge.GetInboundOutbound(obsTxs)
 		require.NoError(t, getErr)
@@ -181,8 +182,9 @@ func TestObserverRoundTrip(t *testing.T) {
 
 		final := true
 
-		obsTxs, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
+		obsTxs, invalidIndices, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
 		require.NoError(t, txErr)
+		require.Empty(t, invalidIndices, "expected no invalid transactions in test data")
 
 		require.Len(t, obsTxs, numTxs)
 

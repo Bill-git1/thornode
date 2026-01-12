@@ -49,6 +49,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 // SolvencyReporter is to report solvency info to THORNode
@@ -372,6 +373,16 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 		fees := feeTx.GetFee()
 		mem, _ := tx.(ctypes.TxWithMemo)
 		memo := mem.GetMemo()
+
+		// Filter out transactions with memos that exceed MaxMemoSize
+		// This prevents spam from reaching the observer and matches behavior of other chains
+		if len([]byte(memo)) > constants.MaxMemoSize {
+			c.logger.Debug().
+				Str("txhash", hash).
+				Int64("height", height).
+				Msg("memo too long, skipping transaction")
+			continue
+		}
 
 		c.updateGasCache(feeTx)
 
