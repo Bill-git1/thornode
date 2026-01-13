@@ -119,6 +119,20 @@ func (s *EthereumSuite) SetUpTest(c *C) {
 			err = json.Unmarshal(body, &rpcRequest)
 			c.Assert(err, IsNil)
 			if rpcRequest.Method == "eth_getBalance" {
+				var params []interface{}
+				err = json.Unmarshal(rpcRequest.Params, &params)
+				c.Assert(err, IsNil)
+				// check if it is asking for pending balance
+				if len(params) > 1 {
+					if val, ok := params[1].(string); ok && val == "pending" {
+						// Return 5 ETH for pending requests
+						// standard tests (send 1-2 ETH) will pass.
+						// regression test (send 6 ETH) will fail (correctly).
+						_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x4563918244F40000"}`))
+						c.Assert(err, IsNil)
+						return
+					}
+				}
 				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x8ac7230489e80000"}`))
 				c.Assert(err, IsNil)
 			}
@@ -303,6 +317,7 @@ func (s *EthereumSuite) TestClient(c *C) {
 	c.Assert(err2, IsNil)
 	c.Assert(e2, NotNil)
 	e2.ethScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	e2.signingReady.Store(true) // Mark ready for tests that don't call Start()
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
 	c.Check(e2.GetChain(), Equals, common.ETHChain)
@@ -337,7 +352,6 @@ func (s *EthereumSuite) TestClient(c *C) {
     "height": 1,
     "tx_array": [
         {
-            "vault_pub_key": "tthorpub1addwnpepq2mza4j4vplyjw295pkq8j2dan627lz6vufeu22pjx5vnnyjted5vwq3e3d",
             "chain": "ETH",
 			"from_address":"0xa7d9ddbe1f17865597fbd27ec712455208b6b76d",
             "to_address": "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae",
@@ -420,6 +434,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)
 	e.ethScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	e.signingReady.Store(true) // Mark ready for tests that don't call Start()
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
 	pubkeys := pubkeyMgr.GetAlgoPubKeys(common.SigningAlgoSecp256k1, true)
@@ -712,4 +727,64 @@ func (s *EthereumSuite) TestGetConfirmationCount(c *C) {
 		},
 		MemPool: false,
 	}), Equals, int64(2))
+}
+
+func (s *EthereumSuite) TestSignTxChecksMemLiability(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewClient(s.thorKeys, config.BifrostChainConfiguration{
+		RPCHost: "http://" + s.server.Listener.Addr().String(),
+		BlockScanner: config.BifrostBlockScannerConfiguration{
+			StartBlockHeight:   1,
+			HTTPRequestTimeout: time.Second,
+		},
+		ChainID: common.ETHChain,
+	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(e, NotNil)
+	e.ethScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	e.signingReady.Store(true) // Mark ready for tests that don't call Start()
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	// Test: In-Memory Liability Tracking
+	// The mock for eth_getBalance returns 10 ETH for "latest".
+	// First Transaction (5 ETH + ~1.5 ETH fee) should SUCCEED and record liability.
+	// Second Transaction (5 ETH + ~1.5 ETH fee) should FAIL because:
+	//   EffectiveBalance = LatestBalance(10) - Liability(~6.5) = ~3.5 ETH < Required(~6.5 ETH)
+
+	txOutItem1 := stypes.TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   types2.GetRandomETHAddress(),
+		VaultPubKey: e.localPubKey,
+		Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(5*common.One))}, // 5 ETH
+		Memo:        "MIGRATE:100",
+		GasRate:     5,
+		MaxGas:      common.Gas(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)))),
+	}
+
+	// First transaction should succeed
+	rawTx1, _, _, err := e.SignTx(txOutItem1, 100)
+	c.Assert(err, IsNil, Commentf("First SignTx should succeed"))
+	c.Assert(rawTx1, NotNil)
+
+	// Verify liability was recorded
+	c.Assert(len(e.pendingLiabilities[e.kw.GetPubKey().String()]) > 0 || len(e.pendingLiabilities) > 0, Equals, true, Commentf("Liability should be recorded"))
+
+	// Second transaction should fail due to accumulated liability
+	txOutItem2 := stypes.TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   types2.GetRandomETHAddress(),
+		VaultPubKey: e.localPubKey,
+		Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(5*common.One))}, // 5 ETH
+		Memo:        "MIGRATE:101",
+		GasRate:     5,
+		MaxGas:      common.Gas(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)))),
+	}
+
+	rawTx2, _, _, err := e.SignTx(txOutItem2, 101)
+	c.Assert(err, NotNil, Commentf("Second SignTx should fail due to liability"))
+	c.Assert(err.Error(), Matches, "insufficient gas asset balance.*")
+	c.Assert(rawTx2, IsNil)
 }

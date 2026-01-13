@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -70,6 +71,15 @@ type Client struct {
 	globalSolvencyQueue     chan stypes.Solvency
 	signerCacheManager      *signercache.CacheManager
 	lastSolvencyCheckHeight int64
+
+	// pendingLiabilities tracks signed but unconfirmed transaction amounts (value + maxGas)
+	// keyed by vault address -> nonce -> amount in Wei.
+	pendingLiabilities map[string]map[uint64]*big.Int
+	liabilityMu        sync.Mutex
+
+	// signingReady is set to true once pending liabilities have been reconstructed.
+	// SignTx will reject requests until this is true to prevent overspending.
+	signingReady atomic.Bool
 }
 
 // NewClient create new instance of Ethereum client
@@ -135,19 +145,20 @@ func NewClient(thorKeys *thorclient.Keys,
 		return nil, fmt.Errorf("fail to get contract abi: %w", err)
 	}
 	c := &Client{
-		logger:       log.With().Str("module", "ethereum").Logger(),
-		cfg:          cfg,
-		client:       ethClient,
-		chainID:      chainID,
-		localPubKey:  pk,
-		kw:           keysignWrapper,
-		bridge:       bridge,
-		vaultABI:     vaultABI,
-		pubkeyMgr:    pubkeyMgr,
-		poolMgr:      poolMgr,
-		tssKeySigner: tssKm,
-		wg:           &sync.WaitGroup{},
-		stopchan:     make(chan struct{}),
+		logger:             log.With().Str("module", "ethereum").Logger(),
+		cfg:                cfg,
+		client:             ethClient,
+		chainID:            chainID,
+		localPubKey:        pk,
+		kw:                 keysignWrapper,
+		bridge:             bridge,
+		vaultABI:           vaultABI,
+		pubkeyMgr:          pubkeyMgr,
+		poolMgr:            poolMgr,
+		tssKeySigner:       tssKm,
+		wg:                 &sync.WaitGroup{},
+		stopchan:           make(chan struct{}),
+		pendingLiabilities: make(map[string]map[uint64]*big.Int),
 	}
 
 	c.logger.Info().Msgf("current chain id: %d", chainID.Uint64())
@@ -186,6 +197,40 @@ func NewClient(thorKeys *thorclient.Keys,
 	return c, nil
 }
 
+// getPendingLiability returns the sum of all pending (signed but unconfirmed) liabilities
+// for the given vault address, and prunes entries for nonces that have already been confirmed.
+func (c *Client) getPendingLiability(vaultAddr string, confirmedNonce uint64) *big.Int {
+	c.liabilityMu.Lock()
+	defer c.liabilityMu.Unlock()
+
+	total := big.NewInt(0)
+	vaultLiabilities, exists := c.pendingLiabilities[vaultAddr]
+	if !exists {
+		return total
+	}
+
+	// Prune confirmed nonces and sum pending liabilities
+	for nonce, amount := range vaultLiabilities {
+		if nonce < confirmedNonce {
+			delete(vaultLiabilities, nonce)
+			continue
+		}
+		total.Add(total, amount)
+	}
+	return total
+}
+
+// recordLiability records the liability (value + estimated fee) for a signed transaction.
+func (c *Client) recordLiability(vaultAddr string, nonce uint64, amount *big.Int) {
+	c.liabilityMu.Lock()
+	defer c.liabilityMu.Unlock()
+
+	if c.pendingLiabilities[vaultAddr] == nil {
+		c.pendingLiabilities[vaultAddr] = make(map[uint64]*big.Int)
+	}
+	c.pendingLiabilities[vaultAddr][nonce] = amount
+}
+
 // IsETH return true if the token address equals to ethToken address
 func IsETH(token string) bool {
 	return strings.EqualFold(token, ethToken)
@@ -202,6 +247,175 @@ func (c *Client) Start(globalTxsQueue chan stypes.TxIn, globalErrataQueue chan s
 	go c.unstuck()
 	c.wg.Add(1)
 	go runners.SolvencyCheckRunner(c.GetChain(), c, c.bridge, c.stopchan, c.wg, constants.ThorchainBlockTime)
+	c.wg.Add(1)
+	go c.reconstructLiabilities()
+}
+
+// reconstructLiabilities scans the pending block on startup to reconstruct
+// in-memory liability tracking for transactions that were signed before a restart.
+// It sets signingReady to true once complete, allowing SignTx to proceed.
+func (c *Client) reconstructLiabilities() {
+	defer c.wg.Done()
+
+	// Get all vault addresses this node is a signer for
+	vaultAddresses := make([]string, 0)
+	for _, pk := range c.pubkeyMgr.GetAlgoPubKeys(common.SigningAlgoSecp256k1, true) {
+		addr, err := pk.GetAddress(common.ETHChain)
+		if err != nil {
+			c.logger.Warn().Err(err).Str("pubkey", pk.String()).Msg("failed to get vault address")
+			continue
+		}
+		vaultAddresses = append(vaultAddresses, addr.String())
+	}
+
+	if len(vaultAddresses) == 0 {
+		c.logger.Info().Msg("no vault addresses found, skipping liability reconstruction")
+		c.signingReady.Store(true)
+		return
+	}
+
+	// WaitGroup for local reconstruction routine
+	var reconWg sync.WaitGroup
+	sem := make(chan struct{}, c.cfg.EVM.ReconstructLiabilitiesConcurrency)
+
+	for _, vaultAddr := range vaultAddresses {
+		reconWg.Add(1)
+		sem <- struct{}{}
+		go func(vAddr string) {
+			defer func() { <-sem }()
+			defer reconWg.Done()
+			const maxRetries = 12 // ~60 seconds total (12 * 5s)
+			retryCount := 0
+			for {
+				select {
+				case <-c.stopchan:
+					return
+				default:
+				}
+
+				ready, err := c.reconstructVaultLiability(vAddr)
+				if err != nil {
+					c.logger.Warn().Err(err).Str("vault", vAddr).Msg("failed to reconstruct liability, retrying")
+				} else if ready {
+					return
+				}
+
+				retryCount++
+				if retryCount >= maxRetries {
+					c.logger.Warn().
+						Str("vault", vAddr).
+						Int("retries", retryCount).
+						Msg("could not fully reconstruct liabilities, proceeding anyway")
+					return
+				}
+
+				// Wait before retrying
+				select {
+				case <-c.stopchan:
+					return
+				case <-time.After(5 * time.Second):
+				}
+			}
+		}(vaultAddr)
+	}
+
+	// Wait for all vaults to be ready
+	reconWg.Wait()
+
+	select {
+	case <-c.stopchan:
+		return
+	default:
+		c.logger.Info().Msg("liability reconstruction complete, client ready for signing")
+		c.signingReady.Store(true)
+	}
+}
+
+// reconstructVaultLiability checks a single vault's pending transactions and reconstructs liabilities.
+// Returns (ready, error) - ready is true if the vault is safe to sign, false if we need to wait.
+func (c *Client) reconstructVaultLiability(vaultAddr string) (bool, error) {
+	ctx, cancel := c.getContext()
+	defer cancel()
+
+	addr := ecommon.HexToAddress(vaultAddr)
+
+	// Get confirmed and pending nonces
+	confirmedNonce, err := c.client.NonceAt(ctx, addr, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to get confirmed nonce: %w", err)
+	}
+
+	ctx2, cancel2 := c.getContext()
+	defer cancel2()
+	pendingNonce, err := c.client.PendingNonceAt(ctx2, addr)
+	if err != nil {
+		return false, fmt.Errorf("failed to get pending nonce: %w", err)
+	}
+
+	pendingCount := pendingNonce - confirmedNonce
+	if pendingCount == 0 {
+		// No pending transactions, vault is ready
+		return true, nil
+	}
+
+	c.logger.Info().
+		Str("vault", vaultAddr).
+		Uint64("confirmedNonce", confirmedNonce).
+		Uint64("pendingNonce", pendingNonce).
+		Uint64("pendingCount", pendingCount).
+		Msg("detected pending transactions on startup")
+
+	// Fetch pending block to find our transactions
+	// BlockByNumber with nil returns the pending block
+	ctx3, cancel3 := c.getContext()
+	defer cancel3()
+	pendingBlock, err := c.client.BlockByNumber(ctx3, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to get pending block: %w", err)
+	}
+
+	foundCount := uint64(0)
+	for _, tx := range pendingBlock.Transactions() {
+		// Get sender address
+		signer := etypes.LatestSignerForChainID(c.chainID)
+		sender, err := etypes.Sender(signer, tx)
+		if err != nil {
+			continue
+		}
+
+		if !strings.EqualFold(sender.Hex(), vaultAddr) {
+			continue
+		}
+
+		// This is our transaction - record the liability
+		nonce := tx.Nonce()
+		if nonce >= confirmedNonce && nonce < pendingNonce {
+			// Calculate liability: value + max gas cost
+			liability := new(big.Int).Set(tx.Value())
+			maxGasCost := new(big.Int).Mul(tx.GasFeeCap(), big.NewInt(int64(tx.Gas())))
+			liability.Add(liability, maxGasCost)
+
+			c.recordLiability(vaultAddr, nonce, liability)
+			foundCount++
+
+			c.logger.Info().
+				Str("vault", vaultAddr).
+				Uint64("nonce", nonce).
+				Str("liability", liability.String()).
+				Msg("reconstructed liability from pending transaction")
+		}
+	}
+
+	if foundCount < pendingCount {
+		c.logger.Warn().
+			Str("vault", vaultAddr).
+			Uint64("expected", pendingCount).
+			Uint64("found", foundCount).
+			Msg("cannot see all pending transactions, waiting for confirmation")
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // Stop ETH client
@@ -380,6 +594,11 @@ func (c *Client) convertThorchainAmountToWei(amt *big.Int) *big.Int {
 
 // SignTx sign the the given TxArrayItem
 func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error) {
+	// Wait for liability reconstruction to complete before signing
+	if !c.signingReady.Load() {
+		return nil, nil, nil, fmt.Errorf("client still initializing, cannot sign yet")
+	}
+
 	if !tx.Chain.Equals(common.ETHChain) {
 		return nil, nil, nil, fmt.Errorf("chain %s is not support by ETH chain client", tx.Chain)
 	}
@@ -395,6 +614,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	if tx.VaultPubKey.IsEmpty() {
 		return nil, nil, nil, fmt.Errorf("vault public key is empty")
 	}
+
 	if len(tx.Coins) == 0 {
 		return nil, nil, nil, fmt.Errorf("coins is empty")
 	}
@@ -702,19 +922,30 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 
 	// before signing, confirm the vault has enough gas asset
+	// use nil height to get the latest confirmed balance (not pending, to avoid masking attacks)
 	gasBalance, err := c.GetBalance(fromAddr.String(), ethToken, nil)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to get gas asset balance: %w", err)
 	}
 
-	if gasBalance.Cmp(big.NewInt(0).Add(ethValue, estimatedFee)) < 0 {
-		return nil, nil, nil, fmt.Errorf("insufficient gas asset balance: %s < %s + %s", gasBalance.String(), ethValue.String(), estimatedFee.String())
+	// Subtract pending liabilities (signed but unconfirmed transactions) from the balance
+	confirmedNonce, _ := c.GetNonceFinalized(fromAddr.String())
+	pendingLiability := c.getPendingLiability(fromAddr.String(), confirmedNonce)
+	effectiveBalance := new(big.Int).Sub(gasBalance, pendingLiability)
+
+	requiredBalance := new(big.Int).Add(ethValue, estimatedFee)
+	if effectiveBalance.Cmp(requiredBalance) < 0 {
+		return nil, nil, nil, fmt.Errorf("insufficient gas asset balance: effective %s (latest %s - liability %s) < required %s",
+			effectiveBalance.String(), gasBalance.String(), pendingLiability.String(), requiredBalance.String())
 	}
 
 	rawTx, err := c.sign(createdTx, tx.VaultPubKey, height, tx)
 	if err != nil || len(rawTx) == 0 {
 		return nil, nonceBytes, nil, fmt.Errorf("fail to sign message: %w", err)
 	}
+
+	// Record the liability for this signed transaction (value + estimated fee)
+	c.recordLiability(fromAddr.String(), nonce, requiredBalance)
 
 	// create the observation to be sent by the signer before broadcast
 	chainHeight, err := c.GetHeight()
@@ -781,6 +1012,9 @@ func (c *Client) GetBalance(addr, token string, height *big.Int) (*big.Int, erro
 	ctx, cancel := c.getContext()
 	defer cancel()
 	if IsETH(token) {
+		if height != nil && height.Cmp(big.NewInt(-1)) == 0 {
+			return c.client.PendingBalanceAt(ctx, ecommon.HexToAddress(addr))
+		}
 		return c.client.BalanceAt(ctx, ecommon.HexToAddress(addr), height)
 	}
 	contractAddresses := c.pubkeyMgr.GetContracts(common.ETHChain)

@@ -764,6 +764,10 @@ type BifrostChainConfiguration struct {
 		// ExtraL1GasFee is an extra 1e8 amount deducted from the scheduled max gas to
 		// account for the Ethereum gas fee on Ethereum L2s.
 		ExtraL1GasFee int64 `mapstructure:"extra_l1_gas_fee"`
+
+		// ReconstructLiabilitiesConcurrency is the number of concurrent workers to use
+		// when reconstructing liabilities for EVM chains.
+		ReconstructLiabilitiesConcurrency int `mapstructure:"reconstruct_liabilities_concurrency"`
 	} `mapstructure:"evm"`
 
 	// UTXO contains UTXO chain specific configuration.

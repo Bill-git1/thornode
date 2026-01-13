@@ -31,6 +31,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	thorcommon "gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	tokenlist "gitlab.com/thorchain/thornode/v3/common/tokenlist"
 	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	types2 "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -462,6 +463,10 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)
 	bs.globalNetworkFeeQueue = make(chan thorcommon.NetworkFee, 1)
+	bs.whitelistTokens = append(bs.whitelistTokens, tokenlist.ERC20Token{
+		Address: "0x3b7FA4dd21c6f9BA3ca375217EAD7CAb9D6bF483",
+		Symbol:  "TKN",
+	})
 
 	// smart contract - deposit
 	encodedTx = `{"nonce":"0x4","gasPrice":"0x1","gas":"0x177b8","to":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44","value":"0x0","input":"0x1fece7b400000000000000000000000058e99c9c4a20f5f054c737389fdd51d7ed9c7d2a0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf4830000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000634144443a4554482e544b4e2d3078336237464134646432316336663942413363613337353231374541443743416239443662463438333a7474686f72313678786e30636164727575773661327177707633356176306d6568727976647a7a6a7a3361660000000000000000000000000000000000000000000000000000000000","v":"0xa95","r":"0x8a82b49901d67748c6840d7417d7307a40e6093579f6f73f7222cb52622f92cd","s":"0x21a1097c02306b177a0ca1a6e9f9599a8c4bab9926893493e966253c436977fd","hash":"0x817665ed5d08f6bcc47e409c147187fe0450201152ea1c80c85edf103d623acd"}`

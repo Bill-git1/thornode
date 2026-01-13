@@ -105,6 +105,7 @@ bifrost:
         token_max_gas_multiplier: 0
         aggregator_max_gas_multiplier: 0
         extra_l1_gas_fee: 0
+        reconstruct_liabilities_concurrency: 0
       utxo: &utxo
         block_cache_count: 144
         transaction_batch_size: 500
@@ -174,6 +175,7 @@ bifrost:
         token_max_gas_multiplier: 3
         aggregator_max_gas_multiplier: 10
         extra_l1_gas_fee: 0
+        reconstruct_liabilities_concurrency: 8
       block_scanner:
         <<: *default-block-scanner
         max_reorg_rescan_blocks: 96 # 3 epochs
@@ -198,6 +200,7 @@ bifrost:
         aggregator_max_gas_multiplier: 10
         # deteremined as 90th percentile of observed delta across 1 month on 9R nodes
         extra_l1_gas_fee: 700
+        reconstruct_liabilities_concurrency: 8
       block_scanner:
         <<: *default-block-scanner
         gas_cache_blocks: 40
@@ -251,6 +254,7 @@ bifrost:
         aggregator_max_gas_multiplier: 10
         max_gas_tip_percentage: 0
         extra_l1_gas_fee: 0
+        reconstruct_liabilities_concurrency: 8
       block_scanner:
         <<: *default-block-scanner
         max_reorg_rescan_blocks: 0 # avax has guaranteed finality
@@ -281,6 +285,7 @@ bifrost:
         aggregator_max_gas_multiplier: 10
         max_gas_tip_percentage: 0
         extra_l1_gas_fee: 0
+        reconstruct_liabilities_concurrency: 8
       block_scanner:
         <<: *default-block-scanner
         max_reorg_rescan_blocks: 600 # 30m

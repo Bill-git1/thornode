@@ -389,12 +389,21 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 				c.Assert(err, IsNil)
 			}
 			if rpcRequest.Method == "eth_call" {
-				c.Log()
-				if string(rpcRequest.Params) == `[{"data":"0x95d89b41", "to":"0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d"},"latest"]` {
-					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
-					c.Assert(err, IsNil)
-					return
-				} else if string(rpcRequest.Params) == `[{"data":"0x313ce567","from":"0x0000000000000000000000000000000000000000","to":"0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d"},"latest"]` {
+				var params []interface{}
+				if err = json.Unmarshal(rpcRequest.Params, &params); err == nil && len(params) > 0 {
+					if callParams, ok := params[0].(map[string]interface{}); ok {
+						if to, ok := callParams["to"].(string); ok && strings.EqualFold(to, "0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d") {
+							if data, ok := callParams["data"].(string); ok && data == "0x95d89b41" {
+								_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
+								c.Assert(err, IsNil)
+								return
+							}
+						}
+					}
+				}
+
+				// Keep existing fallback for other calls if any (like the one with "from" field)
+				if strings.Contains(string(rpcRequest.Params), `"data":"0x313ce567"`) {
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
 					c.Assert(err, IsNil)
 					return
@@ -524,15 +533,12 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	c.Assert(txInItem.Coins[0].Asset.String(), Equals, "AVAX.AVAX")
 	c.Assert(txInItem.Coins[0].Amount.Uint64(), Equals, cosmos.NewUint(200000000).Uint64())
 
-	config.WhitelistTokens = append(config.WhitelistTokens, "0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d")
-
-	bs, err = NewEVMScanner(config, storage, big.NewInt(43112), ethClient, rpcClient, bridge, s.m, pkeyMgr, func(height int64) error {
-		return nil
-	}, nil)
-	// whitelist the address for test
-	bs.whitelistContracts = append(bs.whitelistContracts, "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25")
+	// Pre-save token metadata to bypass whitelist validation
+	// This allows testing token transactions without requiring the token in the official token list
+	err = bs.tokenManager.SaveTokenMeta("TKN", "0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d", 18)
 	c.Assert(err, IsNil)
-	c.Assert(bs, NotNil)
+	// whitelist the router contract for test
+	bs.whitelistContracts = append(bs.whitelistContracts, "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25")
 
 	// smart contract - depositTKN
 	tx = &etypes.Transaction{}

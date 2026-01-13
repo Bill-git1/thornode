@@ -313,6 +313,7 @@ func (s *EVMSuite) TestClient(c *C) {
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err2, IsNil)
 	c.Assert(a2, NotNil)
+	a2.signingReady.Store(true) // Mark ready for tests that don't call Start()
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
 	c.Check(a2.GetChain(), Equals, common.AVAXChain)
@@ -406,6 +407,7 @@ func (s *EVMSuite) TestL1FeeDeduction(c *C) {
 	e, err := NewEVMClient(s.thorKeys, chainConfig, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)
+	e.signingReady.Store(true) // Mark ready for tests that don't call Start()
 
 	// sign tx without extra L1 gas fee
 	pubkeys := pubkeyMgr.GetPubKeys()
@@ -492,6 +494,7 @@ func (s *EVMSuite) TestSignEVMTx(c *C) {
 	e, err := NewEVMClient(s.thorKeys, chainConfig, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)
+	e.signingReady.Store(true) // Mark ready for tests that don't call Start()
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
 	pubkeys := pubkeyMgr.GetPubKeys()
@@ -687,4 +690,71 @@ func (s *EVMSuite) TestSignEVMTx(c *C) {
 	fromAddr, err = e.localPubKey.GetAddress(common.AVAXChain)
 	c.Assert(err, IsNil)
 	c.Assert(obs.Sender, Equals, fromAddr.String())
+}
+
+func (s *EVMSuite) TestSignTxChecksMemLiability(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	chainConfig := config.BifrostChainConfiguration{
+		ChainID: common.AVAXChain,
+		RPCHost: "http://" + s.server.Listener.Addr().String(),
+		BlockScanner: config.BifrostBlockScannerConfiguration{
+			StartBlockHeight:   1, // avoids querying thorchain for block height
+			HTTPRequestTimeout: time.Second,
+			MaxGasLimit:        80000,
+		},
+	}
+	chainConfig.EVM.AggregatorMaxGasMultiplier = 10
+	chainConfig.EVM.TokenMaxGasMultiplier = 3
+	e, err := NewEVMClient(s.thorKeys, chainConfig, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(e, NotNil)
+	e.signingReady.Store(true) // Mark ready for tests that don't call Start()
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	// Test: In-Memory Liability Tracking
+	// The mock for eth_getBalance returns 10 AVAX for "latest".
+	// First Transaction (5 AVAX + ~1.5 AVAX fee) should SUCCEED and record liability.
+	// Second Transaction (5 AVAX + ~1.5 AVAX fee) should FAIL because:
+	//   EffectiveBalance = LatestBalance(10) - Liability(~6.5) = ~3.5 AVAX < Required(~6.5 AVAX)
+
+	pubkeys := pubkeyMgr.GetPubKeys()
+	addr, err := pubkeys[len(pubkeys)-1].GetAddress(common.AVAXChain)
+	c.Assert(err, IsNil)
+
+	txOutItem1 := stypes.TxOutItem{
+		Chain:       common.AVAXChain,
+		ToAddress:   addr,
+		VaultPubKey: e.localPubKey,
+		Coins:       common.Coins{common.NewCoin(common.AVAXAsset, cosmos.NewUint(5*common.One))}, // 5 AVAX
+		Memo:        "MIGRATE:100",
+		GasRate:     1,
+		MaxGas:      common.Gas(common.NewCoins(common.NewCoin(common.AVAXAsset, cosmos.NewUint(80000*4)))),
+	}
+
+	// First transaction should succeed
+	rawTx1, _, _, err := e.SignTx(txOutItem1, 100)
+	c.Assert(err, IsNil, Commentf("First SignTx should succeed"))
+	c.Assert(rawTx1, NotNil)
+
+	// Verify liability was recorded
+	c.Assert(len(e.pendingLiabilities) > 0, Equals, true, Commentf("Liability should be recorded"))
+
+	// Second transaction should fail due to accumulated liability
+	txOutItem2 := stypes.TxOutItem{
+		Chain:       common.AVAXChain,
+		ToAddress:   addr,
+		VaultPubKey: e.localPubKey,
+		Coins:       common.Coins{common.NewCoin(common.AVAXAsset, cosmos.NewUint(5*common.One))}, // 5 AVAX
+		Memo:        "MIGRATE:101",
+		GasRate:     1,
+		MaxGas:      common.Gas(common.NewCoins(common.NewCoin(common.AVAXAsset, cosmos.NewUint(80000*4)))),
+	}
+
+	rawTx2, _, _, err := e.SignTx(txOutItem2, 101)
+	c.Assert(err, NotNil, Commentf("Second SignTx should fail due to liability"))
+	c.Assert(err.Error(), Matches, "insufficient gas asset balance.*")
+	c.Assert(rawTx2, IsNil)
 }
