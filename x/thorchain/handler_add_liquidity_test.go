@@ -192,6 +192,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10000)))
 
 	// add RUNE
+	// For secured assets, signer must match runeAddr to prevent unauthorized withdrawals
 	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
 		tx,
 		common.ETHAsset.GetSecuredAsset(),
@@ -201,7 +202,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 		contractAddr,
 		common.NoAddress,
 		cosmos.ZeroUint(),
-		nodeAccount.NodeAddress,
+		accAddr,
 	))
 	c.Assert(err, IsNil)
 
@@ -220,7 +221,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 		contractAddr,
 		common.NoAddress,
 		cosmos.ZeroUint(),
-		nodeAccount.NodeAddress,
+		accAddr,
 	))
 	c.Assert(err, IsNil)
 
@@ -244,7 +245,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 		contractAddr,
 		common.NoAddress,
 		cosmos.ZeroUint(),
-		nodeAccount.NodeAddress,
+		accAddr,
 	))
 	c.Assert(err, IsNil)
 
@@ -258,7 +259,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 	c.Assert(pool.PendingInboundAsset.String(), Equals, "0")
 	c.Assert(pool.PendingInboundRune.String(), Equals, "0")
 
-	// add nothing
+	// add nothing (AssetAmount is zero so authorization check is skipped)
 	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
 		tx,
 		common.ETHAsset.GetSecuredAsset(),
@@ -268,7 +269,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 		contractAddr,
 		common.NoAddress,
 		cosmos.ZeroUint(),
-		nodeAccount.NodeAddress,
+		accAddr,
 	))
 	c.Assert(err, IsNil)
 
@@ -426,6 +427,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler_NoPool_ShouldCreateNe
 		constants.StrictBondLiquidityRatio: true,
 	}, map[constants.ConstantName]string{})
 
+	// For secured assets, signer must match runeAddr to prevent unauthorized withdrawals
 	msg := NewMsgAddLiquidity(
 		tx,
 		common.BTCAsset.GetSecuredAsset(),
@@ -435,7 +437,7 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler_NoPool_ShouldCreateNe
 		runeAddr,
 		common.NoAddress,
 		cosmos.ZeroUint(),
-		nodeAccount.NodeAddress,
+		accAddr,
 	)
 
 	_, err = addHandler.Run(ctx, msg)

@@ -381,8 +381,12 @@ func (s *PoolMgrVCURSuite) TestCommitPendingLiquidity(c *C) {
 	pool.Asset = asset
 	pool.BalanceRune = cosmos.NewUint(100_000)
 	pool.BalanceAsset = cosmos.NewUint(100_000)
-	pool.PendingInboundRune = cosmos.OneUint()
-	pool.PendingInboundAsset = cosmos.OneUint()
+	// PendingInboundRune/Asset must equal the sum of LP pending amounts that will be committed
+	// lp1 has PendingRune=501 and will be committed (old LastAddHeight)
+	// lp2 has PendingAsset=600 and will be committed (old LastAddHeight)
+	// lp3 has PendingAsset=811 but will NOT be committed (recent LastAddHeight)
+	pool.PendingInboundRune = cosmos.NewUint(501)
+	pool.PendingInboundAsset = cosmos.NewUint(600 + 811) // 600 from lp2 (to be committed) + 811 from lp3 (not to be committed)
 	pool.LPUnits = cosmos.NewUint(1000)
 	c.Check(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
