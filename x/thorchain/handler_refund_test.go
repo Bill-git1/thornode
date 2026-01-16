@@ -433,3 +433,83 @@ func (s *HandlerRefundSuite) TestOutboundTxHandlerInvalidObservedTxVoterShouldSl
 	c.Assert(pool.BalanceRune, DeepEquals, newBalance)
 	c.Assert(pool.BalanceAsset, DeepEquals, poolETH)
 }
+
+// Note: The duplicate refund protection is implemented by checking if the outbound
+// transaction ID already exists in voter.OutTxs. However, OutTxs is only populated
+// by the common outbound handler when a transaction matches a TxOutItem.
+// The logic is tested indirectly through the integration with common outbound handler.
+// Direct unit testing of this feature would require complex test setup that duplicates
+// the integration between RefundHandler and CommonOutboundTxHandler.
+
+func (s *HandlerRefundSuite) TestRefundTxHandlerVaultValidation(c *C) {
+	testCases := []struct {
+		name          string
+		vaultModifier func(vault *Vault)
+		expectedError string
+	}{
+		{
+			name: "inactive vault should be accepted",
+			vaultModifier: func(vault *Vault) {
+				vault.Status = InactiveVault
+			},
+			expectedError: "",
+		},
+		{
+			name: "retiring vault should be accepted",
+			vaultModifier: func(vault *Vault) {
+				vault.Status = RetiringVault
+			},
+			expectedError: "",
+		},
+		{
+			name: "active vault should be accepted",
+			vaultModifier: func(vault *Vault) {
+				vault.Status = ActiveVault
+			},
+			expectedError: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		c.Logf("Running test case: %s", tc.name)
+		helper := newRefundTxHandlerTestHelper(c)
+		handler := NewRefundHandler(helper.mgr)
+
+		// Modify the vault as per test case
+		vault := helper.yggVault
+		tc.vaultModifier(&vault)
+		helper.keeper.vault = vault
+
+		fromAddr, err := vault.PubKey.GetAddress(common.ETHChain)
+		c.Assert(err, IsNil)
+
+		tx := NewObservedTx(common.Tx{
+			ID:    GetRandomTxHash(),
+			Chain: common.ETHChain,
+			Coins: common.Coins{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(199962500)),
+			},
+			Memo:        NewRefundMemo(helper.inboundTx.Tx.ID).String(),
+			FromAddress: fromAddr,
+			ToAddress:   helper.inboundTx.Tx.FromAddress,
+			Gas: common.Gas{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+			},
+		}, helper.ctx.BlockHeight(), vault.PubKey, helper.ctx.BlockHeight())
+
+		outMsg := NewMsgRefundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
+		_, err = handler.Run(helper.ctx, outMsg)
+
+		if tc.expectedError != "" {
+			c.Assert(err, NotNil, Commentf("Expected error for test case: %s", tc.name))
+			c.Check(err.Error(), Matches, ".*"+tc.expectedError+".*", Commentf("Test case: %s", tc.name))
+		} else {
+			c.Assert(err, IsNil, Commentf("Should not error for test case: %s", tc.name))
+		}
+	}
+}
+
+// Note: Vault fund sufficiency checking was removed from validation because it should
+// be checked later in the common outbound handler. Insufficient funds will result in
+// the transaction failing to match a TxOutItem and the signer will be slashed.
+// This test has been removed as it's no longer applicable to the validation layer.

@@ -3,6 +3,7 @@ package thorchain
 import (
 	"github.com/blang/semver"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -51,7 +52,50 @@ func (h RefundHandler) validate(ctx cosmos.Context, msg MsgRefundTx) error {
 }
 
 func (h RefundHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRefundTx) error {
-	return msg.ValidateBasic()
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+
+	// Check for duplicate refund - verify this exact outbound tx hasn't already been processed
+	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, msg.InTxID)
+	if err != nil {
+		return ErrInternal(err, "fail to get observed tx voter for duplicate check")
+	}
+
+	// Check if this specific outbound tx ID has already been recorded
+	// This prevents the same refund from being processed multiple times
+	for _, outTx := range voter.OutTxs {
+		if outTx.ID.Equals(msg.Tx.Tx.ID) && !msg.Tx.Tx.ID.Equals(common.BlankTxID) {
+			return cosmos.ErrUnknownRequest("refund transaction already processed")
+		}
+	}
+
+	// Validate vault exists
+	// Note: We allow refunds from any vault status (Active, Retiring, or Inactive)
+	// because:
+	// 1. Active/Retiring vaults: Normal refund processing
+	// 2. Inactive vaults: Can legitimately send refunds for coins they received
+	//    (e.g., from inbounds observed to their address before retirement)
+	// The creation of refund outbounds from inactive vaults is controlled by
+	// the slasher/manager code, not this handler. This handler only validates
+	// observed refund transactions that were already sent.
+	vault, err := h.mgr.Keeper().GetVault(ctx, msg.Tx.ObservedPubKey)
+	if err != nil {
+		return ErrInternal(err, "fail to get vault")
+	}
+
+	// Ensure vault exists and is valid
+	if vault.IsEmpty() {
+		return cosmos.ErrUnknownRequest("vault not found")
+	}
+
+	// Note: Vault fund sufficiency is validated later in the common outbound handler
+	// and the TxOut matching logic. If a vault doesn't have sufficient funds, the
+	// transaction will fail to match a TxOutItem and result in slashing.
+	// We don't validate funds here to allow malicious/incorrect refunds to be
+	// processed and slashed appropriately.
+
+	return nil
 }
 
 func (h RefundHandler) handle(ctx cosmos.Context, msg MsgRefundTx) (*cosmos.Result, error) {
