@@ -186,7 +186,6 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	SetupConfigForTest()
 	ctx, mgr := setupManagerForTest(c)
-	handler := NewDepositHandler(mgr)
 	affAddr := GetRandomTHORAddress()
 	tx := common.NewTx(
 		GetRandomTxHash(),
@@ -201,7 +200,7 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	// no affiliate fee
 	msg := NewMsgSwap(tx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 
-	c.Assert(handler.addSwap(ctx, *msg), IsNil)
+	c.Assert(addSwap(ctx, mgr, *msg), IsNil)
 	swap, err := getSwapQueueItem(ctx, mgr, tx.ID, 0)
 	c.Assert(err, IsNil)
 	// Compare core fields instead of string representation since advanced queue adds state
@@ -220,7 +219,7 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	acct := mgr.Keeper().GetBalance(ctx, affiliateFeeAddr)
 	c.Assert(acct.AmountOf(common.RuneNative.Native()).String(), Equals, "0")
 
-	c.Assert(handler.addSwap(ctx, *msg1), IsNil)
+	c.Assert(addSwap(ctx, mgr, *msg1), IsNil)
 	swap, err = getSwapQueueItem(ctx, mgr, tx.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, false)
@@ -231,7 +230,7 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	tx.Memo = fmt.Sprintf("=:BTC.BTC:%s::%s:1000", GetRandomBTCAddress().String(), affAddr.String())
 	tx.Coins[0].Amount = cosmos.NewUint(common.One)
 	msg2 := NewMsgSwap(tx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
-	c.Assert(handler.addSwap(ctx, *msg2), IsNil)
+	c.Assert(addSwap(ctx, mgr, *msg2), IsNil)
 	swap, err = getSwapQueueItem(ctx, mgr, tx.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, false)
@@ -260,7 +259,7 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	c.Assert(mgr.Keeper().MintToModule(ctx, ModuleName, tx1.Coins[0]), IsNil)
 	c.Assert(mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, tx1.Coins), IsNil)
 	msg3 := NewMsgSwap(tx1, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
-	c.Assert(handler.addSwap(ctx, *msg3), IsNil)
+	c.Assert(addSwap(ctx, mgr, *msg3), IsNil)
 	swap, err = getSwapQueueItem(ctx, mgr, tx1.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, false)

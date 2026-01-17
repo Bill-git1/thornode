@@ -232,10 +232,10 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 	if isSwap {
 		swapMsg, ok := m.(*MsgSwap)
 		if ok {
-			if err = h.addSwap(ctx, *swapMsg); err != nil {
+			if err = addSwap(ctx, h.mgr, *swapMsg); err != nil {
 				if refundErr := refundTx(ctx, txIn, h.mgr, CodeSwapFail, err.Error(), ""); refundErr != nil {
 					ctx.Logger().Error("fail to refund swap", "error", refundErr)
-					// swallow the error here
+					return nil, fmt.Errorf("swap failed and refund also failed: %w, refund error: %v", err, refundErr)
 				}
 			}
 		}
@@ -259,48 +259,6 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
 	}
 	return result, nil
-}
-
-func (h DepositHandler) addSwap(ctx cosmos.Context, msg MsgSwap) error {
-	// Route swap based on message version instead of configuration
-	if msg.IsV2() {
-		source := msg.Tx.Coins[0]
-		target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
-		evt := NewEventLimitSwap(source, target, msg.Tx.ID)
-		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
-			ctx.Logger().Error("fail to emit limit swap event", "error", err)
-		}
-		if err := h.mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, h.mgr, &msg); err != nil {
-			ctx.Logger().Error("fail to add swap to queue", "error", err)
-			return err
-		}
-	} else {
-		h.addSwapDirect(ctx, msg)
-	}
-	return nil
-}
-
-// addSwapDirect adds the swap directly to the swap queue - segmented out into
-// its own function to allow easier maintenance of original behavior vs advanced
-// behavior.
-func (h DepositHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		h.addSwapDirectV3_0_0(ctx, msg)
-	default:
-		ctx.Logger().Error(errInvalidVersion.Error())
-	}
-}
-
-func (h DepositHandler) addSwapDirectV3_0_0(ctx cosmos.Context, msg MsgSwap) {
-	if msg.Tx.Coins.IsEmpty() {
-		return
-	}
-	// Queue the main swap
-	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, msg, 0); err != nil {
-		ctx.Logger().Error("fail to add swap to queue", "error", err)
-	}
 }
 
 // extractReferenceFromNativeAmount extracts the reference ID from a native asset transaction amount.

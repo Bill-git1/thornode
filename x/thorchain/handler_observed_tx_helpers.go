@@ -307,7 +307,7 @@ func handleObservedTxInQuorum(
 		if err = addSwap(ctx, mgr, *swapMsg); err != nil {
 			if refundErr := refundTx(ctx, tx, mgr, CodeSwapFail, err.Error(), ""); refundErr != nil {
 				ctx.Logger().Error("fail to refund swap", "error", refundErr)
-				// swallow the error here
+				return fmt.Errorf("swap failed and refund also failed: %w, refund error: %v", err, refundErr)
 			}
 		}
 		return nil
