@@ -770,37 +770,68 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 					assetFee = outputs[i].Coin.Amount // Fee is the full amount
 				}
 
-				outputs[i].Coin.Amount = common.SafeSub(outputs[i].Coin.Amount, assetFee) // Deduct Asset fee
+				coinAmountAfterFee := common.SafeSub(outputs[i].Coin.Amount, assetFee) // Calculate amount after fee deduction
+
+				// Check dust threshold BEFORE making any state changes (Finding 1)
+				// This prevents pool balance corruption when outputs are dropped
+				if toi.Coin.Asset.IsGasAsset() && coinAmountAfterFee.LT(toi.Chain.DustThreshold()) {
+					ctx.Logger().
+						With("inbound", toi.InHash).
+						With("amount", coinAmountAfterFee).
+						With("fee", transactionFeeAmount).
+						Error("dropping gas asset output below dust threshold")
+					continue
+				}
+
+				// Check for zero coin BEFORE making any state changes (Finding 2)
+				// This prevents pool balance corruption and fee event inconsistency
+				if coinAmountAfterFee.IsZero() {
+					ctx.Logger().Info("tx out item would have zero coin after fee, checking if withdrawal", "tx_out", outputs[i].String())
+					// Need to determine whether the outbound is triggered by a withdrawal request
+					if !outputs[i].InHash.IsEmpty() && !outputs[i].InHash.Equals(common.BlankTxID) {
+						inboundVoter, err := tos.keeper.GetObservedTxInVoter(ctx, outputs[i].InHash)
+						if err != nil {
+							ctx.Logger().Error("fail to get observed txin voter", "error", err)
+							continue
+						}
+						if inboundVoter.Tx.IsEmpty() {
+							continue
+						}
+						inboundMemo, err := ParseMemoWithTHORNames(ctx, tos.keeper, inboundVoter.Tx.Tx.Memo)
+						if err != nil {
+							ctx.Logger().Error("fail to parse inbound transaction memo", "error", err)
+							continue
+						}
+						if inboundMemo.IsType(TxWithdraw) {
+							return nil, cosmos.ZeroUint(), errors.New("tx out item has zero coin")
+						}
+					}
+					continue
+				}
+
+				// Now safe to deduct fee since we've confirmed the output won't be dropped
+				outputs[i].Coin.Amount = coinAmountAfterFee
+
 				if outputs[i].Coin.Asset.IsSyntheticAsset() || outputs[i].Coin.Asset.IsDerivedAsset() {
 					// burn the native asset which used to pay for fee, that's only required when sending Synthetic/Derived assets from asgard
 					// (not for instance applicable for Trade/Secured Assets which are not (1-to-1) Cosmos-SDK coins transferred from the Pool Module)
-					if outputs[i].GetModuleName() == AsgardName {
+					// Only burn if assetFee > 0 (synths have zero fee, so skip for them)
+					if outputs[i].GetModuleName() == AsgardName && !assetFee.IsZero() {
+						// Finding 4: Return errors from synth/derived fee burning to prevent supply accounting errors
 						if err := tos.keeper.SendFromModuleToModule(ctx,
 							AsgardName,
 							ModuleName,
 							common.NewCoins(common.NewCoin(outputs[i].Coin.Asset, assetFee))); err != nil {
-							ctx.Logger().Error("fail to move native asset fee from asgard to Module", "error", err)
-						} else {
-							if err := tos.keeper.BurnFromModule(ctx, ModuleName, common.NewCoin(outputs[i].Coin.Asset, assetFee)); err != nil {
-								ctx.Logger().Error("fail to burn native asset", "error", err)
-							} else {
-								burnEvt := NewEventMintBurn(BurnSupplyType, outputs[i].Coin.Asset.Native(), assetFee, "burn_native_fee")
-								if err := tos.eventMgr.EmitEvent(ctx, burnEvt); err != nil {
-									ctx.Logger().Error("fail to emit burn event", "error", err)
-								}
-							}
+							return nil, cosmos.ZeroUint(), fmt.Errorf("fail to move native asset fee from asgard to Module: %w", err)
+						}
+						if err := tos.keeper.BurnFromModule(ctx, ModuleName, common.NewCoin(outputs[i].Coin.Asset, assetFee)); err != nil {
+							return nil, cosmos.ZeroUint(), fmt.Errorf("fail to burn native asset: %w", err)
+						}
+						burnEvt := NewEventMintBurn(BurnSupplyType, outputs[i].Coin.Asset.Native(), assetFee, "burn_native_fee")
+						if err := tos.eventMgr.EmitEvent(ctx, burnEvt); err != nil {
+							ctx.Logger().Error("fail to emit burn event", "error", err)
 						}
 					}
-				}
-
-				// drop any gas asset outputs below the dust threshold
-				if toi.Coin.Asset.IsGasAsset() && outputs[i].Coin.Amount.LT(toi.Chain.DustThreshold()) {
-					ctx.Logger().
-						With("inbound", toi.InHash).
-						With("amount", outputs[i].Coin.Amount).
-						With("fee", transactionFeeAmount).
-						Error("dropping gas asset output below dust threshold")
-					continue
 				}
 
 				poolDeduct := pool.RuneDisbursementForAssetAdd(assetFee)
@@ -816,6 +847,8 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 				feeEvents = append(feeEvents, NewEventFee(outputs[i].InHash, fee, cosmos.ZeroUint()))
 			}
 		}
+		// After applying all fees, check if the coin is still empty
+		// (this can happen for RUNE outputs where the fee equals the amount)
 		if outputs[i].Coin.IsEmpty() {
 			ctx.Logger().Info("tx out item has zero coin", "tx_out", outputs[i].String())
 
@@ -881,9 +914,10 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			if toi.ModuleName != ReserveName {
 				sourceModule := toi.GetModuleName() // Ensure that non-"".
 				coin := common.NewCoin(common.RuneAsset(), finalRuneFee)
-				err := tos.keeper.SendFromModuleToModule(ctx, sourceModule, ReserveName, common.NewCoins(coin))
-				if err != nil {
-					ctx.Logger().Error("fail to send fee to reserve", "error", err, "module", sourceModule)
+				// Finding 3: Return error instead of just logging to prevent fund accounting mismatch
+				// If this transfer fails, the fee has been deducted from the outbound but Reserve never receives it
+				if err := tos.keeper.SendFromModuleToModule(ctx, sourceModule, ReserveName, common.NewCoins(coin)); err != nil {
+					return nil, cosmos.ZeroUint(), fmt.Errorf("fail to send fee to reserve: %w", err)
 				}
 			}
 		} else {
@@ -902,12 +936,12 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			// If the source module is the Reserve, leave the fee in the Reserve without a transfer.
 			if !toi.Coin.Asset.IsDerivedAsset() && sourceModule != ReserveName {
 				coin := common.NewCoin(common.RuneAsset(), finalRuneFee)
-				err := tos.keeper.SendFromModuleToModule(ctx, sourceModule, ReserveName, common.NewCoins(coin))
-				if err != nil {
-					ctx.Logger().Error("fail to send fee to reserve", "error", err, "module", sourceModule)
+				// Finding 3: Return error instead of just logging to prevent fund accounting mismatch
+				// If this transfer fails, the fee has been deducted from pool balances but Reserve never receives it
+				if err := tos.keeper.SendFromModuleToModule(ctx, sourceModule, ReserveName, common.NewCoins(coin)); err != nil {
+					return nil, cosmos.ZeroUint(), fmt.Errorf("fail to send fee to reserve: %w", err)
 				}
 			}
-
 		}
 	}
 
