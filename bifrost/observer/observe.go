@@ -378,7 +378,7 @@ func (o *Observer) sendDeck(ctx context.Context) {
 			continue
 		}
 
-		final := chainClient.ConfirmationCountReady(*deck)
+		final := chainClient.ConfirmationCountReady(*deck) && !deck.MemPool
 		invalidIndices := o.sendToQuorumChecker(deck, final, k.height)
 
 		// Remove invalid transactions from deck
