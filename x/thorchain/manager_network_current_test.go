@@ -1600,6 +1600,50 @@ func (s *NetworkManagerVCURTestSuite) TestCalculateNetworkSolvency(c *C) {
 	for _, s := range solvency {
 		c.Assert(s.Amount.IsNegative(), Equals, true)
 	}
+
+	// Test 6: All THORChain native assets should be excluded (synths, derived, whitelisted)
+	// Create a synth pool (BTC/BTC)
+	synthBTC := common.BTCAsset.GetSyntheticAsset()
+	synthPool := NewPool()
+	synthPool.Asset = synthBTC
+	synthPool.BalanceAsset = cosmos.NewUint(80 * common.One)
+	synthPool.BalanceRune = cosmos.NewUint(80 * common.One)
+	synthPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, synthPool), IsNil)
+
+	// Create a derived asset pool (THOR.BTC)
+	derivedBTCAsset, err := common.NewAsset("THOR.BTC")
+	c.Assert(err, IsNil)
+	derivedPool := NewPool()
+	derivedPool.Asset = derivedBTCAsset
+	derivedPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	derivedPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	derivedPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, derivedPool), IsNil)
+
+	// Create a whitelisted native asset pool (RUJI)
+	rujiPool := NewPool()
+	rujiPool.Asset = common.RUJI
+	rujiPool.BalanceAsset = cosmos.NewUint(50 * common.One)
+	rujiPool.BalanceRune = cosmos.NewUint(50 * common.One)
+	rujiPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, rujiPool), IsNil)
+
+	// Reset vault with only L1 BTC and ETH
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(110*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	// Should only have BTC and ETH, excluding all THORChain native assets
+	c.Assert(len(solvency), Equals, 2)
+	for _, s := range solvency {
+		c.Assert(s.Asset.IsNative(), Equals, false, Commentf("THORChain native asset %s should not be in solvency", s.Asset))
+		c.Assert(s.Asset.Equals(common.BTCAsset) || s.Asset.Equals(common.ETHAsset), Equals, true)
+	}
 }
 
 func (s *NetworkManagerVCURTestSuite) TestProcessPostChurnSolvency(c *C) {

@@ -2223,8 +2223,9 @@ func (vm *NetworkMgrVCUR) calculateNetworkSolvency(ctx cosmos.Context, mgr Manag
 			ctx.Logger().Error("fail to unmarshal pool", "error", err)
 			continue
 		}
-		// Skip non-L1 pools
-		if !pool.Asset.Equals(pool.Asset.GetLayer1Asset()) {
+		// Skip all THORChain native assets (synths, trade, secured, derived, whitelisted)
+		// Vaults only hold external chain assets (BTC, ETH, AVAX, etc.)
+		if pool.Asset.IsNative() {
 			continue
 		}
 		assetAmounts[pool.Asset] = math.ZeroInt()
@@ -2250,8 +2251,9 @@ func (vm *NetworkMgrVCUR) calculateNetworkSolvency(ctx cosmos.Context, mgr Manag
 			ctx.Logger().Error("fail to unmarshal pool", "error", err)
 			continue
 		}
-		// Skip non-L1 pools
-		if !pool.Asset.Equals(pool.Asset.GetLayer1Asset()) {
+		// Skip all THORChain native assets (synths, trade, secured, derived, whitelisted)
+		// Vaults only hold external chain assets (BTC, ETH, AVAX, etc.)
+		if pool.Asset.IsNative() {
 			continue
 		}
 		// Subtract balance asset
