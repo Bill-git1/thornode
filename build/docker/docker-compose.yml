@@ -543,7 +543,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.16.7
+    image: ethereum/client-go:v1.16.8
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -611,7 +611,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.14.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.14.1
     volumes:
       - "./mocknet/avax:/mocknet"
     command:
@@ -636,7 +636,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0-1
+    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0.1
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -665,7 +665,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0-1
+    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0.1
     depends_on:
       tron-supernode:
         condition: service_healthy
