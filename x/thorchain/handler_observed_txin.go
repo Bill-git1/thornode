@@ -92,7 +92,7 @@ func addSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap) error {
 			return err
 		}
 	} else {
-		addSwapDirect(ctx, mgr.Keeper(), msg)
+		return addSwapDirect(ctx, mgr.Keeper(), msg)
 	}
 	return nil
 }
@@ -100,14 +100,16 @@ func addSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap) error {
 // addSwapDirect adds the swap directly to the swap queue (no order book) - segmented
 // out into its own function to allow easier maintenance of original behavior vs order
 // book behavior.
-func addSwapDirect(ctx cosmos.Context, k keeper.Keeper, msg MsgSwap) {
+func addSwapDirect(ctx cosmos.Context, k keeper.Keeper, msg MsgSwap) error {
 	if msg.Tx.Coins.IsEmpty() {
-		return
+		return nil
 	}
 	// Queue the main swap
 	if err := k.SetSwapQueueItem(ctx, msg, 0); err != nil {
 		ctx.Logger().Error("fail to add swap to queue", "error", err)
+		return err
 	}
+	return nil
 }
 
 // ObservedTxInAnteHandler called by the ante handler to gate mempool entry
