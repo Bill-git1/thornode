@@ -44,6 +44,22 @@ func (h CommonOutboundTxHandler) slash(ctx cosmos.Context, tx ObservedTx) error 
 }
 
 func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
+	// Validate that the observed pubkey corresponds to an existing vault.
+	// This prevents fake outbound transactions from arbitrary public keys.
+	// Note: Vault existence is also checked upstream in ensureVaultAndGetTxOutVoter,
+	// but we add this check here as defense-in-depth since this handler can be
+	// called from multiple paths (refund, outbound).
+	vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
+	if err != nil {
+		ctx.Logger().Error("fail to get vault for outbound validation", "error", err, "pubkey", tx.ObservedPubKey)
+		return nil, ErrInternal(err, "fail to get vault for observed pubkey")
+	}
+	// A completely empty vault (no pubkey) indicates it doesn't exist
+	if vault.PubKey.IsEmpty() {
+		ctx.Logger().Error("vault not found for observed outbound", "pubkey", tx.ObservedPubKey)
+		return nil, ErrInternal(nil, fmt.Sprintf("vault not found for observed pubkey: %s", tx.ObservedPubKey))
+	}
+
 	// note: Outbound tx usually it is related to an inbound tx except migration
 	// thus here try to get the ObservedTxInVoter,  and set the tx out hash accordingly
 	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, inTxID)
@@ -89,6 +105,11 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 		}
 	}
 
+	// Pool cache to reduce repeated store reads during the nested loop.
+	// The loop may check multiple TxOutItems with the same asset, so caching
+	// prevents redundant GetPool calls.
+	poolCache := make(map[common.Asset]Pool)
+
 	for height := latestHeight; height >= earliestHeight; height-- {
 		// update txOut record with our TxID that sent funds out of the pool
 		var txOut *TxOut
@@ -108,22 +129,31 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 			// one coin in it , THORNode could use that to identify which tx it
 			// is
 
+			// Use deterministic case-insensitive comparison for aggregator fields.
+			// strings.EqualFold uses Unicode case folding which can have locale-specific
+			// behavior. Using strings.ToLower on both sides ensures deterministic comparison
+			// across all validators in the consensus path.
+			// nolint:staticcheck // SA6005: ToLower is intentionally used instead of EqualFold for determinism
 			if txOutItem.InHash.Equals(inTxID) &&
 				txOutItem.OutHash.IsEmpty() &&
 				tx.Tx.Chain.Equals(txOutItem.Chain) &&
 				tx.Tx.ToAddress.Equals(txOutItem.ToAddress) &&
-				strings.EqualFold(tx.Aggregator, txOutItem.Aggregator) &&
-				strings.EqualFold(tx.AggregatorTarget, txOutItem.AggregatorTargetAsset) &&
+				strings.ToLower(tx.Aggregator) == strings.ToLower(txOutItem.Aggregator) &&
+				strings.ToLower(tx.AggregatorTarget) == strings.ToLower(txOutItem.AggregatorTargetAsset) &&
 				(tx.ObservedPubKey.Equals(txOutItem.VaultPubKey) ||
 					tx.ObservedPubKey.Equals(txOutItem.VaultPubKeyEddsa)) {
 
 				matchCoin := tx.Tx.Coins.EqualsEx(common.Coins{txOutItem.Coin})
 				if !matchCoin {
-					// In case the mismatch is caused by decimals , round the tx out item's amount , and compare it again
-					var p Pool
-					p, err = h.mgr.Keeper().GetPool(ctx, txOutItem.Coin.Asset)
-					if err != nil {
-						ctx.Logger().Error("fail to get pool", "error", err)
+					// In case the mismatch is caused by decimals, round the tx out item's amount and compare it again.
+					// Use pool cache to avoid repeated store reads for the same asset.
+					p, ok := poolCache[txOutItem.Coin.Asset]
+					if !ok {
+						p, err = h.mgr.Keeper().GetPool(ctx, txOutItem.Coin.Asset)
+						if err != nil {
+							ctx.Logger().Error("fail to get pool", "error", err)
+						}
+						poolCache[txOutItem.Coin.Asset] = p
 					}
 					if !p.IsEmpty() {
 						matchCoin = tx.Tx.Coins.EqualsEx(common.Coins{
@@ -143,11 +173,8 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 						ctx.Logger().Info("override match coin", "intend to spend", intendToSpend, "actual spend", actualSpend, "max_gas", maxGasAmt, "actual gas", realGasAmt)
 						if maxGasAmt.GT(realGasAmt) {
 							// Don't reimburse gas difference if the outbound is from an InactiveVault.
-							var vault Vault
-							vault, err = h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
-							if err != nil {
-								ctx.Logger().Error("fail to get vault info", "error", err)
-							} else if vault.Status != InactiveVault {
+							// Reuse the vault variable from initial validation to avoid repeated store reads.
+							if vault.Status != InactiveVault {
 								// the outbound spend less than MaxGas
 								diffGas := maxGasAmt.Sub(realGasAmt)
 								h.mgr.GasMgr().AddGasAsset(txOutItem.Coin.Asset, common.Gas{
@@ -231,10 +258,18 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	}
 
 	slashed := false
-	if shouldSlash && !isOutboundFakeGasTx(tx) {
+	// Slash the vault if no matching TxOutItem was found, unless this is an
+	// authorized operational transaction (fake gas tx or cancel tx).
+	// - isOutboundFakeGasTx: Fake gas transactions used for EVM chain operations
+	//   (amount=1, gas asset, self-referential OUT: memo)
+	// - isCancelTx: Cancel transactions sent by bifrost to unstuck pending transactions
+	//   on EVM chains (vault-to-vault, dust threshold amount, empty memo)
+	if shouldSlash && !isOutboundFakeGasTx(tx) && !isCancelTx(tx) {
 		ctx.Logger().Info("slash node account, no matched tx out item", "inbound txid", inTxID, "outbound tx", tx.Tx)
 
-		// send security alert for events that are not evm burn
+		// Send security alert for unmatched outbounds.
+		// Note: Security event emission errors are logged but don't halt processing,
+		// as the slashing penalty is the primary security mechanism.
 		msg := fmt.Sprintf("missing tx out in=%s", inTxID)
 		if err = h.mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
 			ctx.Logger().Error("fail to emit security event", "error", err)

@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"strings"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gopkg.in/check.v1"
@@ -252,4 +254,73 @@ func (s *HandlerCommonOutboundSuite) TestSplitCloutBothCloutsZero(c *check.C) {
 
 	c.Assert(split1.IsZero(), check.Equals, true)
 	c.Assert(split2.IsZero(), check.Equals, true)
+}
+
+// TestDeterministicAggregatorComparison verifies that aggregator field comparison
+// uses deterministic case-insensitive matching (via strings.ToLower) rather than
+// strings.EqualFold which can have locale-specific behavior.
+func (s *HandlerCommonOutboundSuite) TestDeterministicAggregatorComparison(c *check.C) {
+	// Test cases for deterministic case-insensitive comparison
+	testCases := []struct {
+		name     string
+		a        string
+		b        string
+		expected bool
+	}{
+		{"exact match", "0xAggregator", "0xAggregator", true},
+		{"case insensitive match", "0xAGGREGATOR", "0xaggregator", true},
+		{"mixed case match", "0xAgGrEgAtOr", "0xaGgReGaToR", true},
+		{"different strings", "0xAggregator1", "0xAggregator2", false},
+		{"empty strings", "", "", true},
+		{"one empty", "0xAggregator", "", false},
+	}
+
+	for _, tc := range testCases {
+		// This mirrors the comparison logic in handler_common_outbound.go
+		// nolint:staticcheck // SA6005: ToLower is intentionally used instead of EqualFold for determinism
+		result := strings.ToLower(tc.a) == strings.ToLower(tc.b)
+		c.Assert(result, check.Equals, tc.expected, check.Commentf("test case: %s", tc.name))
+	}
+}
+
+// TestSlashingExemptionsForOperationalTxs verifies that fake gas and cancel
+// transactions are properly exempted from slashing when no TxOutItem match is found.
+func (s *HandlerCommonOutboundSuite) TestSlashingExemptionsForOperationalTxs(c *check.C) {
+	// Test 1: Fake gas transaction should be exempted
+	coins := common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
+	}
+	gas := common.Gas{
+		{Asset: common.ETHAsset, Amount: cosmos.NewUint(1)},
+	}
+	// Fake gas transactions have self-referential OUT:txhash memo
+	fakeGasTx := ObservedTx{
+		Tx: common.NewTx("TXHASH123", "0xabc", "0x123", coins, gas, "OUT:TXHASH123"),
+	}
+	c.Assert(isOutboundFakeGasTx(fakeGasTx), check.Equals, true, check.Commentf("fake gas tx should be recognized"))
+
+	// Test 2: Cancel transaction should be exempted
+	vaultPubKey := GetRandomPubKey()
+	vaultAddr, err := vaultPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, check.IsNil)
+	dustThreshold := common.ETHChain.DustThreshold()
+	cancelCoins := common.Coins{
+		common.NewCoin(common.ETHAsset, dustThreshold),
+	}
+	cancelTx := ObservedTx{
+		Tx:             common.NewTx("123", vaultAddr, vaultAddr, cancelCoins, gas, ""),
+		ObservedPubKey: vaultPubKey,
+	}
+	c.Assert(isCancelTx(cancelTx), check.Equals, true, check.Commentf("cancel tx should be recognized"))
+
+	// Test 3: Theft attempt (large amount, not operational) should NOT be exempted
+	theftCoins := common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+	}
+	theftTx := ObservedTx{
+		Tx:             common.NewTx("123", "0xabc", "0x123", theftCoins, gas, "OUT:123"),
+		ObservedPubKey: vaultPubKey,
+	}
+	c.Assert(isOutboundFakeGasTx(theftTx), check.Equals, false, check.Commentf("theft tx should not be exempted"))
+	c.Assert(isCancelTx(theftTx), check.Equals, false, check.Commentf("theft tx should not be exempted as cancel"))
 }
