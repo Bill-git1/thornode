@@ -599,7 +599,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 			Msg("failed to get transaction status")
 	}
 	memoType := memo.TxUnknown
-	if status.Tx != nil {
+	if status.Tx != nil && status.Tx.Memo != nil {
 		memoParts := strings.Split(*status.Tx.Memo, ":")
 		memoType, err = memo.StringToTxType(memoParts[0])
 		if err != nil {
@@ -610,17 +610,19 @@ func scheduledOutbound(height int64, events []map[string]string) {
 	// consider from address clout for swaps and trade/secured asset withdraws
 	switch memoType {
 	case memo.TxSwap, memo.TxTradeAccountWithdrawal, memo.TxSecuredAssetWithdraw:
-		clout := util.Clout(height, *status.Tx.FromAddress)
-		cloutUSD := util.USDValue(height, clout)
-		totalCloutUSD += uint64(cloutUSD)
-		cloutFields.Set(
-			fmt.Sprintf("Clout (%s)", *status.Tx.FromAddress),
-			fmt.Sprintf(
-				"%f RUNE (%s)",
-				float64(clout.Amount.Uint64())/common.One,
-				util.FormatUSD(cloutUSD),
-			),
-		)
+		if status.Tx != nil && status.Tx.FromAddress != nil {
+			clout := util.Clout(height, *status.Tx.FromAddress)
+			cloutUSD := util.USDValue(height, clout)
+			totalCloutUSD += uint64(cloutUSD)
+			cloutFields.Set(
+				fmt.Sprintf("Clout (%s)", *status.Tx.FromAddress),
+				fmt.Sprintf(
+					"%f RUNE (%s)",
+					float64(clout.Amount.Uint64())/common.One,
+					util.FormatUSD(cloutUSD),
+				),
+			)
+		}
 	}
 	if uint64(usdValue) < config.Get().Thresholds.USDValue+totalCloutUSD && uint64(usdValue) < config.Get().Thresholds.SwapDelta.USDValue {
 		return
@@ -643,7 +645,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 		lines = append(lines, util.Moneybags(uint64(usdValue)))
 	}
 	fields := util.NewOrderedMap()
-	if status.Tx != nil {
+	if status.Tx != nil && status.Tx.Memo != nil {
 		fields.Set("Inbound Memo", fmt.Sprintf("`%s`", *status.Tx.Memo))
 	}
 
@@ -653,7 +655,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 	}
 
 	// add the inbound coins for inbound swap or outbound refund
-	if memoType == thorchain.TxSwap || reMemoRefund.MatchString(events[0]["memo"]) && status.Tx != nil {
+	if (memoType == thorchain.TxSwap || reMemoRefund.MatchString(events[0]["memo"])) && status.Tx != nil && len(status.Tx.Coins) > 0 {
 		inboundCoin := util.CoinToCommon(status.Tx.Coins[0])
 		inboundUSDValue := util.USDValue(height, inboundCoin)
 		fields.Set("Inbound Amount", fmt.Sprintf(
@@ -701,7 +703,9 @@ func scheduledOutbound(height int64, events []map[string]string) {
 		} else if lastStatus.Stages.SwapStatus != nil &&
 			lastStatus.Stages.SwapStatus.Streaming != nil &&
 			lastStatus.Stages.SwapStatus.Streaming.Interval > 0 &&
-			lastStatus.Stages.SwapStatus.Streaming.Quantity > 0 {
+			lastStatus.Stages.SwapStatus.Streaming.Quantity > 0 &&
+			status.Tx != nil &&
+			len(status.Tx.Coins) > 0 {
 
 			interval := lastStatus.Stages.SwapStatus.Streaming.Interval
 			quantity := lastStatus.Stages.SwapStatus.Streaming.Quantity
@@ -940,12 +944,20 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 		}
 		for _, vault := range vaultsRes {
 			if vault.Status == types.VaultStatus_ActiveVault.String() {
-				vaults.Active[*vault.PubKey] = true
-				vaults.Active[*vault.PubKeyEddsa] = true
+				if vault.PubKey != nil {
+					vaults.Active[*vault.PubKey] = true
+				}
+				if vault.PubKeyEddsa != nil {
+					vaults.Active[*vault.PubKeyEddsa] = true
+				}
 			}
 			if vault.Status == types.VaultStatus_RetiringVault.String() {
-				vaults.Retiring[*vault.PubKey] = true
-				vaults.Retiring[*vault.PubKeyEddsa] = true
+				if vault.PubKey != nil {
+					vaults.Retiring[*vault.PubKey] = true
+				}
+				if vault.PubKeyEddsa != nil {
+					vaults.Retiring[*vault.PubKeyEddsa] = true
+				}
 			}
 		}
 		err = util.Store("vaults", vaults)

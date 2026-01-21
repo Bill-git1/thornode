@@ -487,6 +487,9 @@ func notifyChurnStarted(height, keygenHeight int64, keyshareBackups map[string]m
 		if vault.Status != types.VaultStatus_ActiveVault.String() {
 			continue
 		}
+		if vault.PubKey == nil || vault.PubKeyEddsa == nil {
+			continue
+		}
 		pk := *vault.PubKey
 		eddsaPk := *vault.PubKeyEddsa
 		keyshareBackupLines = append(keyshareBackupLines,
@@ -601,6 +604,11 @@ func formatNodeMimirMessage(height int64, node, key, value string) (string, *uti
 	var previous *int64
 	votes := make(map[int64]int64)
 	for _, mimir := range mimirs.Mimirs {
+		// skip if key or signer is nil
+		if mimir.Key == nil || mimir.Signer == nil {
+			continue
+		}
+
 		// skip votes that are not this key
 		if *mimir.Key != key {
 			continue
