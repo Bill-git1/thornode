@@ -56,7 +56,7 @@ func (h TCYStakeHandler) handle(ctx cosmos.Context, msg MsgTCYStake) (*cosmos.Re
 
 	err := h.mgr.Keeper().UpdateTCYStaker(ctx, msg.Tx.FromAddress, msg.Tx.Coins[0].Amount)
 	if err != nil {
-		ctx.Logger().Error("failed to update tcy staker", "err", err)
+		return nil, fmt.Errorf("failed to update tcy staker: %w", err)
 	}
 
 	evt := types.NewEventTCYStake(msg.Tx.FromAddress, msg.Tx.Coins[0].Amount)
