@@ -100,7 +100,11 @@ func (h RagnarokHandler) handleV3_0_0(ctx cosmos.Context, msg MsgRagnarok) (*cos
 			// this type of tx out is special, because it doesn't have relevant tx
 			// in to trigger it, it is trigger by thorchain itself.
 
-			fromAddress, _ := tx.VaultPubKey.GetAddress(tx.Chain)
+			fromAddress, err := tx.VaultPubKey.GetAddress(tx.Chain)
+			if err != nil {
+				ctx.Logger().Error("fail to get from address from vault pubkey", "error", err, "vault_pubkey", tx.VaultPubKey, "chain", tx.Chain)
+				continue
+			}
 
 			if tx.InHash.Equals(common.BlankTxID) &&
 				tx.OutHash.IsEmpty() &&
