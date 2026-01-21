@@ -414,7 +414,7 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 	case AVAXChain:
 		return 3_000
 	case BSCChain:
-		return 750
+		return 450
 	case GAIAChain:
 		return 6_000
 	case THORChain:
