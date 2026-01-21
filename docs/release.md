@@ -47,24 +47,24 @@ THORNode follows a custom variation of semantic version structure: `MAJOR.MINOR.
 ## Mainnet Release
 
 1. Determine the upgrade height and time - this must be at least 1 week out to accommodate agreements with exchanges and other stakeholders.
-2. Copy the contents of the final RC release (e.g. `v3.7.0-rc1`) to a new release (e.g. `v3.7.0`) at https://gitlab.com/thorchain/thornode/-/releases, also including the upgrade height and time in the following format:
-
-   ```text
-   - **Proposed Block**: `21210000`
-   - **Date**: 22-May-2025 @ ~1:00pm EDT - https://runescan.io/block/21jj210000
-   - **Note**: Block time is presently fluctuating - this time is an estimate, but may fluctuate by hours.
-
-   **Changelog**
-   ...
-   ```
-
-3. Checkout the release commit locally, then create the `mainnet` branch from it, and push it to the remote (force push may be necessary):
+2. Checkout the release commit locally, then create the `mainnet` branch from it, and push it to the remote (force push may be necessary):
 
    ```bash
    git checkout v3.7.0-rc1
    git branch -D mainnet
    git checkout -b mainnet
    git push -f origin mainnet
+   ```
+
+3. Copy the contents of the final RC release (e.g. `v3.7.0-rc1`) to a new release (e.g. `v3.7.0`) at https://gitlab.com/thorchain/thornode/-/releases, create the version tag on the `mainnet` branch you just pushed, and include the upgrade height and time in the release description in the following format:
+
+   ```text
+   - **Proposed Block**: `21210000`
+   - **Date**: 22-May-2025 @ ~1:00pm EDT - https://runescan.io/block/21jj210000
+   - **Note**: Block time is an estimate and may fluctuate.
+
+   **Changelog**
+   ...
    ```
 
 4. The `build-thornode` job in the pipeline for the `mainnet` branch will build the release image.
@@ -97,7 +97,7 @@ THORNode follows a custom variation of semantic version structure: `MAJOR.MINOR.
    @everyone
    ```
 
-7. Relay the announcement to the Telegram channel and any relevant chats with exchanges to notify them of the upcoming fork.
+7. Relay the announcement any relevant chats with exchanges to notify them of the upcoming fork.
 
 8. PR in `node-launcher` to extend the [`thornode.versions`](https://gitlab.com/thorchain/devops/node-launcher/-/blob/master/thornode-stack/mainnet.yaml?ref_type=heads#L5) with the upgrade height and new version image.
 
@@ -120,3 +120,23 @@ THORNode follows a custom variation of semantic version structure: `MAJOR.MINOR.
 
    @everyone
    ````
+
+10. Click the "Publish" button (horn emoji) on the announcement message to relay to other servers and the Telegram relay bot.
+
+## Mainnet Release (Private Image)
+
+In the case of a private mainnet release with security patches, the process remains the same with the following additions:
+
+1. Push all public code included in the release to the `mainnet` branch as normal, but do not include the private security commits. After pushing the branch, stop the pipeline before it builds the image.
+2. Add the following line to the release description before the changelog:
+
+   ```text
+   > **This release will use a private binary including additional security patches - DO NOT build from source.**
+   ```
+
+3. Manually build the release image including the cherry picked private security patches and push to the Gitlab container registry.
+4. Add the following to the release announcement in Discord (modify as needed depending on circumstance):
+
+   ```text
+   > Please note that this release is a private image containing a security patch. Any nodes that wish to review the patch can make relay an `age` public key and one of the devs or THORSec will reply with an encrypted patch and instructions to verify the reproducible build hash.
+   ```
