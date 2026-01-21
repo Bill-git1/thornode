@@ -83,6 +83,43 @@ func (s *AnteTestSuite) TestRejectMutlipleDepositMsgs(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *AnteTestSuite) TestRejectDuplicateTHORNameMsgs(c *C) {
+	_, k := setupKeeperForTest(c)
+
+	ad := AnteDecorator{
+		keeper: k,
+	}
+
+	addr := GetRandomTHORAddress()
+	acc, _ := addr.AccAddress()
+	coin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
+
+	msg1 := types.NewMsgManageTHORName("test-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc)
+	msg2 := types.NewMsgManageTHORName("other-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc)
+	msg3 := types.NewMsgManageTHORName("test-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc)
+
+	// no THORName msgs is ok
+	err := ad.rejectDuplicateTHORNameMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}})
+	c.Assert(err, IsNil)
+
+	// one THORName msg is ok
+	err = ad.rejectDuplicateTHORNameMsgs([]cosmos.Msg{&types.MsgBan{}, msg1})
+	c.Assert(err, IsNil)
+
+	// two THORName msgs with different names is ok
+	err = ad.rejectDuplicateTHORNameMsgs([]cosmos.Msg{msg1, msg2})
+	c.Assert(err, IsNil)
+
+	// two THORName msgs with same name is not ok
+	err = ad.rejectDuplicateTHORNameMsgs([]cosmos.Msg{msg1, msg3})
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*duplicate THORName operation in same tx.*")
+
+	// three msgs with same name in middle is not ok
+	err = ad.rejectDuplicateTHORNameMsgs([]cosmos.Msg{msg1, msg2, msg3})
+	c.Assert(err, NotNil)
+}
+
 func (s *AnteTestSuite) TestAnteHandleMessage(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	version := GetCurrentVersion()

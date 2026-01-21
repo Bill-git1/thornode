@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 
 	"github.com/blang/semver"
@@ -169,13 +170,35 @@ func (h ManageTHORNameHandler) handleV3_0_0(ctx cosmos.Context, msg MsgManageTHO
 			addBlocks = h.mgr.GetConstants().GetInt64Value(constants.BlocksPerYear) // registration comes with 1 free year
 		}
 		feePerBlock := h.mgr.Keeper().GetTHORNamePerBlockFee(ctx)
-		fundPaid = msg.Coin.Amount
-		addBlocks += (int64(msg.Coin.Amount.Uint64()) / int64(feePerBlock.Uint64()))
-		if tn.ExpireBlockHeight < ctx.BlockHeight() {
-			tn.ExpireBlockHeight = ctx.BlockHeight() + addBlocks
-		} else {
-			tn.ExpireBlockHeight += addBlocks
+		// Validate feePerBlock is not zero to prevent division by zero
+		if feePerBlock.IsZero() {
+			return nil, errors.New("per block fee cannot be zero")
 		}
+		fundPaid = msg.Coin.Amount
+		// Validate msg.Coin.Amount doesn't exceed int64 max to prevent overflow during conversion
+		if msg.Coin.Amount.GT(cosmos.NewUint(math.MaxInt64)) {
+			return nil, errors.New("coin amount exceeds maximum allowed value")
+		}
+		// Validate feePerBlock doesn't exceed int64 max to prevent overflow during conversion
+		if feePerBlock.GT(cosmos.NewUint(math.MaxInt64)) {
+			return nil, errors.New("per block fee exceeds maximum allowed value")
+		}
+		blocksFromFund := int64(msg.Coin.Amount.Uint64()) / int64(feePerBlock.Uint64())
+		// Check for overflow before adding blocks
+		if addBlocks > 0 && blocksFromFund > math.MaxInt64-addBlocks {
+			return nil, errors.New("block calculation overflow: addBlocks")
+		}
+		addBlocks += blocksFromFund
+		// Determine base block height for expiration
+		baseHeight := tn.ExpireBlockHeight
+		if baseHeight < ctx.BlockHeight() {
+			baseHeight = ctx.BlockHeight()
+		}
+		// Check for overflow when computing new expiration
+		if addBlocks > 0 && baseHeight > math.MaxInt64-addBlocks {
+			return nil, errors.New("block calculation overflow: expire block height")
+		}
+		tn.ExpireBlockHeight = baseHeight + addBlocks
 	}
 
 	// check if we need to reduce the expire time, upon user request

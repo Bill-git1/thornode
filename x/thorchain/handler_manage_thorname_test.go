@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"math"
+
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -143,4 +145,64 @@ func (s *HandlerManageTHORNameSuite) TestHandler(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(name.Owner.Empty(), Equals, true)
 	c.Check(name.ExpireBlockHeight, Equals, int64(0))
+}
+
+func (s *HandlerManageTHORNameSuite) TestHandlerIntegerOverflow(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	handler := NewManageTHORNameHandler(mgr)
+	addr := GetRandomTHORAddress()
+	acc, _ := addr.AccAddress()
+
+	// add rune to addr for gas
+	FundAccount(c, ctx, mgr.Keeper(), acc, 10*common.One)
+
+	// Test coin amount exceeding int64 max
+	// Create a coin with an amount larger than MaxInt64
+	hugeAmount := cosmos.NewUint(math.MaxUint64)
+	hugeCoin := common.NewCoin(common.RuneAsset(), hugeAmount)
+	msg := NewMsgManageTHORName("overflow-test", common.THORChain, addr, hugeCoin, 0, common.RuneAsset(), acc, acc)
+	_, err := handler.handle(ctx, *msg)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*coin amount exceeds maximum allowed value.*")
+}
+
+func (s *HandlerManageTHORNameSuite) TestHandlerBlockHeightOverflow(c *C) {
+	ver := GetCurrentVersion()
+	constAccessor := constants.GetConstantValues(ver)
+	feePerBlock := constAccessor.GetInt64Value(constants.TNSFeePerBlock)
+	ctx, mgr := setupManagerForTest(c)
+
+	handler := NewManageTHORNameHandler(mgr)
+	addr := GetRandomTHORAddress()
+	acc, _ := addr.AccAddress()
+	tnName := "overflow-expire"
+
+	// add rune to addr for gas
+	FundAccount(c, ctx, mgr.Keeper(), acc, 10*common.One)
+
+	// First, register a THORName
+	coin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
+	msg := NewMsgManageTHORName(tnName, common.THORChain, addr, coin, 0, common.RuneAsset(), acc, acc)
+	_, err := handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+
+	// Now create a THORName with very high expire block height and try to extend it
+	// This should trigger the overflow check when trying to add more blocks
+	name, err := mgr.Keeper().GetTHORName(ctx, tnName)
+	c.Assert(err, IsNil)
+
+	// Set expire block height to near MaxInt64 to trigger overflow when adding blocks
+	name.ExpireBlockHeight = math.MaxInt64 - 100
+	mgr.Keeper().SetTHORName(ctx, name)
+
+	// Try to extend with a large amount that would overflow
+	// Calculate the amount needed to generate enough blocks to overflow
+	// addBlocks = amount / feePerBlock, so we need amount > 100 * feePerBlock to overflow
+	overflowAmount := cosmos.NewUint(uint64(200 * feePerBlock))
+	overflowCoin := common.NewCoin(common.RuneAsset(), overflowAmount)
+	msg = NewMsgManageTHORName(tnName, common.THORChain, addr, overflowCoin, 0, common.RuneAsset(), acc, acc)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*block calculation overflow.*")
 }
