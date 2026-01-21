@@ -22,7 +22,7 @@ func (s *EventManagerTestSuite) TestEmitPoolEvent(c *C) {
 
 func (s *EventManagerTestSuite) TestEmitErrataEvent(c *C) {
 	ctx, _ := setupKeeperForTest(c)
-	eventMgr := newEventMgrVCUR()
+	eventMgr := newEventMgr()
 	c.Assert(eventMgr, NotNil)
 	ctx = ctx.WithBlockHeight(1024)
 	errataEvent := NewEventErrata(GetRandomTxHash(), PoolMods{

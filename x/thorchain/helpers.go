@@ -168,16 +168,6 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 }
 
 func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return getMaxSwapQuantityV3_0_0(ctx, mgr, sourceAsset, targetAsset, swp)
-	default:
-		return 0, errBadVersion
-	}
-}
-
-func getMaxSwapQuantityV3_0_0(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
 	if swp.Interval == 0 {
 		return 0, nil
 	}

@@ -11,16 +11,16 @@ type EmitEventItem interface {
 	Events() (cosmos.Events, error)
 }
 
-// EventMgrVCUR implement EventManager interface
-type EventMgrVCUR struct{}
+// EventMgr implement EventManager interface
+type EventMgr struct{}
 
-// newEventMgrVCUR create a new instance of EventMgrVCUR
-func newEventMgrVCUR() *EventMgrVCUR {
-	return &EventMgrVCUR{}
+// newEventMgr create a new instance of EventMgr
+func newEventMgr() *EventMgr {
+	return &EventMgr{}
 }
 
 // EmitEvent to block
-func (m *EventMgrVCUR) EmitEvent(ctx cosmos.Context, evt EmitEventItem) error {
+func (m *EventMgr) EmitEvent(ctx cosmos.Context, evt EmitEventItem) error {
 	events, err := evt.Events()
 	if err != nil {
 		return fmt.Errorf("fail to get events: %w", err)
@@ -30,7 +30,7 @@ func (m *EventMgrVCUR) EmitEvent(ctx cosmos.Context, evt EmitEventItem) error {
 }
 
 // EmitGasEvent emit gas events
-func (m *EventMgrVCUR) EmitGasEvent(ctx cosmos.Context, gasEvent *EventGas) error {
+func (m *EventMgr) EmitGasEvent(ctx cosmos.Context, gasEvent *EventGas) error {
 	if gasEvent == nil {
 		return nil
 	}
@@ -38,7 +38,7 @@ func (m *EventMgrVCUR) EmitGasEvent(ctx cosmos.Context, gasEvent *EventGas) erro
 }
 
 // EmitSwapEvent emit swap event to block
-func (m *EventMgrVCUR) EmitSwapEvent(ctx cosmos.Context, swap *EventSwap) error {
+func (m *EventMgr) EmitSwapEvent(ctx cosmos.Context, swap *EventSwap) error {
 	// OutTxs is a temporary field that we used, as for now we need to keep backward compatibility so the
 	// events change doesn't break midgard and smoke test, for double swap , we first swap the source asset to RUNE ,
 	// and then from RUNE to target asset, so the first will be marked as success
@@ -52,7 +52,7 @@ func (m *EventMgrVCUR) EmitSwapEvent(ctx cosmos.Context, swap *EventSwap) error 
 }
 
 // EmitFeeEvent emit a fee event through event manager
-func (m *EventMgrVCUR) EmitFeeEvent(ctx cosmos.Context, feeEvent *EventFee) error {
+func (m *EventMgr) EmitFeeEvent(ctx cosmos.Context, feeEvent *EventFee) error {
 	if feeEvent.Fee.Coins.IsEmpty() && feeEvent.Fee.PoolDeduct.IsZero() {
 		return nil
 	}

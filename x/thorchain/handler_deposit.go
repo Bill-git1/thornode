@@ -45,16 +45,6 @@ func (h DepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, e
 }
 
 func (h DepositHandler) validate(ctx cosmos.Context, msg MsgDeposit) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errInvalidVersion
-	}
-}
-
-func (h DepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgDeposit) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err

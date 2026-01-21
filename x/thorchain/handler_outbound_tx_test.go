@@ -43,7 +43,7 @@ func (s *HandlerOutboundTxSuite) TestValidate(c *C) {
 	}
 
 	mgr.K = k
-	mgr.slasher = newSlasherVCUR(k, NewDummyEventMgr())
+	mgr.slasher = newSlasher(k, NewDummyEventMgr())
 
 	handler := NewOutboundTxHandler(mgr)
 
@@ -253,7 +253,7 @@ func newOutboundTxHandlerTestHelper(c *C) outboundTxHandlerTestHelper {
 	keeperHelper.SetObservedTxOutVoter(ctx, voter)
 
 	constAccessor := constants.GetConstantValues(version)
-	txOutStorage := newTxOutStorageVCUR(keeperHelper, constAccessor, NewDummyEventMgr(), newGasMgrVCUR(constAccessor, keeperHelper))
+	txOutStorage := newTxOutStorage(keeperHelper, constAccessor, NewDummyEventMgr(), newGasMgr(constAccessor, keeperHelper))
 	toi := TxOutItem{
 		Chain:       common.BTCChain,
 		ToAddress:   tx.Tx.FromAddress,
@@ -263,7 +263,7 @@ func newOutboundTxHandlerTestHelper(c *C) outboundTxHandlerTestHelper {
 		InHash:      tx.Tx.ID,
 	}
 	mgr.K = keeperHelper
-	mgr.slasher = newSlasherVCUR(keeperHelper, NewDummyEventMgr())
+	mgr.slasher = newSlasher(keeperHelper, NewDummyEventMgr())
 	result, err := txOutStorage.TryAddTxOutItem(ctx, mgr, toi, cosmos.ZeroUint())
 	c.Assert(err, IsNil)
 	c.Check(result, Equals, true)
@@ -366,7 +366,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxNormalCase(c *C) {
 
 	fromAddr, err := helper.asgardVault.PubKey.GetAddress(common.BTCChain)
 	c.Assert(err, IsNil)
-	gasMgr := newGasMgrVCUR(helper.constAccessor, helper.keeper)
+	gasMgr := newGasMgr(helper.constAccessor, helper.keeper)
 
 	err = helper.keeper.resetFeeMultiplierForAsset(helper.ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
@@ -517,7 +517,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasSho
 	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
 	c.Assert(err, IsNil)
 
-	txOutStorage := newTxOutStorageVCUR(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrVCUR(helper.constAccessor, helper.keeper))
+	txOutStorage := newTxOutStorage(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgr(helper.constAccessor, helper.keeper))
 	pubKey := GetRandomPubKey()
 	toAddr, err := pubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
@@ -567,7 +567,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasPer
 	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
 	c.Assert(err, IsNil)
 
-	txOutStorage := newTxOutStorageVCUR(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrVCUR(helper.constAccessor, helper.keeper))
+	txOutStorage := newTxOutStorage(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgr(helper.constAccessor, helper.keeper))
 	pubKey := GetRandomPubKey()
 	toAddr, err := pubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
@@ -622,7 +622,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerMismatchDecimalShouldNotSl
 	fromAddr, err := helper.asgardVault.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
-	txOutStorage := newTxOutStorageVCUR(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrVCUR(helper.constAccessor, helper.keeper))
+	txOutStorage := newTxOutStorage(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgr(helper.constAccessor, helper.keeper))
 	pubKey := GetRandomPubKey()
 	toAddr, err := pubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)

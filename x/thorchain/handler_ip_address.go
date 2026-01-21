@@ -41,16 +41,6 @@ func (h IPAddressHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result,
 }
 
 func (h IPAddressHandler) validate(ctx cosmos.Context, msg MsgSetIPAddress) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h IPAddressHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSetIPAddress) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -64,16 +54,6 @@ func (h IPAddressHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSetIPAddress
 
 func (h IPAddressHandler) handle(ctx cosmos.Context, msg MsgSetIPAddress) error {
 	ctx.Logger().Info("handleMsgSetIPAddress request", "ip address", msg.IPAddress)
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h IPAddressHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSetIPAddress) error {
 	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.Signer)
 	if err != nil {
 		ctx.Logger().Error("fail to get node account", "error", err, "address", msg.Signer.String())

@@ -3,7 +3,6 @@ package thorchain
 import (
 	"fmt"
 
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
 
@@ -51,16 +50,6 @@ func (h RunePoolDepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.R
 }
 
 func (h RunePoolDepositHandler) validate(ctx cosmos.Context, msg MsgRunePoolDeposit) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h RunePoolDepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRunePoolDeposit) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -76,16 +65,6 @@ func (h RunePoolDepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRunePo
 }
 
 func (h RunePoolDepositHandler) handle(ctx cosmos.Context, msg MsgRunePoolDeposit) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h RunePoolDepositHandler) handleV3_0_0(ctx cosmos.Context, msg MsgRunePoolDeposit) error {
 	// get rune pool value before deposit
 	runePoolValue, err := runePoolValue(ctx, h.mgr)
 	if err != nil {

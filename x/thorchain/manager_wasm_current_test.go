@@ -12,11 +12,11 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type WasmManagerVCURSuite struct{}
+type WasmManagerSuite struct{}
 
-var _ = Suite(&WasmManagerVCURSuite{})
+var _ = Suite(&WasmManagerSuite{})
 
-func (s WasmManagerVCURSuite) TestStoreCode(c *C) {
+func (s WasmManagerSuite) TestStoreCode(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
 
@@ -27,7 +27,7 @@ func (s WasmManagerVCURSuite) TestStoreCode(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s WasmManagerVCURSuite) TestInstantiateContract(c *C) {
+func (s WasmManagerSuite) TestInstantiateContract(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockTime(time.Unix(1, 0))
 	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
@@ -85,7 +85,7 @@ func (s WasmManagerVCURSuite) TestInstantiateContract(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s WasmManagerVCURSuite) TestMigrateCode(c *C) {
+func (s WasmManagerSuite) TestMigrateCode(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockTime(time.Unix(1, 0))
 	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
@@ -123,7 +123,7 @@ func (s WasmManagerVCURSuite) TestMigrateCode(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s WasmManagerVCURSuite) loadWasm(c *C, file string) []byte {
+func (s WasmManagerSuite) loadWasm(c *C, file string) []byte {
 	wasmPath := filepath.Join("../../test/fixtures/wasm", file)
 	wasm, err := os.ReadFile(wasmPath)
 	c.Assert(err, IsNil)

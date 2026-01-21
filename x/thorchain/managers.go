@@ -495,131 +495,83 @@ func GetKeeper(
 	accountKeeper authkeeper.AccountKeeper,
 	upgradeKeeper *upgradekeeper.Keeper,
 ) (keeper.Keeper, error) {
-	if version.GTE(semver.MustParse("3.0.0")) {
-		kvs := kv1.NewKVStore(cdc, storeService, coinKeeper, accountKeeper, upgradeKeeper, version)
-		return &kvs, nil
-	}
-	return nil, errInvalidVersion
+	kvs := kv1.NewKVStore(cdc, storeService, coinKeeper, accountKeeper, upgradeKeeper, version)
+	return &kvs, nil
 }
 
 // GetGasManager return GasManager
 func GetGasManager(version semver.Version, keeper keeper.Keeper) (GasManager, error) {
 	constAccessor := constants.GetConstantValues(version)
-	return newGasMgrVCUR(constAccessor, keeper), nil
+	return newGasMgr(constAccessor, keeper), nil
 }
 
 // GetEventManager will return an implementation of EventManager
 func GetEventManager(version semver.Version) (EventManager, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newEventMgrVCUR(), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newEventMgr(), nil
 }
 
 // GetTxOutStore will return an implementation of the txout store that
 func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventManager, gasManager GasManager) (TxOutStore, error) {
 	constAccessor := constants.GetConstantValues(version)
-	return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
+	return newTxOutStorage(keeper, constAccessor, eventMgr, gasManager), nil
 }
 
 // GetNetworkManager  retrieve a NetworkManager that is compatible with the given version
 func GetNetworkManager(version semver.Version, keeper keeper.Keeper, txOutStore TxOutStore, eventMgr EventManager) (NetworkManager, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newNetworkMgrVCUR(keeper, txOutStore, eventMgr), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newNetworkMgr(keeper, txOutStore, eventMgr), nil
 }
 
 // GetValidatorManager create a new instance of Validator Manager
 func GetValidatorManager(_ semver.Version, keeper keeper.Keeper, networkMgr NetworkManager, txOutStore TxOutStore, eventMgr EventManager) (ValidatorManager, error) {
-	return newValidatorMgrVCUR(keeper, networkMgr, txOutStore, eventMgr), nil
+	return newValidatorMgr(keeper, networkMgr, txOutStore, eventMgr), nil
 }
 
 // GetObserverManager return an instance that implements ObserverManager interface
 // when there is no version can match the given semver , it will return nil
 func GetObserverManager(version semver.Version) (ObserverManager, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newObserverMgrVCUR(), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newObserverMgr(), nil
 }
 
 // GetPoolManager return an implementation of PoolManager
 func GetPoolManager(version semver.Version) (PoolManager, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newPoolMgrVCUR(), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newPoolMgr(), nil
 }
 
 // GetSwapQueue retrieve a SwapQueue that is compatible with the given version
 func GetSwapQueue(version semver.Version, keeper keeper.Keeper) (SwapQueue, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newSwapQueueVCUR(keeper), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newSwapQueue(keeper), nil
 }
 
 // GetAdvSwapQueue retrieve a AdvSwapQueue that is compatible with the given version
 func GetAdvSwapQueue(version semver.Version, keeper keeper.Keeper) (AdvSwapQueue, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newSwapQueueAdvVCUR(keeper), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newSwapQueueAdv(keeper), nil
 }
 
 // GetSlasher return an implementation of Slasher
 func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (Slasher, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newSlasherVCUR(keeper, eventMgr), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newSlasher(keeper, eventMgr), nil
 }
 
 // Though Swapper is not a full manager, it is recorded here for versioning convenience.
 // GetSwapper return an implementation of Swapper
 func GetSwapper(version semver.Version) (Swapper, error) {
-	return newSwapperVCUR(), nil
+	return newSwapper(), nil
 }
 
 func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (TradeAccountManager, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newTradeMgrVCUR(keeper, eventMgr), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newTradeMgr(keeper, eventMgr), nil
 }
 
 func GetSecuredAssetManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (SecuredAssetManager, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newSecuredAssetMgrVCUR(keeper, eventMgr), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newSecuredAssetMgr(keeper, eventMgr), nil
 }
 
 func GetWasmManager(ctx cosmos.Context, keeper keeper.Keeper, wasmKeeper wasmkeeper.Keeper, eventMgr EventManager) (WasmManager, error) {
-	return newWasmMgrVCUR(keeper, wasmKeeper, wasmpermissions.GetWasmPermissions(), eventMgr)
+	return newWasmMgr(keeper, wasmKeeper, wasmpermissions.GetWasmPermissions(), eventMgr)
 }
 
 func GetSwitchManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (SwitchManager, error) {
-	return newSwitchMgrVCUR(keeper, eventMgr), nil
+	return newSwitchMgr(keeper, eventMgr), nil
 }
 
 func GetScheduledMigrationManager(_ semver.Version, mgr Manager) (ScheduledMigrationManager, error) {
@@ -627,9 +579,9 @@ func GetScheduledMigrationManager(_ semver.Version, mgr Manager) (ScheduledMigra
 }
 
 func GetOracleManager(_ semver.Version, keeper keeper.Keeper, eventMgr EventManager) (OracleManager, error) {
-	return newOracleMgrVCUR(keeper), nil
+	return newOracleMgr(keeper), nil
 }
 
 func GetVolumeManager(_ semver.Version, keeper keeper.Keeper) (VolumeManager, error) {
-	return newVolumeMgrVCUR(keeper), nil
+	return newVolumeMgr(keeper), nil
 }

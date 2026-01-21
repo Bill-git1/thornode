@@ -3,8 +3,6 @@ package thorchain
 import (
 	"fmt"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -39,16 +37,6 @@ func (h DonateHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, er
 }
 
 func (h DonateHandler) validate(ctx cosmos.Context, msg MsgDonate) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h DonateHandler) validateV3_0_0(ctx cosmos.Context, msg MsgDonate) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -62,16 +50,6 @@ func (h DonateHandler) validateV3_0_0(ctx cosmos.Context, msg MsgDonate) error {
 // handle process MsgDonate, MsgDonate add asset and RUNE to the asset pool
 // it simply increase the pool asset/RUNE balance but without taking any of the pool units
 func (h DonateHandler) handle(ctx cosmos.Context, msg MsgDonate) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h DonateHandler) handleV3_0_0(ctx cosmos.Context, msg MsgDonate) error {
 	pool, err := h.mgr.Keeper().GetPool(ctx, msg.Asset)
 	if err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to get pool for (%s)", msg.Asset))

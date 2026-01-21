@@ -14,15 +14,15 @@ import (
 	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
-type SlashingVCURSuite struct{}
+type SlashingSuite struct{}
 
-var _ = Suite(&SlashingVCURSuite{})
+var _ = Suite(&SlashingSuite{})
 
-func (s *SlashingVCURSuite) SetUpSuite(_ *C) {
+func (s *SlashingSuite) SetUpSuite(_ *C) {
 	SetupConfigForTest()
 }
 
-func (s *SlashingVCURSuite) TestNodeSignSlashErrors(c *C) {
+func (s *SlashingSuite) TestNodeSignSlashErrors(c *C) {
 	testCases := []struct {
 		name        string
 		condition   func(keeper *TestSlashingLackKeeper)
@@ -115,7 +115,7 @@ func (s *SlashingVCURSuite) TestNodeSignSlashErrors(c *C) {
 		}
 		signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
 		ctx = ctx.WithBlockHeight(3 + signingTransactionPeriod)
-		slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+		slasher := newSlasher(keeper, NewDummyEventMgr())
 		item.condition(keeper)
 		if item.shouldError {
 			c.Assert(slasher.LackSigning(ctx, NewDummyMgr()), NotNil)
@@ -125,7 +125,7 @@ func (s *SlashingVCURSuite) TestNodeSignSlashErrors(c *C) {
 	}
 }
 
-func (s *SlashingVCURSuite) TestNotSigningSlash(c *C) {
+func (s *SlashingSuite) TestNotSigningSlash(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(201) // set blockheight
 	txOutStore := NewTxStoreDummy()
@@ -174,7 +174,7 @@ func (s *SlashingVCURSuite) TestNotSigningSlash(c *C) {
 	ctx = ctx.WithBlockHeight(3 + signingTransactionPeriod)
 	mgr := NewDummyMgr()
 	mgr.txOutStore = txOutStore
-	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+	slasher := newSlasher(keeper, NewDummyEventMgr())
 	c.Assert(slasher.LackSigning(ctx, mgr), IsNil)
 
 	outItems, err := txOutStore.GetOutboundItems(ctx)
@@ -188,7 +188,7 @@ func (s *SlashingVCURSuite) TestNotSigningSlash(c *C) {
 	c.Assert(keeper.txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
 }
 
-func (s *SlashingVCURSuite) TestNewSlasher(c *C) {
+func (s *SlashingSuite) TestNewSlasher(c *C) {
 	nas := NodeAccounts{
 		GetRandomValidatorNode(NodeActive),
 		GetRandomValidatorNode(NodeActive),
@@ -198,11 +198,11 @@ func (s *SlashingVCURSuite) TestNewSlasher(c *C) {
 		addrs:    []cosmos.AccAddress{nas[0].NodeAddress},
 		slashPts: make(map[string]int64),
 	}
-	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+	slasher := newSlasher(keeper, NewDummyEventMgr())
 	c.Assert(slasher, NotNil)
 }
 
-func (s *SlashingVCURSuite) TestHandleSuccessfulSign(c *C) {
+func (s *SlashingSuite) TestHandleSuccessfulSign(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 
@@ -260,7 +260,7 @@ func (s *SlashingVCURSuite) TestHandleSuccessfulSign(c *C) {
 			slashPoints: make(map[string]int64),
 			constants:   make(map[string]int64),
 		}
-		slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+		slasher := newSlasher(keeper, NewDummyEventMgr())
 
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
 		c.Assert(err, IsNil)
@@ -276,7 +276,7 @@ func (s *SlashingVCURSuite) TestHandleSuccessfulSign(c *C) {
 	}
 }
 
-func (s *SlashingVCURSuite) TestHandleSuccessfulSignErrors(c *C) {
+func (s *SlashingSuite) TestHandleSuccessfulSignErrors(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 
@@ -288,7 +288,7 @@ func (s *SlashingVCURSuite) TestHandleSuccessfulSignErrors(c *C) {
 		slashPoints: make(map[string]int64),
 		constants:   make(map[string]int64),
 	}
-	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+	slasher := newSlasher(keeper, NewDummyEventMgr())
 
 	randomAddr := GetRandomBech32Addr().String()
 	err := slasher.HandleSuccessfulSign(ctx, []byte(randomAddr), constAccessor, []nodeAddressValidatorAddressPair{})
@@ -296,7 +296,7 @@ func (s *SlashingVCURSuite) TestHandleSuccessfulSignErrors(c *C) {
 	c.Assert(err.Error(), Matches, "could not find active node account with validator address: .*")
 }
 
-func (s *SlashingVCURSuite) TestHandleMissingSign(c *C) {
+func (s *SlashingSuite) TestHandleMissingSign(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 
@@ -409,7 +409,7 @@ func (s *SlashingVCURSuite) TestHandleMissingSign(c *C) {
 		}
 		keeper.constants["MissBlockSignSlashPoints"] = tc.missBlockSignSlashPts
 		keeper.constants["MaxTrackMissingBlock"] = tc.maxTrack
-		slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+		slasher := newSlasher(keeper, NewDummyEventMgr())
 
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
 		c.Assert(err, IsNil)
@@ -426,7 +426,7 @@ func (s *SlashingVCURSuite) TestHandleMissingSign(c *C) {
 	}
 }
 
-func (s *SlashingVCURSuite) TestHandleMissingSignErrors(c *C) {
+func (s *SlashingSuite) TestHandleMissingSignErrors(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 
@@ -438,7 +438,7 @@ func (s *SlashingVCURSuite) TestHandleMissingSignErrors(c *C) {
 		slashPoints: make(map[string]int64),
 		constants:   make(map[string]int64),
 	}
-	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+	slasher := newSlasher(keeper, NewDummyEventMgr())
 
 	randomAddr := GetRandomBech32Addr().String()
 	err := slasher.HandleMissingSign(ctx, []byte(randomAddr), constAccessor, []nodeAddressValidatorAddressPair{})
@@ -446,7 +446,7 @@ func (s *SlashingVCURSuite) TestHandleMissingSignErrors(c *C) {
 	c.Assert(err.Error(), Matches, "could not find active node account with validator address: .*")
 }
 
-func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
+func (s *SlashingSuite) TestDoubleSign(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 
@@ -458,7 +458,7 @@ func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
 		slashPoints: make(map[string]int64),
 		constants:   make(map[string]int64),
 	}
-	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+	slasher := newSlasher(keeper, NewDummyEventMgr())
 
 	pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
 	c.Assert(err, IsNil)
@@ -474,7 +474,7 @@ func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
 	c.Assert(keeper.slashPoints[na.NodeAddress.String()], Equals, int64(1))
 }
 
-func (s *SlashingVCURSuite) TestIncreaseDecreaseSlashPoints(c *C) {
+func (s *SlashingSuite) TestIncreaseDecreaseSlashPoints(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 
 	na := GetRandomValidatorNode(NodeActive)
@@ -485,16 +485,16 @@ func (s *SlashingVCURSuite) TestIncreaseDecreaseSlashPoints(c *C) {
 		network:     NewNetwork(),
 		slashPoints: make(map[string]int64),
 	}
-	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+	slasher := newSlasher(keeper, NewDummyEventMgr())
 	addr := GetRandomBech32Addr()
 	slasher.IncSlashPoints(ctx, 1, addr)
 	slasher.DecSlashPoints(ctx, 1, addr)
 	c.Assert(keeper.slashPoints[addr.String()], Equals, int64(0))
 }
 
-func (s *SlashingVCURSuite) TestSlashVault(c *C) {
+func (s *SlashingSuite) TestSlashVault(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 	// when coins are empty , it should return nil
 	c.Assert(slasher.SlashVault(ctx, GetRandomPubKey(), common.NewCoins(), mgr), IsNil)
 
@@ -601,9 +601,9 @@ func (s *SlashingVCURSuite) TestSlashVault(c *C) {
 	c.Assert(val2, Equals, int64(18), Commentf("%d", val2))
 }
 
-func (s *SlashingVCURSuite) TestUpdatePoolFromSlash(c *C) {
+func (s *SlashingSuite) TestUpdatePoolFromSlash(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 
 	pool := NewPool()
 	pool.Asset = common.BTCAsset
@@ -623,9 +623,9 @@ func (s *SlashingVCURSuite) TestUpdatePoolFromSlash(c *C) {
 	c.Assert(pool.BalanceRune.Uint64(), Equals, uint64(1500*common.One))
 }
 
-func (s *SlashingVCURSuite) TestNetworkShouldNotSlashMorethanVaultAmount(c *C) {
+func (s *SlashingSuite) TestNetworkShouldNotSlashMorethanVaultAmount(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 
 	// create a node
 	node := GetRandomValidatorNode(NodeActive)
@@ -755,7 +755,7 @@ func (s *SlashingVCURSuite) TestNetworkShouldNotSlashMorethanVaultAmount(c *C) {
 	c.Assert(updatedPool.BalanceAsset.Uint64(), Equals, cosmos.NewUint(2000*common.One).Uint64())
 }
 
-func (s *SlashingVCURSuite) TestNeedsNewVault(c *C) {
+func (s *SlashingSuite) TestNeedsNewVault(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	inhash := GetRandomTxHash()
@@ -776,7 +776,7 @@ func (s *SlashingVCURSuite) TestNeedsNewVault(c *C) {
 	vault := GetRandomVault()
 	vault.Membership = []string{pk1.String(), pk2.String(), pk3.String()}
 
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 
 	c.Assert(len(tx.Coins), Equals, 1)
 	toi := TxOutItem{
@@ -803,7 +803,7 @@ func (s *SlashingVCURSuite) TestNeedsNewVault(c *C) {
 	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 }
 
-func (s *SlashingVCURSuite) TestTreasuryRecoveryForMaxAttempts(c *C) {
+func (s *SlashingSuite) TestTreasuryRecoveryForMaxAttempts(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	// Setup a node and vault
@@ -845,7 +845,7 @@ func (s *SlashingVCURSuite) TestTreasuryRecoveryForMaxAttempts(c *C) {
 	c.Assert(memo.IsOutbound(), Equals, true, Commentf("Memo should be outbound"))
 
 	// Directly call sendFailedOutboundToTreasury
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
 	c.Assert(err, IsNil, Commentf("sendFailedOutboundToTreasury should not error"))
 
@@ -873,7 +873,7 @@ func (s *SlashingVCURSuite) TestTreasuryRecoveryForMaxAttempts(c *C) {
 	c.Assert(hasSwap, Equals, true, Commentf("Expected a swap to be queued for treasury recovery"))
 }
 
-func (s *SlashingVCURSuite) TestTreasuryRecoveryWithDifferentMemoTypes(c *C) {
+func (s *SlashingSuite) TestTreasuryRecoveryWithDifferentMemoTypes(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	testCases := []struct {
@@ -948,7 +948,7 @@ func (s *SlashingVCURSuite) TestTreasuryRecoveryWithDifferentMemoTypes(c *C) {
 
 		// If this should recover, test the sendFailedOutboundToTreasury function
 		if tc.shouldRecover {
-			slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+			slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 			err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, parsedMemo)
 			c.Assert(err, IsNil, Commentf("sendFailedOutboundToTreasury should not error for %s", tc.name))
 
@@ -978,7 +978,7 @@ func (s *SlashingVCURSuite) TestTreasuryRecoveryWithDifferentMemoTypes(c *C) {
 	}
 }
 
-func (s *SlashingVCURSuite) TestReverseSwapForFailedSwapOutbound(c *C) {
+func (s *SlashingSuite) TestReverseSwapForFailedSwapOutbound(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	// Setup a node and vault
@@ -1059,7 +1059,7 @@ func (s *SlashingVCURSuite) TestReverseSwapForFailedSwapOutbound(c *C) {
 	c.Assert(memo.IsOutbound(), Equals, true)
 
 	// Call sendFailedOutboundToTreasury - it should detect this is a swap and do a reverse swap
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
 	c.Assert(err, IsNil, Commentf("sendFailedOutboundToTreasury should not error"))
 
@@ -1106,7 +1106,7 @@ func (s *SlashingVCURSuite) TestReverseSwapForFailedSwapOutbound(c *C) {
 		Commentf("Reverse swap should have no slip limit"))
 }
 
-func (s *SlashingVCURSuite) TestReverseSwapWithCustomRefundAddress(c *C) {
+func (s *SlashingSuite) TestReverseSwapWithCustomRefundAddress(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	// Setup a node and vault
@@ -1186,7 +1186,7 @@ func (s *SlashingVCURSuite) TestReverseSwapWithCustomRefundAddress(c *C) {
 	c.Assert(err, IsNil)
 
 	// Call sendFailedOutboundToTreasury
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
 	c.Assert(err, IsNil)
 
@@ -1223,7 +1223,7 @@ func (s *SlashingVCURSuite) TestReverseSwapWithCustomRefundAddress(c *C) {
 		Commentf("Reverse swap should use custom refund address"))
 }
 
-func (s *SlashingVCURSuite) TestReverseSwapFallbackToTreasury(c *C) {
+func (s *SlashingSuite) TestReverseSwapFallbackToTreasury(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	// Setup a node and vault
@@ -1264,7 +1264,7 @@ func (s *SlashingVCURSuite) TestReverseSwapFallbackToTreasury(c *C) {
 	c.Assert(err, IsNil)
 
 	// Call sendFailedOutboundToTreasury - should fall back to treasury since no original tx
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
 	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
 	c.Assert(err, IsNil)
 

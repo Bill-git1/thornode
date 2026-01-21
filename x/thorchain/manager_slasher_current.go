@@ -20,19 +20,19 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-// SlasherVCUR is VCUR implementation of slasher
-type SlasherVCUR struct {
+// Slasher is current implementation of slasher
+type SlasherImpl struct {
 	keeper   keeper.Keeper
 	eventMgr EventManager
 }
 
-// newSlasherVCUR create a new instance of Slasher
-func newSlasherVCUR(keeper keeper.Keeper, eventMgr EventManager) *SlasherVCUR {
-	return &SlasherVCUR{keeper: keeper, eventMgr: eventMgr}
+// newSlasher create a new instance of Slasher
+func newSlasher(keeper keeper.Keeper, eventMgr EventManager) *SlasherImpl {
+	return &SlasherImpl{keeper: keeper, eventMgr: eventMgr}
 }
 
 // BeginBlock called when a new block get proposed to detect whether there are duplicate vote
-func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, constAccessor constants.ConstantValues) {
+func (s *SlasherImpl) BeginBlock(ctx cosmos.Context, constAccessor constants.ConstantValues) {
 	var doubleSignEvidence []comet.Evidence
 	// Iterate through any newly discovered evidence of infraction
 	// Slash any validators (and since-unbonded liquidity within the unbonding period)
@@ -103,7 +103,7 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, constAccessor constants.Con
 // HandleDoubleSign - slashes a validator for signing two blocks at the same
 // block height
 // https://blog.cosmos.network/consensus-compare-casper-vs-tendermint-6df154ad56ae
-func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
+func (s *SlasherImpl) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
 	// check if we're recent enough to slash for this behavior
 	maxAge := constAccessor.GetInt64Value(constants.DoubleSignMaxAge)
 	if (ctx.BlockHeight() - infractionHeight) > maxAge {
@@ -137,7 +137,7 @@ func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, 
 }
 
 // HandleSuccessfulSign - decrement missing blocks from a validator for signing a block
-func (s *SlasherVCUR) HandleSuccessfulSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
+func (s *SlasherImpl) HandleSuccessfulSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
 	for _, pair := range validatorAddresses {
 		if addr.String() != pair.validatorAddress.String() {
 			continue
@@ -162,7 +162,7 @@ func (s *SlasherVCUR) HandleSuccessfulSign(ctx cosmos.Context, addr crypto.Addre
 }
 
 // HandleMissingSign - slashes a validator for not signing a block
-func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
+func (s *SlasherImpl) HandleMissingSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
 	missBlockSignSlashPoints := s.keeper.GetConfigInt64(ctx, constants.MissBlockSignSlashPoints)
 	maxTrack := s.keeper.GetConfigInt64(ctx, constants.MaxTrackMissingBlock)
 
@@ -197,7 +197,7 @@ func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address,
 }
 
 // LackSigning slash account that fail to sign tx
-func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
+func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	var resultErr error
 	maxOutboundAttempts := mgr.Keeper().GetConfigInt64(ctx, constants.MaxOutboundAttempts)
 	signingTransPeriod := mgr.Keeper().GetConfigInt64(ctx, constants.SigningTransactionPeriod)
@@ -495,7 +495,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 
 // getOriginalSwapDetails retrieves the original swap transaction details for a failed outbound
 // Returns the original transaction, swap memo, and any error encountered
-func (s *SlasherVCUR) getOriginalSwapDetails(ctx cosmos.Context, mgr Manager, inboundHash common.TxID) (ObservedTx, SwapMemo, error) {
+func (s *SlasherImpl) getOriginalSwapDetails(ctx cosmos.Context, mgr Manager, inboundHash common.TxID) (ObservedTx, SwapMemo, error) {
 	voter, err := mgr.Keeper().GetObservedTxInVoter(ctx, inboundHash)
 	if err != nil {
 		return ObservedTx{}, SwapMemo{}, fmt.Errorf("could not get observed tx voter: %w", err)
@@ -526,7 +526,7 @@ func (s *SlasherVCUR) getOriginalSwapDetails(ctx cosmos.Context, mgr Manager, in
 // the original transaction ID with the recovery type suffix and block height. This prevents
 // collisions with the original swap in the swap queue, especially important for streaming swaps
 // that may still be in progress when the recovery is triggered.
-func (s *SlasherVCUR) generateRecoveryTxID(ctx cosmos.Context, originalTxID common.TxID, recoveryType string) common.TxID {
+func (s *SlasherImpl) generateRecoveryTxID(ctx cosmos.Context, originalTxID common.TxID, recoveryType string) common.TxID {
 	// Create a unique hash by combining original txID + recovery type + block height
 	// This ensures no collision with the original swap queue entry
 	hashInput := fmt.Sprintf("%s:%s:%d", originalTxID.String(), recoveryType, ctx.BlockHeight())
@@ -537,7 +537,7 @@ func (s *SlasherVCUR) generateRecoveryTxID(ctx cosmos.Context, originalTxID comm
 // queueRecoverySwap is a helper function that queues a swap for failed outbound recovery.
 // It handles the common logic of creating a swap transaction, determining the queue version,
 // and emitting the appropriate events.
-func (s *SlasherVCUR) queueRecoverySwap(
+func (s *SlasherImpl) queueRecoverySwap(
 	ctx cosmos.Context,
 	mgr Manager,
 	toi TxOutItem,
@@ -644,7 +644,7 @@ func (s *SlasherVCUR) queueRecoverySwap(
 }
 
 // sendFailedSwapReverseSwap creates a reverse swap to refund the original sender when a swap outbound fails
-func (s *SlasherVCUR) sendFailedSwapReverseSwap(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, originalTx ObservedTx, swapMemo SwapMemo) error {
+func (s *SlasherImpl) sendFailedSwapReverseSwap(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, originalTx ObservedTx, swapMemo SwapMemo) error {
 	ctx.Logger().Info("attempting reverse swap for failed swap outbound", "hash", toi.InHash, "coin", toi.Coin)
 
 	// Determine destination address: use custom refund address if specified, otherwise original sender
@@ -670,7 +670,7 @@ func (s *SlasherVCUR) sendFailedSwapReverseSwap(ctx cosmos.Context, mgr Manager,
 // sendFailedOutboundToTreasury creates a swap to convert failed outbound assets to RUNE
 // and send them to the treasury address when MaxOutboundAttempts is reached.
 // For swap outbounds, attempts to perform a reverse swap instead.
-func (s *SlasherVCUR) sendFailedOutboundToTreasury(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, memo mem.Memo) error {
+func (s *SlasherImpl) sendFailedOutboundToTreasury(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, memo mem.Memo) error {
 	ctx.Logger().Info("max attempts reached for outbound", "hash", toi.InHash, "coin", toi.Coin)
 
 	// Extract the inbound hash from the memo (format: "OUT:<hash>" or "REFUND:<hash>")
@@ -733,7 +733,7 @@ func (s *SlasherVCUR) sendFailedOutboundToTreasury(ctx cosmos.Context, mgr Manag
 // discover signer send out fund more than the amount specified in TxOutItem,
 // it will slash the node account who does that by taking 1.5 * extra fund from
 // node account's bond and subsidise the pool that actually lost it.
-func (s *SlasherVCUR) SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coins common.Coins, mgr Manager) error {
+func (s *SlasherImpl) SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coins common.Coins, mgr Manager) error {
 	if coins.IsEmpty() {
 		return nil
 	}
@@ -852,7 +852,7 @@ func (s *SlasherVCUR) SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coin
 
 // slashAndUpdateNodeAccount slashes a NodeAccount a portion of the value of coin based on their
 // portion of the total bond of the offending Vault's membership. Return the amount of RUNE slashed
-func (s SlasherVCUR) slashAndUpdateNodeAccount(ctx cosmos.Context, na types.NodeAccount, coin common.Coin, vault types.Vault, totalBond, totalSlashAmountInRune cosmos.Uint) cosmos.Uint {
+func (s *SlasherImpl) slashAndUpdateNodeAccount(ctx cosmos.Context, na types.NodeAccount, coin common.Coin, vault types.Vault, totalBond, totalSlashAmountInRune cosmos.Uint) cosmos.Uint {
 	slashAmountRune := common.GetSafeShare(na.Bond, totalBond, totalSlashAmountInRune)
 	if slashAmountRune.GT(na.Bond) {
 		ctx.Logger().Info("slash amount is larger than bond", "slash amount", slashAmountRune, "bond", na.Bond)
@@ -890,7 +890,7 @@ func (s SlasherVCUR) slashAndUpdateNodeAccount(ctx cosmos.Context, na types.Node
 }
 
 // IncSlashPoints will increase the given account's slash points
-func (s *SlasherVCUR) IncSlashPoints(ctx cosmos.Context, point int64, addresses ...cosmos.AccAddress) {
+func (s *SlasherImpl) IncSlashPoints(ctx cosmos.Context, point int64, addresses ...cosmos.AccAddress) {
 	for _, addr := range addresses {
 		if err := s.keeper.IncNodeAccountSlashPoints(ctx, addr, point); err != nil {
 			ctx.Logger().Error("fail to increase node account slash point", "error", err, "address", addr.String())
@@ -899,7 +899,7 @@ func (s *SlasherVCUR) IncSlashPoints(ctx cosmos.Context, point int64, addresses 
 }
 
 // DecSlashPoints will decrease the given account's slash points
-func (s *SlasherVCUR) DecSlashPoints(ctx cosmos.Context, point int64, addresses ...cosmos.AccAddress) {
+func (s *SlasherImpl) DecSlashPoints(ctx cosmos.Context, point int64, addresses ...cosmos.AccAddress) {
 	for _, addr := range addresses {
 		if err := s.keeper.DecNodeAccountSlashPoints(ctx, addr, point); err != nil {
 			ctx.Logger().Error("fail to decrease node account slash point", "error", err, "address", addr.String())
@@ -908,7 +908,7 @@ func (s *SlasherVCUR) DecSlashPoints(ctx cosmos.Context, point int64, addresses 
 }
 
 // updatePoolFromSlash updates a pool's depths and emits appropriate events after a slash
-func (s *SlasherVCUR) updatePoolFromSlash(ctx cosmos.Context, pool types.Pool, stolenAsset common.Coin, runeCreditAmt cosmos.Uint, mgr Manager) {
+func (s *SlasherImpl) updatePoolFromSlash(ctx cosmos.Context, pool types.Pool, stolenAsset common.Coin, runeCreditAmt cosmos.Uint, mgr Manager) {
 	pool.BalanceAsset = common.SafeSub(pool.BalanceAsset, stolenAsset.Amount)
 	pool.BalanceRune = pool.BalanceRune.Add(runeCreditAmt)
 	if err := s.keeper.SetPool(ctx, pool); err != nil {
@@ -930,7 +930,7 @@ func (s *SlasherVCUR) updatePoolFromSlash(ctx cosmos.Context, pool types.Pool, s
 	}
 }
 
-func (s *SlasherVCUR) needsNewVault(ctx cosmos.Context, mgr Manager, vault Vault, signingTransPeriod, startHeight int64, toi TxOutItem) bool {
+func (s *SlasherImpl) needsNewVault(ctx cosmos.Context, mgr Manager, vault Vault, signingTransPeriod, startHeight int64, toi TxOutItem) bool {
 	outhashes := mgr.Keeper().GetObservedLink(ctx, toi.InHash)
 	if len(outhashes) == 0 {
 		return true

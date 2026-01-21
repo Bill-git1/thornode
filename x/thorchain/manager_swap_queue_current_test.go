@@ -12,12 +12,12 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-type SwapQueueVCURSuite struct{}
+type SwapQueueSuite struct{}
 
-var _ = Suite(&SwapQueueVCURSuite{})
+var _ = Suite(&SwapQueueSuite{})
 
-func (s SwapQueueVCURSuite) TestGetTodoNum(c *C) {
-	queue := newSwapQueueVCUR(keeper.KVStoreDummy{})
+func (s SwapQueueSuite) TestGetTodoNum(c *C) {
+	queue := newSwapQueue(keeper.KVStoreDummy{})
 
 	c.Check(queue.getTodoNum(10000, 10, 100), Equals, int64(100)) // MaxSwapsPerBlock
 
@@ -40,7 +40,7 @@ func (s SwapQueueVCURSuite) TestGetTodoNum(c *C) {
 	c.Check(queue.getTodoNum(0, 10, 100), Equals, int64(0)) // does none
 }
 
-func (s SwapQueueVCURSuite) TestScoreMsgs(c *C) {
+func (s SwapQueueSuite) TestScoreMsgs(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	pool := NewPool()
@@ -60,7 +60,7 @@ func (s SwapQueueVCURSuite) TestScoreMsgs(c *C) {
 	pool.Status = PoolStaged
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
-	queue := newSwapQueueVCUR(k)
+	queue := newSwapQueue(k)
 
 	// check that we sort by liquidity ok
 	msgs := []*MsgSwap{
@@ -277,9 +277,9 @@ func (s SwapQueueVCURSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps[10].msg.Tx.Coins[0].Asset.Equals(common.ATOMAsset), Equals, true)
 }
 
-func (s SwapQueueVCURSuite) TestStreamingSwapSelection(c *C) {
+func (s SwapQueueSuite) TestStreamingSwapSelection(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	queue := newSwapQueueVCUR(k)
+	queue := newSwapQueue(k)
 
 	ethAddr := GetRandomETHAddress()
 	txID := GetRandomTxHash()
@@ -328,7 +328,7 @@ func (s SwapQueueVCURSuite) TestStreamingSwapSelection(c *C) {
 	c.Check(items, HasLen, 1)
 }
 
-func (s SwapQueueVCURSuite) TestStreamingSwapOutbounds(c *C) {
+func (s SwapQueueSuite) TestStreamingSwapOutbounds(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.txOutStore = NewTxStoreDummy()
 
@@ -340,7 +340,7 @@ func (s SwapQueueVCURSuite) TestStreamingSwapOutbounds(c *C) {
 	pool.Asset = common.ETHAsset
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	queue := newSwapQueueVCUR(mgr.Keeper())
+	queue := newSwapQueue(mgr.Keeper())
 
 	badHandler := func(mgr Manager) cosmos.Handler {
 		return func(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, error) {
@@ -456,7 +456,7 @@ func (s SwapQueueVCURSuite) TestStreamingSwapOutbounds(c *C) {
 // - Execute successfully without panicking
 // - Do NOT create or update StreamingSwap records in keeper
 // - Complete in a single iteration
-func (s SwapQueueVCURSuite) TestStreamingLimitSwapNoDivisionByZero(c *C) {
+func (s SwapQueueSuite) TestStreamingLimitSwapNoDivisionByZero(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.txOutStore = NewTxStoreDummy()
 
@@ -467,7 +467,7 @@ func (s SwapQueueVCURSuite) TestStreamingLimitSwapNoDivisionByZero(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	queue := newSwapQueueVCUR(mgr.Keeper())
+	queue := newSwapQueue(mgr.Keeper())
 
 	// Create the exact transaction from the incident:
 	// Streaming LIMIT swap with quantity=2, interval=2

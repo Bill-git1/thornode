@@ -3,8 +3,6 @@ package thorchain
 import (
 	"fmt"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
@@ -41,16 +39,6 @@ func (h SecuredAssetDepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosm
 }
 
 func (h SecuredAssetDepositHandler) validate(ctx cosmos.Context, msg MsgSecuredAssetDeposit) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h SecuredAssetDepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSecuredAssetDeposit) error {
 	if err := h.checkHalt(ctx, msg.Asset.Chain.String()); err != nil {
 		return err
 	}
@@ -72,18 +60,8 @@ func (h SecuredAssetDepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSe
 	return msg.ValidateBasic()
 }
 
-func (h SecuredAssetDepositHandler) handle(ctx cosmos.Context, msg MsgSecuredAssetDeposit) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
 // handle process MsgSecuredAssetDeposit
-func (h SecuredAssetDepositHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSecuredAssetDeposit) error {
+func (h SecuredAssetDepositHandler) handle(ctx cosmos.Context, msg MsgSecuredAssetDeposit) error {
 	_, err := h.mgr.SecuredAssetManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
 	if err != nil {
 		ctx.Logger().Error("fail to handle Deposit", "error", err)

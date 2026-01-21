@@ -3,7 +3,6 @@ package thorchain
 import (
 	"context"
 
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
 
@@ -42,28 +41,7 @@ func (h RagnarokHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 }
 
 func (h RagnarokHandler) validate(ctx cosmos.Context, msg MsgRagnarok) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errInvalidVersion
-	}
-}
-
-func (h RagnarokHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRagnarok) error {
 	return msg.ValidateBasic()
-}
-
-func (h RagnarokHandler) handle(ctx cosmos.Context, msg MsgRagnarok) (*cosmos.Result, error) {
-	ctx.Logger().Info("receive MsgRagnarok", "request tx hash", msg.Tx.Tx.ID)
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return nil, errBadVersion
-	}
 }
 
 func (h RagnarokHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
@@ -79,7 +57,9 @@ func (h RagnarokHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
 	return h.mgr.Slasher().SlashVault(ctx, tx.ObservedPubKey, toSlash, h.mgr)
 }
 
-func (h RagnarokHandler) handleV3_0_0(ctx cosmos.Context, msg MsgRagnarok) (*cosmos.Result, error) {
+func (h RagnarokHandler) handle(ctx cosmos.Context, msg MsgRagnarok) (*cosmos.Result, error) {
+	ctx.Logger().Info("receive MsgRagnarok", "request tx hash", msg.Tx.Tx.ID)
+
 	// for ragnarok on thorchain ,
 	if msg.Tx.Tx.Chain.Equals(common.THORChain) {
 		return &cosmos.Result{}, nil

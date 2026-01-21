@@ -1,8 +1,6 @@
 package thorchain
 
 import (
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -36,16 +34,6 @@ func (h OutboundTxHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result
 }
 
 func (h OutboundTxHandler) validate(ctx cosmos.Context, msg MsgOutboundTx) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h OutboundTxHandler) validateV3_0_0(ctx cosmos.Context, msg MsgOutboundTx) error {
 	return msg.ValidateBasic()
 }
 
@@ -55,15 +43,5 @@ func (h OutboundTxHandler) handle(ctx cosmos.Context, msg MsgOutboundTx) (*cosmo
 	} else {
 		ctx.Logger().Debug("receive MsgOutboundTx", "request outbound tx hash", msg.Tx.Tx.ID)
 	}
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return nil, errBadVersion
-	}
-}
-
-func (h OutboundTxHandler) handleV3_0_0(ctx cosmos.Context, msg MsgOutboundTx) (*cosmos.Result, error) {
 	return h.ch.handle(ctx, msg.Tx, msg.InTxID)
 }

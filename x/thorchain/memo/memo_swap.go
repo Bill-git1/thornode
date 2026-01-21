@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
@@ -152,15 +151,6 @@ func NewSwapMemo(asset common.Asset, dest common.Address, slip cosmos.Uint, affA
 }
 
 func (p *parser) ParseSwapMemo() (SwapMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("3.0.0")):
-		return p.ParseSwapMemoV3_0_0()
-	default:
-		return SwapMemo{}, fmt.Errorf("unsupported version: %s", p.version.String())
-	}
-}
-
-func (p *parser) ParseSwapMemoV3_0_0() (SwapMemo, error) {
 	// TODO confirm and remove this.
 	if p.keeper == nil {
 		return ParseSwapMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)

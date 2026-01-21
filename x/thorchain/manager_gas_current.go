@@ -10,9 +10,9 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-// GasMgrVCUR implement GasManager interface which will store the gas related events happened in thorchain to memory
+// GasMgr implement GasManager interface which will store the gas related events happened in thorchain to memory
 // emit GasEvent per block if there are any
-type GasMgrVCUR struct {
+type GasMgr struct {
 	gasEvent          *EventGas
 	outAssetGas       []OutAssetGas
 	gasCount          map[common.Asset]int64
@@ -20,9 +20,9 @@ type GasMgrVCUR struct {
 	keeper            keeper.Keeper
 }
 
-// newGasMgrVCUR create a new instance of GasMgrVCUR
-func newGasMgrVCUR(constantsAccessor constants.ConstantValues, k keeper.Keeper) *GasMgrVCUR {
-	return &GasMgrVCUR{
+// newGasMgr create a new instance of GasMgr
+func newGasMgr(constantsAccessor constants.ConstantValues, k keeper.Keeper) *GasMgr {
+	return &GasMgr{
 		gasEvent:          NewEventGas(),
 		outAssetGas:       []OutAssetGas{},
 		gasCount:          make(map[common.Asset]int64),
@@ -31,21 +31,21 @@ func newGasMgrVCUR(constantsAccessor constants.ConstantValues, k keeper.Keeper) 
 	}
 }
 
-func (gm *GasMgrVCUR) reset() {
+func (gm *GasMgr) reset() {
 	gm.gasEvent = NewEventGas()
 	gm.outAssetGas = []OutAssetGas{}
 	gm.gasCount = make(map[common.Asset]int64)
 }
 
 // BeginBlock need to be called when a new block get created , update the internal EventGas to new one
-func (gm *GasMgrVCUR) BeginBlock() {
+func (gm *GasMgr) BeginBlock() {
 	gm.reset()
 }
 
 // AddGasAsset for EndBlock's ProcessGas;
 // add the outbound-Asset-associated Gas to the gas manager's outAssetGas,
 // and optionally increment the gas manager's gasCount.
-func (gm *GasMgrVCUR) AddGasAsset(outAsset common.Asset, gas common.Gas, increaseTxCount bool) {
+func (gm *GasMgr) AddGasAsset(outAsset common.Asset, gas common.Gas, increaseTxCount bool) {
 	matched := false
 	for i := range gm.outAssetGas {
 		if !gm.outAssetGas[i].outAsset.Equals(outAsset) {
@@ -80,7 +80,7 @@ func (gm *GasMgrVCUR) AddGasAsset(outAsset common.Asset, gas common.Gas, increas
 }
 
 // GetGas return gas
-func (gm *GasMgrVCUR) GetGas() common.Gas {
+func (gm *GasMgr) GetGas() common.Gas {
 	// Collect gas by gas asset.
 	gas := common.Gas{}
 	for i := range gm.outAssetGas {
@@ -94,7 +94,7 @@ func (gm *GasMgrVCUR) GetGas() common.Gas {
 // - asset: the asset to calculate the fee for
 // - inRune: whether the fee should be returned in RUNE. If false the fee is returned in
 // asset units.
-func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
+func (gm *GasMgr) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
 	// If the asset is native to THORChain, no need to charge an outbound fee.
 	if asset.IsNative() {
 		return cosmos.ZeroUint(), nil
@@ -191,7 +191,7 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 }
 
 // CalcOutboundFeeMultiplier returns the current outbound fee multiplier based on current and target outbound fee surplus
-func (gm *GasMgrVCUR) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplusRune, gasSpentRune, gasWithheldRune, maxMultiplier, minMultiplier cosmos.Uint) cosmos.Uint {
+func (gm *GasMgr) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplusRune, gasSpentRune, gasWithheldRune, maxMultiplier, minMultiplier cosmos.Uint) cosmos.Uint {
 	// Sanity check
 	if targetSurplusRune.Equal(cosmos.ZeroUint()) {
 		ctx.Logger().Error("target gas surplus is zero")
@@ -214,7 +214,7 @@ func (gm *GasMgrVCUR) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplu
 // (If done completely, perhaps mark GetMaxGas/GetGasRate to be removed on hard fork.)
 //
 // GetGasDetails calculates a consistent MaxGas Coin and GasRate for the network's TransactionSize.
-func (gm *GasMgrVCUR) GetGasDetails(ctx cosmos.Context, chain common.Chain) (common.Coin, int64, error) {
+func (gm *GasMgr) GetGasDetails(ctx cosmos.Context, chain common.Chain) (common.Coin, int64, error) {
 	networkFee, err := gm.GetNetworkFee(ctx, chain)
 	if err != nil {
 		ctx.Logger().Error("fail to get network fee", "error", err, "chain", chain)
@@ -249,12 +249,12 @@ func (gm *GasMgrVCUR) GetGasDetails(ctx cosmos.Context, chain common.Chain) (com
 }
 
 // GetGasRate return the gas rate
-func (gm *GasMgrVCUR) GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.Uint {
+func (gm *GasMgr) GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.Uint {
 	_, gasRate, _ := gm.GetGasDetails(ctx, chain)
 	return cosmos.NewUint(uint64(gasRate))
 }
 
-func (gm *GasMgrVCUR) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (types.NetworkFee, error) {
+func (gm *GasMgr) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (types.NetworkFee, error) {
 	if chain.Equals(common.THORChain) {
 		transactionFee := gm.keeper.GetOutboundTxFee(ctx)
 		return types.NewNetworkFee(common.THORChain, 1, transactionFee.Uint64()), nil
@@ -264,13 +264,13 @@ func (gm *GasMgrVCUR) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (typ
 }
 
 // GetMaxGas will calculate the maximum gas fee a tx can use
-func (gm *GasMgrVCUR) GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.Coin, error) {
+func (gm *GasMgr) GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.Coin, error) {
 	maxGasCoin, _, err := gm.GetGasDetails(ctx, chain)
 	return maxGasCoin, err
 }
 
 // EndBlock emit the events
-func (gm *GasMgrVCUR) EndBlock(ctx cosmos.Context, keeper keeper.Keeper, eventManager EventManager) {
+func (gm *GasMgr) EndBlock(ctx cosmos.Context, keeper keeper.Keeper, eventManager EventManager) {
 	gm.ProcessGas(ctx, keeper)
 
 	if len(gm.gasEvent.Pools) == 0 {
@@ -283,7 +283,7 @@ func (gm *GasMgrVCUR) EndBlock(ctx cosmos.Context, keeper keeper.Keeper, eventMa
 }
 
 // ProcessGas to subsidise the gas asset pools with RUNE for the gas they have spent
-func (gm *GasMgrVCUR) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
+func (gm *GasMgr) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
 	if keeper.RagnarokInProgress(ctx) {
 		// ragnarok is in progress , stop
 		return

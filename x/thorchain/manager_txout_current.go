@@ -17,17 +17,17 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
-// TxOutStorageVCUR is going to manage all the outgoing tx
-type TxOutStorageVCUR struct {
+// TxOutStorage is going to manage all the outgoing tx
+type TxOutStorage struct {
 	keeper        keeper.Keeper
 	constAccessor constants.ConstantValues
 	eventMgr      EventManager
 	gasManager    GasManager
 }
 
-// newTxOutStorageVCUR will create a new instance of TxOutStore.
-func newTxOutStorageVCUR(keeper keeper.Keeper, constAccessor constants.ConstantValues, eventMgr EventManager, gasManager GasManager) *TxOutStorageVCUR {
-	return &TxOutStorageVCUR{
+// newTxOutStorage will create a new instance of TxOutStore.
+func newTxOutStorage(keeper keeper.Keeper, constAccessor constants.ConstantValues, eventMgr EventManager, gasManager GasManager) *TxOutStorage {
+	return &TxOutStorage{
 		keeper:        keeper,
 		eventMgr:      eventMgr,
 		constAccessor: constAccessor,
@@ -35,7 +35,7 @@ func newTxOutStorageVCUR(keeper keeper.Keeper, constAccessor constants.ConstantV
 	}
 }
 
-func (tos *TxOutStorageVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
+func (tos *TxOutStorage) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	// update the max gas for all outbounds in this block. This can be useful
 	// if an outbound transaction was scheduled into the future, and the gas
 	// for that blockchain changes in that time span. This avoids the need to
@@ -96,12 +96,12 @@ func (tos *TxOutStorageVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 }
 
 // GetBlockOut read the TxOut from kv store
-func (tos *TxOutStorageVCUR) GetBlockOut(ctx cosmos.Context) (*TxOut, error) {
+func (tos *TxOutStorage) GetBlockOut(ctx cosmos.Context) (*TxOut, error) {
 	return tos.keeper.GetTxOut(ctx, ctx.BlockHeight())
 }
 
 // GetOutboundItems read all the outbound item from kv store
-func (tos *TxOutStorageVCUR) GetOutboundItems(ctx cosmos.Context) ([]TxOutItem, error) {
+func (tos *TxOutStorage) GetOutboundItems(ctx cosmos.Context) ([]TxOutItem, error) {
 	block, err := tos.keeper.GetTxOut(ctx, ctx.BlockHeight())
 	if block == nil {
 		return nil, nil
@@ -110,7 +110,7 @@ func (tos *TxOutStorageVCUR) GetOutboundItems(ctx cosmos.Context) ([]TxOutItem, 
 }
 
 // GetOutboundItemByToAddress read all the outbound items filter by the given to address
-func (tos *TxOutStorageVCUR) GetOutboundItemByToAddress(ctx cosmos.Context, to common.Address) []TxOutItem {
+func (tos *TxOutStorage) GetOutboundItemByToAddress(ctx cosmos.Context, to common.Address) []TxOutItem {
 	filterItems := make([]TxOutItem, 0)
 	items, _ := tos.GetOutboundItems(ctx)
 	for _, item := range items {
@@ -122,14 +122,14 @@ func (tos *TxOutStorageVCUR) GetOutboundItemByToAddress(ctx cosmos.Context, to c
 }
 
 // ClearOutboundItems remove all the tx out items , mostly used for test
-func (tos *TxOutStorageVCUR) ClearOutboundItems(ctx cosmos.Context) {
+func (tos *TxOutStorage) ClearOutboundItems(ctx cosmos.Context) {
 	_ = tos.keeper.ClearTxOut(ctx, ctx.BlockHeight())
 }
 
 // When TryAddTxOutItem returns an error, there should be no state changes from it,
 // including funds movements or fee events from prepareTxOutItem.
 // So, use CacheContext to only commit state changes when cachedTryAddTxOutItem doesn't return an error.
-func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
+func (tos *TxOutStorage) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
 	if toi.ToAddress.IsNoop() {
 		return true, nil
 	}
@@ -175,21 +175,21 @@ func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, to
 
 // isAffiliateFeeExemptOutbound returns true if the outbound memo indicates a
 // transaction type that is exempt from affiliate fees.
-func (tos *TxOutStorageVCUR) isAffiliateFeeExemptOutbound(memo string) bool {
+func (tos *TxOutStorage) isAffiliateFeeExemptOutbound(memo string) bool {
 	return strings.HasPrefix(memo, constants.MemoPrefixRefund) ||
 		strings.HasPrefix(memo, constants.MemoPrefixMigrate)
 }
 
 // isAffiliateFeeExemptInbound returns true if the inbound memo indicates a transaction
 // type that is exempt from affiliate fees.
-func (tos *TxOutStorageVCUR) isAffiliateFeeExemptInbound(memo string) bool {
+func (tos *TxOutStorage) isAffiliateFeeExemptInbound(memo string) bool {
 	return memo == "" || strings.HasPrefix(memo, constants.MemoPrefixPreferredAssetSwap)
 }
 
 // takeAffiliateFee - take affiliate fee from outbound amount using the inbound memo.
 // should not skim fees for refunds. returns the outbound amount less the affiliate
 // fee(s)
-func (tos *TxOutStorageVCUR) takeAffiliateFee(ctx cosmos.Context, mgr Manager, toi TxOutItem) (cosmos.Uint, error) {
+func (tos *TxOutStorage) takeAffiliateFee(ctx cosmos.Context, mgr Manager, toi TxOutItem) (cosmos.Uint, error) {
 	if tos.isAffiliateFeeExemptOutbound(toi.Memo) {
 		return toi.Coin.Amount, nil
 	}
@@ -252,7 +252,7 @@ func (tos *TxOutStorageVCUR) takeAffiliateFee(ctx cosmos.Context, mgr Manager, t
 // (cached)TryAddTxOutItem add an outbound tx to block
 // return bool indicate whether the transaction had been added successful or not
 // return error indicate error
-func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
+func (tos *TxOutStorage) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
 	outputs, totalOutboundFeeRune, err := tos.prepareTxOutItem(ctx, toi)
 	if err != nil {
 		return false, fmt.Errorf("failed to prepare tx out item: %w", err)
@@ -342,7 +342,7 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 
 // UnSafeAddTxOutItem - blindly adds a tx out, skipping vault selection, transaction
 // fee deduction, etc
-func (tos *TxOutStorageVCUR) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error {
+func (tos *TxOutStorage) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error {
 	if toi.ToAddress.IsNoop() {
 		return nil
 	}
@@ -368,7 +368,7 @@ func (tos *TxOutStorageVCUR) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager,
 // minimum gas to attempt signing.
 // Note: vaults passed here may have had pending outbounds deducted, so we fetch original
 // balances from the keeper to make selection decisions based on actual vault holdings.
-func (tos *TxOutStorageVCUR) selectFallbackVault(ctx cosmos.Context, toi TxOutItem, maxGasCoin common.Coin, vaults Vaults) Vault {
+func (tos *TxOutStorage) selectFallbackVault(ctx cosmos.Context, toi TxOutItem, maxGasCoin common.Coin, vaults Vaults) Vault {
 	var bestVault Vault
 	bestAmount := cosmos.ZeroUint()
 
@@ -415,7 +415,7 @@ func (tos *TxOutStorageVCUR) selectFallbackVault(ctx cosmos.Context, toi TxOutIt
 	return bestVault
 }
 
-func (tos *TxOutStorageVCUR) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmount cosmos.Uint, maxGasCoin common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
+func (tos *TxOutStorage) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmount cosmos.Uint, maxGasCoin common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
 	var outputs []TxOutItem
 
 	// Save original vaults before any filtering for potential fallback selection.
@@ -574,7 +574,7 @@ func (tos *TxOutStorageVCUR) DiscoverOutbounds(ctx cosmos.Context, transactionFe
 // 2. choose an appropriate vault(s) to send from (active asgard, then retiring asgard)
 // 3. deduct transaction fee, keep in mind, only take transaction fee when active nodes are  more then minimumBFT
 // return list of outbound transactions
-func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) ([]TxOutItem, sdkmath.Uint, error) {
+func (tos *TxOutStorage) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) ([]TxOutItem, sdkmath.Uint, error) {
 	var outputs []TxOutItem
 	var remaining cosmos.Uint
 
@@ -948,7 +948,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 	return finalOutput, finalRuneFee, nil
 }
 
-func (tos *TxOutStorageVCUR) addToBlockOut(ctx cosmos.Context, mgr Manager, item TxOutItem, outboundHeight int64) error {
+func (tos *TxOutStorage) addToBlockOut(ctx cosmos.Context, mgr Manager, item TxOutItem, outboundHeight int64) error {
 	// if we're sending native assets, transfer them now and return
 	if item.Chain.IsTHORChain() {
 		return tos.nativeTxOut(ctx, mgr, item)
@@ -983,7 +983,7 @@ func (tos *TxOutStorageVCUR) addToBlockOut(ctx cosmos.Context, mgr Manager, item
 	return tos.keeper.AppendTxOut(ctx, outboundHeight, item)
 }
 
-func (tos *TxOutStorageVCUR) calcClout(ctx cosmos.Context, runeValue cosmos.Uint, toi TxOutItem) (cosmos.Uint, cosmos.Uint) {
+func (tos *TxOutStorage) calcClout(ctx cosmos.Context, runeValue cosmos.Uint, toi TxOutItem) (cosmos.Uint, cosmos.Uint) {
 	// disable swapper clout for dex agg txs
 	if toi.Aggregator != "" || toi.AggregatorTargetAsset != "" || toi.AggregatorTargetLimit != nil {
 		return runeValue, cosmos.ZeroUint()
@@ -1047,7 +1047,7 @@ func (tos *TxOutStorageVCUR) calcClout(ctx cosmos.Context, runeValue cosmos.Uint
 }
 
 // splitClout tries to split runeValue into two Uints, ensuring that it doesn't exceed the given clout1 and clout2.
-func (tos *TxOutStorageVCUR) splitClout(ctx cosmos.Context, swapperCloutLimit, clout1, clout2, runeValue cosmos.Uint) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
+func (tos *TxOutStorage) splitClout(ctx cosmos.Context, swapperCloutLimit, clout1, clout2, runeValue cosmos.Uint) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
 	if clout1.Add(clout2).GT(swapperCloutLimit) {
 		halfLimit := swapperCloutLimit.QuoUint64(2)
 		switch {
@@ -1079,7 +1079,7 @@ func (tos *TxOutStorageVCUR) splitClout(ctx cosmos.Context, swapperCloutLimit, c
 	return amountFromClout1, amountFromClout2, common.SafeSub(runeValue, amountFromClout1.Add(amountFromClout2))
 }
 
-func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.Version, toi TxOutItem) (int64, cosmos.Uint, error) {
+func (tos *TxOutStorage) CalcTxOutHeight(ctx cosmos.Context, version semver.Version, toi TxOutItem) (int64, cosmos.Uint, error) {
 	// non-outbound transactions are skipped. This is so this code does not
 	// affect internal transactions (ie consolidation and migrate txs)
 	memo, _ := ParseMemo(version, toi.GetMemo()) // ignore err
@@ -1176,7 +1176,7 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 	return targetBlock, cloutApplied, nil
 }
 
-func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
+func (tos *TxOutStorage) nativeTxOut(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
 	addr, err := toi.ToAddress.AccAddress()
 	if err != nil {
 		return err

@@ -67,9 +67,9 @@ func NewSendHandler(mgr Manager) BaseHandler[sdk.Msg] {
 		mgr:    mgr,
 		logger: MsgSendLogger,
 		validators: NewValidators[sdk.Msg]().
-			Register("3.0.0", MsgSendValidateV3_0_0),
+			Register("3.0.0", MsgSendValidate),
 		handlers: NewHandlers[sdk.Msg]().
-			Register("3.0.0", MsgSendHandleV3_0_0),
+			Register("3.0.0", MsgSendHandle),
 	}
 }
 
@@ -146,7 +146,7 @@ func SendAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, m sd
 	return ctx, k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
 }
 
-func MsgSendValidateV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) error {
+func MsgSendValidate(ctx cosmos.Context, mgr Manager, m sdk.Msg) error {
 	msg, err := getThorSend(m)
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func MsgSendValidateV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) error {
 	return nil
 }
 
-func MsgSendHandleV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) (*cosmos.Result, error) {
+func MsgSendHandle(ctx cosmos.Context, mgr Manager, m sdk.Msg) (*cosmos.Result, error) {
 	msg, err := getThorSend(m)
 	if err != nil {
 		return nil, err

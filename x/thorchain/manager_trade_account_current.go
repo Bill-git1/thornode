@@ -8,26 +8,26 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
-// TradeMgrVCUR is VCUR implementation of slasher
-type TradeMgrVCUR struct {
+// TradeMgr is current implementation of slasher
+type TradeMgr struct {
 	keeper   keeper.Keeper
 	eventMgr EventManager
 }
 
-// newTradeMgrVCUR create a new instance of Slasher
-func newTradeMgrVCUR(keeper keeper.Keeper, eventMgr EventManager) *TradeMgrVCUR {
-	return &TradeMgrVCUR{
+// newTradeMgr create a new instance of Slasher
+func newTradeMgr(keeper keeper.Keeper, eventMgr EventManager) *TradeMgr {
+	return &TradeMgr{
 		keeper:   keeper,
 		eventMgr: eventMgr,
 	}
 }
 
-func (s *TradeMgrVCUR) EndBlock(ctx cosmos.Context, keeper keeper.Keeper) error {
+func (s *TradeMgr) EndBlock(ctx cosmos.Context, keeper keeper.Keeper) error {
 	// TODO: implement liquidation
 	return nil
 }
 
-func (s *TradeMgrVCUR) BalanceOf(ctx cosmos.Context, asset common.Asset, addr cosmos.AccAddress) cosmos.Uint {
+func (s *TradeMgr) BalanceOf(ctx cosmos.Context, asset common.Asset, addr cosmos.AccAddress) cosmos.Uint {
 	asset = asset.GetTradeAsset()
 	tu, err := s.keeper.GetTradeUnit(ctx, asset)
 	if err != nil {
@@ -43,7 +43,7 @@ func (s *TradeMgrVCUR) BalanceOf(ctx cosmos.Context, asset common.Asset, addr co
 	return common.GetSafeShare(tr.Units, tu.Units, tu.Depth)
 }
 
-func (s *TradeMgrVCUR) Deposit(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, txID common.TxID) (cosmos.Uint, error) {
+func (s *TradeMgr) Deposit(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, txID common.TxID) (cosmos.Uint, error) {
 	asset = asset.GetTradeAsset()
 	tu, err := s.keeper.GetTradeUnit(ctx, asset)
 	if err != nil {
@@ -72,7 +72,7 @@ func (s *TradeMgrVCUR) Deposit(ctx cosmos.Context, asset common.Asset, amount co
 	return amount, nil
 }
 
-func (s *TradeMgrVCUR) calcDepositUnits(oldUnits, depth, add cosmos.Uint) cosmos.Uint {
+func (s *TradeMgr) calcDepositUnits(oldUnits, depth, add cosmos.Uint) cosmos.Uint {
 	if oldUnits.IsZero() || depth.IsZero() {
 		return add
 	}
@@ -82,7 +82,7 @@ func (s *TradeMgrVCUR) calcDepositUnits(oldUnits, depth, add cosmos.Uint) cosmos
 	return common.GetUncappedShare(add, depth, oldUnits)
 }
 
-func (s *TradeMgrVCUR) Withdrawal(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, txID common.TxID) (cosmos.Uint, error) {
+func (s *TradeMgr) Withdrawal(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, txID common.TxID) (cosmos.Uint, error) {
 	asset = asset.GetTradeAsset()
 	tu, err := s.keeper.GetTradeUnit(ctx, asset)
 	if err != nil {

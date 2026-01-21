@@ -1,8 +1,6 @@
 package thorchain
 
 import (
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -42,16 +40,6 @@ func (h RefundHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, er
 }
 
 func (h RefundHandler) validate(ctx cosmos.Context, msg MsgRefundTx) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h RefundHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRefundTx) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}

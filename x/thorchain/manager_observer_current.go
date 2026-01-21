@@ -8,30 +8,30 @@ import (
 	keeper "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
-// ObserverMgrVCUR implement a ObserverManager which will store the
+// ObserverMgr implement a ObserverManager which will store the
 // observers in memory before written to chain
-type ObserverMgrVCUR struct {
+type ObserverMgr struct {
 	chains map[common.Chain][]cosmos.AccAddress
 }
 
-// newObserverMgrVCUR create a new instance of ObserverManager
-func newObserverMgrVCUR() *ObserverMgrVCUR {
-	return &ObserverMgrVCUR{
+// newObserverMgr create a new instance of ObserverManager
+func newObserverMgr() *ObserverMgr {
+	return &ObserverMgr{
 		chains: make(map[common.Chain][]cosmos.AccAddress),
 	}
 }
 
 // BeginBlock called when a new block get proposed
-func (om *ObserverMgrVCUR) BeginBlock() {
+func (om *ObserverMgr) BeginBlock() {
 	om.reset()
 }
 
-func (om *ObserverMgrVCUR) reset() {
+func (om *ObserverMgr) reset() {
 	om.chains = make(map[common.Chain][]cosmos.AccAddress)
 }
 
 // AppendObserver add the address
-func (om *ObserverMgrVCUR) AppendObserver(chain common.Chain, addrs []cosmos.AccAddress) {
+func (om *ObserverMgr) AppendObserver(chain common.Chain, addrs []cosmos.AccAddress) {
 	// combine addresses
 	all := append(om.chains[chain], addrs...) // nolint
 
@@ -49,7 +49,7 @@ func (om *ObserverMgrVCUR) AppendObserver(chain common.Chain, addrs []cosmos.Acc
 }
 
 // List - gets a list of addresses that have been observed in all chains
-func (om *ObserverMgrVCUR) List() []cosmos.AccAddress {
+func (om *ObserverMgr) List() []cosmos.AccAddress {
 	result := make([]cosmos.AccAddress, 0)
 	tracker := make(map[string]int)
 
@@ -81,7 +81,7 @@ func (om *ObserverMgrVCUR) List() []cosmos.AccAddress {
 }
 
 // EndBlock emit the observers
-func (om *ObserverMgrVCUR) EndBlock(ctx cosmos.Context, keeper keeper.Keeper) {
+func (om *ObserverMgr) EndBlock(ctx cosmos.Context, keeper keeper.Keeper) {
 	if err := keeper.AddObservingAddresses(ctx, om.List()); err != nil {
 		ctx.Logger().Error("fail to append observers", "error", err)
 	}

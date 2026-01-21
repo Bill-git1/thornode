@@ -3,8 +3,6 @@ package thorchain
 import (
 	"strings"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -40,32 +38,12 @@ func (h NoOpHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 }
 
 func (h NoOpHandler) validate(ctx cosmos.Context, msg MsgNoOp) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h NoOpHandler) validateV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
 	return msg.ValidateBasic()
 }
 
 // handle process MsgNoOp, MsgNoOp add asset and RUNE to the asset pool
 // it simply increase the pool asset/RUNE balance but without taking any of the pool units
 func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h NoOpHandler) handleV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
 	action := msg.GetAction()
 	if len(action) == 0 {
 		return nil

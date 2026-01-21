@@ -194,7 +194,7 @@ func (HandlerMigrateSuite) TestSlash(c *C) {
 	addr, err := keeper.retireVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	mgr := NewDummyMgrWithKeeper(keeper)
-	mgr.slasher = newSlasherVCUR(keeper, NewDummyEventMgr())
+	mgr.slasher = newSlasher(keeper, NewDummyEventMgr())
 	handler := NewMigrateHandler(mgr)
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),

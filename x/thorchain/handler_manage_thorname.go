@@ -7,8 +7,6 @@ import (
 	"math"
 	"regexp"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
@@ -44,16 +42,6 @@ func (h ManageTHORNameHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Re
 	return result, err
 }
 
-func (h ManageTHORNameHandler) validate(ctx cosmos.Context, msg MsgManageTHORName) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
 func (h ManageTHORNameHandler) validateName(n string) error {
 	// validate THORName
 	if len(n) > 30 {
@@ -65,7 +53,7 @@ func (h ManageTHORNameHandler) validateName(n string) error {
 	return nil
 }
 
-func (h ManageTHORNameHandler) validateV3_0_0(ctx cosmos.Context, msg MsgManageTHORName) error {
+func (h ManageTHORNameHandler) validate(ctx cosmos.Context, msg MsgManageTHORName) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -123,18 +111,8 @@ func (h ManageTHORNameHandler) validateV3_0_0(ctx cosmos.Context, msg MsgManageT
 }
 
 // handle process MsgManageTHORName
-func (h ManageTHORNameHandler) handle(ctx cosmos.Context, msg MsgManageTHORName) (*cosmos.Result, error) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return nil, errBadVersion
-	}
-}
-
 // handle process MsgManageTHORName
-func (h ManageTHORNameHandler) handleV3_0_0(ctx cosmos.Context, msg MsgManageTHORName) (*cosmos.Result, error) {
+func (h ManageTHORNameHandler) handle(ctx cosmos.Context, msg MsgManageTHORName) (*cosmos.Result, error) {
 	var err error
 
 	enable, _ := h.mgr.Keeper().GetMimir(ctx, "THORNames")

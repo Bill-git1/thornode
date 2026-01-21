@@ -778,7 +778,7 @@ func (HandlerObservedTxInSuite) TestObservedTxHandler_validations(c *C) {
 func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
-	queue := newSwapQueueVCUR(mgr.Keeper())
+	queue := newSwapQueue(mgr.Keeper())
 
 	affAddr := GetRandomTHORAddress()
 

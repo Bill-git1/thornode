@@ -9,20 +9,20 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-type VolumeMgrVCUR struct {
+type VolumeMgr struct {
 	keeper keeper.Keeper
 }
 
-// newVolumeMgrVCUR creates a new instance of VolumeMgrVCUR
-func newVolumeMgrVCUR(
+// newVolumeMgr creates a new instance of VolumeMgr
+func newVolumeMgr(
 	keeper keeper.Keeper,
-) *VolumeMgrVCUR {
-	return &VolumeMgrVCUR{
+) *VolumeMgr {
+	return &VolumeMgr{
 		keeper: keeper,
 	}
 }
 
-func (vm *VolumeMgrVCUR) EndBlock(ctx cosmos.Context) error {
+func (vm *VolumeMgr) EndBlock(ctx cosmos.Context) error {
 	pools, err := vm.keeper.GetPools(ctx)
 	if err != nil {
 		return err

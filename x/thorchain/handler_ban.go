@@ -38,16 +38,6 @@ func (h BanHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error
 }
 
 func (h BanHandler) validate(ctx cosmos.Context, msg MsgBan) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h BanHandler) validateV3_0_0(ctx cosmos.Context, msg MsgBan) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -62,17 +52,6 @@ func (h BanHandler) validateV3_0_0(ctx cosmos.Context, msg MsgBan) error {
 
 func (h BanHandler) handle(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, error) {
 	ctx.Logger().Info("handleMsgBan request", "node address", msg.NodeAddress.String())
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		ctx.Logger().Error(errInvalidVersion.Error())
-		return nil, errBadVersion
-	}
-}
-
-func (h BanHandler) handleV3_0_0(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, error) {
 	toBan, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		err = wrapError(ctx, err, "fail to get to ban node account")

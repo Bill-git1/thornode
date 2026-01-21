@@ -3,8 +3,6 @@ package thorchain
 import (
 	"fmt"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -38,31 +36,11 @@ func (h ReserveContributorHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmo
 }
 
 func (h ReserveContributorHandler) validate(ctx cosmos.Context, msg MsgReserveContributor) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h ReserveContributorHandler) validateV3_0_0(ctx cosmos.Context, msg MsgReserveContributor) error {
 	return msg.ValidateBasic()
 }
 
-func (h ReserveContributorHandler) handle(ctx cosmos.Context, msg MsgReserveContributor) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
 // handle process MsgReserveContributor
-func (h ReserveContributorHandler) handleV3_0_0(ctx cosmos.Context, msg MsgReserveContributor) error {
+func (h ReserveContributorHandler) handle(ctx cosmos.Context, msg MsgReserveContributor) error {
 	// the actually sending of rune into the reserve is handled in the handler_deposit.go file.
 
 	reserveEvent := NewEventReserve(msg.Contributor, msg.Tx)

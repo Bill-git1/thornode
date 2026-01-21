@@ -10,15 +10,15 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type VolumeManagerVCURSuite struct{}
+type VolumeManagerSuite struct{}
 
-var _ = Suite(&VolumeManagerVCURSuite{})
+var _ = Suite(&VolumeManagerSuite{})
 
-func (s *VolumeManagerVCURSuite) TestConstant(c *C) {
+func (s *VolumeManagerSuite) TestConstant(c *C) {
 	c.Assert(constants.VolumeBucketSeconds, Equals, int64(900))
 }
 
-func (s *VolumeManagerVCURSuite) TestBuckets(c *C) {
+func (s *VolumeManagerSuite) TestBuckets(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	pool := NewPool()
@@ -101,7 +101,7 @@ func (s *VolumeManagerVCURSuite) TestBuckets(c *C) {
 	c.Assert(n, Equals, 96)
 }
 
-func (s *VolumeManagerVCURSuite) TestBucketWrites(c *C) {
+func (s *VolumeManagerSuite) TestBucketWrites(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	pool := NewPool()

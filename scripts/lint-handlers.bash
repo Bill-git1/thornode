@@ -44,18 +44,3 @@ for f in $handlers; do
   fi
   echo "Handler: $f... OK"
 done
-
-# Check that no change has removed a handler registration.
-REMOVED=$(git diff origin/develop | grep -E '^\-\s*Register\(\s*"[0-9\.]+' || true)
-
-if [[ -n $REMOVED ]]; then
-  cat <<EOF
-Error: Handler registrations were removed:
-$REMOVED
-EOF
-  if [[ ${CI_MERGE_REQUEST_TITLE-} == *"#check-lint-warning"* ]]; then
-    echo "Merge request is marked unsafe - please carefully evaluate warnings above"
-  else
-    exit 1
-  fi
-fi

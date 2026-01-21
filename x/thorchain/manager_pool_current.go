@@ -11,14 +11,14 @@ import (
 	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
-type PoolMgrVCUR struct{}
+type PoolMgr struct{}
 
-func newPoolMgrVCUR() *PoolMgrVCUR {
-	return &PoolMgrVCUR{}
+func newPoolMgr() *PoolMgr {
+	return &PoolMgr{}
 }
 
 // EndBlock cycle pools if required and if ragnarok is not in progress
-func (pm *PoolMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
+func (pm *PoolMgr) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	poolCycle, err := mgr.Keeper().GetMimir(ctx, constants.PoolCycle.String())
 	if poolCycle < 0 || err != nil {
 		poolCycle = mgr.GetConstants().GetInt64Value(constants.PoolCycle)
@@ -59,7 +59,7 @@ func (pm *PoolMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 // The valid Staged pool with the highest rune depth is promoted to Available.
 // If there are more than the maximum available pools, the Available pool with
 // with the lowest rune depth is demoted to Staged
-func (pm *PoolMgrVCUR) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePoolDepth, stagedPoolCost int64, mgr Manager) error {
+func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePoolDepth, stagedPoolCost int64, mgr Manager) error {
 	var availblePoolCount int64
 	onDeck := NewPool()        // currently staged pool that could get promoted
 	choppingBlock := NewPool() // currently available pool that is on the chopping block to being demoted
@@ -215,7 +215,7 @@ func (pm *PoolMgrVCUR) cyclePools(ctx cosmos.Context, maxAvailablePools, minRune
 }
 
 // poolMeetTradingVolumeCriteria check if pool generated the minimum amount of fees since last cycle
-func (pm *PoolMgrVCUR) poolMeetTradingVolumeCriteria(ctx cosmos.Context, mgr Manager, pool Pool, minPoolLiquidityFee cosmos.Uint) bool {
+func (pm *PoolMgr) poolMeetTradingVolumeCriteria(ctx cosmos.Context, mgr Manager, pool Pool, minPoolLiquidityFee cosmos.Uint) bool {
 	if minPoolLiquidityFee.IsZero() {
 		return true
 	}
@@ -230,7 +230,7 @@ func (pm *PoolMgrVCUR) poolMeetTradingVolumeCriteria(ctx cosmos.Context, mgr Man
 }
 
 // removeAssetFromVault set asset balance to zero for all vaults holding the asset
-func (pm *PoolMgrVCUR) removeAssetFromVault(ctx cosmos.Context, asset common.Asset, mgr Manager) {
+func (pm *PoolMgr) removeAssetFromVault(ctx cosmos.Context, asset common.Asset, mgr Manager) {
 	if asset.IsNative() {
 		// get asgard module balance
 		asgardAddress, err := mgr.Keeper().GetModuleAddress(AsgardName)
@@ -290,7 +290,7 @@ func (pm *PoolMgrVCUR) removeAssetFromVault(ctx cosmos.Context, asset common.Ass
 }
 
 // removeLiquidityProviders remove all lps for the given asset pool
-func (pm *PoolMgrVCUR) removeLiquidityProviders(ctx cosmos.Context, asset common.Asset, mgr Manager) {
+func (pm *PoolMgr) removeLiquidityProviders(ctx cosmos.Context, asset common.Asset, mgr Manager) {
 	iterator := mgr.Keeper().GetLiquidityProviderIterator(ctx, asset)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -324,7 +324,7 @@ func (pm *PoolMgrVCUR) removeLiquidityProviders(ctx cosmos.Context, asset common
 	}
 }
 
-func (pm *PoolMgrVCUR) cleanupPendingLiquidity(ctx cosmos.Context, mgr Manager) {
+func (pm *PoolMgr) cleanupPendingLiquidity(ctx cosmos.Context, mgr Manager) {
 	if atTVLCap(ctx, nil, mgr) {
 		ctx.Logger().Info("cleaning pending liquidity skipped due to TVL cap")
 		return
@@ -386,7 +386,7 @@ func (pm *PoolMgrVCUR) cleanupPendingLiquidity(ctx cosmos.Context, mgr Manager) 
 	}
 }
 
-func (pm *PoolMgrVCUR) checkSaversUtilization(ctx cosmos.Context, mgr Manager) error {
+func (pm *PoolMgr) checkSaversUtilization(ctx cosmos.Context, mgr Manager) error {
 	if mgr.Keeper().IsGlobalTradingHalted(ctx) {
 		return nil
 	}
@@ -517,7 +517,7 @@ func (pm *PoolMgrVCUR) checkSaversUtilization(ctx cosmos.Context, mgr Manager) e
 }
 
 // commitPendingLiquidity - for aged pending liquidity, commit it to the pool
-func (pm *PoolMgrVCUR) commitPendingLiquidity(ctx cosmos.Context, pool Pool, mgr Manager) error {
+func (pm *PoolMgr) commitPendingLiquidity(ctx cosmos.Context, pool Pool, mgr Manager) error {
 	ctx.Logger().Info("cleaning pending liquidity in pool", "pool", pool.Asset)
 	// track stats
 	var count int

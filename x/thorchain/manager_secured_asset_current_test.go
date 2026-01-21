@@ -18,7 +18,7 @@ func (s *SecuredAssetMgrSuite) TestDepositAndWithdraw(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	eventMgr, err := GetEventManager(GetCurrentVersion())
 	c.Assert(err, IsNil)
-	mgr := newSecuredAssetMgrVCUR(k, eventMgr)
+	mgr := newSecuredAssetMgr(k, eventMgr)
 
 	asset := common.BTCAsset
 	securedAsset := asset.GetSecuredAsset()
@@ -66,7 +66,7 @@ func (s *SecuredAssetMgrSuite) TestRateDecrease(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	eventMgr, err := GetEventManager(GetCurrentVersion())
 	c.Assert(err, IsNil)
-	mgr := newSecuredAssetMgrVCUR(k, eventMgr)
+	mgr := newSecuredAssetMgr(k, eventMgr)
 
 	asset := common.BCHAsset
 	securedAsset := asset.GetSecuredAsset()
@@ -126,7 +126,7 @@ func (s *SecuredAssetMgrSuite) TestRateDecreaseDeposit(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	eventMgr, err := GetEventManager(GetCurrentVersion())
 	c.Assert(err, IsNil)
-	mgr := newSecuredAssetMgrVCUR(k, eventMgr)
+	mgr := newSecuredAssetMgr(k, eventMgr)
 
 	asset := common.BTCAsset
 	securedAsset := asset.GetSecuredAsset()

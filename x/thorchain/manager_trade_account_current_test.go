@@ -6,19 +6,19 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type TradeManagerVCURSuite struct{}
+type TradeManagerSuite struct{}
 
-var _ = Suite(&TradeManagerVCURSuite{})
+var _ = Suite(&TradeManagerSuite{})
 
-func (s *TradeManagerVCURSuite) SetUpSuite(_ *C) {
+func (s *TradeManagerSuite) SetUpSuite(_ *C) {
 	SetupConfigForTest()
 }
 
-func (s *TradeManagerVCURSuite) TestDepositAndWithdrawal(c *C) {
+func (s *TradeManagerSuite) TestDepositAndWithdrawal(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	eventMgr, err := GetEventManager(GetCurrentVersion())
 	c.Assert(err, IsNil)
-	mgr := newTradeMgrVCUR(k, eventMgr)
+	mgr := newTradeMgr(k, eventMgr)
 
 	asset := common.BTCAsset.GetTradeAsset()
 	addr1 := GetRandomBech32Addr()
@@ -54,11 +54,11 @@ func (s *TradeManagerVCURSuite) TestDepositAndWithdrawal(c *C) {
 	c.Check(bal.String(), Equals, cosmos.NewUint(0).String())
 }
 
-func (s *TradeManagerVCURSuite) TestReducedDepth(c *C) {
+func (s *TradeManagerSuite) TestReducedDepth(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	eventMgr, err := GetEventManager(GetCurrentVersion())
 	c.Assert(err, IsNil)
-	mgr := newTradeMgrVCUR(k, eventMgr)
+	mgr := newTradeMgr(k, eventMgr)
 
 	asset := common.BTCAsset.GetTradeAsset()
 	addr1 := GetRandomBech32Addr()

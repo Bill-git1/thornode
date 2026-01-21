@@ -18,21 +18,21 @@ var switchMap = map[string]common.Address{
 	"GAIA.NSTK":  common.GaiaZeroAddress,
 }
 
-// SwitchMgrVCUR is VCUR implementation of SwitchManager
-type SwitchMgrVCUR struct {
+// SwitchMgr is current implementation of SwitchManager
+type SwitchMgr struct {
 	keeper   keeper.Keeper
 	eventMgr EventManager
 }
 
-// newSwitchMgrVCUR creates a new instance of SwitchMgrVCUR
-func newSwitchMgrVCUR(keeper keeper.Keeper, eventMgr EventManager) *SwitchMgrVCUR {
-	return &SwitchMgrVCUR{
+// newSwitchMgr creates a new instance of SwitchMgr
+func newSwitchMgr(keeper keeper.Keeper, eventMgr EventManager) *SwitchMgr {
+	return &SwitchMgr{
 		keeper:   keeper,
 		eventMgr: eventMgr,
 	}
 }
 
-func (s *SwitchMgrVCUR) IsSwitch(
+func (s *SwitchMgr) IsSwitch(
 	ctx cosmos.Context,
 	asset common.Asset,
 ) bool {
@@ -40,7 +40,7 @@ func (s *SwitchMgrVCUR) IsSwitch(
 	return exists
 }
 
-func (s *SwitchMgrVCUR) Switch(
+func (s *SwitchMgr) Switch(
 	ctx cosmos.Context,
 	asset common.Asset,
 	amount cosmos.Uint,

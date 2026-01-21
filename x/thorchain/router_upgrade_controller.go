@@ -46,12 +46,7 @@ func (r *RouterUpgradeController) getChainOldAndNewRouters(chain common.Chain) (
 
 // getRouterChains gets the chains that have routers for the current version
 func (r *RouterUpgradeController) getRouterChains(version semver.Version) ([]common.Chain, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.1.0")):
-		return []common.Chain{common.ETHChain, common.AVAXChain, common.BSCChain, common.BASEChain}, nil
-	default:
-		return nil, fmt.Errorf("invalid version %s", version.String())
-	}
+	return []common.Chain{common.ETHChain, common.AVAXChain, common.BSCChain, common.BASEChain}, nil
 }
 
 // upgradeContract updates a chain's router in the KVStore if needed

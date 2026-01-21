@@ -11,12 +11,12 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-type AdvSwapQueueVCURSuite struct{}
+type AdvSwapQueueSuite struct{}
 
-var _ = Suite(&AdvSwapQueueVCURSuite{})
+var _ = Suite(&AdvSwapQueueSuite{})
 
-func (s AdvSwapQueueVCURSuite) TestGetTodoNum(c *C) {
-	book := newSwapQueueAdvVCUR(keeper.KVStoreDummy{})
+func (s AdvSwapQueueSuite) TestGetTodoNum(c *C) {
+	book := newSwapQueueAdv(keeper.KVStoreDummy{})
 
 	c.Check(book.getTodoNum(50, 10, 100), Equals, int64(25))     // halves it
 	c.Check(book.getTodoNum(11, 10, 100), Equals, int64(10))     // enforces minimum
@@ -27,7 +27,7 @@ func (s AdvSwapQueueVCURSuite) TestGetTodoNum(c *C) {
 	c.Check(book.getTodoNum(200, 10, 100), Equals, int64(100))   // does max 100
 }
 
-func (s AdvSwapQueueVCURSuite) TestScoreMsgs(c *C) {
+func (s AdvSwapQueueSuite) TestScoreMsgs(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	pool := NewPool()
@@ -41,7 +41,7 @@ func (s AdvSwapQueueVCURSuite) TestScoreMsgs(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
-	book := newSwapQueueAdvVCUR(k)
+	book := newSwapQueueAdv(k)
 
 	// check that we sort by liquidity ok
 	msgs := []*MsgSwap{
@@ -250,14 +250,14 @@ func (s AdvSwapQueueVCURSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps[10].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestMarketOnlyModeRejectsLimitSwaps(c *C) {
+func (s AdvSwapQueueSuite) TestMarketOnlyModeRejectsLimitSwaps(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	// Enable advanced swap queue in market-only mode
 	mgr.Keeper().SetMimir(ctx, "EnableAdvSwapQueue", 2)
 
 	// Create a swap queue manager
-	swapQueue := newSwapQueueAdvVCUR(mgr.Keeper())
+	swapQueue := newSwapQueueAdv(mgr.Keeper())
 
 	// Create a limit swap message
 	sourceAsset := common.BTCAsset
@@ -298,7 +298,7 @@ func (s AdvSwapQueueVCURSuite) TestMarketOnlyModeRejectsLimitSwaps(c *C) {
 	c.Assert(err.Error(), Equals, "limit swaps are not allowed in market-only mode")
 }
 
-func (s AdvSwapQueueVCURSuite) TestNormalModePreservesLimitSwaps(c *C) {
+func (s AdvSwapQueueSuite) TestNormalModePreservesLimitSwaps(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	// Enable advanced swap queue in normal mode
@@ -320,7 +320,7 @@ func (s AdvSwapQueueVCURSuite) TestNormalModePreservesLimitSwaps(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	// Create a swap queue manager
-	swapQueue := newSwapQueueAdvVCUR(mgr.Keeper())
+	swapQueue := newSwapQueueAdv(mgr.Keeper())
 
 	// Create a limit swap message
 	sourceAsset := common.BTCAsset
@@ -369,9 +369,9 @@ func (s AdvSwapQueueVCURSuite) TestNormalModePreservesLimitSwaps(c *C) {
 	c.Check(msg.State.Deposit.Equal(amount), Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestFetchQueue(c *C) {
+func (s AdvSwapQueueSuite) TestFetchQueue(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Enable advanced swap queue to allow limit swaps
 	mgr.Keeper().SetMimir(ctx, "EnableAdvSwapQueue", int64(AdvSwapQueueModeEnabled))
@@ -491,10 +491,10 @@ func (s AdvSwapQueueVCURSuite) TestFetchQueue(c *C) {
 	c.Check(items, HasLen, 3, Commentf("%d", len(items))) // Market swap + 2 limit swaps expected (all pairs checked)
 }
 
-func (s AdvSwapQueueVCURSuite) TestgetAssetPairs(c *C) {
+func (s AdvSwapQueueSuite) TestgetAssetPairs(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
-	book := newSwapQueueAdvVCUR(k)
+	book := newSwapQueueAdv(k)
 
 	pool := NewPool()
 	pool.Asset = common.BTCAsset
@@ -507,7 +507,7 @@ func (s AdvSwapQueueVCURSuite) TestgetAssetPairs(c *C) {
 	c.Check(pairs, HasLen, len(pools)*(len(pools)+1))
 }
 
-func (s AdvSwapQueueVCURSuite) TestTradePairsTodo(c *C) {
+func (s AdvSwapQueueSuite) TestTradePairsTodo(c *C) {
 	pairs := tradePairs{
 		{common.RuneAsset(), common.ETHAsset},
 		{common.ETHAsset, common.RuneAsset()},
@@ -544,10 +544,10 @@ func (s AdvSwapQueueVCURSuite) TestTradePairsTodo(c *C) {
 	c.Check(todo[2].Equals(genTradePair(common.ETHAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[2]))
 }
 
-func (s AdvSwapQueueVCURSuite) TestEndBlock(c *C) {
+func (s AdvSwapQueueSuite) TestEndBlock(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.txOutStore = NewTxStoreDummy()
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Set rapid swap max to 2 to enable the rapid swap behavior this test expects
 	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 2)
@@ -666,7 +666,7 @@ func (s AdvSwapQueueVCURSuite) TestEndBlock(c *C) {
 	// the actual implementation of findMatchingTrades logic
 }
 
-func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantity(c *C) {
+func (s AdvSwapQueueSuite) TestGetMaxSwapQuantity(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
 
@@ -685,7 +685,7 @@ func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantity(c *C) {
 	btcPool.Status = PoolAvailable
 	c.Assert(k.SetPool(ctx, btcPool), IsNil)
 
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Test 1: Basic swap with min slip configuration
 	k.SetMimir(ctx, "L1SlipMinBps", 100)             // 1% min slip
@@ -802,10 +802,10 @@ func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantity(c *C) {
 	c.Assert(quantity, Equals, uint64(1)) // Should return 1 as minimum
 }
 
-func (s AdvSwapQueueVCURSuite) TestIsSwapReady(c *C) {
+func (s AdvSwapQueueSuite) TestIsSwapReady(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Test 1: Basic market swap - should be ready
 	msg := types.MsgSwap{
@@ -920,10 +920,10 @@ func (s AdvSwapQueueVCURSuite) TestIsSwapReady(c *C) {
 	c.Assert(vm.isSwapReady(ctx, msg), Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestCheckFeelessSwap(c *C) {
+func (s AdvSwapQueueSuite) TestCheckFeelessSwap(c *C) {
 	_, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Setup test pools
 	ethPool := Pool{
@@ -984,10 +984,10 @@ func (s AdvSwapQueueVCURSuite) TestCheckFeelessSwap(c *C) {
 	c.Assert(result, Equals, false)
 }
 
-func (s AdvSwapQueueVCURSuite) TestCheckWithFeeSwap(c *C) {
+func (s AdvSwapQueueSuite) TestCheckWithFeeSwap(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Set minimal network fee for BTC to reduce outbound fee impact
 	err := k.SaveNetworkFee(ctx, common.BTCChain, NetworkFee{
@@ -1176,10 +1176,10 @@ func (s AdvSwapQueueVCURSuite) TestCheckWithFeeSwap(c *C) {
 	c.Assert(result, Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestDiscoverLimitSwaps(c *C) {
+func (s AdvSwapQueueSuite) TestDiscoverLimitSwaps(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Setup pools
 	ethPool := NewPool()
@@ -1315,10 +1315,10 @@ func (s AdvSwapQueueVCURSuite) TestDiscoverLimitSwaps(c *C) {
 	c.Assert(len(items), Equals, 0) // Should be empty as fee check fails
 }
 
-func (s AdvSwapQueueVCURSuite) TestIsDone(c *C) {
+func (s AdvSwapQueueSuite) TestIsDone(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Test 1: Market swap - done when count >= quantity
 	msg := types.MsgSwap{
@@ -1371,9 +1371,9 @@ func (s AdvSwapQueueVCURSuite) TestIsDone(c *C) {
 	c.Assert(vm.IsDone(ctx, msg), Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapMimirIntegration(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapMimirIntegration(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Create 5 active validators for testing
 	activeNodes := NodeAccounts{
@@ -1445,9 +1445,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapMimirIntegration(c *C) {
 	c.Assert(value, Equals, int64(10)) // Should be 10 (single vote is enough)
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapMultipleIterations(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapMultipleIterations(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup pools for testing
 	ethPool := NewPool()
@@ -1573,9 +1573,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapMultipleIterations(c *C) {
 	// If test reaches here without panic/error, default behavior works
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapEarlyExit(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapEarlyExit(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup basic pool for testing
 	ethPool := NewPool()
@@ -1701,9 +1701,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEarlyExit(c *C) {
 	// the system exits early rather than continuing unnecessary iterations
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapTodoListPassing(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapTodoListPassing(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup multiple pools for comprehensive testing
 	ethPool := NewPool()
@@ -1830,9 +1830,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapTodoListPassing(c *C) {
 	}
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapIterationCountLogging(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapIterationCountLogging(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup basic pool for testing
 	ethPool := NewPool()
@@ -1960,9 +1960,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapIterationCountLogging(c *C) {
 	// The log verification would require integration testing or log capture mechanisms
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup basic pool for testing
 	ethPool := NewPool()
@@ -2112,9 +2112,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
 	_ = swapsRecovery
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup multiple pools for comprehensive testing
 	ethPool := NewPool()
@@ -2415,9 +2415,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	// This demonstrates end-to-end workflow stability
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup basic pool for testing
 	ethPool := NewPool()
@@ -2737,9 +2737,9 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	// This demonstrates that the rapid swap system is resilient to various error conditions
 }
 
-func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup multiple pools for comprehensive testing
 	ethPool := NewPool()
@@ -3135,10 +3135,10 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	// All EndBlock calls should complete without errors, demonstrating proper integration
 }
 
-func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwaps(c *C) {
+func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwaps(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Set TTL to 100 blocks
 	maxAge := int64(100)
@@ -3227,10 +3227,10 @@ func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwaps(c *C) {
 	c.Assert(activeTTL[0].Equals(txID2), Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsNoExpired(c *C) {
+func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwapsNoExpired(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Set TTL to 100 blocks
 	maxAge := int64(100)
@@ -3279,10 +3279,10 @@ func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsNoExpired(c *C) {
 	c.Assert(ttlEntries[0].Equals(txID), Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsMultipleAtSameHeight(c *C) {
+func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwapsMultipleAtSameHeight(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Set TTL to 50 blocks
 	maxAge := int64(50)
@@ -3349,10 +3349,10 @@ func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsMultipleAtSameHeight(
 	c.Assert(len(ttlEntries), Equals, 0)
 }
 
-func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsHandlesMissingSwap(c *C) {
+func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwapsHandlesMissingSwap(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	currentBlockHeight := int64(200)
 	ctx = ctx.WithBlockHeight(currentBlockHeight)
@@ -3373,10 +3373,10 @@ func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsHandlesMissingSwap(c 
 	c.Assert(len(ttlEntries), Equals, 0)
 }
 
-func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsWithMixedSwapTypes(c *C) {
+func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwapsWithMixedSwapTypes(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
-	vm := newSwapQueueAdvVCUR(k)
+	vm := newSwapQueueAdv(k)
 
 	// Set TTL to 50 blocks
 	maxAge := int64(50)
@@ -3441,7 +3441,7 @@ func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsWithMixedSwapTypes(c 
 	c.Assert(retrievedMarketSwap.Tx.ID.Equals(txID2), Equals, true)
 }
 
-func (s AdvSwapQueueVCURSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
+func (s AdvSwapQueueSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
 
@@ -3467,7 +3467,7 @@ func (s AdvSwapQueueVCURSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
 	pool.Status = PoolAvailable
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	swapQueue := newSwapQueueAdvVCUR(mgr.Keeper())
+	swapQueue := newSwapQueueAdv(mgr.Keeper())
 
 	// Test 1: Custom TTL within limits (500 blocks)
 	customTTL := uint64(500)
@@ -3604,8 +3604,8 @@ func (s AdvSwapQueueVCURSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
 }
 
 // TestTelemConversion tests the telem helper function for cosmos.Uint to float32 conversion
-func (s AdvSwapQueueVCURSuite) TestTelemConversion(c *C) {
-	swapQueue := newSwapQueueAdvVCUR(keeper.KVStoreDummy{})
+func (s AdvSwapQueueSuite) TestTelemConversion(c *C) {
+	swapQueue := newSwapQueueAdv(keeper.KVStoreDummy{})
 
 	// Test zero value
 	result := swapQueue.telem(cosmos.ZeroUint())
@@ -3638,7 +3638,7 @@ func (s AdvSwapQueueVCURSuite) TestTelemConversion(c *C) {
 }
 
 // TestSwapTypeCountingAccuracy tests that market vs limit swap classification is 100% accurate
-func (s AdvSwapQueueVCURSuite) TestSwapTypeCountingAccuracy(c *C) {
+func (s AdvSwapQueueSuite) TestSwapTypeCountingAccuracy(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	// Set up pools for testing
@@ -3787,7 +3787,7 @@ func (s AdvSwapQueueVCURSuite) TestSwapTypeCountingAccuracy(c *C) {
 }
 
 // TestQueueDepthTelemetryAccuracy tests queue depth calculation and value computation
-func (s AdvSwapQueueVCURSuite) TestQueueDepthTelemetryAccuracy(c *C) {
+func (s AdvSwapQueueSuite) TestQueueDepthTelemetryAccuracy(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
 
@@ -3807,7 +3807,7 @@ func (s AdvSwapQueueVCURSuite) TestQueueDepthTelemetryAccuracy(c *C) {
 	// Mock RUNE price for USD conversion ($5 per RUNE)
 	k.SetMimir(ctx, "DollarsPerRune", 500000000) // $5.00 in base units
 
-	swapQueue := newSwapQueueAdvVCUR(k)
+	swapQueue := newSwapQueueAdv(k)
 
 	// Create limit swaps with known deposit amounts
 	limitSwap1 := NewMsgSwap(
@@ -3857,11 +3857,11 @@ func (s AdvSwapQueueVCURSuite) TestQueueDepthTelemetryAccuracy(c *C) {
 }
 
 // TestTelemetryEdgeCases tests edge cases and error handling
-func (s AdvSwapQueueVCURSuite) TestTelemetryEdgeCases(c *C) {
+func (s AdvSwapQueueSuite) TestTelemetryEdgeCases(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
 
-	swapQueue := newSwapQueueAdvVCUR(k)
+	swapQueue := newSwapQueueAdv(k)
 
 	// Test with empty queues (no swaps)
 	emptyTelemetryValues := []int64{0, 0, 0, 0, 0} // iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount
@@ -3894,7 +3894,7 @@ func (s AdvSwapQueueVCURSuite) TestTelemetryEdgeCases(c *C) {
 }
 
 // TestEmitAdvSwapQueueTelemetryIntegration tests the integration between EndBlock and telemetry
-func (s AdvSwapQueueVCURSuite) TestEmitAdvSwapQueueTelemetryIntegration(c *C) {
+func (s AdvSwapQueueSuite) TestEmitAdvSwapQueueTelemetryIntegration(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
 
@@ -3918,7 +3918,7 @@ func (s AdvSwapQueueVCURSuite) TestEmitAdvSwapQueueTelemetryIntegration(c *C) {
 	k.SetMimir(ctx, "EnableAdvSwapQueue", 1)
 	k.SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 2)
 
-	swapQueue := newSwapQueueAdvVCUR(k)
+	swapQueue := newSwapQueueAdv(k)
 
 	// Create and add test swaps
 	marketSwap := NewMsgSwap(
@@ -3988,7 +3988,7 @@ func (s AdvSwapQueueVCURSuite) TestEmitAdvSwapQueueTelemetryIntegration(c *C) {
 }
 
 // TestTradingPairLabelingAccuracy tests that trading pair labels are set correctly
-func (s AdvSwapQueueVCURSuite) TestTradingPairLabelingAccuracy(c *C) {
+func (s AdvSwapQueueSuite) TestTradingPairLabelingAccuracy(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	// Set up pools for different asset types
@@ -4004,7 +4004,7 @@ func (s AdvSwapQueueVCURSuite) TestTradingPairLabelingAccuracy(c *C) {
 	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
 	c.Assert(k.SetPool(ctx, ethPool), IsNil)
 
-	swapQueue := newSwapQueueAdvVCUR(k)
+	swapQueue := newSwapQueueAdv(k)
 
 	// Test getAssetPairs functionality
 	pairs, pools := swapQueue.getAssetPairs(ctx)
@@ -4046,10 +4046,10 @@ func (s AdvSwapQueueVCURSuite) TestTradingPairLabelingAccuracy(c *C) {
 
 // TestGetMaxSwapQuantityTradeAsset verifies that trade assets (BTC~BTC) do NOT trigger
 // the derived asset quantity reduction logic, which was causing incorrect swap quantities.
-func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantityTradeAsset(c *C) {
+func (s AdvSwapQueueSuite) TestGetMaxSwapQuantityTradeAsset(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
-	book := newSwapQueueAdvVCUR(k)
+	book := newSwapQueueAdv(k)
 
 	// Setup BTC pool with 29M RUNE depth (matching real scenario)
 	btcPool := NewPool()
@@ -4093,10 +4093,10 @@ func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantityTradeAsset(c *C) {
 
 // TestGetMaxSwapQuantitySecuredAsset verifies that secured assets (BTC-BTC) also do NOT
 // trigger the derived asset quantity reduction logic.
-func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantitySecuredAsset(c *C) {
+func (s AdvSwapQueueSuite) TestGetMaxSwapQuantitySecuredAsset(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
-	book := newSwapQueueAdvVCUR(k)
+	book := newSwapQueueAdv(k)
 
 	// Setup BTC pool
 	btcPool := NewPool()
@@ -4137,10 +4137,10 @@ func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantitySecuredAsset(c *C) {
 
 // TestGetMaxSwapQuantityDerivedAsset verifies that actual derived assets (THOR.BTC)
 // DO trigger the derived asset quantity reduction logic as intended.
-func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantityDerivedAsset(c *C) {
+func (s AdvSwapQueueSuite) TestGetMaxSwapQuantityDerivedAsset(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
-	book := newSwapQueueAdvVCUR(k)
+	book := newSwapQueueAdv(k)
 
 	// Setup BTC pool as anchor pool
 	btcPool := NewPool()
@@ -4194,9 +4194,9 @@ func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantityDerivedAsset(c *C) {
 // TestRapidSwapFailedMarketSwapSkip verifies that failed market swaps on rapid swap
 // iteration 1+ do not count as attempts. This prevents rapid swaps from burning through
 // all subswaps of a streaming swap in a single block when swaps fail.
-func (s AdvSwapQueueVCURSuite) TestRapidSwapFailedMarketSwapSkip(c *C) {
+func (s AdvSwapQueueSuite) TestRapidSwapFailedMarketSwapSkip(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newSwapQueueAdvVCUR(mgr.Keeper())
+	book := newSwapQueueAdv(mgr.Keeper())
 
 	// Setup pools for testing with limited liquidity
 	ethPool := NewPool()

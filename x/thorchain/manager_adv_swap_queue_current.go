@@ -16,18 +16,18 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-// SwapQueueAdvVCUR is going to manage the swaps queue
-type SwapQueueAdvVCUR struct {
+// SwapQueueAdv is going to manage the swaps queue
+type SwapQueueAdv struct {
 	k keeper.Keeper
 }
 
-// newSwapQueueAdvVCUR create a new vault manager
-func newSwapQueueAdvVCUR(k keeper.Keeper) *SwapQueueAdvVCUR {
-	return &SwapQueueAdvVCUR{k: k}
+// newSwapQueueAdv create a new vault manager
+func newSwapQueueAdv(k keeper.Keeper) *SwapQueueAdv {
+	return &SwapQueueAdv{k: k}
 }
 
 // FetchQueue - grabs all swap queue items from the kvstore and returns them
-func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradePairs, pools Pools, todo tradePairs) (swapItems, error) { // nolint
+func (vm *SwapQueueAdv) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradePairs, pools Pools, todo tradePairs) (swapItems, error) { // nolint
 	items := make(swapItems, 0)
 
 	// if the network is doing a pool cycle, no swaps are executed this
@@ -76,7 +76,7 @@ func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tr
 	return items, nil
 }
 
-func (vm *SwapQueueAdvVCUR) isSwapReady(ctx cosmos.Context, msg MsgSwap) bool {
+func (vm *SwapQueueAdv) isSwapReady(ctx cosmos.Context, msg MsgSwap) bool {
 	// skip processing limit swaps if EnableAdvSwapQueue is set to market only mode
 	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
 	if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly && msg.IsLimitSwap() {
@@ -116,7 +116,7 @@ func (vm *SwapQueueAdvVCUR) isSwapReady(ctx cosmos.Context, msg MsgSwap) bool {
 	return true
 }
 
-func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, pair tradePair, pools Pools) swapItems {
+func (vm *SwapQueueAdv) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, pair tradePair, pools Pools) swapItems {
 	items := make(swapItems, 0)
 
 	iter := vm.k.GetAdvSwapQueueIndexIterator(ctx, LimitSwap, pair.source, pair.target)
@@ -199,7 +199,7 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, 
 	return items
 }
 
-func (vm *SwapQueueAdvVCUR) IsDone(ctx cosmos.Context, msg MsgSwap) bool {
+func (vm *SwapQueueAdv) IsDone(ctx cosmos.Context, msg MsgSwap) bool {
 	if msg.IsDone() {
 		return true
 	}
@@ -216,7 +216,7 @@ func (vm *SwapQueueAdvVCUR) IsDone(ctx cosmos.Context, msg MsgSwap) bool {
 
 // getTTL calculates the custom TTL for a limit swap message
 // Uses State.Interval if specified and valid, otherwise falls back to maxAge
-func (vm *SwapQueueAdvVCUR) getTTL(ctx cosmos.Context, msg MsgSwap) int64 {
+func (vm *SwapQueueAdv) getTTL(ctx cosmos.Context, msg MsgSwap) int64 {
 	maxAge := vm.k.GetConfigInt64(ctx, constants.StreamingLimitSwapMaxAge)
 
 	// Use custom TTL if specified via State.Interval, with validation
@@ -228,7 +228,7 @@ func (vm *SwapQueueAdvVCUR) getTTL(ctx cosmos.Context, msg MsgSwap) int64 {
 	return ttl
 }
 
-func (vm *SwapQueueAdvVCUR) checkFeelessSwap(pools Pools, pair tradePair, indexRatio uint64) bool {
+func (vm *SwapQueueAdv) checkFeelessSwap(pools Pools, pair tradePair, indexRatio uint64) bool {
 	var ratio cosmos.Uint
 	switch {
 	case !pair.HasRune():
@@ -260,7 +260,7 @@ func (vm *SwapQueueAdvVCUR) checkFeelessSwap(pools Pools, pair tradePair, indexR
 	return cosmos.NewUint(indexRatio).GT(ratio)
 }
 
-func (vm *SwapQueueAdvVCUR) checkWithFeeSwap(ctx cosmos.Context, mgr Manager, pools Pools, msg MsgSwap) bool {
+func (vm *SwapQueueAdv) checkWithFeeSwap(ctx cosmos.Context, mgr Manager, pools Pools, msg MsgSwap) bool {
 	swapper, err := GetSwapper(vm.k.GetVersion())
 	if err != nil {
 		panic(err)
@@ -329,7 +329,7 @@ func (vm *SwapQueueAdvVCUR) checkWithFeeSwap(ctx cosmos.Context, mgr Manager, po
 	return emit.GTE(target.Amount)
 }
 
-func (vm *SwapQueueAdvVCUR) getRatio(input, output cosmos.Uint) cosmos.Uint {
+func (vm *SwapQueueAdv) getRatio(input, output cosmos.Uint) cosmos.Uint {
 	if output.IsZero() {
 		return cosmos.ZeroUint()
 	}
@@ -337,7 +337,7 @@ func (vm *SwapQueueAdvVCUR) getRatio(input, output cosmos.Uint) cosmos.Uint {
 }
 
 // getAssetPairs - fetches a list of strings that represents directional trading pairs
-func (vm *SwapQueueAdvVCUR) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools) {
+func (vm *SwapQueueAdv) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools) {
 	result := make(tradePairs, 0)
 	var pools Pools
 
@@ -373,7 +373,7 @@ func (vm *SwapQueueAdvVCUR) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools
 	return result, pools
 }
 
-func (vm *SwapQueueAdvVCUR) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, msg MsgSwap) (uint64, error) {
+func (vm *SwapQueueAdv) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, msg MsgSwap) (uint64, error) {
 	// collect pools involved in this swap
 	minSwapSize := cosmos.ZeroUint()
 	var sourceAssetPool types.Pool
@@ -475,7 +475,7 @@ func (vm *SwapQueueAdvVCUR) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, 
 	return maxSwapQuantity.Uint64(), nil
 }
 
-func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, msg *MsgSwap) error {
+func (vm *SwapQueueAdv) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, msg *MsgSwap) error {
 	// If advanced swap queue is in market-only mode, reject limit swaps
 	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
 	if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly && msg.IsLimitSwap() {
@@ -529,7 +529,7 @@ func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, ms
 }
 
 // EndBlock trigger the real swap to be processed
-func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabled bool) error {
+func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabled bool) error {
 	swapHandler := NewSwapHandler(mgr)
 
 	minSwapsPerBlock, err := vm.k.GetMimir(ctx, constants.MinSwapsPerBlock.String())
@@ -695,7 +695,7 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 }
 
 // getTodoNum - determine how many swaps to do.
-func (vm *SwapQueueAdvVCUR) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
+func (vm *SwapQueueAdv) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
 	// Do half the length of the queue. Unless...
 	//  1. Half the queue length is greater than maxSwapsPerBlock
 	//  2. Half the queue length is less than minSwapsPerBlock
@@ -715,7 +715,7 @@ func (vm *SwapQueueAdvVCUR) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBl
 
 // scoreMsgs - this takes a list of MsgSwap, and converts them to a scored
 // swapItem list
-func (vm *SwapQueueAdvVCUR) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualDepthMult int64) (swapItems, error) {
+func (vm *SwapQueueAdv) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualDepthMult int64) (swapItems, error) {
 	pools := make(map[common.Asset]Pool)
 
 	for i, item := range items {
@@ -775,7 +775,7 @@ func (vm *SwapQueueAdvVCUR) scoreMsgs(ctx cosmos.Context, items swapItems, synth
 }
 
 // getLiquidityFeeAndSlip calculate liquidity fee and slip, fee is in RUNE
-func (vm *SwapQueueAdvVCUR) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, sourceCoin common.Coin, item *swapItem, virtualDepthMult int64) {
+func (vm *SwapQueueAdv) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, sourceCoin common.Coin, item *swapItem, virtualDepthMult int64) {
 	// Get our X, x, Y values
 	var X, x, Y cosmos.Uint
 	x = sourceCoin.Amount
@@ -803,7 +803,7 @@ func (vm *SwapQueueAdvVCUR) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool
 	item.slip = item.slip.Add(slip)
 }
 
-func (vm *SwapQueueAdvVCUR) parseRatioFromKey(key string) (uint64, error) {
+func (vm *SwapQueueAdv) parseRatioFromKey(key string) (uint64, error) {
 	parts := strings.Split(key, "/")
 	if len(parts) < 5 {
 		return 0, fmt.Errorf("invalid key format")
@@ -812,7 +812,7 @@ func (vm *SwapQueueAdvVCUR) parseRatioFromKey(key string) (uint64, error) {
 }
 
 // processExpiredLimitSwaps processes limit swaps that have expired (reached TTL) up to the current block height
-func (vm *SwapQueueAdvVCUR) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager) error {
+func (vm *SwapQueueAdv) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager) error {
 	currentHeight := ctx.BlockHeight()
 
 	// Process TTL entries for all block heights up to and including the current height
@@ -877,7 +877,7 @@ func (vm *SwapQueueAdvVCUR) processExpiredLimitSwaps(ctx cosmos.Context, mgr Man
 
 // emitAdvSwapQueueTelemetry emits telemetry metrics for the advanced swap queue
 // This method should only be called when telemetry is enabled
-func (vm *SwapQueueAdvVCUR) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Manager, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount int64) {
+func (vm *SwapQueueAdv) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Manager, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount int64) {
 	// Emit core metrics
 	telemetry.SetGauge(float32(iterationCount), "thornode", "adv_swap_queue", "iterations_per_block")
 	telemetry.SetGauge(float32(totalSwapsProcessed), "thornode", "adv_swap_queue", "total_swaps_per_block")
@@ -895,7 +895,7 @@ func (vm *SwapQueueAdvVCUR) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Ma
 }
 
 // emitQueueDepthTelemetry emits queue depth metrics per trading pair
-func (vm *SwapQueueAdvVCUR) emitQueueDepthTelemetry(ctx cosmos.Context, mgr Manager) {
+func (vm *SwapQueueAdv) emitQueueDepthTelemetry(ctx cosmos.Context, mgr Manager) {
 	pairs, _ := vm.getAssetPairs(ctx)
 
 	// Get 1 RUNE price in USD for value conversions
@@ -1008,7 +1008,7 @@ func (vm *SwapQueueAdvVCUR) emitQueueDepthTelemetry(ctx cosmos.Context, mgr Mana
 }
 
 // telem converts cosmos.Uint to float32 for telemetry (similar to helpers.go)
-func (vm *SwapQueueAdvVCUR) telem(input cosmos.Uint) float32 {
+func (vm *SwapQueueAdv) telem(input cosmos.Uint) float32 {
 	if !input.BigInt().IsUint64() {
 		return 0
 	}

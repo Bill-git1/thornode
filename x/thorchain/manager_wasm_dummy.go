@@ -8,7 +8,7 @@ import (
 
 var _ WasmManager = &DummyWasmManager{}
 
-// DummyWasmManager is VCUR implementation of slasher
+// DummyWasmManager is current implementation of slasher
 type DummyWasmManager struct {
 	wasmtypes.UnimplementedMsgServer
 }

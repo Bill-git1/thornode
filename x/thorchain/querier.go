@@ -307,7 +307,7 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 
 func (qs queryServer) queryVaultSolvency(ctx cosmos.Context, _ *types.QueryVaultSolvencyRequest) (*types.QueryVaultSolvencyResponse, error) {
 	// Get the network manager to calculate solvency
-	networkMgr, ok := qs.mgr.NetworkMgr().(*NetworkMgrVCUR)
+	networkMgr, ok := qs.mgr.NetworkMgr().(*NetworkMgr)
 	if !ok {
 		return nil, fmt.Errorf("network manager is not the correct type")
 	}
