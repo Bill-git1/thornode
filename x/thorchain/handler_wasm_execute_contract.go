@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"fmt"
+	"math"
 
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
@@ -157,6 +158,13 @@ func checkTxFeeWithValidatorMinGasPrices(ctx sdk.Context, k keeper.Keeper, tx sd
 
 		if !minGasPrices.IsZero() {
 			requiredFees := make(sdk.Coins, len(minGasPrices))
+
+			// Validate gas before conversion to int64 to prevent integer overflow.
+			// If gas > MaxInt64, conversion would silently overflow to negative value,
+			// causing incorrect fee calculation that could bypass payment requirements.
+			if gas > math.MaxInt64 {
+				return nil, 0, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "gas value %d exceeds maximum allowed value", gas)
+			}
 
 			// Determine the required fees by multiplying each required minimum gas
 			// price by the gas limit, where fee = ceil(minGasPrice * gasLimit).
