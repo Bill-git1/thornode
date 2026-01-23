@@ -181,8 +181,9 @@ func processErrataTxAttestation(
 	return nil
 }
 
-// processErrataOutboundTx when the network detect an outbound tx which previously had been sent out to customer , however it get re-org , and it doesn't
-// exist on the external chain anymore , then it will need to reschedule the tx
+// processErrataOutboundTx handles an errata for an outbound tx that was sent but later reorged out.
+// It re-credits funds to the vault so they are not abandoned.
+// The tx is marked as reverted rather than rescheduled.
 func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr EventManager, er *common.ErrataTx) error {
 	txOutVoter, err := k.GetObservedTxOutVoter(ctx, er.Id)
 	if err != nil {
@@ -212,53 +213,18 @@ func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr Event
 		if err != nil {
 			return fmt.Errorf("fail to get vault with pubkey %s: %w", vaultPubKey, err)
 		}
-		compensate := true
-		if v.IsAsgard() {
-			// if the fund is sending out from asgard , then it need to be credit back to asgard
-			// if the asgard has been retired (inactive), need to set it to Retiring again , so the fund can be migrated
-			v.AddFunds(tx.Coins)
-			compensate = false
-			if v.Status == InactiveVault {
-				ctx.Logger().Info("Errata cause retired vault to be resurrect", "vault pub key", v.PubKey)
-				v.UpdateStatus(RetiringVault, ctx.BlockHeight())
-			}
+		// Credit funds back to the vault so they are not lost.
+		// Note: We intentionally do NOT change InactiveVault back to RetiringVault
+		// as this could cause side effects (blocking churns, affecting node unbonding).
+		// Recovery from InactiveVaults with funds should be handled via migration.
+		v.AddFunds(tx.Coins)
+		if v.Status == InactiveVault {
+			ctx.Logger().Info("Errata credited funds to inactive vault - recovery via migration needed", "vault pub key", v.PubKey)
 		}
 
 		if !v.IsEmpty() {
 			if err := k.SetVault(ctx, v); err != nil {
 				return fmt.Errorf("fail to save vault: %w", err)
-			}
-		}
-		if compensate {
-			for _, coin := range tx.Coins {
-				if coin.IsRune() {
-					// it is using native rune, so outbound can't be RUNE
-					continue
-				}
-				p, err := k.GetPool(ctx, coin.Asset)
-				if err != nil {
-					return fmt.Errorf("fail to get pool(%s): %w", coin.Asset, err)
-				}
-				runeValue := p.AssetValueInRune(coin.Amount)
-				p.BalanceRune = p.BalanceRune.Add(runeValue)
-				p.BalanceAsset = common.SafeSub(p.BalanceAsset, coin.Amount)
-				if err := k.SendFromModuleToModule(ctx, ReserveName, AsgardName, common.Coins{
-					common.NewCoin(common.RuneAsset(), runeValue),
-				}); err != nil {
-					return fmt.Errorf("fail to send fund from reserve to asgard: %w", err)
-				}
-				if err := k.SetPool(ctx, p); err != nil {
-					return fmt.Errorf("fail to save pool (%s) : %w", p.Asset, err)
-				}
-				// send errata event
-				mods := PoolMods{
-					NewPoolMod(p.Asset, runeValue, true, coin.Amount, false),
-				}
-
-				eventErrata := NewEventErrata(er.Id, mods)
-				if err := eventMgr.EmitEvent(ctx, eventErrata); err != nil {
-					return ErrInternal(err, "fail to emit errata event")
-				}
 			}
 		}
 	}

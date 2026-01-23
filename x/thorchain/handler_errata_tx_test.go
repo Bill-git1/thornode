@@ -552,15 +552,16 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, IsNil)
 
-	// inactive vault , cause it to compensate asgard with reserve
+	// inactive vault - funds are credited but vault stays InactiveVault
+	// (no resurrection to RetiringVault to avoid side effects)
 	asgardVault.UpdateStatus(types.VaultStatus_InactiveVault, 1024)
 	c.Assert(helper.Keeper.SetVault(ctx, asgardVault), IsNil)
 	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, IsNil)
-	// vault should be set back to retiring
+	// vault should remain inactive (recovery via migration)
 	v, err := helper.Keeper.GetVault(ctx, asgardVault.PubKey)
 	c.Assert(err, IsNil)
-	c.Assert(v.Status == types.VaultStatus_RetiringVault, Equals, true)
+	c.Assert(v.Status == types.VaultStatus_InactiveVault, Equals, true)
 
 	// With POOL , but no txin voter
 	pool := NewPool()
@@ -620,7 +621,7 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	c.Assert(found, Equals, 1)
 }
 
-func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSetInactiveVaultBackToRetiring(c *C) {
+func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx_EnsureFundsAreCreditedToInactiveVault(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	helper := NewErrataTxHandlerTestHelper(mgr.Keeper())
 	mgr.K = helper
@@ -709,7 +710,10 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	c.Assert(err, IsNil)
 	v, err := helper.Keeper.GetVault(ctx, retiredPubKey)
 	c.Assert(err, IsNil)
-	c.Assert(v.Status == types.VaultStatus_RetiringVault, Equals, true)
+	// Vault should remain InactiveVault (not resurrected to RetiringVault)
+	// to avoid side effects like blocking churns or affecting node unbonding.
+	// Recovery from InactiveVaults with funds should be handled via migration.
+	c.Assert(v.Status == types.VaultStatus_InactiveVault, Equals, true)
 	c.Assert(v.HasFunds(), Equals, true)
 	ltcCoin := v.GetCoin(common.LTCAsset)
 	c.Assert(ltcCoin.Equals(common.NewCoin(common.LTCAsset, cosmos.NewUint(102400000))), Equals, true)
@@ -725,7 +729,8 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	c.Assert(err, IsNil)
 	v, err = helper.Keeper.GetVault(ctx, retiredPubKey)
 	c.Assert(err, IsNil)
-	c.Assert(v.Status == types.VaultStatus_RetiringVault, Equals, true)
+	// Same here - vault stays InactiveVault, funds are credited
+	c.Assert(v.Status == types.VaultStatus_InactiveVault, Equals, true)
 	c.Assert(v.HasFunds(), Equals, true)
 	ltcCoin = v.GetCoin(common.LTCAsset)
 	c.Assert(ltcCoin.Equals(common.NewCoin(common.LTCAsset, cosmos.NewUint(102400000))), Equals, true)
