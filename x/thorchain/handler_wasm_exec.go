@@ -47,6 +47,10 @@ func (h WasmExecHandler) handle(ctx cosmos.Context, msg MsgWasmExec) (*cosmos.Re
 		return nil, fmt.Errorf("unable to use MsgWasmExec while THORChain is halted")
 	}
 
+	// Note: No contract whitelist is applied here. The execute interface is unrestricted
+	// for any contract, similar to MsgExecuteContract. Restrictions only apply to
+	// privileged operations like migrate, sudo, and instantiate.
+
 	var (
 		execAmt cosmos.Coin
 		err     error
