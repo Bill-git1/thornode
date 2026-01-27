@@ -1,7 +1,10 @@
 package thorchain
 
 import (
+	"fmt"
 	"strings"
+
+	"github.com/blang/semver"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -38,7 +41,27 @@ func (h NoOpHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 }
 
 func (h NoOpHandler) validate(ctx cosmos.Context, msg MsgNoOp) error {
-	return msg.ValidateBasic()
+	version := h.mgr.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
+	default:
+		return errBadVersion
+	}
+}
+
+func (h NoOpHandler) validateV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+
+	// Verify that the signer is an active node account with observation privileges.
+	// This is critical for the "novault" action which modifies vault balances.
+	if !isSignedByActiveNodeAccounts(ctx, h.mgr.Keeper(), msg.GetSigners()) {
+		return cosmos.ErrUnauthorized(fmt.Sprintf("%+v are not authorized", msg.GetSigners()))
+	}
+
+	return nil
 }
 
 // handle process MsgNoOp, MsgNoOp add asset and RUNE to the asset pool
@@ -51,15 +74,36 @@ func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 	if !strings.EqualFold(action, "novault") {
 		return nil
 	}
+
+	// Get the vault and verify it exists
 	vault, err := h.mgr.Keeper().GetVault(ctx, msg.ObservedTx.ObservedPubKey)
 	if err != nil {
-		ctx.Logger().Error("fail to get vault", "error", err, "pub_key", msg.ObservedTx.ObservedPubKey)
-		return nil
+		return fmt.Errorf("fail to get vault: %w", err)
 	}
-	// subtract the coins from vault , as it has been added to
+
+	// Verify vault is not empty (exists)
+	if vault.IsEmpty() {
+		return fmt.Errorf("vault does not exist: %s", msg.ObservedTx.ObservedPubKey)
+	}
+
+	// Verify vault status is active or retiring - only these vaults should have funds modified
+	if !vault.IsActive() && !vault.IsRetiring() {
+		return fmt.Errorf("vault is not active or retiring: %s (status: %s)", msg.ObservedTx.ObservedPubKey, vault.Status)
+	}
+
+	// Verify the vault has sufficient funds for each coin being subtracted
+	for _, coin := range msg.ObservedTx.Tx.Coins {
+		vaultCoin := vault.GetCoin(coin.Asset)
+		if vaultCoin.Amount.LT(coin.Amount) {
+			return fmt.Errorf("vault has insufficient funds for %s: has %s, attempting to subtract %s",
+				coin.Asset, vaultCoin.Amount, coin.Amount)
+		}
+	}
+
+	// Subtract the coins from vault, as it has been added to
 	vault.SubFunds(msg.ObservedTx.Tx.Coins)
 	if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
-		ctx.Logger().Error("fail to save vault", "error", err)
+		return fmt.Errorf("fail to save vault: %w", err)
 	}
 	return nil
 }
