@@ -2284,6 +2284,16 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 				return nil, fmt.Errorf("unexpected asset %s not found in tracking map (legacy swap queue)", coin.Asset)
 			}
 			coinAmount := math.NewIntFromBigInt(coin.Amount.BigInt())
+			// For streaming swaps, only deduct the remaining (unprocessed) amount
+			// to avoid double-counting with pool balance which already includes processed amounts
+			if msg.IsLegacyStreaming() {
+				swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
+				if err == nil && swp.TxID.Equals(msg.Tx.ID) {
+					// Remaining = Deposit - In (what hasn't been swapped yet)
+					remaining := common.SafeSub(swp.Deposit, swp.In)
+					coinAmount = math.NewIntFromBigInt(remaining.BigInt())
+				}
+			}
 			assetAmounts[coin.Asset] = assetAmounts[coin.Asset].Sub(coinAmount)
 		}
 	}
@@ -2308,6 +2318,16 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 				return nil, fmt.Errorf("unexpected asset %s not found in tracking map (advanced swap queue)", coin.Asset)
 			}
 			coinAmount := math.NewIntFromBigInt(coin.Amount.BigInt())
+			// For streaming swaps, only deduct the remaining (unprocessed) amount
+			// to avoid double-counting with pool balance which already includes processed amounts
+			if msg.IsStreaming() {
+				swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
+				if err == nil && swp.TxID.Equals(msg.Tx.ID) {
+					// Remaining = Deposit - In (what hasn't been swapped yet)
+					remaining := common.SafeSub(swp.Deposit, swp.In)
+					coinAmount = math.NewIntFromBigInt(remaining.BigInt())
+				}
+			}
 			assetAmounts[coin.Asset] = assetAmounts[coin.Asset].Sub(coinAmount)
 		}
 	}

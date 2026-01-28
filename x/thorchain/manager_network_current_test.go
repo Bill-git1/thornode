@@ -1646,6 +1646,144 @@ func (s *NetworkManagerTestSuite) TestCalculateNetworkSolvency(c *C) {
 	}
 }
 
+func (s *NetworkManagerTestSuite) TestCalculateNetworkSolvencyWithStreamingSwaps(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create a pool with some balance
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One) // Pool has 100 BTC from LPs + processed streaming swaps
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Create an active vault with funds
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)), // Vault has 150 BTC (includes 50 BTC streaming deposit)
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Test 1: Non-streaming swap - should deduct full amount
+	txID := GetRandomTxHash()
+	swapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    txID,
+			Chain: common.BTCChain,
+			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))},
+		},
+		TargetAsset: common.RuneAsset(),
+	}
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, swapMsg, 0), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+	// Vault: 150, Pool: 100, SwapQueue: 10 → Solvency: 150 - 100 - 10 = 40
+	c.Assert(solvency[0].Amount.Equal(math.NewInt(40*common.One)), Equals, true,
+		Commentf("Non-streaming swap should deduct full amount, expected 40, got %s", solvency[0].Amount))
+
+	// Clean up non-streaming swap
+	mgr.Keeper().RemoveSwapQueueItem(ctx, txID, 0)
+
+	// Test 2: Legacy streaming swap with partial progress - should only deduct remaining amount
+	streamingTxID := GetRandomTxHash()
+	streamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    streamingTxID,
+			Chain: common.BTCChain,
+			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(50*common.One))}, // Full deposit: 50 BTC
+		},
+		TargetAsset:    common.RuneAsset(),
+		StreamInterval: 10, // Makes it a legacy streaming swap (V1)
+		Version:        types.SwapVersion_v1,
+	}
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, streamingSwapMsg, 0), IsNil)
+
+	// Create streaming swap state showing 20 BTC has been processed
+	streamingSwap := types.NewStreamingSwap(streamingTxID, 5, 10, cosmos.ZeroUint(), cosmos.NewUint(50*common.One))
+	streamingSwap.In = cosmos.NewUint(20 * common.One) // 20 BTC processed, 30 BTC remaining
+	mgr.Keeper().SetStreamingSwap(ctx, streamingSwap)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+	// Vault: 150, Pool: 100 (includes 20 BTC from processed streaming swap), SwapQueue: 30 (remaining)
+	// Solvency: 150 - 100 - 30 = 20
+	// If we incorrectly deducted full deposit: 150 - 100 - 50 = 0 (wrong!)
+	c.Assert(solvency[0].Amount.Equal(math.NewInt(20*common.One)), Equals, true,
+		Commentf("Streaming swap should only deduct remaining amount, expected 20, got %s", solvency[0].Amount))
+
+	// Clean up
+	mgr.Keeper().RemoveSwapQueueItem(ctx, streamingTxID, 0)
+	mgr.Keeper().RemoveStreamingSwap(ctx, streamingTxID)
+
+	// Test 3: Advanced swap queue with streaming swap (V2)
+	advStreamingTxID := GetRandomTxHash()
+	advStreamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    advStreamingTxID,
+			Chain: common.BTCChain,
+			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(30*common.One))}, // Full deposit: 30 BTC
+		},
+		TargetAsset: common.RuneAsset(),
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 10, // Makes it a streaming swap (State.Quantity > 1)
+			Count:    3,
+			Interval: 5,
+		},
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, advStreamingSwapMsg), IsNil)
+
+	// Create streaming swap state showing 12 BTC has been processed
+	advStreamingSwap := types.NewStreamingSwap(advStreamingTxID, 10, 5, cosmos.ZeroUint(), cosmos.NewUint(30*common.One))
+	advStreamingSwap.In = cosmos.NewUint(12 * common.One) // 12 BTC processed, 18 BTC remaining
+	mgr.Keeper().SetStreamingSwap(ctx, advStreamingSwap)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+	// Vault: 150, Pool: 100, AdvSwapQueue: 18 (remaining)
+	// Solvency: 150 - 100 - 18 = 32
+	c.Assert(solvency[0].Amount.Equal(math.NewInt(32*common.One)), Equals, true,
+		Commentf("V2 streaming swap should only deduct remaining amount, expected 32, got %s", solvency[0].Amount))
+
+	// Clean up
+	c.Assert(mgr.Keeper().RemoveAdvSwapQueueItem(ctx, advStreamingTxID, 0), IsNil)
+	mgr.Keeper().RemoveStreamingSwap(ctx, advStreamingTxID)
+
+	// Test 4: Streaming swap with no progress yet - should deduct full amount
+	newStreamingTxID := GetRandomTxHash()
+	newStreamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    newStreamingTxID,
+			Chain: common.BTCChain,
+			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(25*common.One))},
+		},
+		TargetAsset:    common.RuneAsset(),
+		StreamInterval: 10,
+		Version:        types.SwapVersion_v1,
+	}
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, newStreamingSwapMsg, 0), IsNil)
+
+	// Create streaming swap state with zero progress
+	newStreamingSwap := types.NewStreamingSwap(newStreamingTxID, 5, 10, cosmos.ZeroUint(), cosmos.NewUint(25*common.One))
+	// In is already zero from NewStreamingSwap
+	mgr.Keeper().SetStreamingSwap(ctx, newStreamingSwap)
+
+	solvency, err = nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+	// Vault: 150, Pool: 100, SwapQueue: 25 (full, since In=0)
+	// Solvency: 150 - 100 - 25 = 25
+	c.Assert(solvency[0].Amount.Equal(math.NewInt(25*common.One)), Equals, true,
+		Commentf("Streaming swap with no progress should deduct full amount, expected 25, got %s", solvency[0].Amount))
+}
+
 func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvency(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
