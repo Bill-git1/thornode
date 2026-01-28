@@ -698,6 +698,11 @@ func (c *Client) consolidateUTXOs() {
 			rawTx, _, _, err = c.SignTx(txOutItem, height)
 			if err != nil {
 				c.log.Err(err).Msg("fail to sign consolidate txout item")
+				return
+			}
+			if len(rawTx) == 0 {
+				c.log.Warn().Msg("signed consolidate transaction is empty, skipping broadcast")
+				return
 			}
 			var txID string
 			txID, err = c.BroadcastTx(txOutItem, rawTx)
