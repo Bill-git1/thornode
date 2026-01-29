@@ -120,7 +120,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "43558E0C47D52A2FE0228F20A957FBCD4F2ED7080E4FE5CFA11CE02DBA5730AB",
+      "data_hash": "6BC25EF713718A3166CF137BA08D3990B4CE320EFBFCA36D3F04FBA6EA547FD2",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -193,7 +193,7 @@
     ],
     "txs": [
       {
-        "hash": "9B7566DF14F4A36A0ADB5DE3A263BF3F6628D5CAABB10804F685EC8257482AD4",
+        "hash": "DE375C2E828E6DF15EA2D369D9EC4206FD77D155A9E080DE4E4DF37CC93732B1",
         "tx": {
           "auth_info": {
             "fee": {
@@ -227,13 +227,13 @@
                 "chain": "BTC",
                 "coins": [
                   {
-                    "amount": "20000000",
+                    "amount": "19000000",
                     "asset": "BTC.BTC",
                     "decimals": "0"
                   }
                 ],
                 "height": "1",
-                "id": "FD61A50956452DFE1BF50826470595D59AB21A74EEDC45F90E313E7755836CAE",
+                "id": "D28D125A58732BB78C50EE55D8CDD5448EB2B08B6BD32F49C4B8A9866EBB7D4A",
                 "pub_key": "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
               }
@@ -244,7 +244,7 @@
             "unordered": false
           },
           "signatures": [
-            "IZkCmZXmvtwCG2Lq9mYgiy1BUATBIy6qZFlomfW+aGJDDtQ0nU63GpPmyByzZaLHz80Mcv47s2KQFDIkPAVWbA=="
+            "CFRrTKLyBzchCoHSnur2HtEvfNhHYSOg8+mOZy7ix7h485LD46RGoYV1JR23NaKSHkdT2rw9lkD45SiuUy2OYA=="
           ]
         },
         "result": {
@@ -257,7 +257,7 @@
               "type": "tx"
             },
             {
-              "signature": "IZkCmZXmvtwCG2Lq9mYgiy1BUATBIy6qZFlomfW+aGJDDtQ0nU63GpPmyByzZaLHz80Mcv47s2KQFDIkPAVWbA==",
+              "signature": "CFRrTKLyBzchCoHSnur2HtEvfNhHYSOg8+mOZy7ix7h485LD46RGoYV1JR23NaKSHkdT2rw9lkD45SiuUy2OYA==",
               "type": "tx"
             },
             {

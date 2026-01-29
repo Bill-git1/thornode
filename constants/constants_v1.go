@@ -83,6 +83,7 @@ func NewConstantValue() *ConstantVals {
 			TNSFeePerBlock:                      20,
 			TNSFeePerBlockUSD:                   20,               // per block cost for TNS in USD
 			PermittedSolvencyGap:                100,              // the setting is in basis points
+			PermittedSolvencyGapUSD:             500_00000000,     // $500 USD in 1e8 notation
 			ValidatorMaxRewardRatio:             1,                // the ratio to MinimumBondInRune at which validators stop receiving rewards proportional to their bond
 			MaxNodeToChurnOutForLowVersion:      1,                // the maximum number of nodes to churn out for low version per churn
 			ChurnOutForLowVersionBlocks:         21600,            // the blocks after the MinJoinVersion changes before nodes can be churned out for low version

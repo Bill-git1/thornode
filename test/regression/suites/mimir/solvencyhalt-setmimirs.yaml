@@ -10,6 +10,11 @@ genesis:
             - amount: "100000000000"
               denom: rune
     thorchain:
+      mimirs:
+        # Set RUNE price to $5 so DollarConfigInRune can convert the $500 threshold
+        # At $5/RUNE, $500 = 100 RUNE (10000000000 in 1e8)
+        - key: DollarsPerRune
+          value: "500000000"
       liquidity_providers:
         - asset: BTC.BTC
           asset_address: {{ addr_btc_cat }}
@@ -92,7 +97,7 @@ chain: BTC
 pub_key: tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5
 coins:
   - asset: BTC.BTC
-    amount: "20000000" # insolvent vault
+    amount: "19000000" # insolvent vault (gap of 11M > 100 RUNE threshold at $5/RUNE)
 height: 1
 sequence: 0
 ---

@@ -59,6 +59,19 @@ func (s *HandlerSolvencyTestSuite) TestValidate(c *C) {
 	asgard.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1024*common.One))))
 	c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
 
+	// Set up ETH pool with liquidity so gap can be valued in RUNE
+	// Pool has 1000 ETH and 10000 RUNE, so 1 ETH = 10 RUNE
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Set RUNE price to $5 so DollarConfigInRune can convert the $500 threshold
+	// At $5/RUNE, $500 = 100 RUNE
+	mgr.Keeper().SetMimir(ctx, "DollarsPerRune", 5_00000000)
+
 	// second active node report solvency , it should be accepted
 	// reach consensus , vault is solvent , everything continues
 	msgSolvency.Signer = activeNodes[1].NodeAddress

@@ -132,7 +132,8 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 
 - `StopSolvencyCheck`#: Enable/Disable Solvency Checker
 - `StopSolvencyCheck<chain>`#: Enable/Disable Solvency Checker, per chain
-- `PermittedSolvencyGap`: The amount of funds permitted to be "insolvent". This gives the network a little bit of "wiggle room" for margin of error
+- `PermittedSolvencyGap`: (deprecated) The amount of funds permitted to be "insolvent" as a percentage (basis points). Replaced by `PermittedSolvencyGapUSD`.
+- `PermittedSolvencyGapUSD`: The permitted solvency gap in USD (1e8 notation). Vault insolvency below this USD value will not trigger a chain halt. Default is $500 (500_00000000).
 
 ## Node Management
 

@@ -130,7 +130,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "50007187274",
+              "amount": "50005000820",
               "denom": "rune"
             }
           ]
@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000007670203",
+              "amount": "35000010999580",
               "denom": "rune"
             }
           ]
@@ -157,7 +157,7 @@
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "coins": [
             {
-              "amount": "2549991087028",
+              "amount": "2549989999600",
               "denom": "rune"
             }
           ]
@@ -166,7 +166,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000000055495",
+              "amount": "5000000000000",
               "denom": "rune"
             }
           ]
@@ -225,11 +225,15 @@
           "units": "50010000000"
         }
       ],
-      "mimirs": [],
+      "mimirs": [
+        {
+          "key": "EMISSIONCURVE",
+          "value": "1000000000000"
+        }
+      ],
       "network": {
-        "LPIncomeSplit": "9900",
-        "NodeIncomeSplit": "100",
-        "bond_reward_rune": "55495",
+        "NodeIncomeSplit": "10000",
+        "bond_reward_rune": "0",
         "total_bond_units": "3"
       },
       "network_fees": [
@@ -280,7 +284,7 @@
             {
               "chain": "THOR",
               "coin": {
-                "amount": "49993087028",
+                "amount": "49991999600",
                 "asset": "THOR.RUNE"
               },
               "gas_rate": "2000000",
@@ -303,7 +307,7 @@
               "chain": "THOR",
               "coins": [
                 {
-                  "amount": "49993087028",
+                  "amount": "49991999600",
                   "asset": "THOR.RUNE"
                 }
               ],
@@ -367,7 +371,7 @@
       "outbound_fee_spent_rune": [],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "689662172146",
+          "amount": "689662171994",
           "asset": "BTC.BTC"
         }
       ],
@@ -376,7 +380,7 @@
           "LP_units": "50010000000",
           "asset": "BTC.BTC",
           "balance_asset": "50015000",
-          "balance_rune": "50007187274",
+          "balance_rune": "50005000820",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

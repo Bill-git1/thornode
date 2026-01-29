@@ -86,6 +86,7 @@ const (
 	MaxCR
 	LendingLever
 	PermittedSolvencyGap
+	PermittedSolvencyGapUSD
 	NodeOperatorFee
 	ValidatorMaxRewardRatio
 	MaxNodeToChurnOutForLowVersion

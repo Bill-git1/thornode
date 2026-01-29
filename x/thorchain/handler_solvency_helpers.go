@@ -156,10 +156,8 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 	if err != nil {
 		return false
 	}
-	permittedSolvencyGap, err := mgr.Keeper().GetMimir(ctx, constants.PermittedSolvencyGap.String())
-	if err != nil || permittedSolvencyGap <= 0 {
-		permittedSolvencyGap = mgr.GetConstants().GetInt64Value(constants.PermittedSolvencyGap)
-	}
+	// Get the permitted solvency gap in RUNE (converted from USD)
+	permittedGapInRune := mgr.Keeper().DollarConfigInRune(ctx, constants.PermittedSolvencyGapUSD)
 	// Use the coin in vault as baseline , wallet can have more coins than vault
 	for _, c := range adjustVault.Coins {
 		if !c.Asset.Chain.Equals(chain) {
@@ -173,21 +171,24 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 			ctx.Logger().Info("asset exist in vault , but not in wallet, insolvent", "asset", c.Asset.String(), "amount", c.Amount.String())
 			return true
 		}
-		if c.Asset.IsGasAsset() {
-			gas, err := mgr.GasMgr().GetMaxGas(ctx, c.Asset.GetChain())
-			if err != nil {
-				ctx.Logger().Error("fail to get max gas", "error", err)
-			} else if c.Amount.LTE(gas.Amount.MulUint64(10)) {
-				// if the amount left in asgard vault is not enough for 10 * max gas, then skip it from solvency check
-				continue
-			}
-		}
-
 		if c.Amount.GT(walletCoin.Amount) {
 			gap := c.Amount.Sub(walletCoin.Amount)
-			permittedGap := walletCoin.Amount.MulUint64(uint64(permittedSolvencyGap)).QuoUint64(10000)
-			if gap.GT(permittedGap) {
-				ctx.Logger().Info("vault has more asset than wallet, insolvent", "asset", c.Asset.String(), "vault amount", c.Amount.String(), "wallet amount", walletCoin.Amount.String(), "gap", gap.String())
+			// Convert the gap to RUNE value using the pool
+			pool, err := mgr.Keeper().GetPool(ctx, c.Asset.GetLayer1Asset())
+			if err != nil {
+				ctx.Logger().Error("fail to get pool for solvency check", "asset", c.Asset.String(), "error", err)
+				// If we can't get the pool, treat as insolvent to be safe
+				return true
+			}
+			gapInRune := pool.AssetValueInRune(gap)
+			// If pool has no liquidity, we can't value the gap - skip this asset
+			// (this allows solvency checks to continue for chains with empty pools)
+			if gapInRune.IsZero() && !gap.IsZero() {
+				ctx.Logger().Info("cannot value gap for solvency check (pool has no liquidity)", "asset", c.Asset.String(), "gap", gap.String())
+				continue
+			}
+			if gapInRune.GT(permittedGapInRune) {
+				ctx.Logger().Info("vault has more asset than wallet, insolvent", "asset", c.Asset.String(), "vault amount", c.Amount.String(), "wallet amount", walletCoin.Amount.String(), "gap", gap.String(), "gap in rune", gapInRune.String(), "permitted gap in rune", permittedGapInRune.String())
 				return true
 			}
 		}
