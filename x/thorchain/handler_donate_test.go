@@ -48,7 +48,24 @@ func (HandlerDonateSuite) TestDonate(c *C) {
 	c.Assert(err, IsNil)
 	mgr := NewDummyMgrWithKeeper(w.keeper)
 	donateHandler := NewDonateHandler(mgr)
-	msg := NewMsgDonate(GetRandomTx(), common.DOGEAsset, cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress)
+
+	// Create a transaction with coins matching the donation amounts
+	runeAmount := cosmos.NewUint(common.One * 5)
+	assetAmount := cosmos.NewUint(common.One * 5)
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomDOGEAddress(),
+		GetRandomDOGEAddress(),
+		common.Coins{
+			common.NewCoin(common.RuneAsset(), runeAmount),
+			common.NewCoin(common.DOGEAsset, assetAmount),
+		},
+		common.Gas{
+			{Asset: common.DOGEAsset, Amount: cosmos.NewUint(37500)},
+		},
+		"DONATE:DOGE.DOGE",
+	)
+	msg := NewMsgDonate(tx, common.DOGEAsset, runeAmount, assetAmount, w.activeNodeAccount.NodeAddress)
 	_, err = donateHandler.Run(w.ctx, msg)
 	c.Assert(err, IsNil)
 	afterPool, err := w.keeper.GetPool(w.ctx, common.DOGEAsset)
@@ -113,4 +130,49 @@ func (HandlerDonateSuite) TestHandleMsgDonateValidation(c *C) {
 		_, err := donateHandler.Run(w.ctx, item.msg)
 		c.Check(errors.Is(err, item.expectedErr), Equals, true, Commentf("name:%s", item.name))
 	}
+}
+
+func (HandlerDonateSuite) TestDonateAmountMismatch(c *C) {
+	w := getHandlerTestWrapper(c, 1, true, true)
+	mgr := NewDummyMgrWithKeeper(w.keeper)
+	donateHandler := NewDonateHandler(mgr)
+
+	// Test case 1: Rune amount mismatch - message claims more rune than tx contains
+	txRune := cosmos.NewUint(common.One * 2)
+	txAsset := cosmos.NewUint(common.One * 5)
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomDOGEAddress(),
+		GetRandomDOGEAddress(),
+		common.Coins{
+			common.NewCoin(common.RuneAsset(), txRune),
+			common.NewCoin(common.DOGEAsset, txAsset),
+		},
+		common.Gas{
+			{Asset: common.DOGEAsset, Amount: cosmos.NewUint(37500)},
+		},
+		"DONATE:DOGE.DOGE",
+	)
+	// Claim more rune than what's in the transaction
+	msgRuneMismatch := NewMsgDonate(tx, common.DOGEAsset, cosmos.NewUint(common.One*10), txAsset, w.activeNodeAccount.NodeAddress)
+	_, err := donateHandler.Run(w.ctx, msgRuneMismatch)
+	c.Check(err, NotNil)
+	c.Check(err.Error(), Matches, ".*rune amount mismatch.*")
+
+	// Test case 2: Asset amount mismatch - message claims more asset than tx contains
+	msgAssetMismatch := NewMsgDonate(tx, common.DOGEAsset, txRune, cosmos.NewUint(common.One*10), w.activeNodeAccount.NodeAddress)
+	_, err = donateHandler.Run(w.ctx, msgAssetMismatch)
+	c.Check(err, NotNil)
+	c.Check(err.Error(), Matches, ".*asset amount mismatch.*")
+
+	// Test case 3: Both amounts mismatch
+	msgBothMismatch := NewMsgDonate(tx, common.DOGEAsset, cosmos.NewUint(common.One*100), cosmos.NewUint(common.One*100), w.activeNodeAccount.NodeAddress)
+	_, err = donateHandler.Run(w.ctx, msgBothMismatch)
+	c.Check(err, NotNil)
+	c.Check(err.Error(), Matches, ".*amount mismatch.*")
+
+	// Test case 4: Matching amounts should succeed
+	msgCorrect := NewMsgDonate(tx, common.DOGEAsset, txRune, txAsset, w.activeNodeAccount.NodeAddress)
+	_, err = donateHandler.Run(w.ctx, msgCorrect)
+	c.Assert(err, IsNil)
 }

@@ -3,6 +3,7 @@ package thorchain
 import (
 	"fmt"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -57,6 +58,22 @@ func (h DonateHandler) handle(ctx cosmos.Context, msg MsgDonate) error {
 	if pool.Asset.IsEmpty() {
 		return cosmos.ErrUnknownRequest(fmt.Sprintf("pool %s not exist", msg.Asset.String()))
 	}
+
+	// Verify that donation amounts match the coins in the observed transaction.
+	// This provides defense-in-depth validation. The amounts are derived from verified sources:
+	// - External chains: Bifrost observers verify actual on-chain transactions before reporting
+	// - Native chain: Cosmos SDK bank module ante handler validates transfers
+	// The getMsgDonateFromMemo function extracts amounts from tx.Tx.Coins, so this check
+	// ensures message integrity and guards against any potential manipulation.
+	txRuneCoin := msg.Tx.Coins.GetCoin(common.RuneAsset())
+	txAssetCoin := msg.Tx.Coins.GetCoin(msg.Asset)
+	if !msg.RuneAmount.Equal(txRuneCoin.Amount) {
+		return fmt.Errorf("rune amount mismatch: msg has %s but tx has %s", msg.RuneAmount, txRuneCoin.Amount)
+	}
+	if !msg.AssetAmount.Equal(txAssetCoin.Amount) {
+		return fmt.Errorf("asset amount mismatch: msg has %s but tx has %s", msg.AssetAmount, txAssetCoin.Amount)
+	}
+
 	pool.BalanceAsset = pool.BalanceAsset.Add(msg.AssetAmount)
 	pool.BalanceRune = pool.BalanceRune.Add(msg.RuneAmount)
 

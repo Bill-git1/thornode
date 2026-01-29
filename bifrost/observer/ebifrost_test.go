@@ -215,12 +215,20 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 			logger.Info().Msgf("Dialing %s from %s", ph.ID(), host.GetHost().ID())
 
 			var err error
-			for range 5 {
+			// Use more retries with exponential backoff to handle CI environment variability
+			backoffDelay := time.Millisecond * 100
+			for attempt := range 10 {
 				err = host.GetHost().Connect(ctx, peerInfo)
 				if err == nil {
 					break
 				}
-				time.Sleep(time.Millisecond * 100)
+				// Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1s, 1s, 1s, 1s, 1s, 1s
+				time.Sleep(backoffDelay)
+				if attempt < 4 {
+					backoffDelay *= 2
+				} else {
+					backoffDelay = time.Second
+				}
 			}
 			c.Assert(err, IsNil)
 		}
