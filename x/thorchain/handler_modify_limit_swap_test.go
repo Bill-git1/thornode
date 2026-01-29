@@ -965,6 +965,12 @@ func (s *HandlerModifyLimitSwapSuite) TestDonateToPool(c *C) {
 		donationAmount := cosmos.NewUint(25 * common.One)
 		fromAddr := GetRandomTHORAddress()
 
+		// For native assets (like synths), funds must be in Reserve module first
+		// (simulating what handler_deposit.go does when receiving a native deposit)
+		synthCoin := common.NewCoin(synthBTC, donationAmount)
+		c.Assert(mgr.Keeper().MintToModule(ctx, ModuleName, synthCoin), IsNil)
+		c.Assert(mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, ReserveName, common.NewCoins(synthCoin)), IsNil)
+
 		// Donate synth BTC (should go to BTC pool as asset)
 		err := handler.donateToPool(ctx, synthBTC, donationAmount, fromAddr)
 		c.Assert(err, IsNil)

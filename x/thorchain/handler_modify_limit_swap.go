@@ -151,6 +151,17 @@ func (h ModifyLimitSwapHandler) donateToPool(ctx cosmos.Context, asset common.As
 		return fmt.Errorf("pool does not exist for asset %s", asset)
 	}
 
+	// For native THORChain assets (RUNE, synths, etc.), transfer funds from Reserve to Asgard.
+	// The funds were deposited to Reserve by handler_deposit.go when processing the native deposit.
+	// Pool balances must be backed by actual funds in the Asgard module account.
+	// External chain assets (BTC, ETH, etc.) are observed via Bifrost and don't go through bank module.
+	if asset.IsNative() {
+		coin := common.NewCoin(asset, amount)
+		if err := h.mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, AsgardName, common.NewCoins(coin)); err != nil {
+			return fmt.Errorf("fail to transfer funds from reserve to asgard: %w", err)
+		}
+	}
+
 	// Add the amount to the appropriate balance
 	if asset.IsRune() {
 		pool.BalanceRune = pool.BalanceRune.Add(amount)
