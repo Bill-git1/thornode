@@ -997,16 +997,15 @@ func (s *HandlerModifyLimitSwapSuite) TestDonateToPool(c *C) {
 		c.Assert(btcPool.BalanceAsset.Equal(expectedBalance), Equals, true)
 	}
 
-	// Test Case 8: Donate RUNE - but this is incorrect usage
+	// Test Case 8: Donate RUNE - RUNE stays in Reserve, no pool donation
 	{
-		// When the asset is RUNE, donateToPool will try to get pool for RUNE itself
-		// which doesn't exist. This test verifies the error handling.
+		// When the asset is RUNE, donateToPool skips the donation since RUNE has no pool.
+		// The funds were already sent to Reserve by handler_deposit.go.
 		donationAmount := cosmos.NewUint(100 * common.One)
 		fromAddr := GetRandomTHORAddress()
 
-		// Try to donate RUNE (which should fail)
+		// RUNE donation should succeed (it just does nothing)
 		err := handler.donateToPool(ctx, common.RuneAsset(), donationAmount, fromAddr)
-		c.Assert(err, NotNil)
-		c.Assert(err.Error(), Matches, ".*pool does not exist.*")
+		c.Assert(err, IsNil)
 	}
 }
