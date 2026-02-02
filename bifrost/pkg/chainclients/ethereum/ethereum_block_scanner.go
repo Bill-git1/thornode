@@ -936,15 +936,35 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 			// Tx to a different contract, attempt to parse with max allowable logs
 			return e.getTxInFromSmartContract(tx, receipt, int64(e.cfg.MaxContractTxLogs))
 		default:
-			// Tx to a non-contract or vault address
-			return e.getTxInFromTransaction(tx, receipt)
+			// check if tx is from a vault (outbound)
+			sender, err := e.eipSigner.Sender(tx)
+			if err != nil {
+				return nil, nil // ignore tx if we cannot determine sender
+			}
+			isFromVault, _ := e.pubkeyMgr.IsValidPoolAddress(sender.String(), e.cfg.ChainID)
+			if isFromVault {
+				return e.getTxInFromTransaction(tx, receipt)
+			}
+			// ignore tx not involving any vault
+			return nil, nil
 		}
 	} else {
 		// parse tx with whitelist
 		if e.isToValidContractAddress(tx.To(), true) {
 			return e.getTxInFromSmartContract(tx, receipt, 0)
 		}
-		return e.getTxInFromTransaction(tx, receipt)
+		// check if tx is to or from a vault
+		sender, err := e.eipSigner.Sender(tx)
+		if err != nil {
+			return nil, nil // ignore tx if we cannot determine sender
+		}
+		isFromVault, _ := e.pubkeyMgr.IsValidPoolAddress(sender.String(), e.cfg.ChainID)
+		isToVault, _ := e.pubkeyMgr.IsValidPoolAddress(tx.To().String(), e.cfg.ChainID)
+		if isFromVault || isToVault {
+			return e.getTxInFromTransaction(tx, receipt)
+		}
+		// ignore tx not involving any vault
+		return nil, nil
 	}
 }
 
