@@ -616,6 +616,13 @@ func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInIte
 				txs = append(txs, tx)
 			}
 		}
+
+		// skip creating a duplicate cancel observation
+		isCancel := txInItem.Sender == txInItem.To && txInItem.Memo == ""
+		if isCancel {
+			continue
+		}
+
 		// check if the to address is a valid pool address
 		// for inbound message , if it is still in mempool , it will be ignored unless it is internal transaction
 		// internal tx means both from & to addresses belongs to the network. for example migrate/consolidate
