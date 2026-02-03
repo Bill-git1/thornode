@@ -78,6 +78,14 @@ func (h BondHandler) validate(ctx cosmos.Context, msg MsgBond) error {
 		return cosmos.ErrUnknownRequest(fmt.Sprintf("bonding address is NOT a THORChain address: %s", msg.BondAddress.String()))
 	}
 
+	// Validate bond provider address is a THORChain address if provided
+	if !msg.BondProviderAddress.Empty() {
+		bondProviderAddr := common.Address(msg.BondProviderAddress.String())
+		if !bondProviderAddr.IsChain(common.THORChain) {
+			return cosmos.ErrUnknownRequest(fmt.Sprintf("bond provider address is NOT a THORChain address: %s", msg.BondProviderAddress.String()))
+		}
+	}
+
 	bp, err := h.mgr.Keeper().GetBondProviders(ctx, msg.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to get bond providers(%s)", msg.NodeAddress))
@@ -112,6 +120,13 @@ func (h BondHandler) validate(ctx cosmos.Context, msg MsgBond) error {
 	return nil
 }
 
+// handle processes the bond message.
+// Note on multi-message transactions: This handler reads BondProviders state,
+// modifies it through multiple operations (Adjust, Bond, operator fee), then writes it back.
+// In a multi-message transaction, sequential bond messages for the same node will be processed
+// sequentially with each message seeing the updated state from the previous message.
+// The handler's Run method is wrapped in a CacheContext (see handler.go:40-41) which ensures
+// atomicity - if any message fails, all state changes from that message are rolled back.
 func (h BondHandler) handle(ctx cosmos.Context, msg MsgBond) (err error) {
 	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
@@ -153,8 +168,7 @@ func (h BondHandler) handle(ctx cosmos.Context, msg MsgBond) (err error) {
 	if acct == nil && nodeAccount.Bond.GTE(cosmos.NewUint(common.One)) {
 		coin := common.NewCoin(common.RuneNative, cosmos.NewUint(common.One))
 		if err = h.mgr.Keeper().SendFromModuleToAccount(ctx, BondName, msg.NodeAddress, common.NewCoins(coin)); err != nil {
-			ctx.Logger().Error("fail to send one RUNE to node address", "error", err)
-			nodeAccount.Status = NodeUnknown
+			return ErrInternal(err, "fail to send one RUNE to node address")
 		}
 		nodeAccount.Bond = common.SafeSub(nodeAccount.Bond, cosmos.NewUint(common.One))
 		msg.Bond = common.SafeSub(msg.Bond, cosmos.NewUint(common.One))

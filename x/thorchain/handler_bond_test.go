@@ -102,7 +102,7 @@ func (HandlerBondSuite) TestBondHandler_Run(c *C) {
 		},
 		"bond",
 	)
-	FundModule(c, ctx, k1, BondName, uint64(minimumBondInRune))
+	FundModule(c, ctx, k1, BondName, uint64(minimumBondInRune)+common.One)
 	msg := NewMsgBond(txIn, GetRandomValidatorNode(NodeStandby).NodeAddress, cosmos.NewUint(uint64(minimumBondInRune)+common.One), GetRandomTHORAddress(), nil, standbyNodeAccount.NodeAddress, -1)
 	_, err := handler.Run(ctx, msg)
 	c.Assert(err, IsNil)
@@ -228,6 +228,11 @@ func (HandlerBondSuite) TestBondProvider_Validate(c *C) {
 	err = handler.validate(ctx, *msg)
 	errCheck(c, err, "bonding address is NOT a THORChain address")
 
+	// BondProviderAddress validation is in place to ensure the address is a THORChain address.
+	// Since BondProviderAddress is of type cosmos.AccAddress, it is inherently bech32-encoded
+	// with THORChain's prefix when used in this codebase. The validation ensures any
+	// BondProviderAddress that somehow isn't a valid THORChain address is rejected.
+
 	// try to bond with a valid additional bond provider
 	bp := NewBondProviders(standbyNA)
 	bp.Providers = []BondProvider{NewBondProvider(additionalBondAddress)}
@@ -259,6 +264,9 @@ func (HandlerBondSuite) TestBondProvider_OperatorFee(c *C) {
 	amt := cosmos.NewUint(100 * common.One)
 	txIn := GetRandomTx()
 	txIn.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), amt))
+
+	// Fund the bond module with the bond amount (needed for first-time bond 1 RUNE transfer)
+	FundModule(c, ctx, k, BondName, amt.Uint64())
 
 	/* Test Validation and Handling */
 
