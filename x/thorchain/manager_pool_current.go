@@ -132,19 +132,21 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 				fee = pool.BalanceRune
 			}
 			if !fee.IsZero() {
-				pool.BalanceRune = common.SafeSub(pool.BalanceRune, fee)
-				if err := mgr.Keeper().SetPool(ctx, pool); err != nil {
-					ctx.Logger().Error("fail to save pool", "pool", pool.Asset, "err", err)
-				}
-
+				// Transfer fee to reserve first before modifying pool balance.
+				// If the transfer fails, skip pool balance reduction to avoid accounting mismatch.
 				if err := mgr.Keeper().AddPoolFeeToReserve(ctx, fee); err != nil {
 					ctx.Logger().Error("fail to add rune to reserve", "from pool", pool.Asset, "err", err)
-				}
+				} else {
+					pool.BalanceRune = common.SafeSub(pool.BalanceRune, fee)
+					if err := mgr.Keeper().SetPool(ctx, pool); err != nil {
+						ctx.Logger().Error("fail to save pool", "pool", pool.Asset, "err", err)
+					}
 
-				emitPoolBalanceChangedEvent(ctx,
-					NewPoolMod(pool.Asset, fee, false, cosmos.ZeroUint(), false),
-					"pool stage cost",
-					mgr)
+					emitPoolBalanceChangedEvent(ctx,
+						NewPoolMod(pool.Asset, fee, false, cosmos.ZeroUint(), false),
+						"pool stage cost",
+						mgr)
+				}
 			}
 			// check if the rune balance is zero, and asset balance IS NOT
 			// zero. This is because we don't want to abandon a pool that is in

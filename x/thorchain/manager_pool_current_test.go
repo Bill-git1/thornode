@@ -17,6 +17,8 @@ func (s *PoolMgrSuite) TestEnableNextPool(c *C) {
 	var err error
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
+	// Fund Asgard module with enough RUNE for staged pool fees
+	FundModule(c, ctx, k, AsgardName, 1000*common.One)
 	c.Assert(err, IsNil)
 	pool := NewPool()
 	pool.Asset = common.ETHAsset
@@ -86,6 +88,8 @@ func (s *PoolMgrSuite) TestEnableNextPool(c *C) {
 func (s *PoolMgrSuite) TestAbandonPool(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
+	// Fund Asgard module with enough RUNE for staged pool fees
+	FundModule(c, ctx, k, AsgardName, 1000*common.One)
 	usdAsset, err := common.NewAsset("ETH.TUSDB")
 	c.Assert(err, IsNil)
 	pool := NewPool()
@@ -176,6 +180,8 @@ func (s *PoolMgrSuite) TestAbandonPool(c *C) {
 func (s *PoolMgrSuite) TestDemotePoolWithLowLiquidityFees(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
+	// Fund Asgard module with enough RUNE for staged pool fees
+	FundModule(c, ctx, k, AsgardName, 1000*common.One)
 	usdAsset, err := common.NewAsset("ETH.TUSDB")
 	c.Assert(err, IsNil)
 	pool := NewPool()
