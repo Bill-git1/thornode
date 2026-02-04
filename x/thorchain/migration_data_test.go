@@ -90,3 +90,28 @@ func (s MigrationDataSuite) TestMigrate5to6AddressValidation(c *C) {
 		c.Assert(refund.amount > 0, Equals, true, Commentf("Amount at index %d should be positive: %d", i, refund.amount))
 	}
 }
+
+func (s MigrationDataSuite) TestVerifyTotal12to13(c *C) {
+	// verify total
+	sum := uint64(0)
+	for _, refund := range mainnetSlashRefunds12to13 {
+		sum += refund.amount
+	}
+	// $ https thornode-v2.ninerealms.com/thorchain/block height==24809168 | \
+	//   jq '[.txs[7].result.events[]|select(.bond_type=="bond_cost")|.amount|tonumber]|add'
+	// 53389901389659
+	totalBondSlash := 53389901389659
+
+	// NOTE: ~96 RUNE of slash was on the autobond contract, which cannot receive
+	// transfer. That amount is excluded from the refunds.
+	autoBondSlash := 9615118848
+	c.Assert(mainnetSlashRefunds12to13Total, Equals, uint64(totalBondSlash-autoBondSlash))
+	c.Assert(sum, Equals, mainnetSlashRefunds12to13Total)
+
+	// verify no duplicates
+	addresses := make(map[string]bool)
+	for _, refund := range mainnetSlashRefunds12to13 {
+		c.Assert(addresses[refund.address], Equals, false)
+		addresses[refund.address] = true
+	}
+}

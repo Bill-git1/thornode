@@ -408,3 +408,51 @@ func (m Migrator) Migrate11to12(ctx sdk.Context) error {
 
 	return nil
 }
+
+// Migrate12to13 migrates from version 12 to 13.
+func (m Migrator) Migrate12to13(ctx sdk.Context) error {
+	// Loads the manager for this migration (we are in the x/upgrade's preblock)
+	// Note, we do not require the manager loaded for this migration, but it is okay
+	// to load it earlier and this is the pattern for migrations to follow.
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	// ------------------------------ Bond Slash Refund ------------------------------
+
+	// Validate Reserve module has sufficient funds before starting refunds
+	totalRefundAmount := cosmos.NewUint(mainnetSlashRefunds12to13Total) // Total amount to be refunded
+	reserveBalance := m.mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
+	if reserveBalance.LT(totalRefundAmount) {
+		return fmt.Errorf("insufficient reserve balance for migration: have %s, need %s",
+			reserveBalance.String(), totalRefundAmount.String())
+	}
+	ctx.Logger().Info("Reserve balance validation passed",
+		"reserve_balance", reserveBalance.String(),
+		"required_amount", totalRefundAmount.String())
+
+	for _, slashRefund := range mainnetSlashRefunds12to13 {
+		recipient, err := cosmos.AccAddressFromBech32(slashRefund.address)
+		if err != nil {
+			ctx.Logger().Error("error parsing address in store migration",
+				"error", err,
+				"address", slashRefund.address)
+			continue
+		}
+		amount := cosmos.NewUint(slashRefund.amount)
+		refundCoins := common.NewCoins(common.NewCoin(common.RuneAsset(), amount))
+		if err := m.mgr.Keeper().SendFromModuleToAccount(ctx, ReserveName, recipient, refundCoins); err != nil {
+			ctx.Logger().Error("fail to store migration transfer RUNE from Reserve to recipient",
+				"error", err,
+				"recipient", recipient.String(),
+				"address", slashRefund.address,
+				"amount", amount.String())
+		} else {
+			ctx.Logger().Debug("successfully transferred bond slash refund",
+				"recipient", recipient.String(),
+				"amount", amount.String())
+		}
+	}
+
+	return nil
+}
