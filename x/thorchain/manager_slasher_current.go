@@ -983,11 +983,11 @@ func (s *SlasherImpl) needsNewVault(ctx cosmos.Context, mgr Manager, vault Vault
 					count++
 				}
 			}
-			// if a super majority of vault members have observed the outbound,
+			// if a simple majority of vault members have observed the outbound,
 			// then we should not reschedule. If a vault says it sent it, it
 			// sent it and shouldn't get another vault to send it (potentially
 			// a second time)
-			if count > 0 && HasSuperMajority(count, len(vault.Membership)) {
+			if count > 0 && HasSimpleMajority(count, len(vault.Membership)) {
 				return false
 			}
 			maxHeight := startHeight + ((int64(len(signers)) + 1) * signingTransPeriod)
