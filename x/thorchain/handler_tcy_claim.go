@@ -74,17 +74,22 @@ func (h TCYClaimHandler) handle(ctx cosmos.Context, msg MsgTCYClaim) (*cosmos.Re
 			continue
 		}
 
+		// Recheck module balance before each transfer to prevent double-spend
+		currentBalance := h.mgr.Keeper().GetBalanceOfModule(ctx, TCYClaimingName, common.TCY.Native())
+		if currentBalance.LT(claim.Amount) {
+			return &cosmos.Result{}, fmt.Errorf("insufficient module balance for claim: balance %s, claim_amount %s", currentBalance, claim.Amount)
+		}
+
 		ctx.Logger().Info("staking tcy claim", "l1_address", claim.L1Address.String(), "rune_address", msg.RuneAddress.String(), "amount", claim.Amount, "asset", claim.Asset.String())
 		coin := common.NewCoin(common.TCY, claim.Amount)
 		err = h.mgr.Keeper().SendFromModuleToModule(ctx, TCYClaimingName, TCYStakeName, common.NewCoins(coin))
 		if err != nil {
-			ctx.Logger().Error("failed to send from claiming to staking module", "err", err)
-			continue
+			return &cosmos.Result{}, fmt.Errorf("failed to send from claiming to staking module: %w", err)
 		}
 
 		err = h.mgr.Keeper().UpdateTCYStaker(ctx, msg.RuneAddress, claim.Amount)
 		if err != nil {
-			ctx.Logger().Error("failed to update tcy staker", "err", err)
+			return &cosmos.Result{}, fmt.Errorf("failed to update tcy staker: %w", err)
 		}
 
 		h.mgr.Keeper().DeleteTCYClaimer(ctx, claim.L1Address, claim.Asset)
@@ -95,5 +100,5 @@ func (h TCYClaimHandler) handle(ctx cosmos.Context, msg MsgTCYClaim) (*cosmos.Re
 		}
 	}
 
-	return &cosmos.Result{}, err
+	return &cosmos.Result{}, nil
 }
