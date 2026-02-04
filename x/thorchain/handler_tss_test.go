@@ -374,7 +374,7 @@ func (s *HandlerTssSuite) TestTssHandler(c *C) {
 			expectedResult: se.ErrUnknownRequest,
 		},
 		{
-			name: "fail to keygen with invalid blame node account address should return an error",
+			name: "blame node not in keygen participants should return an error",
 			messageCreator: func(helper tssHandlerTestHelper) cosmos.Msg {
 				sort.SliceStable(helper.members, func(i, j int) bool {
 					return helper.members[i].String() < helper.members[j].String()
@@ -403,7 +403,7 @@ func (s *HandlerTssSuite) TestTssHandler(c *C) {
 			runner: func(handler TssHandler, msg cosmos.Msg, helper tssHandlerTestHelper) (*cosmos.Result, error) {
 				return handler.Run(helper.ctx, msg)
 			},
-			expectedResult: errInternal,
+			expectedResult: se.ErrUnknownRequest,
 		},
 		{
 			name: "fail to keygen retry should be slashed",

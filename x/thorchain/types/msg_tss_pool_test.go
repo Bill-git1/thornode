@@ -76,3 +76,87 @@ func (s *MsgTssPoolSuite) TestMsgTssPool(c *C) {
 	c.Assert(err3, NotNil)
 	c.Check(errors.Is(err3, se.ErrUnknownRequest), Equals, true)
 }
+
+func (s *MsgTssPoolSuite) TestMsgTssPoolBlameNodesValidation(c *C) {
+	pk := GetRandomPubKey()
+	pks := []string{
+		GetRandomPubKey().String(), GetRandomPubKey().String(), GetRandomPubKey().String(),
+	}
+	addr, err := common.PubKey(pks[0]).GetThorAddress()
+	c.Assert(err, IsNil)
+	keygenTime := int64(1024)
+
+	// Valid: blame nodes are keygen participants with no duplicates
+	blame := []Blame{
+		{
+			FailReason: "test",
+			BlameNodes: []Node{
+				{Pubkey: pks[0]},
+				{Pubkey: pks[1]},
+			},
+		},
+	}
+	msg, err := NewMsgTssPool(pks, pk, nil, nil, KeygenType_AsgardKeygen, 1, blame, nil, addr, keygenTime)
+	c.Assert(err, IsNil)
+	// This should fail due to missing chains, but the blame check should pass
+	err = msg.ValidateBasic()
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Not(Equals), "blame node not in keygen participants: unknown request")
+	c.Assert(err.Error(), Not(Equals), "duplicate blame node: unknown request")
+
+	// Invalid: blame node not in keygen participants
+	nonParticipantBlame := []Blame{
+		{
+			FailReason: "test",
+			BlameNodes: []Node{
+				{Pubkey: pks[0]},
+				{Pubkey: GetRandomPubKey().String()}, // not a keygen participant
+			},
+		},
+	}
+	msg2, err := NewMsgTssPool(pks, pk, nil, nil, KeygenType_AsgardKeygen, 1, nonParticipantBlame, nil, addr, keygenTime)
+	c.Assert(err, IsNil)
+	err = msg2.ValidateBasic()
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "blame node not in keygen participants: unknown request")
+	c.Check(errors.Is(err, se.ErrUnknownRequest), Equals, true)
+
+	// Invalid: duplicate blame nodes within same Blame
+	duplicateBlame := []Blame{
+		{
+			FailReason: "test",
+			BlameNodes: []Node{
+				{Pubkey: pks[0]},
+				{Pubkey: pks[0]}, // duplicate
+			},
+		},
+	}
+	msg3, err := NewMsgTssPool(pks, pk, nil, nil, KeygenType_AsgardKeygen, 1, duplicateBlame, nil, addr, keygenTime)
+	c.Assert(err, IsNil)
+	err = msg3.ValidateBasic()
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "duplicate blame node: unknown request")
+	c.Check(errors.Is(err, se.ErrUnknownRequest), Equals, true)
+
+	// Invalid: duplicate blame nodes across multiple Blame entries
+	duplicateAcrossBlame := []Blame{
+		{
+			FailReason: "test1",
+			BlameNodes: []Node{
+				{Pubkey: pks[0]},
+			},
+		},
+		{
+			FailReason: "test2",
+			BlameNodes: []Node{
+				{Pubkey: pks[0]}, // duplicate from first Blame
+			},
+		},
+	}
+	msg4, err := NewMsgTssPool(pks, pk, nil, nil, KeygenType_AsgardKeygen, 1, duplicateAcrossBlame, nil, addr, keygenTime)
+	c.Assert(err, IsNil)
+	err = msg4.ValidateBasic()
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "duplicate blame node: unknown request")
+	c.Check(errors.Is(err, se.ErrUnknownRequest), Equals, true)
+}

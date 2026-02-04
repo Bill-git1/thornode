@@ -105,6 +105,24 @@ func (m *MsgTssPool) ValidateBasic() error {
 	if len(m.PubKeys) > 100 {
 		return cosmos.ErrUnknownRequest("Must have no more then 100 pub keys")
 	}
+	// Validate blame nodes: all blamed pubkeys must be keygen participants and no duplicates.
+	// This prevents a malicious quorum from spamming blame against non-participants.
+	pubKeySet := make(map[string]struct{}, len(m.PubKeys))
+	for _, pk := range m.PubKeys {
+		pubKeySet[pk] = struct{}{}
+	}
+	seenBlameNodes := make(map[string]struct{})
+	for _, b := range m.Blame {
+		for _, node := range b.BlameNodes {
+			if _, exists := pubKeySet[node.Pubkey]; !exists {
+				return cosmos.ErrUnknownRequest("blame node not in keygen participants")
+			}
+			if _, seen := seenBlameNodes[node.Pubkey]; seen {
+				return cosmos.ErrUnknownRequest("duplicate blame node")
+			}
+			seenBlameNodes[node.Pubkey] = struct{}{}
+		}
+	}
 	pks := m.GetPubKeys()
 	if len(m.PubKeys) != len(pks) {
 		return cosmos.ErrUnknownRequest("One or more pubkeys were not valid")
