@@ -139,6 +139,24 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transaction")
 	}
 
+	// Resolve reference memo before determining target module to ensure funds go to the correct module
+	if len(msg.Coins) > 0 && memo.GetType() == TxReferenceReadMemo {
+		asset := msg.Coins[0].Asset
+		// Create a temporary tx for resolution context
+		tempTx := common.NewTx(txID, from, common.NoAddress, msg.Coins, common.Gas{}, msg.Memo)
+		// Use current block height as observation height for native deposits (instant finality)
+		resolvedMemo := fetchMemoFromReference(ctx, h.mgr, asset, tempTx, ctx.BlockHeight())
+		preMemo := msg.Memo
+		msg.Memo = resolvedMemo
+		ctx.Logger().Info("reference memo conversion for native deposit", "pre", preMemo, "post", msg.Memo, "asset", asset)
+
+		// Re-parse the resolved memo
+		memo, err = ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
+		if err != nil {
+			return nil, ErrInternal(err, "invalid resolved memo")
+		}
+	}
+
 	var targetModule string
 	switch memo.GetType() {
 	case TxBond, TxUnBond, TxLeave, TxOperatorRotate:
@@ -172,24 +190,6 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 	to, err := h.mgr.Keeper().GetModuleAddress(targetModule)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get to address: %w", err)
-	}
-
-	// Resolve reference memo if needed before processing
-	if len(msg.Coins) > 0 && memo.GetType() == TxReferenceReadMemo {
-		asset := msg.Coins[0].Asset
-		// Create a temporary tx for resolution context
-		tempTx := common.NewTx(txID, from, to, msg.Coins, common.Gas{}, msg.Memo)
-		// Use current block height as observation height for native deposits (instant finality)
-		resolvedMemo := fetchMemoFromReference(ctx, h.mgr, asset, tempTx, ctx.BlockHeight())
-		preMemo := msg.Memo
-		msg.Memo = resolvedMemo
-		ctx.Logger().Info("reference memo conversion for native deposit", "pre", preMemo, "post", msg.Memo, "asset", asset)
-
-		// Re-parse the resolved memo
-		memo, err = ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
-		if err != nil {
-			return nil, ErrInternal(err, "invalid resolved memo")
-		}
 	}
 
 	tx := common.NewTx(txID, from, to, coinsInMsg, common.Gas{}, msg.Memo)
