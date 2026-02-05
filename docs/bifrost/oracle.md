@@ -74,12 +74,12 @@ For node operators that are running multiple nodes, it is sufficient if a single
 
 ## Configuration
 
-The price oracle itself has no special configuration besides logging verbosity, which defaults to `info` and an option to disable it completely. It is disabled by default.
+The price oracle itself has no special configuration besides logging verbosity, which defaults to `info` and an option to enable or disable it completely. It is disabled by default.
 
 ```golang
 type BifrostOracleConfiguration struct {
     LogLevel string `mapstructure:"log_level"`
-    Disabled bool   `mapstructure:"disabled"`
+    Enabled  bool   `mapstructure:"enabled"`
 }
 ```
 

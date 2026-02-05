@@ -93,7 +93,7 @@ func (p *BinanceProvider) Poll() {
 	}
 	path := fmt.Sprintf(
 		`/api/v3/ticker/24hr?type=MINI&symbols=["%s"]`,
-		strings.Join(symbols, ","),
+		strings.Join(symbols, `","`),
 	)
 
 	data, err := p.httpGet(path)

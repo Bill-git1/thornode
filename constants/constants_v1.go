@@ -162,7 +162,7 @@ func NewConstantValue() *ConstantVals {
 			DefaultPoolStatus:    "Staged",
 			DevFundAddress:       "thor1d8c0wv4y72kmlytegjmgx825xwumt9qt5xe07k", // dev fund address for ADR 18,  initially set via to address pre-funded 1M by TC treasury
 			MarketingFundAddress: "thor1usj8cqjmjea32csxn5fma96ffeulln40gyrahn", // marketing fund address for ADR 21
-			RequiredPriceFeeds:   "ATOM,AVAX,BCH,BNB,BTC,DOGE,ETH,LTC,RUNE,SOL,TRX,USDC,USDT,XRP",
+			RequiredPriceFeeds:   "ATOM,AVAX,BCH,BNB,BTC,DOGE,ETH,LTC,RUNE,SOL,TRX,USDC,USDT,XRP,ZEC",
 		},
 	}
 }
