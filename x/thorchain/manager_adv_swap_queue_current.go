@@ -839,27 +839,22 @@ func (vm *SwapQueueAdv) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager
 		// Process each expired swap for this height
 		for _, txHash := range expiredTxHashes {
 			// Try to find the swap in the advanced queue
-			// Check up to 5 possible indices for this txID
+			// Iterate until HasAdvSwapQueueItem returns false to handle all indices
 			found := false
-			for index := 0; index < 5; index++ {
-				if vm.k.HasAdvSwapQueueItem(ctx, txHash, index) {
-					swap, err := vm.k.GetAdvSwapQueueItem(ctx, txHash, index)
-					if err != nil {
-						ctx.Logger().Error("fail to get expired swap item", "error", err, "txID", txHash.String(), "index", index)
-						continue
-					}
+			for index := 0; vm.k.HasAdvSwapQueueItem(ctx, txHash, index); index++ {
+				swap, err := vm.k.GetAdvSwapQueueItem(ctx, txHash, index)
+				if err != nil {
+					ctx.Logger().Error("fail to get expired swap item", "error", err, "txID", txHash.String(), "index", index)
+					continue
+				}
 
-					// Verify this is actually a limit swap that should expire
-					if swap.IsLimitSwap() {
-						// Settle the expired swap
-						if err := settleSwap(ctx, mgr, swap, "limit swap expired"); err != nil {
-							ctx.Logger().Error("fail to settle expired limit swap", "error", err, "txID", txHash.String(), "index", index)
-						}
-						found = true
+				// Verify this is actually a limit swap that should expire
+				if swap.IsLimitSwap() {
+					// Settle the expired swap
+					if err := settleSwap(ctx, mgr, swap, "limit swap expired"); err != nil {
+						ctx.Logger().Error("fail to settle expired limit swap", "error", err, "txID", txHash.String(), "index", index)
 					}
-				} else {
-					// No swap found at this hash + index, break to avoid checking higher indices
-					break
+					found = true
 				}
 			}
 

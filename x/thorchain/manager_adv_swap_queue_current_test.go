@@ -3150,6 +3150,7 @@ func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwaps(c *C) {
 
 	// Expired swap (created at block 50, expires at 150, current is 200)
 	txID1 := GetRandomTxHash()
+
 	expiredSwap := types.MsgSwap{
 		Tx: common.Tx{
 			ID:    txID1,
@@ -3165,7 +3166,13 @@ func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwaps(c *C) {
 			Deposit:  cosmos.NewUint(1 * common.One),
 		},
 	}
-	c.Assert(k.SetAdvSwapQueueItem(ctx, expiredSwap), IsNil)
+
+	// Add multiple items to test proper removal
+	indexes := 10
+	for i := 0; i < indexes; i++ {
+		expiredSwap.Index = uint32(i)
+		c.Assert(k.SetAdvSwapQueueItem(ctx, expiredSwap), IsNil)
+	}
 
 	// Non-expired swap (created at block 150, expires at 250, current is 200)
 	txID2 := GetRandomTxHash()
