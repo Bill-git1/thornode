@@ -825,7 +825,8 @@ func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset,
 		// Ensure transaction was observed after the reference memo was created
 		if txObservationHeight <= refMemo.Height {
 			ctx.Logger().Info("transaction observed before reference memo creation", "tx_height", txObservationHeight, "memo_height", refMemo.Height, "reference", m.Reference)
-			// Track failure usage
+			// Track usage for audit purposes - we intentionally track all usage attempts (including failures)
+			// to maintain a record of who tried to use the reference memo, even if the attempt was invalid.
 			trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
 			return ""
 		}
@@ -836,8 +837,8 @@ func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset,
 			maxUse := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnMaxUse)
 			if maxUse > 0 && refMemo.GetUsageCount() >= maxUse {
 				ctx.Logger().Info("reference memo usage limit exceeded in fetchMemoFromReference", "reference", m.Reference, "usage_count", refMemo.GetUsageCount(), "max_use", maxUse)
-
-				// Track failure usage
+				// Track usage for audit purposes - we intentionally track all usage attempts (including failures)
+				// to maintain a record of who tried to use the reference memo, even if the attempt was invalid.
 				trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
 				return ""
 			}
@@ -847,7 +848,8 @@ func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset,
 			return refMemo.Memo
 		}
 
-		// Track failure usage
+		// Track usage for audit purposes - we intentionally track all usage attempts (including failures)
+		// to maintain a record of who tried to use the reference memo, even if the attempt was invalid (expired).
 		trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
 		return ""
 	}

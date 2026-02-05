@@ -306,7 +306,7 @@ func (s *HandlerObservedTxHelpersSuite) TestReferenceMemoIntegrationWithUsageLim
 	resolvedMemo = fetchMemoFromReference(ctx, mgr, common.BTCAsset, testTx3, 3) // tx observed at height 3, memo created at height 0
 	c.Assert(resolvedMemo, Equals, "")
 
-	// Verify usage count is 2
+	// Verify usage count is 3 (all attempts are tracked for audit purposes, including failures)
 	updatedRefMemo, err := mgr.Keeper().GetReferenceMemo(ctx, common.BTCAsset, refID)
 	c.Assert(err, IsNil)
 	c.Assert(updatedRefMemo.GetUsageCount(), Equals, int64(3))

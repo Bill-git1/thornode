@@ -942,11 +942,12 @@ func (s *HandlerObservedTxInSuite) TestMemoUsageTracking(c *C) {
 	memo = fetchMemoFromReference(ctx, mgr, asset, testTx2, 17) // tx observed at height 17, memo created at height 15
 	c.Check(memo, check.Equals, "", check.Commentf("Second usage should fail"))
 
-	// Verify usage count incremented
+	// Verify usage count is 2 (all attempts are tracked for audit purposes, including failures)
 	updatedMemo, err = mgr.Keeper().GetReferenceMemo(ctx, asset, "12345")
 	c.Assert(err, check.IsNil)
 	c.Check(updatedMemo.GetUsageCount(), check.Equals, int64(2))
 	c.Check(updatedMemo.HasBeenUsedBy(txID1), check.Equals, true)
+	c.Check(updatedMemo.HasBeenUsedBy(txID2), check.Equals, true, check.Commentf("Failed validation should still be tracked for audit purposes"))
 
 	// Test duplicate tracking - same txID called again should not increase count
 	testTx3 := common.NewTx(txID1, common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:12345")
