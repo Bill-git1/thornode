@@ -573,6 +573,10 @@ func handleObservedTxOutQuorum(
 	}
 
 	txOut := voter.GetTx(activeNodeAccounts) // get consensus tx, in case our for loop is incorrect
+	if txOut == nil || txOut.IsEmpty() {
+		ctx.Logger().Error("fail to get consensus tx from voter", "txid", tx.Tx.ID)
+		return fmt.Errorf("fail to get consensus tx from voter: %s", tx.Tx.ID)
+	}
 	txOut.Tx.Memo = tx.Tx.Memo
 
 	// For memoless outbounds, look up the original memo from the scheduled TxOutItem
@@ -641,7 +645,7 @@ func handleObservedTxOutQuorum(
 	vault, err := k.GetVault(ctx, tx.ObservedPubKey)
 	if err != nil {
 		ctx.Logger().Error("fail to get vault", "error", err)
-		return nil
+		return fmt.Errorf("fail to get vault for outbound tx: %w", err)
 	}
 
 	// if the vault was slashed we skipped the gas manager above and deduct gas directly
