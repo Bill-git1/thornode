@@ -180,6 +180,8 @@ elif [ "$NET" = "mainnet" ]; then
   THOR_HEIGHT=$(curl -sL --fail -m 10 https://rpc.ninerealms.com/status | jq -r ".result.sync_info.latest_block_height")
 elif [ "$NET" = "stagenet" ]; then
   THOR_HEIGHT=$(curl -sL --fail -m 10 https://stagenet-rpc.ninerealms.com/status | jq -r ".result.sync_info.latest_block_height")
+elif [ "$NET" = "chainnet" ]; then
+  THOR_HEIGHT=$(curl -sL --fail -m 10 https://chainnet-rpc.thorchain.network/status | jq -r ".result.sync_info.latest_block_height")
 else
   THOR_HEIGHT=$THOR_SYNC_HEIGHT
 fi
@@ -325,6 +327,9 @@ if [ "$PUB_KEY" != "null" ]; then
   EXPLORER="https://thorchain.net"
   if [ "$NET" = "stagenet" ]; then
     EXPLORER="https://stagenet.thorchain.net"
+  fi
+  if [ "$NET" = "chainnet" ]; then
+    EXPLORER="https://chainnet.thorchain.net"
   fi
   if [ -n "$MEMBER_ACTIVE" ]; then
     echo "  Active Member: $EXPLORER/address/$MEMBER_ACTIVE"

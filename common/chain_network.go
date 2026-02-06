@@ -13,9 +13,12 @@ const (
 	MockNet
 	// Stagenet network for stagenet
 	StageNet
+	// ChainNet network for chainnet
+	ChainNet
 )
 
-// Soft Equals check is mainnet == mainet, or mocknet == mocknet
+// SoftEquals groups networks into MainNet vs non-MainNet.
+// Returns true if both are MainNet, or both are non-MainNet.
 func (net ChainNetwork) SoftEquals(net2 ChainNetwork) bool {
 	if net == MainNet && net2 == MainNet {
 		return true

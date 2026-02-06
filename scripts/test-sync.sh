@@ -4,15 +4,19 @@ set -euo pipefail
 
 NET=$1
 
-# only mainnet and stagenet are supported
-if [ "${NET}" != "mainnet" ] && [ "${NET}" != "stagenet" ]; then
-  echo "Unsupported network: ${NET}. Only 'mainnet' and 'stagenet' are supported."
+# only mainnet, stagenet, and chainnet are supported
+if [ "${NET}" != "mainnet" ] && [ "${NET}" != "stagenet" ] && [ "${NET}" != "chainnet" ]; then
+  echo "Unsupported network: ${NET}. Only 'mainnet', 'stagenet', and 'chainnet' are supported."
   exit 1
 fi
 
 if [ "${NET}" = "mainnet" ]; then
   CHAIN_ID=thorchain-1
   SNAPSHOTS_URL=https://snapshots.ninerealms.com
+elif [ "${NET}" = "chainnet" ]; then
+  CHAIN_ID=thorchain-chainnet-1
+  SNAPSHOTS_URL=https://chainnet-snapshots.thorchain.network
+  EXTRA_ARGS="-e THOR_SEED_NODES_ENDPOINT=https://chainnet-thornode.thorchain.network/thorchain/nodes"
 else
   CHAIN_ID=thorchain-stagenet-2
   SNAPSHOTS_URL=https://stagenet-snapshots.ninerealms.com

@@ -9,6 +9,7 @@ PORT_P2P=26656
 PORT_RPC=26657
 [ "$NET" = "mainnet" ] && PORT_P2P=27146 && PORT_RPC=27147
 [ "$NET" = "stagenet" ] && PORT_P2P=27146 && PORT_RPC=27147
+[ "$NET" = "chainnet" ] && PORT_P2P=27146 && PORT_RPC=27147
 export PORT_P2P PORT_RPC
 
 # validate required environment
@@ -135,6 +136,8 @@ set_bond_module() {
     BOND_MODULE_ADDR="tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff"
   elif [ "$NET" = "stagenet" ]; then
     BOND_MODULE_ADDR="sthor17gw75axcnr8747pkanye45pnrwk7p9c3ve0wxj"
+  elif [ "$NET" = "chainnet" ]; then
+    BOND_MODULE_ADDR="cthor17gw75axcnr8747pkanye45pnrwk7p9c35sst6s"
   else
     echo "Unsupported NET: $NET"
     exit 1

@@ -1,5 +1,5 @@
-//go:build !testnet && !mocknet
-// +build !testnet,!mocknet
+//go:build !stagenet && !chainnet && !mocknet
+// +build !stagenet,!chainnet,!mocknet
 
 package utxo
 

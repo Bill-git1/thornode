@@ -1,5 +1,5 @@
-//go:build !stagenet && !mocknet
-// +build !stagenet,!mocknet
+//go:build !stagenet && !chainnet && !mocknet
+// +build !stagenet,!chainnet,!mocknet
 
 package common
 

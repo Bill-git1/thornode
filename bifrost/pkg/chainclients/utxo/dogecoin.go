@@ -16,9 +16,7 @@ func (c *Client) getChainCfgDOGE() *dogechaincfg.Params {
 	switch common.CurrentChainNetwork {
 	case common.MockNet:
 		return &dogechaincfg.RegressionNetParams
-	case common.MainNet:
-		return &dogechaincfg.MainNetParams
-	case common.StageNet:
+	case common.MainNet, common.StageNet, common.ChainNet:
 		return &dogechaincfg.MainNetParams
 	default:
 		c.log.Fatal().Msg("unsupported network")

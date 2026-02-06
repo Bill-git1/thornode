@@ -144,6 +144,8 @@ lint:
       when: never
     - if: $CI_COMMIT_BRANCH == "stagenet"
       when: never
+    - if: $CI_COMMIT_BRANCH == "chainnet"
+      when: never
     - if: $CI_COMMIT_BRANCH == "mainnet"
       when: never
     - if: $CI == "true"
@@ -159,6 +161,8 @@ check-formatting:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI_COMMIT_BRANCH == "stagenet"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "chainnet"
       when: never
     - if: $CI_COMMIT_BRANCH == "mainnet"
       when: never
@@ -178,6 +182,8 @@ build-thornode:
     - if: $CI_COMMIT_BRANCH == "develop"
       when: always
     - if: $CI_COMMIT_BRANCH == "stagenet"
+      when: always
+    - if: $CI_COMMIT_BRANCH == "chainnet"
       when: always
     - if: $CI_COMMIT_BRANCH == "mainnet"
       when: always

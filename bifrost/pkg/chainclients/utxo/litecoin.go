@@ -17,9 +17,7 @@ func (c *Client) getChainCfgLTC() *ltcchaincfg.Params {
 	switch cn {
 	case common.MockNet:
 		return &ltcchaincfg.RegressionNetParams
-	case common.MainNet:
-		return &ltcchaincfg.MainNetParams
-	case common.StageNet:
+	case common.MainNet, common.StageNet, common.ChainNet:
 		return &ltcchaincfg.MainNetParams
 	}
 	return nil

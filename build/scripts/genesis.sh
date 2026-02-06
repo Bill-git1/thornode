@@ -70,6 +70,19 @@ genesis_init() {
     set_bond_module # set bond module balance for invariant
   fi
 
+  if [ "$NET" = "chainnet" ]; then
+    if [ -z ${FAUCET+x} ]; then
+      echo "env variable 'FAUCET' is not defined: should be a cthor address"
+      exit 1
+    fi
+    # 400M RUNE to faucet + 50M to reserve = 450M of 500M MaxRuneSupply
+    add_account "$FAUCET" rune 40000000000000000
+
+    reserve 5000000000000000
+
+    set_bond_module # set bond module balance for invariant
+  fi
+
   if [ -n "${ETH_CONTRACT+x}" ]; then
     echo "ETH Contract Address: $ETH_CONTRACT"
     set_eth_contract "$ETH_CONTRACT"

@@ -100,8 +100,8 @@ func slack(webhook, title string, lines []string, level Level, fields *util.Orde
 	// join the lines into a single message
 	message := strings.Join(lines, "\n")
 
-	// add stagenet params
-	message = stagenetQueryParams(message)
+	// add network params
+	message = nonMainnetQueryParams(message)
 
 	// replace markdown links with slack links
 	message = reLinkMdToSlack.ReplaceAllString(message, "<$2|$1>")
@@ -169,8 +169,8 @@ func console(category, title string, lines []string, level Level, fields *util.O
 		// strip markdown line formatting
 		line = util.StripMarkdownLinks(line)
 
-		// add stagenet params
-		line = stagenetQueryParams(line)
+		// add network params
+		line = nonMainnetQueryParams(line)
 
 		// replace emojis
 		line = strings.ReplaceAll(line, config.EmojiMoneybag, "💰")
@@ -205,14 +205,15 @@ func pagerduty(webhook, title string, lines []string, fields *util.OrderedMap) e
 	return nil
 }
 
-// stagenetQueryParam adds ?network=stagenet to explorer and tracker links.
-func stagenetQueryParams(msg string) string {
-	if config.Get().Network == "stagenet" {
+// nonMainnetQueryParams adds ?network=<network> to explorer and tracker links for non-mainnet networks.
+func nonMainnetQueryParams(msg string) string {
+	network := config.Get().Network
+	if network != "" && network != "mainnet" {
 		reExplorer := regexp.MustCompile(fmt.Sprintf(`%s[^\s()]+`, config.Get().Links.Explorer))
 		reTracker := regexp.MustCompile(fmt.Sprintf(`%s[^\s()]+`, config.Get().Links.Track))
 
-		msg = reExplorer.ReplaceAllString(msg, "$0?network=stagenet")
-		msg = reTracker.ReplaceAllString(msg, "$0?network=stagenet")
+		msg = reExplorer.ReplaceAllString(msg, fmt.Sprintf("$0?network=%s", network))
+		msg = reTracker.ReplaceAllString(msg, fmt.Sprintf("$0?network=%s", network))
 	}
 	return msg
 }

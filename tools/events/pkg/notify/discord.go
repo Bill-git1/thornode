@@ -42,8 +42,8 @@ func discord(webhook, title string, block int64, lines []string, level Level, fi
 			continue
 		}
 
-		// add stagenet params to any urls
-		vString = stagenetQueryParams(vString)
+		// add network params to any urls
+		vString = nonMainnetQueryParams(vString)
 
 		embed.Fields = append(embed.Fields, DiscordEmbedField{
 			Name:   k,

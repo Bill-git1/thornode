@@ -33,6 +33,20 @@ func main() {
 		config.SetBech32PrefixForValidator("thorv", "thorvpub")
 		config.SetBech32PrefixForConsensusNode("thorc", "thorcpub")
 		config.Seal()
+	case common.StageNet:
+		fmt.Println("THORChain stagenet:")
+		config := cosmos.GetConfig()
+		config.SetBech32PrefixForAccount("sthor", "sthorpub")
+		config.SetBech32PrefixForValidator("sthorv", "sthorvpub")
+		config.SetBech32PrefixForConsensusNode("sthorc", "sthorcpub")
+		config.Seal()
+	case common.ChainNet:
+		fmt.Println("THORChain chainnet:")
+		config := cosmos.GetConfig()
+		config.SetBech32PrefixForAccount("cthor", "cthorpub")
+		config.SetBech32PrefixForValidator("cthorv", "cthorvpub")
+		config.SetBech32PrefixForConsensusNode("cthorc", "cthorcpub")
+		config.Seal()
 	}
 
 	pk, err := common.NewPubKey(*raw)

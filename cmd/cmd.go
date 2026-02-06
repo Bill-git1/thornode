@@ -1,5 +1,5 @@
-//go:build !mocknet && !stagenet
-// +build !mocknet,!stagenet
+//go:build !stagenet && !chainnet && !mocknet
+// +build !stagenet,!chainnet,!mocknet
 
 package cmd
 

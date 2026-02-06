@@ -210,6 +210,7 @@ test-go-tss:
 
 test-network-specific:
 	@go test -tags stagenet ${RUN_FLAG} ./common
+	@go test -tags chainnet ${RUN_FLAG} ./common
 	@go test -tags mainnet ${RUN_FLAG} ./common ./bifrost/pkg/chainclients/utxo/...
 	@go test -tags mocknet ${RUN_FLAG} ./common ./bifrost/pkg/chainclients/utxo/...
 
