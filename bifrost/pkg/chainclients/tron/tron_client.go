@@ -40,10 +40,14 @@ import (
 )
 
 const (
-	TimestampAccuracy        = 10 * time.Second
-	TimestampValidity        = 90 * time.Second
+	// TimestampValidity is the expiration duration for an outbound transaction. We use
+	// the thornode block time of the outbound height as the timestamp to preserve
+	// determinism, so the 20 minute expiration means the built transaction will be valid
+	// to broadcast for the first 20 minutes of the 30 minute signing period.
+	TimestampValidity = 20 * time.Minute
+
 	ConfirmationBlocks int64 = 1
-	FinalityBlocks           = 19
+	FinalityBlocks     int64 = 19
 )
 
 //go:embed abi/trc20.json
@@ -436,25 +440,33 @@ func (c *TronClient) SignTx(
 		}
 	}
 
-	timestamp := time.Now().UTC().
-		Truncate(TimestampAccuracy).
-		Add(TimestampAccuracy * -1).
-		UnixMilli()
+	// Get the THORChain block timestamp for determinism - all nodes query the same
+	// THORChain height and receive the same timestamp, preventing the race condition
+	// where nodes at different scan heights would have different refBlocks lists.
+	// Using time.Now() or scanner state would cause different transaction hashes
+	// and prevent TSS signing consensus.
+	thorTimestamp, err := c.bridge.GetBlockTimestamp(txOutItem.Height)
+	if err != nil {
+		c.logger.Err(err).Msg("failed to get THORChain block timestamp")
+		return nil, nil, nil, err
+	}
 
-	// Find reference block closest to timestamp of thorBlock
+	// Look 2 minutes back to reduce race around the latest scanned ref block
+	refTimestamp := thorTimestamp.Add(-2 * time.Minute)
+
+	// Convert to milliseconds for TRON
+	timestamp := thorTimestamp.UnixMilli()
+	refTimestampMs := refTimestamp.UnixMilli()
+
+	// Find the reference block closest to (but before) the THORChain timestamp
+	// This ensures the ref block is deterministic while still being valid for TRON
 	index := len(c.tronScanner.refBlocks) - 1
 	for i := index; i >= 0; i-- {
 		refBlock := c.tronScanner.refBlocks[i]
-		index = i
-
-		if refBlock.Timestamp < timestamp {
+		if refBlock.Timestamp <= refTimestampMs {
+			index = i
 			break
 		}
-	}
-
-	// If possible, use ref block before this one
-	if index > 0 {
-		index--
 	}
 
 	refBlock := c.tronScanner.refBlocks[index]
@@ -533,6 +545,17 @@ func (c *TronClient) BroadcastTx(
 	if err != nil {
 		c.logger.Err(err).Msg("failed to broadcast tx")
 		return "", err
+	}
+
+	// treat dup transaction as success - the transaction was already accepted
+	if !response.Result && response.Code == "DUP_TRANSACTION_ERROR" {
+		var tx api.Transaction
+		if unmarshalErr := json.Unmarshal(txBytes, &tx); unmarshalErr != nil {
+			return "", fmt.Errorf("failed to unmarshal tx for dup txid: %w", unmarshalErr)
+		}
+		c.logger.Info().Str("txid", tx.TxId).Msg("dup transaction treated as success")
+		response.Result = true
+		response.TxId = tx.TxId
 	}
 
 	// check the response

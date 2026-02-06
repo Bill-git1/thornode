@@ -24,11 +24,7 @@ import (
 	memo "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 )
 
-var (
-	refBlocksMax            = 10
-	refBlockInterval  int64 = 25
-	updateGasInterval int64 = 30
-)
+var updateGasInterval int64 = 30
 
 type ReportSolvency func(int64) error
 

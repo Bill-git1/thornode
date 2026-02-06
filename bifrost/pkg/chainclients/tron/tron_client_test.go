@@ -46,6 +46,16 @@ type TronTestSuite struct {
 	rpc     *httptest.Server
 }
 
+// mockBridge is a mock implementation of ThorchainBridge for testing
+type mockBridge struct {
+	thorclient.ThorchainBridge
+}
+
+func (m *mockBridge) GetBlockTimestamp(height int64) (time.Time, error) {
+	// Return a fixed timestamp that matches the test's refBlock
+	return time.Unix(0, 1749121581000*int64(time.Millisecond)), nil
+}
+
 var _ = Suite(&TronTestSuite{})
 
 var m *metrics.Metrics
@@ -124,10 +134,8 @@ func (s *TronTestSuite) SetUpSuite(c *C) {
 	localKeyManager, err := NewLocalKeyManager(keys)
 	c.Assert(err, IsNil)
 
-	bridge, err := thorclient.NewThorchainBridge(
-		clientConfig, s.metrics, keys,
-	)
-	c.Assert(err, IsNil)
+	// Use mock bridge for tests to avoid needing a real THORChain node
+	bridge := &mockBridge{}
 
 	whitelist := map[string]tokenlist.ERC20Token{
 		"TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs": {
@@ -257,6 +265,8 @@ func (s *TronTestSuite) TestSignAndBroadcastTx(c *C) {
 	// values used from scanner.refBlocks (api/test-tron/getnowblock.json)
 	c.Assert(tx.RawData.RefBlockBytes, Equals, "95b0")
 	c.Assert(tx.RawData.RefBlockHash, Equals, "e5029588a71f9689")
+	c.Assert(tx.RawData.Timestamp, Equals, int64(1749121581000))
+	c.Assert(tx.RawData.Expiration, Equals, 1749121581000+TimestampValidity.Milliseconds())
 	c.Assert(tx.RawData.Contract[0].Type, Equals, "TransferContract")
 	c.Assert(len(tx.Signature), Equals, 1)
 	c.Assert(len(tx.Signature[0]), Equals, 130)
