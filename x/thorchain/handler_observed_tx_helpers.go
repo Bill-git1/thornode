@@ -534,7 +534,7 @@ func handleObservedTxOutQuorum(
 
 	k := mgr.Keeper()
 
-	if isCancelTx(tx) {
+	if isCancelOrApprovalTx(tx) {
 		ctx.Logger().Info("skipping slash for cancel tx with empty memo", "txid", tx.Tx.ID)
 		// Credit gas to gas manager and deduct from vault (legit operational spend, no penalty)
 		// This also adds to fee_spent_rune for dynamic outbound fee calculation

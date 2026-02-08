@@ -28,6 +28,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/runners"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 
 	tssp "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
 
@@ -38,7 +39,6 @@ import (
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
-	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/aggregators"
@@ -752,6 +752,18 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		return nil, nil, nil, fmt.Errorf("fail to marshal nonce: %w", err)
 	}
 
+	// Check if allowance approval is needed (wrapped with mimir check)
+	approvalTx, err := c.checkAndApproveAllowance(tx, nonce)
+	if err != nil {
+		c.logger.Err(err).Msg("fail to check allowance")
+		return nil, nil, nil, err
+	}
+
+	// Update nonce if approval was needed
+	if approvalTx != nil {
+		nonce++
+	}
+
 	// Convert TxOutItem gas rate units to Wei.
 	_, gasRateUnitsPerOne := c.cfg.ChainID.GetGasUnits()
 	toiGasRateWei := cosmos.NewUint(uint64(tx.GasRate)).MulUint64(common.WeiPerOne).Quo(gasRateUnitsPerOne).BigInt()
@@ -939,7 +951,57 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 			effectiveBalance.String(), gasBalance.String(), pendingLiability.String(), requiredBalance.String())
 	}
 
-	rawTx, err := c.sign(createdTx, tx.VaultPubKey, height, tx)
+	// Declare rawTx at function level for proper scoping
+	var rawTx []byte
+
+	// If approval transaction was created, sign and broadcast it first
+	if approvalTx != nil {
+		// Sign approval transaction first
+		var approvalRawTx []byte
+		approvalRawTx, err = c.sign(approvalTx, tx.VaultPubKey, height, tx)
+		if err != nil {
+			c.logger.Err(err).Msg("fail to sign approval transaction")
+			return nil, nonceBytes, nil, fmt.Errorf("fail to sign approval transaction: %w", err)
+		}
+
+		// Broadcast approval transaction
+		broadcastTx := &etypes.Transaction{}
+		if err = broadcastTx.UnmarshalJSON(approvalRawTx); err != nil {
+			c.logger.Err(err).Msg("fail to unmarshal approval tx")
+			return nil, nonceBytes, nil, fmt.Errorf("fail to unmarshal approval transaction: %w", err)
+		}
+
+		ctx, cancel := c.getContext()
+		defer cancel()
+		err = c.client.SendTransaction(ctx, broadcastTx)
+		if err != nil && err.Error() != txpool.ErrAlreadyKnown.Error() && err.Error() != ecore.ErrNonceTooLow.Error() {
+			c.logger.Err(err).Str("hash", broadcastTx.Hash().String()).Msg("fail to broadcast approval transaction")
+			return nil, nonceBytes, nil, fmt.Errorf("fail to broadcast approval transaction: %w", err)
+		}
+
+		// If the approval transaction broadcast successfully, update the checkpoint nonce
+		nonceBytes, err = json.Marshal(nonce)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to marshal nonce: %w", err)
+		}
+
+		tokenAddr = getTokenAddressFromAsset(tx.Coins[0].Asset)
+		contractAddr = c.getSmartContractAddr(tx.VaultPubKey)
+
+		c.logger.Info().
+			Str("approval_txid", broadcastTx.Hash().String()).
+			Str("token", tokenAddr).
+			Str("router", contractAddr.String()).
+			Msg("successfully broadcast approval transaction")
+
+		// NOTE: Unlike unstuck transactions, approval transactions do NOT update signer cache
+		// because they are internal operations, not THORChain outbound transactions
+
+		// Only proceed with main transaction if approval succeeded
+	}
+
+	// Sign main transaction (only reached if no approval needed OR approval succeeded)
+	rawTx, err = c.sign(createdTx, tx.VaultPubKey, height, tx)
 	if err != nil || len(rawTx) == 0 {
 		return nil, nonceBytes, nil, fmt.Errorf("fail to sign message: %w", err)
 	}
@@ -982,7 +1044,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		)
 	}
 
-	return rawTx, nil, txIn, nil
+	return rawTx, nonceBytes, txIn, nil
 }
 
 // sign is design to sign a given message with keysign party and keysign wrapper
@@ -1367,4 +1429,170 @@ func (c *Client) ReportSolvency(ethBlockHeight int64) error {
 // ShouldReportSolvency with given block height , should chain client report Solvency to THORNode?
 func (c *Client) ShouldReportSolvency(height int64) bool {
 	return height%20 == 0
+}
+
+// checkAndApproveAllowance checks if token allowance is sufficient and creates an approval transaction if needed
+func (c *Client) checkAndApproveAllowance(tx stypes.TxOutItem, nonce uint64) (*etypes.Transaction, error) {
+	// Check if mimir is enabled for allowance checks
+	allowanceCheckEnabled, err := c.bridge.GetMimir(fmt.Sprintf(constants.MimirTemplateEVMAllowanceCheck, c.cfg.ChainID))
+	if err != nil {
+		c.logger.Err(err).Msg("fail to get EVMAllowanceCheck mimir")
+		return nil, nil // Continue without approval check if mimir lookup fails
+	}
+
+	// If mimir is not set or is 0, skip allowance check
+	if allowanceCheckEnabled <= 0 {
+		return nil, nil
+	}
+
+	// Only check allowance for single token transfers (not native asset transfers)
+	if len(tx.Coins) == 0 {
+		return nil, nil
+	} else if len(tx.Coins) > 1 {
+		return nil, errors.New("ethereum token tx cannot have more than 1 coin")
+	}
+
+	coin := tx.Coins[0]
+	tokenAddr := getTokenAddressFromAsset(coin.Asset)
+
+	// Skip native token transfers (ETH) - they don't need approval
+	if IsETH(tokenAddr) {
+		return nil, nil
+	}
+
+	// Get vault and router addresses
+	vaultAddr, err := tx.VaultPubKey.GetAddress(common.ETHChain)
+	if err != nil {
+		c.logger.Err(err).Msg("fail to get vault address")
+		return nil, errors.New("fail to get vault address")
+	}
+
+	contractAddr := c.getSmartContractAddr(tx.VaultPubKey)
+	if contractAddr.IsEmpty() {
+		c.logger.Debug().Msg("no router contract found, skipping allowance check")
+		return nil, errors.New("no router contract found for vault")
+	}
+
+	// Check current allowance: erc20.allowance(vault, router)
+	// This checks how much the router is currently allowed to spend from the vault's token balance
+	allowanceCallData, err := c.ethScanner.erc20ABI.Pack("allowance", ecommon.HexToAddress(vaultAddr.String()), ecommon.HexToAddress(contractAddr.String()))
+	if err != nil {
+		c.logger.Err(err).Msg("fail to pack allowance call data")
+		return nil, errors.New("fail to pack allowance call data")
+	}
+
+	// Call allowance function on the token contract
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	tokenContractAddr := ecommon.HexToAddress(tokenAddr)
+	result, err := c.client.CallContract(ctx, ethereum.CallMsg{
+		To:   &tokenContractAddr,
+		Data: allowanceCallData,
+	}, nil)
+	if err != nil {
+		c.logger.Err(err).Str("token", tokenAddr).Msg("fail to call allowance function")
+		return nil, errors.New("fail to call allowance function on token contract")
+	}
+
+	// Unpack allowance result
+	allowanceResult, err := c.ethScanner.erc20ABI.Unpack("allowance", result)
+	if err != nil {
+		c.logger.Err(err).Msg("fail to unpack allowance result")
+		return nil, errors.New("fail to unpack allowance result")
+	}
+
+	if len(allowanceResult) == 0 {
+		c.logger.Debug().Msg("empty allowance result")
+		return nil, errors.New("empty allowance result")
+	}
+
+	currentAllowance, ok := allowanceResult[0].(*big.Int)
+	if !ok {
+		c.logger.Error().Msg("invalid allowance result type")
+		return nil, errors.New("invalid allowance result type")
+	}
+
+	// Convert coin amount to proper decimals for comparison
+	// THORChain stores all amounts in 1e8 format, but ERC20 tokens can have 3-18 decimals
+	// convertSigningAmount handles the decimal conversion based on the token's actual decimals
+	transferAmount := coin.Amount.BigInt()
+	transferAmount = c.convertSigningAmount(transferAmount, tokenAddr)
+
+	// Check if current allowance is sufficient
+	if currentAllowance.Cmp(transferAmount) >= 0 {
+		// Allowance is sufficient, no approval needed
+		c.logger.Debug().
+			Str("token", tokenAddr).
+			Str("currentAllowance", currentAllowance.String()).
+			Str("requiredAmount", transferAmount.String()).
+			Msg("allowance sufficient, no approval needed")
+		return nil, nil
+	}
+
+	c.logger.Info().
+		Str("token", tokenAddr).
+		Str("vault", vaultAddr.String()).
+		Str("router", contractAddr.String()).
+		Str("currentAllowance", currentAllowance.String()).
+		Str("requiredAmount", transferAmount.String()).
+		Msg("insufficient allowance, creating approval transaction")
+
+	// Create approval transaction for maximum uint256 value to minimize future approvals
+	// erc20.approve(router, maxUint256): vault approves router to spend max amount
+	maxUint256 := new(big.Int)
+	maxUint256.Sub(maxUint256.Lsh(big.NewInt(1), 256), big.NewInt(1))
+
+	approvalData, err := c.ethScanner.erc20ABI.Pack("approve", ecommon.HexToAddress(contractAddr.String()), maxUint256)
+	if err != nil {
+		return nil, fmt.Errorf("fail to pack approval data: %w", err)
+	}
+
+	// Use the same gas price calculation as the main transaction
+	_, gasRateUnitsPerOne := c.cfg.ChainID.GetGasUnits()
+	toiGasRateWei := cosmos.NewUint(uint64(tx.GasRate)).MulUint64(common.WeiPerOne).Quo(gasRateUnitsPerOne).BigInt()
+
+	gasPrice := c.GetGasPrice()
+	if c.cfg.BlockScanner.FixedGasRate > 0 || gasPrice.Cmp(big.NewInt(0)) == 0 {
+		gasPrice = toiGasRateWei
+	} else {
+		// Apply same gas price logic as main transaction
+		lowerBound := toiGasRateWei
+		lowerBound.Mul(lowerBound, big.NewInt(2))
+		lowerBound.Div(lowerBound, big.NewInt(3))
+
+		gasPrice.Div(gasPrice, big.NewInt(common.One*100))
+		if gasPrice.Cmp(big.NewInt(0)) == 0 {
+			gasPrice = big.NewInt(1)
+		}
+		gasPrice.Mul(gasPrice, big.NewInt(common.One*100))
+
+		if gasPrice.Cmp(lowerBound) < 0 {
+			gasPrice = lowerBound
+		}
+	}
+
+	// Use the same gas limit as other non-aggregator transactions
+	approvalGasLimit := c.cfg.BlockScanner.MaxGasLimit
+
+	// Create approval transaction
+	approvalTx := etypes.NewTransaction(
+		nonce,
+		ecommon.HexToAddress(tokenAddr),
+		big.NewInt(0), // No ETH value for ERC20 approval
+		approvalGasLimit,
+		gasPrice,
+		approvalData,
+	)
+
+	c.logger.Info().
+		Str("token", tokenAddr).
+		Str("vault", vaultAddr.String()).
+		Str("router", contractAddr.String()).
+		Uint64("nonce", nonce).
+		Uint64("gasLimit", approvalGasLimit).
+		Str("gasPrice", gasPrice.String()).
+		Msg("created approval transaction")
+
+	return approvalTx, nil
 }

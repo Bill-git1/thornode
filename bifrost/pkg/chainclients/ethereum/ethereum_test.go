@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	types2 "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -33,11 +35,12 @@ import (
 func TestETHPackage(t *testing.T) { TestingT(t) }
 
 type EthereumSuite struct {
-	thordir  string
-	thorKeys *thorclient.Keys
-	bridge   thorclient.ThorchainBridge
-	m        *metrics.Metrics
-	server   *httptest.Server
+	thordir        string
+	thorKeys       *thorclient.Keys
+	bridge         thorclient.ThorchainBridge
+	m              *metrics.Metrics
+	server         *httptest.Server
+	mimirOverrides map[string]string
 }
 
 var _ = Suite(&EthereumSuite{})
@@ -61,6 +64,7 @@ func GetMetricForTest(c *C) *metrics.Metrics {
 }
 
 func (s *EthereumSuite) SetUpTest(c *C) {
+	s.mimirOverrides = nil
 	s.m = GetMetricForTest(c)
 	c.Assert(s.m, NotNil)
 	types2.SetupConfigForTest()
@@ -103,10 +107,40 @@ func (s *EthereumSuite) SetUpTest(c *C) {
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/lastblock/root.json")
 		case thorclient.NodeAccountEndpoint:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/nodeaccount/template.json")
-		case "/thorchain/mimir/key/MaxUTXOsToSpend":
-			_, err := rw.Write([]byte(`-1`))
+		case "/status":
+			rw.Header().Set("Content-Type", "application/json")
+			_, err := rw.Write([]byte(`{"result":{"node_info":{"network":"mocknet"}}}`))
 			c.Assert(err, IsNil)
 		default:
+			// Handle mimir and status endpoints (including double-slash normalization)
+			requestPath := req.RequestURI
+			requestPath = strings.Replace(requestPath, "//thorchain/mimir/key/", "/thorchain/mimir/key/", 1)
+			if strings.Contains(requestPath, "//status") {
+				requestPath = "/status"
+			}
+
+			if strings.HasPrefix(requestPath, "/thorchain/mimir/key/") {
+				mimirKey := strings.TrimPrefix(requestPath, "/thorchain/mimir/key/")
+				rw.Header().Set("Content-Type", "application/json")
+				if s.mimirOverrides != nil {
+					if value, exists := s.mimirOverrides[mimirKey]; exists {
+						_, err := rw.Write([]byte(value))
+						c.Assert(err, IsNil)
+						return
+					}
+				}
+				_, err := rw.Write([]byte(`-1`))
+				c.Assert(err, IsNil)
+				return
+			}
+
+			if requestPath == "/status" {
+				rw.Header().Set("Content-Type", "application/json")
+				_, err := rw.Write([]byte(`{"result":{"node_info":{"network":"mocknet"}}}`))
+				c.Assert(err, IsNil)
+				return
+			}
+
 			body, err := io.ReadAll(req.Body)
 			c.Assert(err, IsNil)
 			type RPCRequest struct {
@@ -170,7 +204,7 @@ func (s *EthereumSuite) SetUpTest(c *C) {
 				"contractAddress":"0x2a65aca4d5fc5b5c859090a6c34d164135398226",
 				"gasUsed":"0x4dc",
 				"effectiveGasPrice":"0x2540be400",
-				"logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+				"logsBloom":"0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 				"logs":[],
 				"status":"0x1"
 			}}`))
@@ -205,11 +239,20 @@ func (s *EthereumSuite) SetUpTest(c *C) {
 				c.Assert(err, IsNil)
 			}
 			if rpcRequest.Method == "eth_call" {
-				if string(rpcRequest.Params) == `[{"from":"0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da","input":"0x03b6a6730000000000000000000000009f4aab49a9cd8fc54dcb3701846f608a6f2c44da0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483","to":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44"},"latest"]` {
+				// Handle allowance() calls - return low allowance that needs approval
+				switch {
+				case strings.Contains(string(rpcRequest.Params), "0xdd62ed3e"):
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000000000000000003e8"}`)) // 1000 in hex
+					c.Assert(err, IsNil)
+				case string(rpcRequest.Params) == `[{"from":"0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da","input":"0x03b6a6730000000000000000000000009f4aab49a9cd8fc54dcb3701846f608a6f2c44da0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483","to":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44"},"latest"]`:
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":5,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
 					c.Assert(err, IsNil)
-				} else if string(rpcRequest.Params) == `[{"data":"0x95d89b41","from":"0x0000000000000000000000000000000000000000","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]` {
+				case string(rpcRequest.Params) == `[{"data":"0x95d89b41","from":"0x0000000000000000000000000000000000000000","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]`:
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"}`))
+					c.Assert(err, IsNil)
+				default:
+					// Default response for other eth_call (e.g., decimals)
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
 					c.Assert(err, IsNil)
 				}
 			}
@@ -787,4 +830,200 @@ func (s *EthereumSuite) TestSignTxChecksMemLiability(c *C) {
 	c.Assert(err, NotNil, Commentf("Second SignTx should fail due to liability"))
 	c.Assert(err.Error(), Matches, "insufficient gas asset balance.*")
 	c.Assert(rawTx2, IsNil)
+}
+
+func (s *EthereumSuite) TestCheckAndApproveAllowance(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+
+	chainConfig := config.BifrostChainConfiguration{
+		ChainID: common.ETHChain,
+		RPCHost: "http://" + s.server.Listener.Addr().String(),
+		BlockScanner: config.BifrostBlockScannerConfiguration{
+			StartBlockHeight:   1, // avoids querying thorchain for block height
+			HTTPRequestTimeout: time.Second,
+			MaxGasLimit:        80000,
+		},
+	}
+
+	e, err := NewClient(s.thorKeys, chainConfig, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(e, NotNil)
+
+	tokenAsset, err := common.NewAsset("ETH.USDC-0xA0b86a33E6441e60DDB6B6B84b7efF8e6f3C5d0C")
+	c.Assert(err, IsNil)
+
+	txOutItem := stypes.TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   common.Address("0x1234567890123456789012345678901234567890"),
+		VaultPubKey: e.localPubKey,
+		Coins: common.Coins{
+			common.NewCoin(tokenAsset, cosmos.NewUint(1000000)),
+		},
+		Memo:    "OUT:1234",
+		GasRate: 50,
+	}
+
+	// Test 1: Mimir disabled (default -1) → Skip approval
+	approvalTx, err := e.checkAndApproveAllowance(txOutItem, 100)
+	c.Assert(err, IsNil)
+	c.Assert(approvalTx, IsNil)
+
+	// Enable mimir for remaining tests to verify the coin-type skip paths
+	s.mimirOverrides = map[string]string{
+		"EVMAllowanceCheck-ETH": "1",
+	}
+	// Sleep for the bridge HTTP cache TTL (ThorchainBlockTime) so the new
+	// mimir value is picked up on the next query.
+	time.Sleep(constants.ThorchainBlockTime)
+
+	// Test 2: Native asset → Skip approval (even with mimir enabled)
+	txOutItemNative := txOutItem
+	txOutItemNative.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+	}
+	approvalTx, err = e.checkAndApproveAllowance(txOutItemNative, 100)
+	c.Assert(err, IsNil)
+	c.Assert(approvalTx, IsNil)
+
+	// Test 3: Multiple coins → Error
+	txOutItemMultiple := txOutItem
+	txOutItemMultiple.Coins = common.Coins{
+		common.NewCoin(tokenAsset, cosmos.NewUint(1000000)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+	}
+	approvalTx, err = e.checkAndApproveAllowance(txOutItemMultiple, 100)
+	c.Assert(err, NotNil)
+	c.Assert(approvalTx, IsNil)
+
+	// Test 4: Empty coins array → Skip approval
+	txOutItemEmpty := txOutItem
+	txOutItemEmpty.Coins = common.Coins{}
+	approvalTx, err = e.checkAndApproveAllowance(txOutItemEmpty, 100)
+	c.Assert(err, IsNil)
+	c.Assert(approvalTx, IsNil)
+
+	// Test 5: Mimir enabled with insufficient allowance → Approval tx created
+	// Mock returns allowance of 1000 (insufficient for 10 USDC)
+	txOutItem.Coins = common.Coins{
+		common.NewCoin(tokenAsset, cosmos.NewUint(1000000000)), // 10 USDC
+	}
+	approvalTx, err = e.checkAndApproveAllowance(txOutItem, 100)
+	c.Assert(err, IsNil)
+	c.Assert(approvalTx, NotNil) // Approval tx created since allowance is insufficient
+}
+
+func (s *EthereumSuite) TestSignTxWithAllowanceFlow(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+
+	chainConfig := config.BifrostChainConfiguration{
+		ChainID: common.ETHChain,
+		RPCHost: "http://" + s.server.Listener.Addr().String(),
+		BlockScanner: config.BifrostBlockScannerConfiguration{
+			StartBlockHeight:   1, // avoids querying thorchain for block height
+			HTTPRequestTimeout: time.Second,
+			MaxGasLimit:        80000,
+		},
+	}
+	chainConfig.EVM.TokenMaxGasMultiplier = 3
+
+	e, err := NewClient(s.thorKeys, chainConfig, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(e, NotNil)
+	e.signingReady.Store(true)
+
+	pubkeys := pubkeyMgr.GetPubKeys()
+	addr, err := pubkeys[len(pubkeys)-1].GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+
+	// Test SignTx with native asset (should work normally)
+	result, checkpoint, obs, err := e.SignTx(stypes.TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   addr,
+		VaultPubKey: e.localPubKey,
+		Coins: common.Coins{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(checkpoint, NotNil)
+	c.Assert(obs, NotNil)
+
+	// Verify nonce is serialized in checkpoint
+	var nonce uint64
+	err = json.Unmarshal(checkpoint, &nonce)
+	c.Assert(err, IsNil)
+	c.Assert(nonce, Equals, uint64(0)) // First transaction from address
+
+	// Test SignTx with token asset (allowance check called but skipped due to disabled mimir)
+	tokenAsset, err := common.NewAsset("ETH.USDC-0xA0b86a33E6441e60DDB6B6B84b7efF8e6f3C5d0C")
+	c.Assert(err, IsNil)
+
+	result, checkpoint, obs, err = e.SignTx(stypes.TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   addr,
+		VaultPubKey: e.localPubKey,
+		Coins: common.Coins{
+			common.NewCoin(tokenAsset, cosmos.NewUint(1000000)), // 1 USDC
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(checkpoint, NotNil)
+	c.Assert(obs, NotNil)
+
+	// Verify nonce is serialized in checkpoint
+	err = json.Unmarshal(checkpoint, &nonce)
+	c.Assert(err, IsNil)
+	c.Assert(nonce, Equals, uint64(0)) // First transaction from address
+
+	// Sleep for bridge cache TTL so the disabled mimir response expires
+	time.Sleep(constants.ThorchainBlockTime)
+
+	// Enable the allowance check via mimir
+	s.mimirOverrides = map[string]string{
+		"EVMAllowanceCheck-ETH": "1",
+	}
+
+	// Test SignTx with token asset and enabled mimir (triggers approval + sign flow)
+	result, checkpoint, obs, err = e.SignTx(stypes.TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   addr,
+		VaultPubKey: e.localPubKey,
+		Coins: common.Coins{
+			common.NewCoin(tokenAsset, cosmos.NewUint(1000000)), // 1 USDC
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(checkpoint, NotNil)
+	c.Assert(obs, NotNil)
+
+	// Verify nonce in checkpoint (incremented after approval tx)
+	err = json.Unmarshal(checkpoint, &nonce)
+	c.Assert(err, IsNil)
+	c.Assert(nonce, Equals, uint64(1))
 }

@@ -262,9 +262,9 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	// authorized operational transaction (fake gas tx or cancel tx).
 	// - isOutboundFakeGasTx: Fake gas transactions used for EVM chain operations
 	//   (amount=1, gas asset, self-referential OUT: memo)
-	// - isCancelTx: Cancel transactions sent by bifrost to unstuck pending transactions
+	// - isCancelOrApprovalTx: Cancel transactions sent by bifrost to unstuck pending transactions
 	//   on EVM chains (vault-to-vault, dust threshold amount, empty memo)
-	if shouldSlash && !isOutboundFakeGasTx(tx) && !isCancelTx(tx) {
+	if shouldSlash && !isOutboundFakeGasTx(tx) && !isCancelOrApprovalTx(tx) {
 		ctx.Logger().Info("slash node account, no matched tx out item", "inbound txid", inTxID, "outbound tx", tx.Tx)
 
 		// Send security alert for unmatched outbounds.

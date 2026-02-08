@@ -56,7 +56,11 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	cryptocodec.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
 	kb := cKeys.NewInMemory(cdc)
-	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
+
+	// Use static test mnemonic for deterministic test addresses
+	// This mnemonic derives to ETH address: 0xd58610F89265a2fB637Ac40EDf59141Ff873b266
+	testMnemonic := "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+	_, err := kb.NewAccount(cfg.SignerName, testMnemonic, "", cmd.THORChainHDPath, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
 
@@ -82,6 +86,9 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 			c.Assert(err, IsNil)
 		case thorclient.ThorchainConstants:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/constants/constants.json")
+		case "/thorchain/mimir/key/EVMDisableContractWhitelist":
+			_, err = rw.Write([]byte(`1`))
+			c.Assert(err, IsNil)
 		case thorclient.PubKeysEndpoint:
 			var content []byte
 			content, err = os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")
@@ -102,6 +109,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 		case thorclient.NodeAccountEndpoint:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/nodeaccount/template.json")
 		default:
+
 			var body []byte
 			body, err = io.ReadAll(req.Body)
 			c.Assert(err, IsNil)
@@ -276,8 +284,10 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	c.Assert(err, IsNil)
 	poolMgr := thorclient.NewPoolMgr(s.bridge)
 	e, err := NewClient(s.thorKeys, config.BifrostChainConfiguration{
+		ChainID: common.ETHChain,
 		RPCHost: "http://" + s.server.Listener.Addr().String(),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
+			ChainID:            common.ETHChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second * 10,
 			GasCacheBlocks:     40,

@@ -64,17 +64,9 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", vaultAddr, vaultAddr, cancelTxCoins, cancelTxGas, ""),
 		ObservedPubKey: vaultPubKey,
 	}
-	c.Assert(isCancelTx(cancelTx), Equals, true)
+	c.Assert(isCancelOrApprovalTx(cancelTx), Equals, true)
 
-	// Test 2: Not a cancel tx - different to address (external address)
-	externalAddr := GetRandomETHAddress()
-	notCancelTx := ObservedTx{
-		Tx:             common.NewTx("123", vaultAddr, externalAddr, cancelTxCoins, cancelTxGas, ""),
-		ObservedPubKey: vaultPubKey,
-	}
-	c.Assert(isCancelTx(notCancelTx), Equals, false)
-
-	// Test 3: Not a cancel tx - amount is 0 (not DustThreshold)
+	// Test 2: Not a cancel tx - amount is 0 (not DustThreshold)
 	zeroAmountCoins := common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
 	}
@@ -82,9 +74,9 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", vaultAddr, vaultAddr, zeroAmountCoins, cancelTxGas, ""),
 		ObservedPubKey: vaultPubKey,
 	}
-	c.Assert(isCancelTx(notCancelTx2), Equals, false)
+	c.Assert(isCancelOrApprovalTx(notCancelTx2), Equals, false)
 
-	// Test 4: Not a cancel tx - large amount
+	// Test 3: Not a cancel tx - large amount
 	largeAmountCoins := common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(100000)),
 	}
@@ -92,9 +84,9 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", vaultAddr, vaultAddr, largeAmountCoins, cancelTxGas, ""),
 		ObservedPubKey: vaultPubKey,
 	}
-	c.Assert(isCancelTx(notCancelTx3), Equals, false)
+	c.Assert(isCancelOrApprovalTx(notCancelTx3), Equals, false)
 
-	// Test 5: Not a cancel tx - not EVM chain (BTC)
+	// Test 4: Not a cancel tx - not EVM chain (BTC)
 	btcVaultPubKey := GetRandomPubKey()
 	btcVaultAddr, err := btcVaultPubKey.GetAddress(common.BTCChain)
 	c.Assert(err, IsNil)
@@ -108,9 +100,9 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", btcVaultAddr, btcVaultAddr, btcCoins, btcGas, ""),
 		ObservedPubKey: btcVaultPubKey,
 	}
-	c.Assert(isCancelTx(notCancelTx4), Equals, false)
+	c.Assert(isCancelOrApprovalTx(notCancelTx4), Equals, false)
 
-	// Test 6: Valid cancel tx on different EVM chain (AVAX)
+	// Test 5: Valid cancel tx on different EVM chain (AVAX)
 	avaxVaultPubKey := GetRandomPubKey()
 	avaxVaultAddr, err := avaxVaultPubKey.GetAddress(common.AVAXChain)
 	c.Assert(err, IsNil)
@@ -125,9 +117,9 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", avaxVaultAddr, avaxVaultAddr, avaxCoins, avaxGas, ""),
 		ObservedPubKey: avaxVaultPubKey,
 	}
-	c.Assert(isCancelTx(cancelTxAvax), Equals, true)
+	c.Assert(isCancelOrApprovalTx(cancelTxAvax), Equals, true)
 
-	// Test 7: Not a cancel tx - not gas asset (ERC20 token)
+	// Test 6: Not a cancel tx - not gas asset (ERC20 token)
 	tokenAsset, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
 	c.Assert(err, IsNil)
 	tokenCoins := common.Coins{
@@ -137,9 +129,9 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", vaultAddr, vaultAddr, tokenCoins, cancelTxGas, ""),
 		ObservedPubKey: vaultPubKey,
 	}
-	c.Assert(isCancelTx(notCancelTx5), Equals, false)
+	c.Assert(isCancelOrApprovalTx(notCancelTx5), Equals, false)
 
-	// Test 8: Not a cancel tx - multiple coins
+	// Test 7: Not a cancel tx - multiple coins
 	multiCoins := common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
 		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
@@ -148,9 +140,9 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", vaultAddr, vaultAddr, multiCoins, cancelTxGas, ""),
 		ObservedPubKey: vaultPubKey,
 	}
-	c.Assert(isCancelTx(notCancelTx6), Equals, false)
+	c.Assert(isCancelOrApprovalTx(notCancelTx6), Equals, false)
 
-	// Test 9: Not a cancel tx - has a memo
+	// Test 8: Not a cancel tx - has a memo
 	memoCoins := common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
 	}
@@ -158,14 +150,7 @@ func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {
 		Tx:             common.NewTx("123", vaultAddr, vaultAddr, memoCoins, cancelTxGas, "OUT:abc123"),
 		ObservedPubKey: vaultPubKey,
 	}
-	c.Assert(isCancelTx(notCancelTx7), Equals, false)
-
-	// Test 10: Not a cancel tx - FromAddress is external (not vault-to-vault)
-	notCancelTx8 := ObservedTx{
-		Tx:             common.NewTx("123", externalAddr, vaultAddr, cancelTxCoins, cancelTxGas, ""),
-		ObservedPubKey: vaultPubKey,
-	}
-	c.Assert(isCancelTx(notCancelTx8), Equals, false)
+	c.Assert(isCancelOrApprovalTx(notCancelTx7), Equals, false)
 }
 
 func (s *HandlerCommonOutboundSuite) TestSplitCloutEvenDistribution(c *check.C) {
@@ -311,7 +296,7 @@ func (s *HandlerCommonOutboundSuite) TestSlashingExemptionsForOperationalTxs(c *
 		Tx:             common.NewTx("123", vaultAddr, vaultAddr, cancelCoins, gas, ""),
 		ObservedPubKey: vaultPubKey,
 	}
-	c.Assert(isCancelTx(cancelTx), check.Equals, true, check.Commentf("cancel tx should be recognized"))
+	c.Assert(isCancelOrApprovalTx(cancelTx), check.Equals, true, check.Commentf("cancel tx should be recognized"))
 
 	// Test 3: Theft attempt (large amount, not operational) should NOT be exempted
 	theftCoins := common.Coins{
@@ -322,5 +307,5 @@ func (s *HandlerCommonOutboundSuite) TestSlashingExemptionsForOperationalTxs(c *
 		ObservedPubKey: vaultPubKey,
 	}
 	c.Assert(isOutboundFakeGasTx(theftTx), check.Equals, false, check.Commentf("theft tx should not be exempted"))
-	c.Assert(isCancelTx(theftTx), check.Equals, false, check.Commentf("theft tx should not be exempted as cancel"))
+	c.Assert(isCancelOrApprovalTx(theftTx), check.Equals, false, check.Commentf("theft tx should not be exempted as cancel"))
 }

@@ -9,13 +9,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
-// GetMimir get a mimir value from key value store
-func (k KVStore) GetMimir(ctx cosmos.Context, key string) (int64, error) {
-	record := int64(-1)
-	_, err := k.getInt64(ctx, k.GetKey(prefixMimir, key), &record)
-	return record, err
-}
-
 // GetMimirWithRef is a helper function to more readably insert references (such as Asset MimirString or Chain) into Mimir key templates.
 func (k KVStore) GetMimirWithRef(ctx cosmos.Context, template string, ref ...any) (int64, error) {
 	// 'template' should be something like "Halt%sChain" (to halt an arbitrary specified chain)
@@ -146,6 +139,8 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 		"HALT",
 		"PAUSE",
 		"STOPSOLVENCYCHECK",
+		"MIMIRUPGRADECONTRACT",
+		"EVMALLOWANCECHECK",
 	}
 	for i := range partialMatches {
 		// Contains rather than HasPrefix to include cases like StreamingSwapPause.

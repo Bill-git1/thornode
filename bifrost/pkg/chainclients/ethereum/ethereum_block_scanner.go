@@ -857,9 +857,9 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 
 	txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed, nil)
 
-	// drop non-cancel transactions below dust threshold
-	isCancel := txInItem.Sender == txInItem.To
-	if !isCancel &&
+	// drop non-outbound transactions below dust threshold
+	isOutbound, _ := e.pubkeyMgr.IsValidPoolAddress(sender.String(), e.cfg.ChainID)
+	if !isOutbound &&
 		len(txInItem.Coins) == 1 &&
 		txInItem.Coins[0].Asset.Equals(e.cfg.ChainID.GetGasAsset()) &&
 		txInItem.Coins[0].Amount.LT(e.cfg.ChainID.DustThreshold()) {
@@ -869,10 +869,15 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 	}
 
 	if txInItem.Coins.IsEmpty() {
-		if isCancel {
-			// When the Sender and To is the same then there's no balance chance whatever the Coins,
-			// and for Tx-received Valid() a non-zero Amount is needed to observe
-			// the transaction fees (THORChain gas cost) of unstuck.go's cancel transactions.
+		if isOutbound {
+			// outbound with no coins that is not a cancel is assumed to be router approval
+			isCancel := txInItem.Sender == txInItem.To
+			if !isCancel {
+				txInItem.Memo = "" // clear the memo (otherwise contains call data)
+			}
+
+			// Outbounds with no coins are either a cancel from unstuck.go, or a router
+			// token approval - both should be observed to take gas fees from the vault.
 			observableAmount := common.ETHChain.DustThreshold()
 			txInItem.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, observableAmount))
 

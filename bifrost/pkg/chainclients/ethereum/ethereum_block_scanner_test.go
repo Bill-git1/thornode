@@ -63,7 +63,11 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 	cryptocodec.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
 	kb := cKeys.NewInMemory(cdc)
-	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
+
+	// Use static test mnemonic for deterministic test addresses
+	// This mnemonic derives to ETH address: 0xd58610F89265a2fB637Ac40EDf59141Ff873b266
+	testMnemonic := "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+	_, err := kb.NewAccount(cfg.SignerName, testMnemonic, cfg.SignerPasswd, cmd.THORChainHDPath, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	thorKeys := thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
 	c.Assert(err, IsNil)
@@ -417,22 +421,24 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 	c.Assert(bs, NotNil)
 	bs.globalNetworkFeeQueue = make(chan thorcommon.NetworkFee, 1)
 
-	// send directly to ETH address
+	// send directly to ETH address (outbound from vault)
+	// This transaction is signed with the test mnemonic's private key
+	// Sender: 0xd58610F89265a2fB637Ac40EDf59141Ff873b266 (derived from test mnemonic)
 	encodedTx := `{
 		"blockHash":"0x1d59ff54b1eb26b013ce3cb5fc9dab3705b415a67127a003c3e61eb445bb8df2",
 		"blockNumber":"0x5daf3b",
-		"from":"0xa7d9ddbe1f17865597fbd27ec712455208b6b76d",
+		"from":"0xd58610F89265a2fB637Ac40EDf59141Ff873b266",
 		"gas":"0xc350",
 		"gasPrice":"0x4a817c800",
-		"hash":"0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b",
+		"hash":"0x60d7d8f81f885db074b19b57b77959b951e9ecc078e0117b08a3beaae2ed133d",
 		"input":"0x68656c6c6f21",
 		"nonce":"0x15",
 		"to":"0xf02c1c8e6114b1dbe8937a39260b5b0a374432bb",
 		"transactionIndex":"0x41",
 		"value":"0xf3dbb76162000",
-		"v":"0x25",
-		"r":"0x1b5e176d927f8e9ab405058b2d2457392da3e20f328b16ddabcebc33eaac5fea",
-		"s":"0x4ba69724e8f69de52f0125ad8b3c5c2cef33019bac3249e2c0a2192766d1721c"
+		"v":"0x26",
+		"r":"0x5a5c10a37eb9f673e085cadff4cd3cebc15402c5861f787b5cfac2a5722f146e",
+		"s":"0x162b4ba7d55a7177bf30816e27e32d5942861dec57a968451eec800f51e832ce"
 	}`
 	tx := etypes.NewTransaction(0, common.HexToAddress(ethToken), nil, 0, nil, nil)
 	err = tx.UnmarshalJSON([]byte(encodedTx))
@@ -441,7 +447,7 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 	txInItem, err := bs.fromTxToTxIn(tx)
 	c.Assert(err, IsNil)
 	c.Assert(txInItem, NotNil)
-	c.Check(txInItem.Sender, Equals, "0xa7d9ddbe1f17865597fbd27ec712455208b6b76d")
+	c.Check(txInItem.Sender, Equals, "0xd58610f89265a2fb637ac40edf59141ff873b266")
 	c.Check(txInItem.To, Equals, "0xf02c1c8e6114b1dbe8937a39260b5b0a374432bb")
 	c.Check(len(txInItem.Coins), Equals, 1)
 

@@ -22,7 +22,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	ttypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -123,17 +122,6 @@ func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 			// only the first mnemonic is an active node at init
 			if i != 0 {
 				return
-			}
-
-			// halt churning
-			accAddr, err := a.PubKey(common.THORChain).GetThorAddress()
-			if err != nil {
-				log.Error().Err(err).Msg("failed to get thor address")
-			}
-			mimir := thorchain.NewMsgMimir("HALTCHURNING", 1, accAddr)
-			_, err = a.Thorchain.Broadcast(mimir)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to broadcast mimir")
 			}
 
 			// default network fees on chains needing a window of blocks before bifrost sends

@@ -3,7 +3,11 @@
 
 package evm
 
-import "gitlab.com/thorchain/thornode/v3/common"
+import (
+	"math/big"
+
+	"gitlab.com/thorchain/thornode/v3/common"
+)
 
 // GetHeight returns the current block height.
 func (e *EVMScanner) GetHeight() (int64, error) {
@@ -22,4 +26,9 @@ func (e *EVMScanner) GetHeight() (int64, error) {
 		return -1, err
 	}
 	return height, nil
+}
+
+// ApprovalTxRateDustWei returns zero outside of mocknet.
+func (e *EVMScanner) ApprovalTxRateDustWei() *big.Int {
+	return big.NewInt(0)
 }

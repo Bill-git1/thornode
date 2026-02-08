@@ -55,6 +55,19 @@
     {
       "pub_key": "tthorpub1addwnpepq27s79a9xk8hjcpjuthmwnl2z4su43uynekcjuqcnmhpemfgfrh6sm4yd8e",
       "pub_key_eddsa": "tthorpub1zcjduepq3p80uejsez2p7ynwjfshlsetm7uqqjxn8xe5susgsf37c0de0kcsecrfnm"
+    },
+    {
+      "pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
+      "routers": [
+        {
+          "chain": "ETH",
+          "router": "0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44"
+        },
+        {
+          "chain": "AVAX",
+          "router": "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
+        }
+      ]
     }
   ],
   "yggdrasil": [

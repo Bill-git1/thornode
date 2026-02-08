@@ -113,7 +113,10 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 	cryptocodec.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
 	kb := cKeys.NewInMemory(cdc)
-	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
+	// Use static test mnemonic for deterministic test addresses
+	// This mnemonic derives to ETH/AVAX address: 0xd58610F89265a2fB637Ac40EDf59141Ff873b266
+	testMnemonic := "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+	_, err := kb.NewAccount(cfg.SignerName, testMnemonic, cfg.SignerPasswd, cmd.THORChainHDPath, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	thorKeys := thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
 	c.Assert(err, IsNil)
@@ -470,28 +473,30 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	}()
 	c.Assert(err, IsNil)
 	config := getConfigForTest()
-	bs, err := NewEVMScanner(config, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, bridge, s.m, pkeyMgr, func(height int64) error {
+	// Use AVAX chainID 43112 to match the transaction signature
+	bs, err := NewEVMScanner(config, storage, big.NewInt(43112), ethClient, rpcClient, bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)
 
-	// send directly to AVAX address
+	// Transaction signed with test mnemonic's private key for AVAX chainID 43112
+	// Sender: 0xd58610F89265a2fB637Ac40EDf59141Ff873b266
 	encodedTx := `{
 		"blockHash":"0x1d59ff54b1eb26b013ce3cb5fc9dab3705b415a67127a003c3e61eb445bb8df2",
 		"blockNumber":"0x5daf3b",
-		"from":"0xa7d9ddbe1f17865597fbd27ec712455208b6b76d",
+		"from":"0xd58610F89265a2fB637Ac40EDf59141Ff873b266",
 		"gas":"0xc350",
 		"gasPrice":"0x4a817c800",
-		"hash":"0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b",
+		"hash":"0x0665d822f0e3dbf837d201af455a8cec486dfad1be6d5bbe585a048bd5f05fe2",
 		"input":"0x68656c6c6f21",
 		"nonce":"0x15",
 		"to":"0xf02c1c8e6114b1dbe8937a39260b5b0a374432bb",
 		"transactionIndex":"0x41",
 		"value":"0xf3dbb76162000",
-		"v":"0x25",
-		"r":"0x1b5e176d927f8e9ab405058b2d2457392da3e20f328b16ddabcebc33eaac5fea",
-		"s":"0x4ba69724e8f69de52f0125ad8b3c5c2cef33019bac3249e2c0a2192766d1721c"
+		"v":"0x150f4",
+		"r":"0xa1b2ae9f127f905825032add98ed7bc3f0b3f00eef7bc23a0403dc1261369d5d",
+		"s":"0x18cb455bc6255fa85d184186233b1bbd7169e590b374a18f4156bcb28c6f27aa"
 	}`
 	tx := etypes.NewTransaction(0, common.HexToAddress(evm.NativeTokenAddr), nil, 0, nil, nil)
 	err = tx.UnmarshalJSON([]byte(encodedTx))
@@ -500,7 +505,7 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	txInItem, err := bs.getTxInItem(tx)
 	c.Assert(err, IsNil)
 	c.Assert(txInItem, NotNil)
-	c.Check(txInItem.Sender, Equals, "0xa7d9ddbe1f17865597fbd27ec712455208b6b76d")
+	c.Check(txInItem.Sender, Equals, "0xd58610f89265a2fb637ac40edf59141ff873b266")
 	c.Check(txInItem.To, Equals, "0xf02c1c8e6114b1dbe8937a39260b5b0a374432bb")
 	c.Check(len(txInItem.Coins), Equals, 1)
 

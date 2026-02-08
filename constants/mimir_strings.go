@@ -11,6 +11,7 @@ const (
 	MimirKeyWasmMinGasPrice        = "WasmMinGasPrice"
 	MimirKeyScheduledMigration     = "ScheduledMigration"
 
+	MimirTemplateEVMAllowanceCheck         = "EVMAllowanceCheck-%s"         // Use with Chain
 	MimirTemplateConfMultiplierBasisPoints = "ConfMultiplierBasisPoints-%s" // Use with Chain
 	MimirTemplateMaxConfirmations          = "MaxConfirmations-%s"          // Use with Chain
 	MimirTemplateSwapSlipBasisPointsMin    = "SwapSlipBasisPointsMin-%s"    // Use with MimirRef

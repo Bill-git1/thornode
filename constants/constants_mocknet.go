@@ -14,7 +14,9 @@ import (
 
 var ThorchainBlockTime = time.Second
 
-func camelToSnakeUpper(s string) string {
+// CamelToSnakeUpper converts a camelCase string to SNAKE_CASE.
+// Examples: "PoolCycle" -> "POOL_CYCLE", "L1SlipMinBps" -> "L1_SLIP_MIN_BPS"
+func CamelToSnakeUpper(s string) string {
 	re := regexp.MustCompile(`([a-z0-9])([A-Z])|([A-Z]+)([A-Z][a-z])`)
 	snake := re.ReplaceAllString(s, `${1}${3}_${2}${4}`)
 	return strings.ToUpper(snake)
@@ -78,19 +80,19 @@ func init() {
 
 	// allow overrides from environment variables in mocknet
 	for k := range v1Values.int64values {
-		env := camelToSnakeUpper(k.String())
+		env := CamelToSnakeUpper(k.String())
 		if os.Getenv(env) != "" {
 			int64Overrides[k], _ = strconv.ParseInt(os.Getenv(env), 10, 64)
 		}
 	}
 	for k := range v1Values.boolValues {
-		env := camelToSnakeUpper(k.String())
+		env := CamelToSnakeUpper(k.String())
 		if os.Getenv(env) != "" {
 			boolOverrides[k], _ = strconv.ParseBool(os.Getenv(env))
 		}
 	}
 	for k := range v1Values.stringValues {
-		env := camelToSnakeUpper(k.String())
+		env := CamelToSnakeUpper(k.String())
 		if os.Getenv(env) != "" {
 			stringOverrides[k] = os.Getenv(env)
 		}

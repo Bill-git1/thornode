@@ -109,6 +109,13 @@ services:
       BASE_HOST: ${BASE_HOST:-http://base:8545}
       BSC_HOST: ${BSC_HOST:-http://binance-smart:8545}
       XRP_HOST: ${XRP_HOST:-http://xrp:5005}
+
+      # mimir default overrides
+      HALT_CHURNING: 1
+      EVM_ALLOWANCE_CHECK_AVAX: 1
+      EVM_ALLOWANCE_CHECK_BASE: 1
+      EVM_ALLOWANCE_CHECK_BSC: 1
+      EVM_ALLOWANCE_CHECK_ETH: 1
     ports:
       - 26657:26657
       - 26656:26656

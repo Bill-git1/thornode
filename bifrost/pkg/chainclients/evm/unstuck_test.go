@@ -56,7 +56,11 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	cryptocodec.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
 	kb := cKeys.NewInMemory(cdc)
-	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
+
+	// Use static test mnemonic for deterministic test addresses
+	// This mnemonic derives to ETH/AVAX address: 0xd58610F89265a2fB637Ac40EDf59141Ff873b266
+	testMnemonic := "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+	_, err := kb.NewAccount(cfg.SignerName, testMnemonic, "", cmd.THORChainHDPath, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
 
@@ -295,6 +299,7 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 		RPCHost:        "http://" + s.server.Listener.Addr().String(),
 		SolvencyBlocks: 10,
 		BlockScanner: config.BifrostBlockScannerConfiguration{
+			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second * 10,
 			GasCacheBlocks:     40,
