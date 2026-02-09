@@ -205,8 +205,11 @@ build-thornode:
     - make docker-gitlab-build
     - make docker-gitlab-push
     # also push mocknet from develop
-    - BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-build
-    - BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-push
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "develop" ]; then
+        BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-build
+        BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-push
+      fi
 
 chain-avalanche:
   rules:
