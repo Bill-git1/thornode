@@ -52,8 +52,14 @@ func (vm *ValidatorMgr) BeginBlock(ctx cosmos.Context, mgr Manager, existingVali
 	lastChurnHeight := getLastChurnHeight(ctx, vm.k)
 	churnInterval := vm.k.GetConfigInt64(ctx, constants.ChurnInterval)
 	churnRetryInterval := vm.k.GetConfigInt64(ctx, constants.ChurnRetryInterval)
-	onChurnTick := (ctx.BlockHeight()-lastChurnHeight-churnInterval)%churnRetryInterval == 0
-	if !onChurnTick {
+	// Only compute retry tick if the interval is valid
+	onChurnTick := false
+	if churnRetryInterval > 0 {
+		onChurnTick = (ctx.BlockHeight()-lastChurnHeight-churnInterval)%churnRetryInterval == 0
+	}
+	// Allow regular churns to proceed regardless of churnRetryInterval
+	isRegularChurn := lastChurnHeight+churnInterval == ctx.BlockHeight()
+	if !onChurnTick && !isRegularChurn {
 		return nil
 	}
 
