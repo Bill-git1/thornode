@@ -76,6 +76,9 @@ func (vm *ValidatorMgr) BeginBlock(ctx cosmos.Context, mgr Manager, existingVali
 		return err
 	}
 	asgardSize := vm.k.GetConfigInt64(ctx, constants.AsgardSize)
+	if asgardSize <= 0 {
+		return nil
+	}
 	expectedActiveVaults := int64(len(nas)) / asgardSize
 	if int64(len(nas))%asgardSize > 0 {
 		expectedActiveVaults++
