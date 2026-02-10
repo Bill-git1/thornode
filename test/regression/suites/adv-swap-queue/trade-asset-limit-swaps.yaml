@@ -236,7 +236,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_cat }}
       coins:
-        - amount: "${REGULAR_SWAP_OUT=15974624}"
+        - amount: "${REGULAR_SWAP_OUT=16158943}"
           asset: "BTC.BTC"
           decimals: 8
       gas:

@@ -4293,3 +4293,319 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedMarketSwapSkip(c *C) {
 	c.Assert(len(updatedSwap.State.FailedSwaps), Equals, 1,
 		Commentf("FailedSwaps should have 1 entry (only iteration 0), got %d", len(updatedSwap.State.FailedSwaps)))
 }
+
+func (s AdvSwapQueueSuite) TestScoreMsgsUsesSubSwapSize(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	book := newSwapQueueAdv(k)
+
+	// Create a streaming swap with 10 sub-swaps, total deposit 100 ETH
+	// Each sub-swap should be ~10 ETH
+	streamingSwap := NewMsgSwap(common.Tx{
+		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000001"),
+		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))},
+	}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+	streamingSwap.State.Quantity = 10
+	streamingSwap.State.Deposit = cosmos.NewUint(100 * common.One)
+
+	// Create a non-streaming swap with 10 ETH deposit (same as one sub-swap)
+	nonStreamingSwap := NewMsgSwap(common.Tx{
+		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000002"),
+		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+	}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+	nonStreamingSwap.State.Quantity = 1
+	nonStreamingSwap.State.Deposit = cosmos.NewUint(10 * common.One)
+
+	swaps := swapItems{
+		{msg: *streamingSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
+		{msg: *nonStreamingSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
+	}
+
+	swaps, err := book.scoreMsgs(ctx, swaps, 10_000)
+	c.Assert(err, IsNil)
+
+	// Both swaps should have roughly equal scores because they have the same
+	// effective sub-swap size (10 ETH each)
+	// The streaming swap (100 ETH total) should NOT have a higher score than
+	// the non-streaming swap (10 ETH) because scoring uses sub-swap size
+	c.Check(swaps[0].fee.Equal(swaps[1].fee), Equals, true,
+		Commentf("Fees should be equal: streaming=%d, non-streaming=%d",
+			swaps[0].fee.Uint64(), swaps[1].fee.Uint64()))
+	c.Check(swaps[0].slip.Equal(swaps[1].slip), Equals, true,
+		Commentf("Slips should be equal: streaming=%d, non-streaming=%d",
+			swaps[0].slip.Uint64(), swaps[1].slip.Uint64()))
+}
+
+func (s AdvSwapQueueSuite) TestScoreMsgsPartiallyExecutedStreamingSwap(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	book := newSwapQueueAdv(k)
+
+	// Create a streaming swap that has already executed 5 of 10 sub-swaps
+	// Remaining: 50 ETH over 5 sub-swaps = 10 ETH per sub-swap
+	partialSwap := NewMsgSwap(common.Tx{
+		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000001"),
+		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))},
+	}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+	partialSwap.State.Quantity = 10
+	partialSwap.State.Deposit = cosmos.NewUint(100 * common.One)
+	partialSwap.State.Count = 5
+	partialSwap.State.In = cosmos.NewUint(50 * common.One) // 50 ETH already swapped
+
+	// Create a fresh 10 ETH non-streaming swap
+	freshSwap := NewMsgSwap(common.Tx{
+		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000002"),
+		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+	}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+	freshSwap.State.Quantity = 1
+	freshSwap.State.Deposit = cosmos.NewUint(10 * common.One)
+
+	swaps := swapItems{
+		{msg: *partialSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
+		{msg: *freshSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
+	}
+
+	swaps, err := book.scoreMsgs(ctx, swaps, 10_000)
+	c.Assert(err, IsNil)
+
+	// Both should have equal scores because the partially executed streaming swap
+	// will have its next sub-swap size calculated based on remaining deposit
+	c.Check(swaps[0].fee.Equal(swaps[1].fee), Equals, true,
+		Commentf("Fees should be equal: partial=%d, fresh=%d",
+			swaps[0].fee.Uint64(), swaps[1].fee.Uint64()))
+	c.Check(swaps[0].slip.Equal(swaps[1].slip), Equals, true,
+		Commentf("Slips should be equal: partial=%d, fresh=%d",
+			swaps[0].slip.Uint64(), swaps[1].slip.Uint64()))
+}
+
+func (s AdvSwapQueueSuite) TestLimitSwapsSortedBeforeMarketSwaps(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	book := newSwapQueueAdv(k)
+
+	// Create swaps with varying sizes - market swaps with higher fees should normally
+	// be sorted before smaller limit swaps, but after the type-based sort,
+	// all limit swaps should come first
+	items := swapItems{
+		// Large market swap (would normally be first by fee)
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000001"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_market,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+		// Small limit swap
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000002"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.NewUint(1000*common.One), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_limit,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+		// Medium market swap
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000003"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_market,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+		// Medium limit swap
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000004"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.NewUint(5000*common.One), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_limit,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+	}
+
+	// Initialize state for all swaps
+	for i := range items {
+		items[i].msg.State.Quantity = 1
+		items[i].msg.State.Deposit = items[i].msg.Tx.Coins[0].Amount
+	}
+
+	// Score the swaps
+	items, err := book.scoreMsgs(ctx, items, 10_000)
+	c.Assert(err, IsNil)
+
+	// Sort by fee+slip, then by swap type (limit swaps first)
+	items = items.Sort()
+
+	// Verify all limit swaps come before market swaps
+	foundMarket := false
+	for i, item := range items {
+		if item.msg.IsLimitSwap() {
+			c.Check(foundMarket, Equals, false,
+				Commentf("Found limit swap at position %d after market swap", i))
+		} else {
+			foundMarket = true
+		}
+	}
+
+	// Verify we have the expected number of each type
+	limitCount := 0
+	marketCount := 0
+	for _, item := range items {
+		if item.msg.IsLimitSwap() {
+			limitCount++
+		} else {
+			marketCount++
+		}
+	}
+	c.Check(limitCount, Equals, 2)
+	c.Check(marketCount, Equals, 2)
+}
+
+func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	book := newSwapQueueAdv(k)
+
+	// Create limit swaps with different sizes (and thus different fees)
+	items := swapItems{
+		// Large limit swap (higher fee)
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000001"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.NewUint(10000*common.One), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_limit,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+		// Small limit swap (lower fee)
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000002"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.NewUint(1000*common.One), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_limit,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+		// Large market swap (higher fee)
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000003"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_market,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+		// Small market swap (lower fee)
+		{
+			msg: *NewMsgSwap(common.Tx{
+				ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000004"),
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+			}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+				"", "", nil,
+				types.SwapType_market,
+				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
+			fee:  cosmos.ZeroUint(),
+			slip: cosmos.ZeroUint(),
+		},
+	}
+
+	// Initialize state for all swaps
+	for i := range items {
+		items[i].msg.State.Quantity = 1
+		items[i].msg.State.Deposit = items[i].msg.Tx.Coins[0].Amount
+	}
+
+	// Score the swaps
+	items, err := book.scoreMsgs(ctx, items, 10_000)
+	c.Assert(err, IsNil)
+
+	// Sort by fee+slip, then by swap type (limit swaps first)
+	items = items.Sort()
+
+	// Expected order after Sort():
+	// 1. Large limit (100 ETH) - first limit swap by score
+	// 2. Small limit (10 ETH) - second limit swap by score
+	// 3. Large market (100 ETH) - first market swap by score
+	// 4. Small market (10 ETH) - second market swap by score
+
+	// Verify limit swaps are first and ordered by size (larger first = higher fee)
+	c.Check(items[0].msg.IsLimitSwap(), Equals, true)
+	c.Check(items[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true,
+		Commentf("First limit swap should be 100 ETH, got %d", items[0].msg.Tx.Coins[0].Amount.Uint64()))
+
+	c.Check(items[1].msg.IsLimitSwap(), Equals, true)
+	c.Check(items[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true,
+		Commentf("Second limit swap should be 10 ETH, got %d", items[1].msg.Tx.Coins[0].Amount.Uint64()))
+
+	// Verify market swaps are last and ordered by size
+	c.Check(items[2].msg.IsLimitSwap(), Equals, false)
+	c.Check(items[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true,
+		Commentf("First market swap should be 100 ETH, got %d", items[2].msg.Tx.Coins[0].Amount.Uint64()))
+
+	c.Check(items[3].msg.IsLimitSwap(), Equals, false)
+	c.Check(items[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true,
+		Commentf("Second market swap should be 10 ETH, got %d", items[3].msg.Tx.Coins[0].Amount.Uint64()))
+}

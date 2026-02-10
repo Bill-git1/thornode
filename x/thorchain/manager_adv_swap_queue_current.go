@@ -751,14 +751,22 @@ func (vm *SwapQueueAdv) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirt
 		if poolAsset.IsSyntheticAsset() {
 			virtualDepthMult = synthVirtualDepthMult
 		}
-		vm.getLiquidityFeeAndSlip(ctx, pool, item.msg.Tx.Coins[0], &items[i], virtualDepthMult)
+		// Get the next sub-swap size for scoring streaming swaps fairly
+		// For non-streaming swaps (quantity=1), this returns the full deposit
+		subSwapSize, _ := item.msg.NextSize()
+		// Fallback to full coin amount if NextSize returns zero (uninitialized state)
+		if subSwapSize.IsZero() {
+			subSwapSize = item.msg.Tx.Coins[0].Amount
+		}
+		sourceCoin := common.NewCoin(item.msg.Tx.Coins[0].Asset, subSwapSize)
+		vm.getLiquidityFeeAndSlip(ctx, pool, sourceCoin, &items[i], virtualDepthMult)
 
 		if sourceAsset.IsRune() || targetAsset.IsRune() {
 			// single swap , stop here
 			continue
 		}
 		// double swap , thus need to convert source coin to RUNE and calculate fee and slip again
-		runeCoin := common.NewCoin(common.RuneAsset(), pool.AssetValueInRune(item.msg.Tx.Coins[0].Amount))
+		runeCoin := common.NewCoin(common.RuneAsset(), pool.AssetValueInRune(subSwapSize))
 		poolAsset = targetAsset
 		pool = pools[poolAsset]
 		if pool.IsEmpty() || !pool.IsAvailable() || pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() {
