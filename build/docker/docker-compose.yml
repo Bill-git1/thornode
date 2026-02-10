@@ -88,6 +88,7 @@ services:
     <<: *thorchain-defaults
     hostname: thornode # required for genesis.sh
     depends_on:
+      - polygon
       - ethereum
       - avalanche
     extra_hosts:
@@ -107,6 +108,7 @@ services:
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
       BASE_HOST: ${BASE_HOST:-http://base:8545}
+      POL_HOST: ${POL_HOST:-http://polygon:8545}
       BSC_HOST: ${BSC_HOST:-http://binance-smart:8545}
       XRP_HOST: ${XRP_HOST:-http://xrp:5005}
 
@@ -169,6 +171,7 @@ services:
       - tron-supernode
       - tron-fullnode
       - thornode
+      - polygon
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment: &bifrost-environment
@@ -243,16 +246,22 @@ services:
       BIFROST_CHAINS_SOL_DISABLED: "false"
       BIFROST_CHAINS_SOL_RPC_HOST: ${SOL_HOST:-http://solana:8899}
 
+      # enable polygon
+      BIFROST_CHAINS_POL_DISABLED: "${BIFROST_CHAINS_POL_DISABLED:-false}"
+      BIFROST_CHAINS_POL_RPC_HOST: ${BIFROST_CHAINS_POL_RPC_HOST:-http://polygon:8545}
+
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_FIXED_GAS_RATE: 100_000_000_000 # 100 navax
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_FIXED_GAS_RATE: 50_000_000_000 # 50 gwei
       BIFROST_CHAINS_BASE_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
+      BIFROST_CHAINS_POL_BLOCK_SCANNER_FIXED_GAS_RATE: 500_000_000_000 # 500 gwei
 
       # override bifrost whitelist tokens
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
       BIFROST_CHAINS_BASE_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
+      BIFROST_CHAINS_POL_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
 
       # attestation timing
       BIFROST_ATTESTATION_GOSSIP_MIN_TIME_BETWEEN_ATTESTATIONS: 1s
@@ -706,3 +715,30 @@ services:
       RPC_PORT: "8899"
       AIRDROP_ADDRESS: "AAH1XhfycX678et7Pjvwp1DMWnHpSP92wpJwV19MXHtX"
       AIRDROP_AMOUNT: "10000"
+
+  # -------------------------- polygon ------------------------------
+
+  polygon:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    restart: unless-stopped
+    image: 0xpolygon/bor:2.5.7
+    ports:
+      - 8548:8545
+    volumes:
+      - ./mocknet/polygon:/mocknet
+    entrypoint: /mocknet/entrypoint.sh
+    command: >
+      server 
+      --allow-insecure-unlock
+      --dev 
+      --dev.period 2
+      --bor.withoutheimdall
+      --http 
+      --http.api=eth,net,web3,txpool,personal 
+      --http.addr=0.0.0.0 
+      --http.corsdomain="*" 
+      --http.vhosts="*"
+      --nodiscover 
+      --miner.etherbase=0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC

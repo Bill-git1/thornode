@@ -32,14 +32,15 @@ Native asset names can be shortened to reduce the length of the memo. The exact 
 | a             | AVAX.AVAX      |
 | b             | BTC.BTC        |
 | c             | BCH.BCH        |
-| e             | ETH.ETH        |
-| g             | GAIA.ATOM      |
-| s             | BSC.BNB        |
 | d             | DOGE.DOGE      |
-| l             | LTC.LTC        |
+| e             | ETH.ETH        |
 | f             | BASE.ETH       |
-| x             | XRP.XRP        |
+| g             | GAIA.ATOM      |
+| l             | LTC.LTC        |
+| p             | POL.POL        |
+| s             | BSC.BNB        |
 | tr            | TRON.TRX       |
+| x             | XRP.XRP        |
 
 **Example Swaps**:
 

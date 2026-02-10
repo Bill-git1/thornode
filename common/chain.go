@@ -30,6 +30,7 @@ const (
 	XRPChain   = Chain("XRP")
 	SOLChain   = Chain("SOL")
 	ZECChain   = Chain("ZEC")
+	POLChain   = Chain("POL")
 
 	SigningAlgoSecp256k1 = SigningAlgo("secp256k1")
 	SigningAlgoEd25519   = SigningAlgo("ed25519")
@@ -51,6 +52,7 @@ var AllChains = [...]Chain{
 	XRPChain,
 	SOLChain,
 	ZECChain,
+	POLChain,
 }
 
 type SigningAlgo string
@@ -103,7 +105,7 @@ func (c Chain) IsBSCChain() bool {
 // - uses 0x as an address prefix
 // - has a "Router" Smart Contract
 func GetEVMChains() []Chain {
-	return []Chain{ETHChain, AVAXChain, BSCChain, BASEChain}
+	return []Chain{ETHChain, AVAXChain, BSCChain, BASEChain, POLChain}
 }
 
 // GetUTXOChains returns all "UTXO" chains connected to THORChain.
@@ -190,6 +192,8 @@ func (c Chain) GetGasAsset() Asset {
 		return SOLAsset
 	case ZECChain:
 		return ZECAsset
+	case POLChain:
+		return POLAsset
 	default:
 		return EmptyAsset
 	}
@@ -212,7 +216,7 @@ func (c Chain) GetGasUnits() (gasRateUnits string, gasRateUnitsPerOne cosmos.Uin
 		return "sun", cosmos.NewUint(1e6)
 	case BTCChain, BCHChain, LTCChain, DOGEChain, ZECChain:
 		return "satsperbyte", cosmos.NewUint(1e8)
-	case ETHChain, BSCChain:
+	case ETHChain, BSCChain, POLChain:
 		return "gwei", cosmos.NewUint(1e9)
 	case AVAXChain:
 		return "nAVAX", cosmos.NewUint(1e9)
@@ -320,7 +324,7 @@ func (c Chain) DustThreshold() cosmos.Uint {
 		return cosmos.NewUint(100_000_000)
 	case ETHChain, BASEChain:
 		return cosmos.NewUint(1_000)
-	case AVAXChain:
+	case AVAXChain, POLChain:
 		return cosmos.NewUint(100_000)
 	case BSCChain:
 		return cosmos.NewUint(10_000)
@@ -431,6 +435,8 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 		return 400
 	case ZECChain:
 		return 75_000
+	case POLChain:
+		return 2_000
 	default:
 		return 0
 	}
@@ -440,7 +446,7 @@ func (c Chain) InboundNotes() string {
 	switch c {
 	case BTCChain, LTCChain, BCHChain, DOGEChain, ZECChain:
 		return "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats."
-	case ETHChain, AVAXChain, BSCChain, BASEChain:
+	case ETHChain, AVAXChain, BSCChain, BASEChain, POLChain:
 		return "Base Asset: Send the inbound_address the asset with the memo encoded in hex in the data field. Tokens: First approve router to spend tokens from user: asset.approve(router, amount). Then call router.depositWithExpiry(inbound_address, asset, amount, memo, expiry). Asset is the token contract address. Amount should be in native asset decimals (eg 1e18 for most tokens). Do not swap to smart contract addresses."
 	case GAIAChain, NOBLEChain:
 		return "Transfer the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions."

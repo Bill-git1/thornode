@@ -39,6 +39,7 @@ var chainRPCs = map[common.Chain]string{
 	common.GAIAChain:  "localhost:9091",
 	common.NOBLEChain: "localhost:9092",
 	common.BASEChain:  "http://localhost:8547",
+	common.POLChain:   "http://localhost:8548",
 	common.TRONChain:  "http://localhost:8090",
 	common.XRPChain:   "http://localhost:5005",
 	common.SOLChain:   "http://localhost:8899",
@@ -135,6 +136,7 @@ func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 				{common.XRPChain, 1, 10},
 				{common.AVAXChain, 80000, 1500},
 				{common.BASEChain, 80000, 300000},
+				{common.POLChain, 80000, 1500},
 				{common.ETHChain, 80000, 300},
 				{common.SOLChain, 1, 5000},
 				{common.BTCChain, 1000, 4},
@@ -273,6 +275,8 @@ func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 			chainSeedAmount = sdkmath.NewUint(100000 * common.One)
 		case common.TRONChain:
 			chainSeedAmount = sdkmath.NewUint(100000 * common.One)
+		case common.POLChain:
+			chainSeedAmount = sdkmath.NewUint(1_000_000 * common.One)
 		default:
 			continue // all other chains currently unsupported
 		}
@@ -343,9 +347,14 @@ func fundUserChainAccount(master, user *User, chain common.Chain, amount sdkmath
 	// fund token balances
 	eAddr := ecommon.HexToAddress(addr.String())
 	for asset, token := range evm.Tokens(chain) {
+		// for huge amounts like POLChain, total token amount is 500k
+		tokenAmount := sdkmath.NewUint(10_000 * common.One)
+		if amount.LT(tokenAmount) {
+			tokenAmount = amount
+		}
 		// convert funding amount to token decimals
 		factor := big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil)
-		tokenAmount := amount.Mul(sdkmath.NewUintFromBigInt(factor))
+		tokenAmount = tokenAmount.Mul(sdkmath.NewUintFromBigInt(factor))
 		tokenAmount = tokenAmount.Quo(sdkmath.NewUint(common.One))
 
 		tokenTx := SimContractTx{

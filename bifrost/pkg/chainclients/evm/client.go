@@ -1388,6 +1388,8 @@ func (c *EVMClient) GetConfirmationCount(txIn stypes.TxIn) int64 {
 		return 12 // ~2 Ethereum blocks for parity with the 2 block minimum in eth client
 	case common.BSCChain:
 		return 3 // round up from 2.5 blocks required for finality
+	case common.POLChain:
+		return 15
 	default:
 		c.logger.Fatal().Msgf("unsupported chain: %s", c.cfg.ChainID)
 		return 0
@@ -1399,7 +1401,7 @@ func (c *EVMClient) ConfirmationCountReady(txIn stypes.TxIn) bool {
 	switch c.cfg.ChainID {
 	case common.AVAXChain: // instant finality
 		return true
-	case common.BSCChain:
+	case common.BSCChain, common.POLChain:
 		if len(txIn.TxArray) == 0 {
 			return true
 		}

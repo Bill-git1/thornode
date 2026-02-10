@@ -49,7 +49,7 @@ class EVMSetupTool:
         self.addr = self.account.address
 
         # fund admin admin account with 10M ETH
-        if self.chain != "AVAX":
+        if self.chain not in ["AVAX", "POL"]:
             coinbase_addr = self.web3.eth.accounts[0]
             self.fund_account(coinbase_addr, self.addr, int(10000000e18))  # 10M ETH
 
@@ -59,8 +59,11 @@ class EVMSetupTool:
             SignAndSendRawMiddlewareBuilder.build(self.account), layer=0
         )
 
+        amount = 1_000_000e18
+        if self.chain == "POL":
+            amount = 100_000_000e18
         # fund simulation account with 1m ETH
-        self.fund_account(self.addr, self.simulation_master, int(1000000e18))
+        self.fund_account(self.addr, self.simulation_master, int(amount))
 
         # done if this is hardhat
         if self.web3.net.version == "31337":
@@ -78,6 +81,8 @@ class EVMSetupTool:
             return "BSC.BNB"
         elif self.chain == "BASE":
             return "BASE.ETH"
+        elif self.chain == "POL":
+            return "POL.POL"
         else:
             logging.fatal(f"unknown chain: {self.chain}")
 
@@ -354,6 +359,7 @@ def main():
         "ETH": "http://ethereum:8545",
         "BSC": "http://binance-smart:8545",
         "BASE": "http://base:8545",
+        "POL": "http://polygon:8545",
     }
 
     # parse args

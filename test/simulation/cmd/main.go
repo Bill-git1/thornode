@@ -54,6 +54,7 @@ var liteClientConstructors = map[common.Chain]LiteChainClientConstructor{
 	common.XRPChain:   xrp.NewConstructor(chainRPCs[common.XRPChain]),
 	common.NOBLEChain: pkgcosmos.NewConstructor(chainRPCs[common.NOBLEChain]),
 	common.SOLChain:   solana.NewConstructor(chainRPCs[common.SOLChain]),
+	common.POLChain:   evm.NewConstructor(chainRPCs[common.POLChain]),
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -46,6 +46,9 @@ func GetEVMTokenList(chain common.Chain) EVMTokenList {
 		return GetBASETokenList()
 	case common.TRONChain:
 		return GetTRONTokenList()
+	case common.POLChain:
+		return GetPOLTokenList()
+
 	default:
 		return EVMTokenList{}
 	}

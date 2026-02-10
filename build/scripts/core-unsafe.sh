@@ -3,7 +3,7 @@
 set -o pipefail
 
 deploy_evm_contracts() {
-  for CHAIN in ETH AVAX BASE; do
+  for CHAIN in ETH AVAX BASE POL; do
     (
       # deploy contract and get address from output
       echo "Deploying $CHAIN contracts"

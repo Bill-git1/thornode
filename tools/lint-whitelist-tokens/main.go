@@ -31,6 +31,8 @@ func main() {
 			tl = tokenlist.GetBSCTokenList()
 		case common.BASEChain.String():
 			tl = tokenlist.GetBASETokenList()
+		case common.POLChain.String():
+			tl = tokenlist.GetPOLTokenList()
 		default:
 			fmt.Printf("unsupported chain %s\n", chain)
 			os.Exit(1)
