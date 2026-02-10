@@ -1013,6 +1013,14 @@ func (vm *ValidatorMgr) getScore(ctx cosmos.Context, slashPts, lastChurnHeight i
 // Iterate over active node accounts, finding bad actors with high slash points
 func (vm *ValidatorMgr) findBadActors(ctx cosmos.Context, minSlashPointsForBadValidator, badValidatorRedline int64) (NodeAccounts, error) {
 	badActors := make(NodeAccounts, 0)
+
+	// Guard against division by zero: badValidatorRedline is used as a divisor
+	// below. If Mimir sets BadValidatorRedline to 0, skip bad actor detection
+	// rather than panicking in a consensus-critical code path.
+	if badValidatorRedline <= 0 {
+		return badActors, nil
+	}
+
 	nas, err := vm.k.ListActiveValidators(ctx)
 	if err != nil {
 		return badActors, err
