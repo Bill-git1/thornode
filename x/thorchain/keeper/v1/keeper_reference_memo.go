@@ -105,6 +105,9 @@ func (k KVStore) normalizeReference(length int, str string) string {
 func (k KVStore) GetReferenceMemoByTxnHash(ctx cosmos.Context, hash common.TxID) (ReferenceMemo, error) {
 	record := ReferenceMemo{}
 	key := k.getHashAlias(ctx, hash)
+	if key == "" {
+		return record, fmt.Errorf("reference memo not found for hash: %s", hash)
+	}
 	_, err := k.getReferenceMemo(ctx, string(k.GetKey(prefixReferenceMemo, key)), &record)
 	return record, err
 }

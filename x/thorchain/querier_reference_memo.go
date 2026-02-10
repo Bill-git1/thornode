@@ -24,6 +24,10 @@ func (qs queryServer) queryReferenceMemo(ctx cosmos.Context, req *types.QueryRef
 		return nil, fmt.Errorf("failed to get reference memo: %w", err)
 	}
 
+	if memo.Height == 0 {
+		return nil, fmt.Errorf("reference memo not found for asset %s and reference %s", req.Asset, req.Reference)
+	}
+
 	return &types.QueryReferenceMemoResponse{
 		Asset:            memo.Asset,
 		Memo:             memo.Memo,
@@ -47,7 +51,11 @@ func (qs queryServer) queryReferenceMemoByHash(ctx cosmos.Context, req *types.Qu
 
 	memo, err := qs.mgr.Keeper().GetReferenceMemoByTxnHash(ctx, hash)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get reference memo by hash: %w", err)
+		return nil, fmt.Errorf("reference memo not found for hash: %s", req.Hash)
+	}
+
+	if memo.Height == 0 {
+		return nil, fmt.Errorf("reference memo not found for hash: %s", req.Hash)
 	}
 
 	return &types.QueryReferenceMemoByHashResponse{

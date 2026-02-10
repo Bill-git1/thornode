@@ -49,6 +49,12 @@ func (s *KeeperReferenceMemoSuite) TestReferenceMemo(c *C) {
 	c.Check(refMemo.Height, Equals, int64(35))
 	c.Check(refMemo.RegisteredBy.String(), Equals, signer.String())
 	c.Check(refMemo.RegistrationHash.String(), Equals, hash.String())
+
+	// Lookup by non-existent hash should return an error
+	unknownHash := GetRandomTxHash()
+	_, err = k.GetReferenceMemoByTxnHash(ctx, unknownHash)
+	c.Assert(err, NotNil)
+	c.Check(err.Error(), Matches, "reference memo not found for hash:.*")
 }
 
 func (s *KeeperReferenceMemoSuite) TestSetHashAliasEdgeCases(c *C) {
