@@ -33,5 +33,7 @@ var WasmPermissionsRaw = WasmPermissions{
 		"thor1j95vmsmkevynmenkkxhlu5at9exgtsuck6nhh79f0x4zx85r5ajqnpnhj2": true,
 		// Fuzion DAODAO
 		"thor1e69r4z9fgx5ghz2l4dfqv0zqw2yhsqf946tgfvpyzsnah2lg7aesfel69y": true,
+		// Redacted DAODAO
+		"thor15qymde6pkjxl2c068lk2gq0c7rcps4mckd3ngzwgy5n2mx6ms6mq3xntrt": true,
 	},
 }
