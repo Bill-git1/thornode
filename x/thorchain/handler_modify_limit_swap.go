@@ -41,6 +41,23 @@ func (h ModifyLimitSwapHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.R
 	return &cosmos.Result{}, err
 }
 
+// validate performs stateless validation on MsgModifyLimitSwap.
+//
+// Security note: MsgModifyLimitSwap is NOT directly submittable via gRPC (it is not registered
+// in the protobuf service descriptor). It can only reach this handler through two paths:
+//
+//  1. Native THORChain (MsgDeposit): The From address is derived from msg.GetSigners()[0]
+//     in DepositHandler.handle(), so the user cannot spoof it. Additionally,
+//     MsgModifyLimitSwap.ValidateBasic() enforces From == Signer for THORChain-native source assets.
+//
+//  2. External chains (Bifrost observation): The message is constructed by getMsgModifyLimitSwap()
+//     from an ObservedTx, where the From address comes from the actual on-chain transaction
+//     observed and agreed upon by multiple Bifrost validators. To spoof another user's From
+//     address, an attacker would need to send a transaction from that address on the external
+//     chain, which requires the victim's private key.
+//
+// Therefore, handle()'s check that msg.From matches the stored swap's FromAddress is sufficient —
+// the From field is always authenticated by the message flow.
 func (h ModifyLimitSwapHandler) validate(ctx cosmos.Context, msg MsgModifyLimitSwap) error {
 	return msg.ValidateBasic()
 }
@@ -74,7 +91,10 @@ func (h ModifyLimitSwapHandler) handle(ctx cosmos.Context, msg MsgModifyLimitSwa
 			continue
 		}
 
-		// ensure addresses match so people can't change other people's limit swaps
+		// Ensure the From address matches the original swap creator.
+		// The From field is authenticated by the message flow: for native deposits it's derived
+		// from the signer's account, and for external chains it's from the observed on-chain tx.
+		// See the validate() comment for full security analysis.
 		if !msgSwap.Tx.FromAddress.Equals(msg.From) {
 			continue
 		}
@@ -104,7 +124,7 @@ func (h ModifyLimitSwapHandler) handle(ctx cosmos.Context, msg MsgModifyLimitSwa
 
 	// Donate any incoming funds from the modification transaction to the pool
 	// If donation fails, the entire transaction fails to ensure atomicity and prevent fund loss.
-	// The handler is wrapped in CacheContext (handler.go:40-41), so all state changes are rolled back on error.
+	// The handler is wrapped in CacheContext by NewInternalHandler(), so all state changes are rolled back on error.
 	if !msg.DepositAmount.IsZero() && !msg.DepositAsset.IsEmpty() {
 		if err := h.donateToPool(ctx, msg.DepositAsset, msg.DepositAmount, msg.From); err != nil {
 			return fmt.Errorf("fail to donate modification tx funds to pool: %w", err)

@@ -481,8 +481,18 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 		c.Assert(err.Error(), Matches, ".*from and signer address must match when source asset is native.*")
 	}
 
-	// Test Case 4: SECURITY VULNERABILITY - Anyone can modify BTC swaps if they know the From address
-	// This test demonstrates that the current implementation allows unauthorized modifications
+	// Test Case 4: Direct handler invocation with mismatched From/Signer for external chain swaps.
+	//
+	// This test calls handler.Run() directly with a hand-crafted MsgModifyLimitSwap where
+	// From != Signer. While this "succeeds" in the test, it is NOT an exploitable vulnerability
+	// because MsgModifyLimitSwap cannot be submitted directly to the chain:
+	//   - It is not registered in the gRPC service descriptor.
+	//   - For native deposits (MsgDeposit), From is derived from the signer's account in DepositHandler.handle().
+	//   - For external chains, From comes from the observed on-chain tx via getMsgModifyLimitSwap(),
+	//     which requires the victim's private key to spoof.
+	//
+	// This test exists to document this design decision and verify the handler's behavior
+	// when called directly (e.g., from other internal code paths).
 	{
 		// User A creates a limit swap
 		userAAddr := GetRandomBTCAddress()
@@ -510,8 +520,8 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwapB), IsNil)
 		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwapB), IsNil)
 
-		// With the current security model, for BTC swaps anyone can modify if they know the From address
-		// This is the vulnerability - User B can modify User A's swap
+		// In a direct handler.Run() call, the From/Signer mismatch is not checked for external chains.
+		// This is safe because this code path is unreachable in production (see comment above).
 		maliciousMsg := types.NewMsgModifyLimitSwap(
 			userAAddr, // Using User A's address
 			sourceCoin,
@@ -522,12 +532,13 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			cosmos.ZeroUint(),
 		)
 
-		// This currently succeeds - which is a security issue
+		// This succeeds because the handler only checks From address match, not From/Signer ownership.
+		// In production, the From field is always authenticated by the message flow (see validate() comment).
 		result, err := handler.Run(ctx, maliciousMsg)
 		c.Assert(err, IsNil)
 		c.Assert(result, NotNil)
 
-		// The swap was modified by User B - this shouldn't be allowed!
+		// The swap was modified via direct handler invocation (not reachable in production)
 		modifiedSwapA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDA, 0)
 		c.Assert(err, IsNil)
 		c.Assert(modifiedSwapA.TradeTarget.Equal(cosmos.NewUint(100*common.One)), Equals, true)
@@ -537,7 +548,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 		c.Assert(err, IsNil)
 		c.Assert(swapB.TradeTarget.Equal(targetCoin.Amount), Equals, true)
 
-		// User A can now modify their own swap (which was already modified to 100 by User B)
+		// User A can also modify their own swap (which was already modified to 100 above)
 		validMsg := types.NewMsgModifyLimitSwap(
 			userAAddr,
 			sourceCoin,
