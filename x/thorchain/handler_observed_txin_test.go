@@ -216,6 +216,15 @@ func (k *TestObservedTxInHandleKeeper) SetLastObserveHeight(ctx cosmos.Context, 
 	return nil
 }
 
+func (k *TestObservedTxInHandleKeeper) ReferenceMemoExists(_ cosmos.Context, asset common.Asset, reference string) bool {
+	if k.referenceMemos == nil {
+		return false
+	}
+	key := fmt.Sprintf("%s:%s", asset.String(), reference)
+	_, exists := k.referenceMemos[key]
+	return exists
+}
+
 func (k *TestObservedTxInHandleKeeper) GetReferenceMemo(_ cosmos.Context, asset common.Asset, reference string) (ReferenceMemo, error) {
 	if k.referenceMemos == nil {
 		return ReferenceMemo{}, fmt.Errorf("reference memo not found")

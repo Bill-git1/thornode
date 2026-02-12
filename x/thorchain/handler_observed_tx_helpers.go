@@ -820,6 +820,12 @@ func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset,
 			return ""
 		}
 
+		// Check if the reference memo exists before proceeding
+		if !mgr.Keeper().ReferenceMemoExists(ctx, asset, m.Reference) {
+			ctx.Logger().Debug("reference memo not found", "reference", m.Reference, "asset", asset)
+			return ""
+		}
+
 		refMemo, err := mgr.Keeper().GetReferenceMemo(ctx, asset, m.Reference)
 		if err != nil {
 			ctx.Logger().Error("unable to fetch pool for ref memo lookup", "error", err, "asset", asset)
@@ -866,6 +872,12 @@ func trackReferenceMemoUsage(ctx cosmos.Context, mgr Manager, asset common.Asset
 	if mem.GetType() == TxReferenceReadMemo {
 		m, ok := mem.(ReferenceReadMemo)
 		if !ok {
+			return
+		}
+
+		// Only track usage for reference memos that actually exist in state
+		if !mgr.Keeper().ReferenceMemoExists(ctx, asset, m.Reference) {
+			ctx.Logger().Debug("reference memo not found for usage tracking, skipping", "reference", m.Reference, "asset", asset)
 			return
 		}
 
