@@ -2,9 +2,12 @@ package utxo
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -13,8 +16,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	ltcwire "github.com/ltcsuite/ltcd/wire"
 	"github.com/ltcsuite/ltcutil"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 
-	"github.com/btcsuite/btcd/mempool"
 	btcwire "github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	dogewire "github.com/eager7/dogd/wire"
@@ -24,7 +27,15 @@ import (
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+
+	"github.com/btcsuite/btcd/mempool"
 )
+
+// ZecTxExpiry (in blocks) is used to calculate the tx expiry height
+const ZecTxExpiry = uint32(40)
+
+// ZecExtraFee (in Zats) is added to the calculated gas costs
+const ZecExtraFee = int(0)
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Client - Signing
@@ -88,6 +99,13 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
 		outputAddrStr = outputAddr.(btcutil.Address).String()
+	case common.ZECChain:
+		outputAddr, err = zecutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgZEC().Name)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		// re-encoding addresses would break tex address support
+		outputAddrStr = tx.ToAddress.String()
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -168,8 +186,33 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		stx = wireToLTC(redeemTx)
 	case common.BTCChain:
 		stx = wireToBTC(redeemTx)
+	case common.ZECChain:
+		// signing is slightly different, using zecTx, no need to wire
 	default:
 		c.log.Fatal().Msg("unsupported chain")
+	}
+
+	chainHeight, err := c.rpc.GetBlockCount()
+	if err != nil {
+		// fall back to the scanner height, thornode voter does not use height
+		chainHeight = c.currentBlockHeight.Load()
+		c.log.Warn().Err(err).
+			Int64("fallback_height", chainHeight).
+			Msg("failed to get block height from RPC, falling back to scanner height")
+	}
+
+	// only used for zcash
+	var zecTx *zecutil.MsgTx
+	if c.cfg.ChainID == common.ZECChain {
+		// WARNING: v4 (Sapling) is assumed by both BroadcastTx (double-SHA256 txid)
+		// and zecutil signing (Blake2b sighash). Upgrading to v5 requires updating
+		// txid calculation per ZIP-244 and the signing algorithm.
+		redeemTx.Version = 4
+
+		zecTx = &zecutil.MsgTx{
+			MsgTx:        redeemTx,
+			ExpiryHeight: uint32(chainHeight) + ZecTxExpiry,
+		}
 	}
 
 	// sign the tx
@@ -194,6 +237,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 				err = c.signUTXOLTC(stx.(*ltcwire.MsgTx), tx, amount, sourceScript, i)
 			case common.BTCChain:
 				err = c.signUTXOBTC(stx.(*btcwire.MsgTx), tx, amount, sourceScript, i)
+			case common.ZECChain:
+				err = c.signUTXOZEC(zecTx, tx, amount, sourceScript, i)
 			default:
 				c.log.Fatal().Msg("unsupported chain")
 			}
@@ -221,24 +266,31 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		redeemTx = ltcToWire(stx.(*ltcwire.MsgTx))
 	case common.BTCChain:
 		redeemTx = btcToWire(stx.(*btcwire.MsgTx))
+	case common.ZECChain:
+		// using zecTx directly, no need to convert back
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
 
-	// calculate the final transaction size
-	finalSize := redeemTx.SerializeSize()
-	finalVBytes := mempool.GetTxVirtualSize(btcutil.NewTx(redeemTx))
-	c.log.Info().Msgf("final size: %d, final vbyte: %d", finalSize, finalVBytes)
 	var signedTx bytes.Buffer
-	if err = redeemTx.Serialize(&signedTx); err != nil {
+
+	switch c.cfg.ChainID {
+	case common.ZECChain:
+		err = zecTx.ZecEncode(&signedTx, 0, btcwire.BaseEncoding)
+	default:
+		// calculate the final transaction size
+		finalSize := redeemTx.SerializeSize()
+		finalVBytes := mempool.GetTxVirtualSize(btcutil.NewTx(redeemTx))
+		c.log.Info().Msgf("final size: %d, final vbyte: %d", finalSize, finalVBytes)
+
+		err = redeemTx.Serialize(&signedTx)
+	}
+
+	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to serialize tx to bytes: %w", err)
 	}
 
 	// create the observation to be sent by the signer before broadcast
-	chainHeight, err := c.rpc.GetBlockCount()
-	if err != nil { // fall back to the scanner height, thornode voter does not use height
-		chainHeight = c.currentBlockHeight.Load()
-	}
 	amt := redeemTx.TxOut[0].Value // the first output is the outbound amount
 	gas := totalAmount
 	for _, txOut := range redeemTx.TxOut { // subtract all vouts to from vins to get the gas
@@ -266,6 +318,19 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		)
 	}
 
+	// keep track of used utxos for Zcash
+	if c.cfg.ChainID == common.ZECChain {
+		var ids []string
+		for _, vin := range redeemTx.TxIn {
+			id := fmt.Sprintf("%s:%d", vin.PreviousOutPoint.Hash.String(), vin.PreviousOutPoint.Index)
+			ids = append(ids, id)
+		}
+		err = c.temporalStorage.SetSpentUtxos(ids, chainHeight)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to set utxos: %w", err)
+		}
+	}
+
 	return signedTx.Bytes(), nil, txIn, nil
 }
 
@@ -289,12 +354,6 @@ func (c *Client) GetVaultLock(vaultPubKey string) *sync.Mutex {
 
 // BroadcastTx will broadcast the given payload.
 func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, error) {
-	redeemTx := btcwire.NewMsgTx(btcwire.TxVersion)
-	buf := bytes.NewBuffer(payload)
-	if err := redeemTx.Deserialize(buf); err != nil {
-		return "", fmt.Errorf("fail to deserialize payload: %w", err)
-	}
-
 	height, err := c.rpc.GetBlockCount()
 	if err != nil {
 		return "", fmt.Errorf("fail to get block height: %w", err)
@@ -313,25 +372,66 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		}
 	}()
 
-	var maxFee any
-	switch c.cfg.ChainID {
-	case common.DOGEChain, common.BCHChain:
-		maxFee = true // "allowHighFees"
-	case common.LTCChain, common.BTCChain:
-		maxFee = 10_000_000
-	}
+	redeemTx := btcwire.NewMsgTx(btcwire.TxVersion)
 
 	// broadcast tx
 	var txid string
-	txid, err = c.rpc.SendRawTransaction(redeemTx, maxFee)
+	switch c.cfg.ChainID {
+	case common.ZECChain:
+		if len(payload) == 0 {
+			return "", fmt.Errorf("payload is empty")
+		}
+
+		args := []any{hex.EncodeToString(payload)}
+
+		err = c.rpc.Call(&txid, "sendrawtransaction", args...)
+
+		if err != nil {
+			c.log.Err(err).Msg("fail to call SendRawTransaction")
+		}
+		if txid == "" {
+			c.log.Error().Msg("fail to call SendRawTransaction")
+		}
+	default:
+		buf := bytes.NewBuffer(payload)
+		if err = redeemTx.Deserialize(buf); err != nil {
+			return "", fmt.Errorf("fail to deserialize payload: %w", err)
+		}
+
+		var maxFee any
+		switch c.cfg.ChainID {
+		case common.DOGEChain, common.BCHChain:
+			maxFee = true // "allowHighFees"
+		case common.LTCChain, common.BTCChain:
+			maxFee = 10_000_000
+		}
+
+		txid, err = c.rpc.SendRawTransaction(redeemTx, maxFee)
+	}
+
 	if txid != "" {
 		bm.AddSelfTransaction(txid)
 	}
+
 	if err != nil {
-		if strings.Contains(err.Error(), "already in block chain") {
-			c.log.Info().Str("hash", redeemTx.TxHash().String()).Msg("broadcasted by another node")
-			return redeemTx.TxHash().String(), nil
+		switch c.cfg.ChainID {
+		case common.ZECChain:
+			hash1 := sha256.Sum256(payload)
+			hash2 := sha256.Sum256(hash1[:])
+			final := hash2[:]
+
+			slices.Reverse(final)
+
+			txid = hex.EncodeToString(final)
+		default:
+			txid = redeemTx.TxHash().String()
 		}
+
+		if strings.Contains(err.Error(), "already in block chain") {
+			c.log.Info().Str("hash", txid).Msg("broadcasted by another node")
+			return txid, nil
+		}
+
 		return "", fmt.Errorf("fail to broadcast transaction to chain: %w", err)
 	}
 

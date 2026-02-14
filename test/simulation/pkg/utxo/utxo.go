@@ -2,14 +2,17 @@ package utxo
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"sync"
 
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
@@ -61,6 +64,10 @@ type Client struct {
 	privKey *btcec.PrivateKey
 	pubKey  common.PubKey
 	address common.Address
+
+	// chain specific
+	mtx        sync.Mutex
+	spentUtxos map[string]bool
 }
 
 var _ LiteChainClient = &Client{}
@@ -74,7 +81,7 @@ func NewConstructor(host string) LiteChainClientConstructor {
 func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChainClient, error) {
 	// create rpc client
 	retries := 5
-	rpc, err := rpc.NewClient(host, "thorchain", "password", retries, zerolog.Nop())
+	rpc, err := rpc.NewClient(host, "thorchain", "password", retries, zerolog.Nop(), chain)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create rpc client: %w", err)
 	}
@@ -101,22 +108,27 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	}
 
 	// import address to wallet, rescan if master account
-	if keys.GetSignerInfo().Name == "master" {
-		err = rpc.ImportAddressRescan(address.String())
-	} else {
-		err = rpc.ImportAddress(address.String())
-	}
-	if err != nil {
-		return nil, fmt.Errorf("fail to import address(%s): %w", address, err)
+	if !chain.Equals(common.ZECChain) {
+		if keys.GetSignerInfo().Name == "master" {
+			err = rpc.ImportAddressRescan(address.String())
+		} else {
+			err = rpc.ImportAddress(address.String())
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("fail to import address(%s): %w", address, err)
+		}
 	}
 
 	return &Client{
-		chain:   chain,
-		rpc:     rpc,
-		keys:    keys,
-		privKey: privKey,
-		pubKey:  pubkey,
-		address: address,
+		chain:      chain,
+		rpc:        rpc,
+		keys:       keys,
+		privKey:    privKey,
+		pubKey:     pubkey,
+		address:    address,
+		spentUtxos: make(map[string]bool),
+		mtx:        sync.Mutex{},
 	}, nil
 }
 
@@ -204,8 +216,28 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 		stx = wireToLTC(redeemTx)
 	case common.BTCChain:
 		stx = wireToBTC(redeemTx)
+	case common.ZECChain:
+		// signing is slightly different, using zecTx, no need to wire
 	default:
 		log.Fatal().Msg("unsupported chain")
+	}
+
+	// only used for zcash
+	var height int64
+	var zecTx *zecutil.MsgTx
+	if c.chain.Equals(common.ZECChain) {
+		height, err = c.rpc.GetBlockCount()
+		if err != nil {
+			return nil, fmt.Errorf("fail to get block count: %w", err)
+		}
+
+		redeemTx.Version = 4
+		// set arbitrary high number for expiry height
+		// to use correct branch id for signing
+		zecTx = &zecutil.MsgTx{
+			MsgTx:        redeemTx,
+			ExpiryHeight: uint32(height + 20),
+		}
 	}
 
 	// sign the tx
@@ -227,6 +259,8 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 				err = c.signUTXOLTC(stx.(*ltcwire.MsgTx), amount, sourceScript, i)
 			case common.BTCChain:
 				err = c.signUTXOBTC(stx.(*btcwire.MsgTx), amount, sourceScript, i)
+			case common.ZECChain:
+				err = c.signUTXOZEC(zecTx, amount, sourceScript, i)
 			default:
 				log.Fatal().Msg("unsupported chain")
 			}
@@ -253,13 +287,22 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 		redeemTx = ltcToWire(stx.(*ltcwire.MsgTx))
 	case common.BTCChain:
 		redeemTx = btcToWire(stx.(*btcwire.MsgTx))
+	case common.ZECChain:
+		// using zecTx directly, no need to convert back
 	default:
 		log.Fatal().Msg("unsupported chain")
 	}
 
 	// calculate the final transaction size
 	var signedTx bytes.Buffer
-	if err = redeemTx.Serialize(&signedTx); err != nil {
+	switch c.chain {
+	case common.ZECChain:
+		err = zecTx.ZecEncode(&signedTx, 0, wire.BaseEncoding)
+	default:
+		err = redeemTx.Serialize(&signedTx)
+	}
+
+	if err != nil {
 		return nil, fmt.Errorf("fail to serialize tx to bytes: %w", err)
 	}
 
@@ -271,6 +314,13 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (c *Client) BroadcastTx(payload []byte) (string, error) {
+	if c.chain.Equals(common.ZECChain) {
+		var hash string
+		args := []any{hex.EncodeToString(payload)}
+		err := c.rpc.Call(&hash, "sendrawtransaction", args...)
+		return hash, err
+	}
+
 	redeemTx := btcwire.NewMsgTx(btcwire.TxVersion)
 	buf := bytes.NewBuffer(payload)
 	if err := redeemTx.Deserialize(buf); err != nil {
@@ -323,6 +373,14 @@ func (c *Client) getSourceScript(tx SimTx) ([]byte, error) {
 			return nil, fmt.Errorf("fail to decode source address(%s): %w", c.address, err)
 		}
 		return btctxscript.PayToAddrScript(addr)
+	case common.ZECChain:
+		params := c.getChainCfgZEC()
+		var addr btcutil.Address
+		addr, err := zecutil.DecodeAddress(c.address.String(), params.Name)
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode source address(%s): %w", c.address, err)
+		}
+		return zecutil.PayToAddrScript(addr)
 	default:
 		log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -348,7 +406,24 @@ func (c *Client) getUtxoToSpend(total float64) ([]btcjson.ListUnspentResult, err
 	// collect UTXOs to spend
 	var result []btcjson.ListUnspentResult
 	var toSpend float64
+
+	if c.chain.Equals(common.ZECChain) {
+		c.mtx.Lock()
+		defer c.mtx.Unlock()
+	}
+
 	for _, item := range utxos {
+		if c.chain.Equals(common.ZECChain) {
+			key := fmt.Sprintf("%s:%d", item.TxID, item.Vout)
+
+			_, found := c.spentUtxos[key]
+			if found {
+				continue
+			}
+
+			c.spentUtxos[key] = true
+		}
+
 		result = append(result, item)
 		toSpend += item.Amount
 		if toSpend >= total {
@@ -374,6 +449,8 @@ func (c *Client) getGasSats() float64 {
 		return 0.0001
 	case common.BTCChain:
 		return 0.0001
+	case common.ZECChain:
+		return 0.001
 	default:
 		log.Fatal().Msg("unsupported chain")
 		return 0.0
@@ -458,6 +535,16 @@ func (c *Client) buildTx(tx SimTx, sourceScript []byte) (
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
+	case common.ZECChain:
+		var outputAddr btcutil.Address
+		outputAddr, err = zecutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgZEC().Name)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		buf, err = zecutil.PayToAddrScript(outputAddr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
 	default:
 		log.Fatal().Msg("unsupported chain")
 	}
@@ -481,7 +568,7 @@ func (c *Client) buildTx(tx SimTx, sourceScript []byte) (
 		nullDataScript, err = bchtxscript.NullDataScript([]byte(tx.Memo))
 	case common.LTCChain:
 		nullDataScript, err = ltctxscript.NullDataScript([]byte(tx.Memo))
-	case common.BTCChain:
+	case common.BTCChain, common.ZECChain:
 		nullDataScript, err = btctxscript.NullDataScript([]byte(tx.Memo))
 	default:
 		log.Fatal().Msg("unsupported chain")
@@ -489,6 +576,7 @@ func (c *Client) buildTx(tx SimTx, sourceScript []byte) (
 	if err != nil {
 		return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
 	}
+
 	redeemTx.AddTxOut(wire.NewTxOut(0, nullDataScript))
 
 	return redeemTx, individualAmounts, nil
@@ -540,6 +628,15 @@ func (c *Client) getChainCfgDOGE() *dogechaincfg.Params {
 	default:
 		log.Fatal().Msg("unsupported network")
 		return nil
+	}
+}
+
+func (c *Client) getChainCfgZEC() *btcchaincfg.Params {
+	switch common.CurrentChainNetwork {
+	case common.MockNet:
+		return &btcchaincfg.Params{Name: "testnet3"}
+	default:
+		return &btcchaincfg.Params{Name: "mainnet"}
 	}
 }
 
@@ -630,5 +727,38 @@ func (c *Client) signUTXOBTC(redeemTx *btcwire.MsgTx, amount int64, sourceScript
 	if err = engine.Execute(); err != nil {
 		return fmt.Errorf("fail to execute the script: %w", err)
 	}
+	return nil
+}
+
+func (c *Client) signUTXOZEC(zecTx *zecutil.MsgTx, amount int64, sourceScript []byte, idx int) (err error) {
+	signable := btctxscript.NewPrivateKeySignable(c.privKey)
+
+	var cache *zecutil.TxSigHashes
+	if cache, err = zecutil.NewTxSigHashes(zecTx); err != nil {
+		return err
+	}
+
+	blakeHash, err := zecutil.Blake2bSignatureHash(sourceScript, cache, txscript.SigHashAll, zecTx, idx, amount)
+	if err != nil {
+		return err
+	}
+
+	signature, err := signable.Sign(blakeHash)
+	if err != nil {
+		return err
+	}
+
+	pkData := signable.GetPubKey().SerializeCompressed()
+
+	sigScript, err := btctxscript.NewScriptBuilder().
+		AddData(append(signature.Serialize(), byte(txscript.SigHashAll))).
+		AddData(pkData).
+		Script()
+	if err != nil {
+		return err
+	}
+
+	zecTx.TxIn[idx].SignatureScript = sigScript
+
 	return nil
 }

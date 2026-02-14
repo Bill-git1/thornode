@@ -31,6 +31,13 @@ const (
 	// PrefixObservedTx is the LevelDB key prefix used for storing observed transactions.
 	// The hash of the transaction is appended for the final key.
 	PrefixObservedTx = "observed-"
+
+	// PrefixSpentUtxoById and PrefixSpentUtxoByHeight are LevelDB key prefixes
+	// used for storing UTXOs used for a broadcasted Zcash to prevent selecting
+	// them twice for the another transaction. Indexing them by height and id
+	// reduce time for lookup up and clean up
+	PrefixSpentUtxoById     = "spentutxobyid-"
+	PrefixSpentUtxoByHeight = "spentutxobyheight-"
 )
 
 // -------------------------------------------------------------------------------------
@@ -49,6 +56,11 @@ type TransactionFee struct {
 	// VSize is the estimated vbytes of the transaction. On chains with no concept of
 	// transaction weight, this is simply the estimated byte size of the transaction.
 	VSize int32 `json:"v_size"`
+}
+
+type SpentUtxosByHeight struct {
+	Height int64    `json:"height"`
+	Ids    []string `json:"ids"`
 }
 
 // -------------------------------------------------------------------------------------
@@ -256,6 +268,124 @@ func (t *TemporalStorage) UntrackObservedTx(txid string) error {
 	return t.db.Delete([]byte(key), nil)
 }
 
+func (t *TemporalStorage) SetSpentUtxos(ids []string, height int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	for _, id := range ids {
+		err := t.setSpentUtxoById(id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return t.setSpentUtxosByHeight(ids, height)
+}
+
+func (t *TemporalStorage) GetSpentUtxosByHeight(height int64) ([]string, error) {
+	key := t.getSpentUtxoByHeightKey(height)
+	bz, err := t.db.Get([]byte(key), nil)
+	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("fail to get utxo data from storage: %w", err)
+	}
+
+	var record SpentUtxosByHeight
+	if err = json.Unmarshal(bz, &record); err != nil {
+		return nil, fmt.Errorf("fail to unmarshal utxos: %w", err)
+	}
+
+	return record.Ids, nil
+}
+
+func (t *TemporalStorage) setSpentUtxosByHeight(ids []string, height int64) error {
+	key := t.getSpentUtxoByHeightKey(height)
+
+	spent, err := t.GetSpentUtxosByHeight(height)
+	if err != nil {
+		return fmt.Errorf("fail to get utxo data from storage: %w", err)
+	}
+
+	// dedup ids
+	idMap := map[string]any{}
+	for _, id := range append(spent, ids...) {
+		if id == "" {
+			continue
+		}
+		idMap[id] = nil
+	}
+
+	var dedupedIds []string
+	for id := range idMap {
+		dedupedIds = append(dedupedIds, id)
+	}
+
+	bz, err := json.Marshal(SpentUtxosByHeight{
+		Height: height,
+		Ids:    dedupedIds,
+	})
+	if err != nil {
+		return fmt.Errorf("fail to marshal utxos by height to json: %w", err)
+	}
+	return t.db.Put([]byte(key), bz, nil)
+}
+
+func (t *TemporalStorage) setSpentUtxoById(id string) error {
+	if id == "" {
+		return nil
+	}
+	key := t.getSpentUtxoByIdKey(id)
+	return t.db.Put([]byte(key), []byte(id), nil)
+}
+
+func (t *TemporalStorage) HasSpentUtxo(id string) (bool, error) {
+	key := t.getSpentUtxoByIdKey(id)
+	return t.db.Has([]byte(key), nil)
+}
+
+func (t *TemporalStorage) PruneSpentUtxos(height int64) error {
+	iterator := t.db.NewIterator(util.BytesPrefix([]byte(PrefixSpentUtxoByHeight)), nil)
+	defer iterator.Release()
+	candidates := []int64{}
+	for ; iterator.Next(); iterator.Valid() {
+		buf := iterator.Value()
+		if len(buf) == 0 {
+			continue
+		}
+		var record SpentUtxosByHeight
+		if err := json.Unmarshal(buf, &record); err != nil {
+			return fmt.Errorf("fail to unmarshal utxo data: %w", err)
+		}
+		if record.Height <= height {
+			candidates = append(candidates, record.Height)
+		}
+	}
+
+	for _, height = range candidates {
+		ids, err := t.GetSpentUtxosByHeight(height)
+		if err != nil {
+			return fmt.Errorf("fail to get utxo data from storage: %w", err)
+		}
+		for _, id := range ids {
+			key := t.getSpentUtxoByIdKey(id)
+			err = t.db.Delete([]byte(key), nil)
+			if err != nil {
+				return fmt.Errorf("fail to delete utxo data from storage: %w", err)
+			}
+		}
+		key := t.getSpentUtxoByHeightKey(height)
+		err = t.db.Delete([]byte(key), nil)
+		if err != nil {
+			return fmt.Errorf("fail to delete utxo data from storage: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // ------------------------------ internal ------------------------------
 
 func (t *TemporalStorage) getBlockMetaKey(height int64) string {
@@ -268,4 +398,12 @@ func (t *TemporalStorage) getMemPoolKey(txid string) string {
 
 func (t *TemporalStorage) getObservedTxKey(txid string) string {
 	return PrefixObservedTx + txid
+}
+
+func (t *TemporalStorage) getSpentUtxoByIdKey(utxo string) string {
+	return PrefixSpentUtxoById + utxo
+}
+
+func (t *TemporalStorage) getSpentUtxoByHeightKey(height int64) string {
+	return fmt.Sprintf("%s-%d", PrefixSpentUtxoByHeight, height)
 }

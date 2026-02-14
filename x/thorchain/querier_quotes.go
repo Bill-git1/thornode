@@ -17,6 +17,7 @@ import (
 	"github.com/gcash/bchutil"
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/ltcsuite/ltcutil"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 
 	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
@@ -368,6 +369,13 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 		address, err = vault.GetAddress(chain)
 		if err != nil {
 			return common.NoAddress, common.NoAddress, 0, err
+		}
+
+		if chain == common.ZECChain {
+			address, err = address.ToTexAddress()
+			if err != nil {
+				return common.NoAddress, common.NoAddress, 0, err
+			}
 		}
 
 		router = common.NoAddress
@@ -1227,6 +1235,19 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 			if err != nil {
 				return nil, err
 			}
+			address = hash.String()
+		case common.ZECChain:
+			params := "mainnet"
+			if network == common.MockNet {
+				params = "testnet3"
+			}
+			if len(data) != 20 {
+				return nil, fmt.Errorf("invalid data length")
+			}
+
+			var bz [20]byte
+			copy(bz[:], data[:20])
+			hash := zecutil.NewAddressPubKeyHash(bz, params)
 			address = hash.String()
 		default:
 			return nil, fmt.Errorf("chain not supported")

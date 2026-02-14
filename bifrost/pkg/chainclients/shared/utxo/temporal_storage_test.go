@@ -2,6 +2,7 @@ package utxo
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
@@ -79,4 +80,89 @@ func (s *BitcoinTemporalStorageTestSuite) TestTemporalStorage(c *C) {
 	c.Assert(fee, Equals, 1.0)
 	c.Assert(vSize, Equals, int32(1))
 	c.Assert(db.Close(), IsNil)
+}
+
+func (s *BitcoinTemporalStorageTestSuite) TestSpentUtxoHandling(c *C) {
+	memStorage := storage.NewMemStorage()
+	db, err := leveldb.Open(memStorage, nil)
+	c.Assert(err, IsNil)
+	store, err := NewTemporalStorage(db, 0)
+	c.Assert(err, IsNil)
+	c.Assert(store, NotNil)
+
+	id1 := "id1"
+	id2 := "id2"
+	id3 := "id3"
+
+	found, err := store.HasSpentUtxo(id1)
+	c.Assert(err, IsNil)
+	c.Assert(found, Equals, false)
+
+	err = store.SetSpentUtxos([]string{id1}, 99)
+	c.Assert(err, IsNil)
+
+	err = store.SetSpentUtxos([]string{id2}, 100)
+	c.Assert(err, IsNil)
+
+	// set empty slice => should simply skip
+	err = store.SetSpentUtxos([]string{}, 101)
+	c.Assert(err, IsNil)
+
+	// has been spent => true
+	found, err = store.HasSpentUtxo(id1)
+	c.Assert(err, IsNil)
+	c.Assert(found, Equals, true)
+
+	// has been spent => true
+	found, err = store.HasSpentUtxo(id2)
+	c.Assert(err, IsNil)
+	c.Assert(found, Equals, true)
+
+	// has not been spent => false
+	found, err = store.HasSpentUtxo(id3)
+	c.Assert(err, IsNil)
+	c.Assert(found, Equals, false)
+
+	// set multiple ids
+	err = store.SetSpentUtxos([]string{id2, id3}, 100)
+	c.Assert(err, IsNil)
+
+	var ids []string
+
+	// return id1
+	ids, err = store.GetSpentUtxosByHeight(99)
+	c.Assert(err, IsNil)
+	c.Assert(ids, HasLen, 1)
+	c.Assert(ids[0], Equals, id1)
+
+	// return id1, id3 (de-duped) for height 100
+	ids, err = store.GetSpentUtxosByHeight(100)
+	c.Assert(err, IsNil)
+	c.Assert(ids, HasLen, 2)
+	slices.Sort(ids)
+	c.Assert(ids[0], Equals, id2)
+	c.Assert(ids[1], Equals, id3)
+
+	// no ids set for height 101
+	ids, err = store.GetSpentUtxosByHeight(101)
+	c.Assert(err, IsNil)
+	c.Assert(ids, HasLen, 0)
+
+	// remove all ids up to and including height 99
+	err = store.PruneSpentUtxos(99)
+	c.Assert(err, IsNil)
+
+	ids, err = store.GetSpentUtxosByHeight(99)
+	c.Assert(err, IsNil)
+	c.Assert(ids, HasLen, 0)
+
+	// was on block 99, should be gone
+	found, err = store.HasSpentUtxo(id1)
+	c.Assert(err, IsNil)
+	c.Assert(found, Equals, false)
+
+	// still there
+	found, err = store.HasSpentUtxo(id3)
+	c.Assert(err, IsNil)
+	c.Assert(found, Equals, true)
 }

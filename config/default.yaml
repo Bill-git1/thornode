@@ -33,6 +33,7 @@ bifrost:
       - NOBLE
       - SOL
       - POL
+      - ZEC
   thorchain:
     chain_id: thorchain
     chain_host: localhost:1317
@@ -491,6 +492,24 @@ bifrost:
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
       solvency_blocks: 50
+
+    zec:
+      <<: *default-chain
+      chain_id: ZEC
+      block_scanner:
+        <<: *default-block-scanner
+        max_reorg_rescan_blocks: 576 # 12h
+        chain_id: ZEC
+        observation_flexibility_blocks: 3
+      mempool_tx_id_cache_size: 1_000_000
+      scanner_leveldb: *default-leveldb
+      utxo:
+        <<: *utxo
+        block_cache_count: 1152
+        max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
+        min_sats_per_vbyte: 2
+        estimated_average_tx_size: 10000
+        max_mempool_ancestors: 0
 
   oracle:
     log_level: info

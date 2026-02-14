@@ -23,6 +23,7 @@ func Consolidate(rng *rand.Rand) *Actor {
 	a.Children[NewConsolidateActor(common.BCHAsset, 10, rng)] = true
 	a.Children[NewConsolidateActor(common.DOGEAsset, 10, rng)] = true
 	a.Children[NewConsolidateActor(common.LTCAsset, 10, rng)] = true
+	a.Children[NewConsolidateActor(common.ZECAsset, 10, rng)] = true
 
 	return a
 }

@@ -19,4 +19,5 @@ var SimChains = []common.Chain{
 	common.TRONChain,
 	common.SOLChain,
 	common.POLChain,
+	common.ZECChain,
 }

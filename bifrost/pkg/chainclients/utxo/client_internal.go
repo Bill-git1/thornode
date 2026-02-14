@@ -435,7 +435,9 @@ func (c *Client) isValidUTXO(hexPubKey string) bool {
 			return len(addresses) == 1 && requireSigs == 1
 		}
 
-	case common.BTCChain:
+	case common.BTCChain, common.ZECChain:
+		// there is no specific txscript package for zcash and vaults are
+		// using p2pkh only, which is compatible to btc
 		scriptType, addresses, requireSigs, err := btctxscript.ExtractPkScriptAddrs(buf, c.getChainCfgBTC())
 		if err != nil {
 			c.log.Err(err).Msg("fail to extract pub key script")
@@ -841,6 +843,13 @@ func (c *Client) getAddressesFromScriptPubKey(scriptPubKey btcjson.ScriptPubKeyR
 func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 	var memo string
 
+	if c.cfg.ChainID.Equals(common.ZECChain) {
+		if len(tx.Vin) == 0 || len(tx.Vout) == 0 {
+			c.log.Error().Str("txid", tx.Txid).Msg("shielded tx")
+			return "", nil
+		}
+	}
+
 	for _, vOut := range tx.Vout {
 		switch strings.ToLower(vOut.ScriptPubKey.Type) {
 		case "witness_v0_keyhash", "pubkeyhash", "nulldata":
@@ -865,6 +874,9 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 			asm, err = ltctxscript.DisasmString(buf)
 		case common.BTCChain:
 			asm, err = btctxscript.DisasmString(buf)
+		case common.ZECChain:
+			asm, err = btctxscript.DisasmString(buf)
+
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}

@@ -22,5 +22,11 @@
     "last_observed_in": 2040528,
     "last_signed_out": 224725,
     "thorchain": 224830
+  },
+  {
+    "chain": "ZEC",
+    "last_observed_in": 17,
+    "last_signed_out": 8654,
+    "thorchain": 456435643
   }
 ]

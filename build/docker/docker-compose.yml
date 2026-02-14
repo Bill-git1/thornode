@@ -88,7 +88,6 @@ services:
     <<: *thorchain-defaults
     hostname: thornode # required for genesis.sh
     depends_on:
-      - polygon
       - ethereum
       - avalanche
     extra_hosts:
@@ -108,7 +107,7 @@ services:
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
       BASE_HOST: ${BASE_HOST:-http://base:8545}
-      POL_HOST: ${POL_HOST:-http://polygon:8545}
+      POL_HOST: ${BASE_HOST:-http://polygon:8545}
       BSC_HOST: ${BSC_HOST:-http://binance-smart:8545}
       XRP_HOST: ${XRP_HOST:-http://xrp:5005}
 
@@ -171,7 +170,6 @@ services:
       - tron-supernode
       - tron-fullnode
       - thornode
-      - polygon
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment: &bifrost-environment
@@ -213,42 +211,64 @@ services:
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_MAX_GAS_LIMIT: 80000
       BIFROST_CHAINS_BASE_BLOCK_SCANNER_MAX_GAS_LIMIT: 80000
 
+      # enable btc
+      BIFROST_CHAINS_BTC_DISABLED: "${BIFROST_CHAINS_BTC_DISABLED:-false}"
+
+      # enable bch
+      BIFROST_CHAINS_BCH_DISABLED: "${BIFROST_CHAINS_BCH_DISABLED:-false}"
+
+      # enable ltc
+      BIFROST_CHAINS_LTC_DISABLED: "${BIFROST_CHAINS_LTC_DISABLED:-false}"
+
+      # enable doge
+      BIFROST_CHAINS_DOGE_DISABLED: "${BIFROST_CHAINS_DOGE_DISABLED:-false}"
+
+      # enable eth
+      BIFROST_CHAINS_ETH_DISABLED: "${BIFROST_CHAINS_ETH_DISABLED:-false}"
+
+      # enable avax
+      BIFROST_CHAINS_AVAX_DISABLED: "${BIFROST_CHAINS_AVAX_DISABLED:-false}"
+
       # enable bsc
-      BIFROST_CHAINS_BSC_DISABLED: "false"
+      BIFROST_CHAINS_BSC_DISABLED: "${BIFROST_CHAINS_BSC_DISABLED:-false}"
       BIFROST_CHAINS_BSC_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
 
       # enable base
-      BIFROST_CHAINS_BASE_DISABLED: "false"
+      BIFROST_CHAINS_BASE_DISABLED: "${BIFROST_CHAINS_BASE_DISABLED:-false}"
       BIFROST_CHAINS_BASE_RPC_HOST: http://base:8545
 
       # enable xrp
-      BIFROST_CHAINS_XRP_DISABLED: "false"
+      BIFROST_CHAINS_XRP_DISABLED: "${BIFROST_CHAINS_XRP_DISABLED:-false}"
       BIFROST_CHAINS_XRP_RPC_HOST: http://xrp:5005
       BIFROST_CHAINS_XRP_CHAIN_NETWORK: "1234"
 
       # enable tron
+      BIFROST_CHAINS_TRON_DISABLED: "${BIFROST_CHAINS_TRON_DISABLED:-false}"
       BIFROST_CHAINS_TRON_API_HOST: http://tron-fullnode:8090
       BIFROST_CHAINS_TRON_RPC_HOST: http://tron-fullnode:8091
 
       # enable gaia
-      BIFROST_CHAINS_GAIA_DISABLED: "false"
+      BIFROST_CHAINS_GAIA_DISABLED: "${BIFROST_CHAINS_GAIA_DISABLED:-false}"
       BIFROST_CHAINS_GAIA_RPC_HOST: ${GAIA_HOST:-http://gaia:26657}
       BIFROST_CHAINS_GAIA_COSMOS_GRPC_HOST: ${GAIA_GRPC_HOST:-gaia:9090}
       BIFROST_CHAINS_GAIA_COSMOS_CHAIN_ID: "localgaia"
 
       # enable noble
-      BIFROST_CHAINS_NOBLE_DISABLED: "false"
+      BIFROST_CHAINS_NOBLE_DISABLED: "${BIFROST_CHAINS_NOBLE_DISABLED:-false}"
       BIFROST_CHAINS_NOBLE_RPC_HOST: http://noble:26657
       BIFROST_CHAINS_NOBLE_COSMOS_GRPC_HOST: "noble:9090"
       BIFROST_CHAINS_NOBLE_COSMOS_CHAIN_ID: "localnoble"
 
       # enable solana
-      BIFROST_CHAINS_SOL_DISABLED: "false"
+      BIFROST_CHAINS_SOL_DISABLED: "${BIFROST_CHAINS_SOL_DISABLED:-false}"
       BIFROST_CHAINS_SOL_RPC_HOST: ${SOL_HOST:-http://solana:8899}
 
       # enable polygon
       BIFROST_CHAINS_POL_DISABLED: "${BIFROST_CHAINS_POL_DISABLED:-false}"
       BIFROST_CHAINS_POL_RPC_HOST: ${BIFROST_CHAINS_POL_RPC_HOST:-http://polygon:8545}
+
+      BIFROST_CHAINS_ZEC_DISABLED: "${BIFROST_CHAINS_ZEC_DISABLED:-false}"
+      BIFROST_CHAINS_ZEC_RPC_HOST: "${BIFROST_CHAINS_ZEC_RPC_HOST:-http://zcash:18232}"
 
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
@@ -742,3 +762,23 @@ services:
       --http.vhosts="*"
       --nodiscover 
       --miner.etherbase=0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC
+
+  # ------------------------------ zcash ------------------------------
+
+  zcash:
+    user: root
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: electriccoinco/zcashd:v6.10.0
+    restart: unless-stopped
+    environment:
+      ZCASH_MASTER_ADDR: ${ZCASH_MASTER_ADDR:-tmGn7qKhnpbnwZPsaPt9XXAQz1Q3HAUCrwh}
+      BLOCK_TIME: ${BLOCK_TIME:-1}
+    volumes:
+      - "./mocknet/zcash/zcash.conf:/srv/zcashd/.zcash/zcash.conf"
+      - "./mocknet/zcash/entrypoint-mock.sh:/usr/local/bin/entrypoint-mock.sh"
+    ports:
+      - 18232:18232
+    entrypoint: entrypoint-mock.sh
+    platform: linux/amd64

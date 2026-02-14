@@ -255,12 +255,16 @@ func (gm *GasMgr) GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.Uint
 }
 
 func (gm *GasMgr) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (types.NetworkFee, error) {
-	if chain.Equals(common.THORChain) {
+	switch chain {
+	case common.THORChain:
 		transactionFee := gm.keeper.GetOutboundTxFee(ctx)
 		return types.NewNetworkFee(common.THORChain, 1, transactionFee.Uint64()), nil
+	case common.ZECChain:
+		// gas fee on Zcash is calculated by logical action, which is done when constructing the tx
+		return types.NewNetworkFee(common.ZECChain, 1, 20_000), nil
+	default:
+		return gm.keeper.GetNetworkFee(ctx, chain)
 	}
-
-	return gm.keeper.GetNetworkFee(ctx, chain)
 }
 
 // GetMaxGas will calculate the maximum gas fee a tx can use

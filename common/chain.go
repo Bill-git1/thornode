@@ -286,6 +286,8 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 			return ltcchaincfg.RegressionNetParams.Bech32HRPSegwit
 		case DOGEChain:
 			return dogchaincfg.RegressionNetParams.Bech32HRPSegwit
+		case ZECChain:
+			return "tm"
 		}
 	case MainNet, StageNet, ChainNet:
 		switch c {
@@ -301,6 +303,8 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 			return ltcchaincfg.MainNetParams.Bech32HRPSegwit
 		case DOGEChain:
 			return dogchaincfg.MainNetParams.Bech32HRPSegwit
+		case ZECChain:
+			return "t1"
 		}
 	}
 	return ""
@@ -318,8 +322,10 @@ func (c Chain) DustThreshold() cosmos.Uint {
 		return cosmos.NewUint(1_000)
 	case LTCChain:
 		return cosmos.NewUint(100_000)
-	case BCHChain, ZECChain:
+	case BCHChain:
 		return cosmos.NewUint(10_000)
+	case ZECChain:
+		return cosmos.NewUint(15_000)
 	case DOGEChain:
 		return cosmos.NewUint(100_000_000)
 	case ETHChain, BASEChain:
@@ -366,6 +372,9 @@ func (c Chain) P2WPKHOutputValue() int64 {
 	case BCHChain:
 		// using bitcoin default for p2pkh txout
 		return 546
+	case ZECChain:
+		// TODO: validate on node
+		return 2730
 	default:
 		return 0 // unsupported chain
 	}

@@ -15,7 +15,12 @@ import (
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/rpc/zec"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
+
+// op-geth rpc uses 10s timeouts
+const ZecClientTimeout = time.Second * 10
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Interfaces
@@ -34,12 +39,14 @@ type SerializableTx interface {
 // Ethereum JSON-RPC 2.0 implementation, which allows batching and connection reuse.
 type Client struct {
 	c          *rpc.Client
+	z          *zec.Client
 	log        zerolog.Logger
+	chain      common.Chain
 	maxRetries int
 }
 
 // NewClient returns a client connection to a UTXO daemon.
-func NewClient(host, user, password string, maxRetries int, log zerolog.Logger) (
+func NewClient(host, user, password string, maxRetries int, log zerolog.Logger, chain common.Chain) (
 	*Client, error,
 ) {
 	authFn := func(h http.Header) error {
@@ -53,16 +60,31 @@ func NewClient(host, user, password string, maxRetries int, log zerolog.Logger) 
 		host = "http://" + host
 	}
 
-	c, err := rpc.DialOptions(context.Background(), host, rpc.WithHTTPAuth(authFn))
+	client := Client{
+		log:        log,
+		chain:      chain,
+		maxRetries: maxRetries,
+	}
+
+	var err error
+
+	switch chain {
+	case common.ZECChain:
+		header := http.Header{}
+		err = authFn(header)
+		if err != nil {
+			return nil, err
+		}
+		client.z = zec.NewClient(host, ZecClientTimeout, header)
+	default:
+		client.c, err = rpc.DialOptions(context.Background(), host, rpc.WithHTTPAuth(authFn))
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{
-		c:          c,
-		log:        log,
-		maxRetries: maxRetries,
-	}, nil
+	return &client, nil
 }
 
 // GetBlockCount returns the number of blocks in the longest block chain.
@@ -139,7 +161,15 @@ func (c *Client) BatchGetMempoolEntry(txids []string) ([]*btcjson.GetMempoolEntr
 	}
 
 	// call batch request
-	err := c.c.BatchCall(batch)
+	var err error
+
+	switch c.chain {
+	case common.ZECChain:
+		err = c.z.BatchCall(batch)
+	default:
+		err = c.c.BatchCall(batch)
+	}
+
 	if err != nil {
 		return nil, nil, extractBTCError(err)
 	}
@@ -194,7 +224,15 @@ func (c *Client) BatchGetRawTransactionVerbose(txids []string) ([]*btcjson.TxRaw
 	}
 
 	// call batch request
-	err := c.c.BatchCall(batch)
+	var err error
+
+	switch c.chain {
+	case common.ZECChain:
+		err = c.z.BatchCall(batch)
+	default:
+		err = c.c.BatchCall(batch)
+	}
+
 	if err != nil {
 		return nil, nil, extractBTCError(err)
 	}
@@ -242,9 +280,44 @@ func (c *Client) CreateWallet(name string) error {
 // ListUnspent returns all unspent outputs with between min and max confirmations.
 func (c *Client) ListUnspent(address string) ([]btcjson.ListUnspentResult, error) {
 	var unspent []btcjson.ListUnspentResult
-	const minConfirm = 0
-	const maxConfirm = 9999999
-	err := c.Call(&unspent, "listunspent", minConfirm, maxConfirm, []string{address})
+	var err error
+
+	switch c.chain {
+	case common.ZECChain:
+		var height int64
+		height, err = c.GetBlockCount()
+		if err != nil {
+			return nil, err
+		}
+
+		var utxos []struct {
+			Txid     string `json:"txid"`
+			Address  string `json:"address"`
+			Index    uint32 `json:"outputIndex"`
+			Script   string `json:"script"`
+			Satoshis uint64 `json:"satoshis"`
+			Height   int64  `json:"height"`
+		}
+
+		err = c.Call(&utxos, "getaddressutxos", []any{address}...)
+
+		for _, utxo := range utxos {
+			unspent = append(unspent, btcjson.ListUnspentResult{
+				TxID:          utxo.Txid,
+				Vout:          utxo.Index,
+				Address:       utxo.Address,
+				ScriptPubKey:  utxo.Script,
+				Amount:        float64(utxo.Satoshis) / 1e8,
+				Confirmations: height - utxo.Height,
+				Spendable:     true,
+			})
+		}
+	default:
+		const minConfirm = 0
+		const maxConfirm = 9999999
+		err = c.Call(&unspent, "listunspent", minConfirm, maxConfirm, []string{address})
+	}
+
 	return unspent, extractBTCError(err)
 }
 
@@ -255,9 +328,19 @@ func (c *Client) GetNetworkInfo() (*btcjson.GetNetworkInfoResult, error) {
 }
 
 func (c *Client) Call(result any, method string, args ...interface{}) error {
-	fn := func() error {
-		return c.c.Call(result, method, args...)
+	var fn func() error
+
+	switch c.chain {
+	case common.ZECChain:
+		fn = func() error {
+			return c.z.Call(result, method, args...)
+		}
+	default:
+		fn = func() error {
+			return c.c.Call(result, method, args...)
+		}
 	}
+
 	err := c.retry(fn)
 	return extractBTCError(err)
 }

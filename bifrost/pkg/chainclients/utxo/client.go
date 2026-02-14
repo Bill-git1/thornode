@@ -114,6 +114,7 @@ func NewClient(
 		common.BCHChain:  true,
 		common.LTCChain:  true,
 		common.BTCChain:  true,
+		common.ZECChain:  true,
 	}
 	if !supported[cfg.ChainID] {
 		return nil, fmt.Errorf("unsupported utxo chain: %s", cfg.ChainID)
@@ -122,7 +123,7 @@ func NewClient(
 	logger := log.Logger.With().Stringer("chain", cfg.ChainID).Logger()
 
 	// create rpc client
-	rpcClient, err := rpc.NewClient(cfg.RPCHost, cfg.UserName, cfg.Password, cfg.MaxRPCRetries, logger)
+	rpcClient, err := rpc.NewClient(cfg.RPCHost, cfg.UserName, cfg.Password, cfg.MaxRPCRetries, logger, cfg.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create rpc client: %w", err)
 	}
@@ -162,8 +163,11 @@ func NewClient(
 	}
 
 	// import the node local address in the daemon wallet
-	if err = c.RegisterPublicKey(c.nodePubKey); err != nil {
-		return nil, fmt.Errorf("fail to register (%s): %w", c.nodePubKey, err)
+	if !c.cfg.ChainID.Equals(common.ZECChain) {
+		err = c.RegisterPublicKey(c.nodePubKey)
+		if err != nil {
+			return nil, fmt.Errorf("fail to register (%s): %w", c.nodePubKey, err)
+		}
 	}
 
 	var path string // fallback to in memory storage if unset
@@ -484,7 +488,7 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 	// report network fee and solvency if within flexibility blocks of tip
 	if chainHeight-height <= c.cfg.BlockScanner.ObservationFlexibilityBlocks {
 		switch c.cfg.ChainID {
-		case common.DOGEChain:
+		case common.DOGEChain, common.ZECChain:
 			err = c.sendNetworkFeeFromBlock(block)
 		case common.BCHChain, common.LTCChain, common.BTCChain:
 			err = c.sendNetworkFee(height)
@@ -507,6 +511,15 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 		c.wg.Add(1)
 		c.consolidateInProgress.Store(true)
 		go c.consolidateUTXOs()
+	}
+
+	if c.cfg.ChainID == common.ZECChain {
+		// expire old utxos from cache
+		expireHeight := height - int64(ZecTxExpiry)
+		err = c.temporalStorage.PruneSpentUtxos(expireHeight)
+		if err != nil {
+			c.log.Err(err).Msg("fail to prune spent utxos")
+		}
 	}
 
 	return txIn, nil
@@ -690,7 +703,7 @@ func (c *Client) ShouldReportSolvency(height int64) bool {
 	}
 
 	switch c.cfg.ChainID {
-	case common.DOGEChain:
+	case common.DOGEChain, common.ZECChain:
 		return height%10 == 0
 	case common.BCHChain, common.BTCChain:
 		return true

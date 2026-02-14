@@ -22,7 +22,6 @@ import (
 	"github.com/cosmos/evm/ethereum/eip712"
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
-
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
@@ -227,6 +226,16 @@ func getVaultChainAddresses(ctx cosmos.Context, vault Vault) []*types.VaultAddre
 			ctx.Logger().Error("fail to get address", "chain", c.String(), "error", err)
 			continue
 		}
+
+		// use tex address for deposits
+		if c == common.ZECChain {
+			addr, err = addr.ToTexAddress()
+			if err != nil {
+				ctx.Logger().Error("fail convert address", "chain", c.String(), "error", err)
+				continue
+			}
+		}
+
 		result = append(result,
 			&types.VaultAddress{
 				Chain:   c.String(),

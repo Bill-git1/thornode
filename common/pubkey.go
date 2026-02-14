@@ -14,7 +14,6 @@ import (
 	"github.com/btcsuite/btcutil/bech32"
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/decred/dcrd/crypto/ripemd160"
 	dogchaincfg "github.com/eager7/dogd/chaincfg"
 	"github.com/eager7/dogutil"
 	eth "github.com/ethereum/go-ethereum/crypto"
@@ -23,7 +22,7 @@ import (
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/ltcsuite/ltcutil"
 	"github.com/mr-tron/base58"
-
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 	xrpkm "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/xrp/keymanager"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -247,39 +246,18 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 			return NoAddress, fmt.Errorf("fail to get pubkey from bech32: %w", err)
 		}
 
-		// Zcash address generation is similar to Bitcoin but uses different version bytes
-		// Version bytes for Zcash: 0x1c, 0xb8 for mainnet P2PKH (t1), 0x1d, 0x25 for testnet P2PKH (tm)
-		pubBz := pk.Bytes()
-
-		// Hash the public key: SHA256 then RIPEMD160
-		pubHash := sha256.Sum256(pubBz)
-		ripemd160Hasher := ripemd160.New()
-		ripemd160Hasher.Write(pubHash[:])
-		pubKeyHash := ripemd160Hasher.Sum(nil)
-
-		// Determine version bytes based on network
-		var versionBytes []byte
+		var prefix string
 		switch chainNetwork {
 		case MockNet:
-			versionBytes = []byte{0x1d, 0x25} // testnet P2PKH prefix (tm)
+			prefix = "testnet3"
 		case MainNet, StageNet, ChainNet:
-			versionBytes = []byte{0x1c, 0xb8} // mainnet P2PKH prefix (t1)
+			prefix = "mainnet"
 		}
 
-		// Create payload: version bytes + public key hash
-		payload := make([]byte, len(versionBytes)+len(pubKeyHash))
-		copy(payload, versionBytes)
-		copy(payload[len(versionBytes):], pubKeyHash)
+		var bz [20]byte
+		copy(bz[:], pk.Address().Bytes())
 
-		// Add checksum: double SHA256 first 4 bytes
-		checksumHash := sha256.Sum256(payload)
-		checksum := sha256.Sum256(checksumHash[:])
-		fullPayload := make([]byte, len(payload)+4)
-		copy(fullPayload, payload)
-		copy(fullPayload[len(payload):], checksum[:4])
-
-		// Encode with base58
-		addressString = base58.Encode(fullPayload)
+		addressString = zecutil.NewAddressPubKeyHash(bz, prefix).String()
 	default:
 		// Only EVM chains remain.
 		if !chain.IsEVM() {

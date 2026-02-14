@@ -18,6 +18,7 @@ import (
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/ltcsuite/ltcutil"
 	"github.com/mr-tron/base58"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -70,6 +71,10 @@ func NewAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
+	if IsValidZECAddress(address) {
+		return Address(address), nil
+	}
+
 	// Network-specific (with build tags) address checking.
 	return newAddress(address)
 }
@@ -101,6 +106,27 @@ func IsValidSOLAddress(address string) bool {
 	}
 
 	return len(decoded) == 32
+}
+
+func IsValidZECAddress(address string) bool {
+	// Zcash transparent addresses start with specific prefixes
+	// Mainnet: t1 (P2PKH), t3 (P2SH), tex1
+	// Testnet: tm (P2PKH), tn (P2SH), textest1
+	for _, prefix := range []string{"t1", "t2", "t3", "tm", "tex1", "textest1"} {
+		if strings.HasPrefix(address, prefix) {
+			var network string
+			switch prefix {
+			case "t1", "t3", "tex1":
+				network = "mainnet"
+			case "t2", "tm", "textest1":
+				network = "testnet3"
+			}
+
+			_, err := zecutil.DecodeAddress(address, network)
+			return err == nil
+		}
+	}
+	return false
 }
 
 // IsValidBCHAddress determinate whether the address is a valid new BCH address format
@@ -260,18 +286,7 @@ func (addr Address) IsChain(chain Chain) bool {
 	case SOLChain:
 		return IsValidSOLAddress(addr.String())
 	case ZECChain:
-		// Zcash transparent addresses start with specific prefixes
-		// Mainnet: t1 (P2PKH), t3 (P2SH)
-		// Testnet: tm (P2PKH), tn (P2SH)
-		// Shielded: z (Sapling), u (Unified)
-		addrStr := addr.String()
-		if strings.HasPrefix(addrStr, "t1") || strings.HasPrefix(addrStr, "t3") ||
-			strings.HasPrefix(addrStr, "tm") || strings.HasPrefix(addrStr, "tn") ||
-			strings.HasPrefix(addrStr, "z") || strings.HasPrefix(addrStr, "u") {
-			// Basic length check for addresses
-			return len(addrStr) >= 26 && len(addrStr) <= 95
-		}
-		return false
+		return IsValidZECAddress(addr.String())
 	default:
 		return true // if THORNode don't specifically check a chain yet, assume its ok.
 	}
@@ -393,16 +408,19 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 		return currentNetwork
 	case ZECChain:
 		// Determine network based on address prefix
-		addrStr := addr.String()
-		if strings.HasPrefix(addrStr, "tm") || strings.HasPrefix(addrStr, "tn") ||
-			strings.HasPrefix(addrStr, "ztestsapling") || strings.HasPrefix(addrStr, "utest") ||
-			strings.HasPrefix(addrStr, "uregtest") {
-			// Testnet addresses
-			return MockNet
+		if !addr.IsChain(chain) {
+			return currentNetwork
 		}
-		// Mainnet addresses: t1, t3, z (Sapling), u (Unified mainnet)
-		if addr.IsChain(ZECChain) {
-			return mainNetPredicate()
+
+		for _, prefix := range []string{"tex1", "t1", "t3", "textest1", "tm", "t2"} {
+			if strings.HasPrefix(addr.String(), prefix) {
+				switch prefix {
+				case "t1", "t3", "tex1":
+					return MainNet
+				case "t2", "tm", "textest1":
+					return MockNet
+				}
+			}
 		}
 	}
 	return currentNetwork
@@ -445,4 +463,46 @@ func (addr Address) MappedAccAddress() (cosmos.AccAddress, error) {
 	}
 
 	return cosmos.AccAddressFromBech32(encoded)
+}
+
+// ToTexAddress returns the tex address for a Zcash P2PKH address
+func (addr Address) ToTexAddress() (Address, error) {
+	addrStr := addr.String()
+
+	if !addr.IsChain(ZECChain) {
+		return NoAddress, fmt.Errorf("%s is no Zcash address", addrStr)
+	}
+
+	if addrStr[:2] != "t1" && addrStr[:2] != "tm" {
+		return NoAddress, fmt.Errorf("%s is no P2PKH address", addrStr)
+	}
+
+	var network, prefix string
+	switch CurrentChainNetwork {
+	case MockNet:
+		network = "testnet3"
+		prefix = "textest"
+	case MainNet, StageNet:
+		network = "mainnet"
+		prefix = "tex"
+	}
+
+	zecAddr, err := zecutil.DecodeAddress(addrStr, network)
+	if err != nil {
+		return NoAddress, err
+	}
+
+	var bz []byte
+	bz, err = bech32.ConvertBits(zecAddr.ScriptAddress(), 8, 5, true)
+	if err != nil {
+		return NoAddress, err
+	}
+
+	var texAddr string
+	texAddr, err = bech32.EncodeM(prefix, bz)
+	if err != nil {
+		return NoAddress, err
+	}
+
+	return Address(texAddr), nil
 }

@@ -61,6 +61,7 @@ lint:
         - third_party/**
         - test/regression/mnt/blocks/**
         - bifrost/pkg/chainclients/tron/api/core
+        - bifrost/pkg/chainclients/utxo/zecutil
 actions:
   disabled:
     - trunk-announce

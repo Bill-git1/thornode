@@ -133,7 +133,9 @@ require (
 
 require (
 	cosmossdk.io/collections v1.2.1
+	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/coder/websocket v1.8.13
+	github.com/dchest/blake2b v1.0.0
 	github.com/decred/dcrd/dcrec/secp256k1 v1.0.4
 )
 

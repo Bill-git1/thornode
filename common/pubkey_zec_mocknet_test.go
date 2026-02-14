@@ -27,12 +27,12 @@ func (s *ZECPubKeyMocknetSuite) TestZECTestnetAddressGeneration(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(addr.IsEmpty(), Equals, false)
 
-	// Verify the address starts with testnet prefix (tm or tn)
+	// Verify the address starts with testnet prefix
 	addrStr := addr.String()
-	c.Check(addrStr[:2] == "tm" || addrStr[:2] == "tn", Equals, true)
+	c.Check(addrStr[:2] == "tm", Equals, true)
 
-	// Verify address length is in valid range
-	c.Check(len(addrStr) >= 26 && len(addrStr) <= 95, Equals, true)
+	// Verify address length is valid
+	c.Check(addrStr, HasLen, 35)
 
 	// Verify it's recognized as a Zcash address
 	c.Check(addr.IsChain(ZECChain), Equals, true)

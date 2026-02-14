@@ -533,6 +533,7 @@ type Bifrost struct {
 		XRP   BifrostChainConfiguration `mapstructure:"xrp"`
 		SOL   BifrostChainConfiguration `mapstructure:"sol"`
 		POL   BifrostChainConfiguration `mapstructure:"pol"`
+		ZEC   BifrostChainConfiguration `mapstructure:"zec"`
 	} `mapstructure:"chains"`
 	TSS             BifrostTSSConfiguration    `mapstructure:"tss"`
 	ObserverLevelDB LevelDBOptions             `mapstructure:"observer_leveldb"`
@@ -577,6 +578,7 @@ func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 		common.XRPChain:   b.Chains.XRP,
 		common.SOLChain:   b.Chains.SOL,
 		common.POLChain:   b.Chains.POL,
+		common.ZECChain:   b.Chains.ZEC,
 	}
 }
 

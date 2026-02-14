@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 
 	"github.com/eager7/dogutil"
 	dogetxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/dogd-txscript"
@@ -117,6 +118,21 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total btcutil.Amount) ([]b
 			}
 		}
 
+		if c.cfg.ChainID == common.ZECChain {
+			id := fmt.Sprintf("%s:%d", item.TxID, item.Vout)
+
+			var found bool
+			found, err = c.temporalStorage.HasSpentUtxo(id)
+			if err != nil {
+				c.log.Err(err).Msg("failed to check spent utxo")
+				continue
+			}
+
+			if found {
+				continue
+			}
+		}
+
 		result = append(result, item)
 		amt, err := btcutil.NewAmount(item.Amount)
 		if err != nil {
@@ -196,7 +212,8 @@ func (c *Client) isSelfTransaction(txID string) bool {
 
 func (c *Client) getPaymentAmount(tx stypes.TxOutItem) btcutil.Amount {
 	amtToPay := tx.Coins.GetCoin(c.cfg.ChainID.GetGasAsset()).Amount.Uint64()
-	if !tx.MaxGas.IsEmpty() {
+	// ZEC gas is calculated differently, see getUtxoToSpend()
+	if !tx.MaxGas.IsEmpty() && c.cfg.ChainID != common.ZECChain {
 		gasAmt := tx.MaxGas.ToCoins().GetCoin(c.cfg.ChainID.GetGasAsset()).Amount
 		amtToPay += gasAmt.Uint64()
 	}
@@ -239,6 +256,14 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
 		}
 		return btctxscript.PayToAddrScript(addr)
+	case common.ZECChain:
+		params := c.getChainCfgZEC()
+		var addr btcutil.Address
+		addr, err := zecutil.DecodeAddress(sourceAddr.String(), params.Name)
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
+		}
+		return zecutil.PayToAddrScript(addr)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -317,7 +342,7 @@ func (c *Client) isSegwitChain() bool {
 	switch c.cfg.ChainID {
 	case common.BTCChain, common.LTCChain:
 		return true
-	case common.DOGEChain, common.BCHChain:
+	case common.DOGEChain, common.BCHChain, common.ZECChain:
 		return false
 	default:
 		c.log.Fatal().Msgf("unsupported chain: %s", c.cfg.ChainID)
@@ -353,6 +378,19 @@ func (c *Client) getGasCoin(tx stypes.TxOutItem, vSize int64) common.Coin {
 	}
 
 	return common.NewCoin(c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(uint64(gasRate*vSize)))
+}
+
+func (c *Client) getGasCoinZEC(tx *wire.MsgTx, memo string) common.Coin {
+	// https://zips.z.cash/zip-0317
+	// 8 bytes value + 1 byte length + OP_RETURN + OP_PUSHBYTES/DATA
+	// -> 8 + 1 + 1 + 2 (using two bytes for OP_PUSHDATA2 for simplicity)
+	bytesOpReturn := 12 + len(memo)
+	actionsMemo := (bytesOpReturn + 34 - 1) / 34
+
+	// assume 2 tx out: one to customer + one back to self
+	amount := 5000*max(len(tx.TxIn), 2+actionsMemo) + ZecExtraFee
+
+	return common.NewCoin(common.ZECAsset, cosmos.NewUint(uint64(amount)))
 }
 
 func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx, map[string]int64, error) {
@@ -441,6 +479,20 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
 		}
+	case common.ZECChain:
+		var outputAddr btcutil.Address
+		outputAddr, err = zecutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgZEC().Name)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		buf, err = zecutil.PayToAddrScript(outputAddr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
+		nullDataScripts, err = MemoToScripts(tx.Memo, btctxscript.MaxDataCarrierSize, btctxscript.NullDataScript, btctxscript.PayToWitnessScript)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
+		}
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -448,26 +500,6 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 	// For memoless outbounds, allow empty nullDataScripts
 	if len(nullDataScripts) == 0 && len(tx.Memo) != 0 {
 		return nil, nil, fmt.Errorf("no null data scripts generated, memo will not be included in the transaction")
-	}
-
-	totalSize := c.estimateTxSize(txes, nullDataScripts, buf, sourceScript)
-
-	coinToCustomer := tx.Coins.GetCoin(c.cfg.ChainID.GetGasAsset())
-
-	// maxFee in sats
-	maxFeeSats := totalSize * c.cfg.UTXO.MaxSatsPerVByte
-	gasCoin := c.getGasCoin(tx, totalSize)
-	gasAmtSats := gasCoin.Amount.Uint64()
-
-	// make sure the transaction fee is not more than the max, otherwise it might reject the transaction
-	if gasAmtSats > uint64(maxFeeSats) {
-		diffSats := gasAmtSats - uint64(maxFeeSats) // in sats
-		c.log.Info().Msgf("gas amount: %d is larger than maximum fee: %d, diff: %d", gasAmtSats, uint64(maxFeeSats), diffSats)
-		gasAmtSats = uint64(maxFeeSats)
-	} else if gasAmtSats < c.minRelayFeeSats {
-		diffStats := c.minRelayFeeSats - gasAmtSats
-		c.log.Info().Msgf("gas amount: %d is less than min relay fee: %d, diff remove from customer: %d", gasAmtSats, c.minRelayFeeSats, diffStats)
-		gasAmtSats = c.minRelayFeeSats
 	}
 
 	// Parse the memo to be able to identify Migrate or Consolidate outbounds.
@@ -481,6 +513,33 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
 		}
+	}
+
+	totalSize := c.estimateTxSize(txes, nullDataScripts, buf, sourceScript)
+
+	coinToCustomer := tx.Coins.GetCoin(c.cfg.ChainID.GetGasAsset())
+
+	var gasCoin common.Coin
+	switch c.cfg.ChainID {
+	case common.ZECChain:
+		gasCoin = c.getGasCoinZEC(redeemTx, memo.String())
+	default:
+		gasCoin = c.getGasCoin(tx, totalSize)
+	}
+
+	// maxFee in sats
+	maxFeeSats := totalSize * c.cfg.UTXO.MaxSatsPerVByte
+	gasAmtSats := gasCoin.Amount.Uint64()
+
+	// make sure the transaction fee is not more than the max, otherwise it might reject the transaction
+	if gasAmtSats > uint64(maxFeeSats) {
+		diffSats := gasAmtSats - uint64(maxFeeSats) // in sats
+		c.log.Info().Msgf("gas amount: %d is larger than maximum fee: %d, diff: %d", gasAmtSats, uint64(maxFeeSats), diffSats)
+		gasAmtSats = uint64(maxFeeSats)
+	} else if gasAmtSats < c.minRelayFeeSats {
+		diffStats := c.minRelayFeeSats - gasAmtSats
+		c.log.Info().Msgf("gas amount: %d is less than min relay fee: %d, diff remove from customer: %d", gasAmtSats, c.minRelayFeeSats, diffStats)
+		gasAmtSats = c.minRelayFeeSats
 	}
 
 	// if the total gas spend is more than max gas , then we have to take away some from the amount pay to customer
