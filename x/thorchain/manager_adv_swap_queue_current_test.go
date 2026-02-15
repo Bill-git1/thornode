@@ -4480,32 +4480,26 @@ func (s AdvSwapQueueSuite) TestLimitSwapsSortedBeforeMarketSwaps(c *C) {
 	items, err := book.scoreMsgs(ctx, items, 10_000)
 	c.Assert(err, IsNil)
 
-	// Sort by fee+slip, then by swap type (limit swaps first)
+	// Sort by fee+slip score
 	items = items.Sort()
 
-	// Verify all limit swaps come before market swaps
-	foundMarket := false
-	for i, item := range items {
-		if item.msg.IsLimitSwap() {
-			c.Check(foundMarket, Equals, false,
-				Commentf("Found limit swap at position %d after market swap", i))
-		} else {
-			foundMarket = true
-		}
-	}
+	// Verify items are sorted by combined fee+slip score (highest fee/slip first)
+	// Expected order: Market 100 ETH (highest fees), Market 50 ETH, Limit 50 ETH, Limit 10 ETH (lowest fees)
+	c.Check(items[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true,
+		Commentf("First should be 100 ETH market, got %d", items[0].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(items[0].msg.IsLimitSwap(), Equals, false)
 
-	// Verify we have the expected number of each type
-	limitCount := 0
-	marketCount := 0
-	for _, item := range items {
-		if item.msg.IsLimitSwap() {
-			limitCount++
-		} else {
-			marketCount++
-		}
-	}
-	c.Check(limitCount, Equals, 2)
-	c.Check(marketCount, Equals, 2)
+	c.Check(items[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true,
+		Commentf("Second should be 50 ETH market, got %d", items[1].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(items[1].msg.IsLimitSwap(), Equals, false)
+
+	c.Check(items[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true,
+		Commentf("Third should be 50 ETH limit, got %d", items[2].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(items[2].msg.IsLimitSwap(), Equals, true)
+
+	c.Check(items[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true,
+		Commentf("Fourth should be 10 ETH limit, got %d", items[3].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(items[3].msg.IsLimitSwap(), Equals, true)
 }
 
 func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
@@ -4582,30 +4576,28 @@ func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
 	items, err := book.scoreMsgs(ctx, items, 10_000)
 	c.Assert(err, IsNil)
 
-	// Sort by fee+slip, then by swap type (limit swaps first)
+	// Sort by fee+slip score
 	items = items.Sort()
 
-	// Expected order after Sort():
-	// 1. Large limit (100 ETH) - first limit swap by score
-	// 2. Small limit (10 ETH) - second limit swap by score
-	// 3. Large market (100 ETH) - first market swap by score
-	// 4. Small market (10 ETH) - second market swap by score
+	// Expected order after Sort() - sorted by combined fee+slip score (highest fee/slip first):
+	// 1. Limit 100 ETH (highest fees/slip)
+	// 2. Market 100 ETH (same size, but lower score due to ID tiebreaking)
+	// 3. Limit 10 ETH (lowest fees/slip)
+	// 4. Market 10 ETH (same size, lower score due to ID tiebreaking)
 
-	// Verify limit swaps are first and ordered by size (larger first = higher fee)
 	c.Check(items[0].msg.IsLimitSwap(), Equals, true)
 	c.Check(items[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true,
-		Commentf("First limit swap should be 100 ETH, got %d", items[0].msg.Tx.Coins[0].Amount.Uint64()))
+		Commentf("First should be 100 ETH limit, got %d", items[0].msg.Tx.Coins[0].Amount.Uint64()))
 
-	c.Check(items[1].msg.IsLimitSwap(), Equals, true)
-	c.Check(items[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true,
-		Commentf("Second limit swap should be 10 ETH, got %d", items[1].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(items[1].msg.IsLimitSwap(), Equals, false)
+	c.Check(items[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true,
+		Commentf("Second should be 100 ETH market, got %d", items[1].msg.Tx.Coins[0].Amount.Uint64()))
 
-	// Verify market swaps are last and ordered by size
-	c.Check(items[2].msg.IsLimitSwap(), Equals, false)
-	c.Check(items[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true,
-		Commentf("First market swap should be 100 ETH, got %d", items[2].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(items[2].msg.IsLimitSwap(), Equals, true)
+	c.Check(items[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true,
+		Commentf("Third should be 10 ETH limit, got %d", items[2].msg.Tx.Coins[0].Amount.Uint64()))
 
 	c.Check(items[3].msg.IsLimitSwap(), Equals, false)
 	c.Check(items[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true,
-		Commentf("Second market swap should be 10 ETH, got %d", items[3].msg.Tx.Coins[0].Amount.Uint64()))
+		Commentf("Fourth should be 10 ETH market, got %d", items[3].msg.Tx.Coins[0].Amount.Uint64()))
 }

@@ -195,6 +195,10 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 		return nil, err
 	}
 
+	if len(redeemTx.TxIn) == 0 {
+		return nil, fmt.Errorf("tx has no vin")
+	}
+
 	// create the list of signing requests
 	signings := []struct{ idx, amount int64 }{}
 	totalAmount := int64(0)

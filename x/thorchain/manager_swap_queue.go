@@ -95,12 +95,6 @@ func (items swapItems) Sort() swapItems {
 		}
 	}
 
-	// Sort by swap type: limit swaps before market swaps
-	// SliceStable preserves the fee+slip score ordering within each type group
-	sort.SliceStable(sorted, func(i, j int) bool {
-		return sorted[i].msg.IsLimitSwap() && !sorted[j].msg.IsLimitSwap()
-	})
-
 	return sorted
 }
 
