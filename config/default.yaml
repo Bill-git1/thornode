@@ -511,6 +511,24 @@ bifrost:
         estimated_average_tx_size: 10000
         max_mempool_ancestors: 0
 
+    sui:
+      <<: *default-chain
+      disabled: true
+      chain_id: SUI
+      block_scanner:
+        <<: *default-block-scanner
+        block_height_discover_back_off: 0.2s
+        max_reorg_rescan_blocks: 0 # sui has guaranteed finality
+        chain_id: SUI
+        observation_flexibility_blocks: 0
+        gas_cache_blocks: 100
+        gas_price_resolution: 10000 # 0.00001 SUI
+        max_gas_limit: 0
+        max_contract_tx_logs: 0
+      mempool_tx_id_cache_size: 0
+      scanner_leveldb: *default-leveldb
+      solvency_blocks: 200
+
   oracle:
     log_level: info
     enabled: false

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strings"
@@ -75,6 +76,10 @@ func NewAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
+	if IsValidSUIAddress(address) {
+		return Address(address), nil
+	}
+
 	// Network-specific (with build tags) address checking.
 	return newAddress(address)
 }
@@ -127,6 +132,14 @@ func IsValidZECAddress(address string) bool {
 		}
 	}
 	return false
+}
+
+func IsValidSUIAddress(address string) bool {
+	if len(address) != 66 || address[:2] != "0x" {
+		return false
+	}
+	_, err := hex.DecodeString(address[2:])
+	return err == nil
 }
 
 // IsValidBCHAddress determinate whether the address is a valid new BCH address format
@@ -200,7 +213,8 @@ func getBCHAddress(address bchutil.Address, cfg *bchchaincfg.Params) (Address, e
 // Note that this can have false positives, such as being unable to distinguish between ETH and AVAX.
 func (addr Address) IsChain(chain Chain) bool {
 	if chain.IsEVM() {
-		return strings.HasPrefix(addr.String(), "0x")
+		addrStr := addr.String()
+		return len(addrStr) == 42 && addrStr[:2] == "0x"
 	}
 	switch chain {
 	case XRPChain:
@@ -287,6 +301,8 @@ func (addr Address) IsChain(chain Chain) bool {
 		return IsValidSOLAddress(addr.String())
 	case ZECChain:
 		return IsValidZECAddress(addr.String())
+	case SUIChain:
+		return IsValidSUIAddress(addr.String())
 	default:
 		return true // if THORNode don't specifically check a chain yet, assume its ok.
 	}
@@ -404,7 +420,7 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 		if err == nil {
 			return MockNet
 		}
-	case SOLChain:
+	case SOLChain, SUIChain:
 		return currentNetwork
 	case ZECChain:
 		// Determine network based on address prefix

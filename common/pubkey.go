@@ -2,6 +2,7 @@ package common
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -23,6 +24,8 @@ import (
 	"github.com/ltcsuite/ltcutil"
 	"github.com/mr-tron/base58"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
+	"golang.org/x/crypto/blake2b"
+
 	xrpkm "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/xrp/keymanager"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -258,6 +261,17 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 		copy(bz[:], pk.Address().Bytes())
 
 		addressString = zecutil.NewAddressPubKeyHash(bz, prefix).String()
+	case SUIChain:
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, p.String())
+		if err != nil {
+			return NoAddress, err
+		}
+
+		pub := append([]byte{0x00}, pk.Bytes()...)
+
+		hash := blake2b.Sum256(pub)
+
+		addressString = "0x" + hex.EncodeToString(hash[:])
 	default:
 		// Only EVM chains remain.
 		if !chain.IsEVM() {

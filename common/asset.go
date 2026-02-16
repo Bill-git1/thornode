@@ -43,7 +43,8 @@ var (
 	ZECAsset = Asset{Chain: ZECChain, Symbol: "ZEC", Ticker: "ZEC", Synth: false}
 	// POLAsset POL
 	POLAsset = Asset{Chain: POLChain, Symbol: "POL", Ticker: "POL", Synth: false}
-
+	// SUIAsset SUI
+	SUIAsset = Asset{Chain: SUIChain, Symbol: "SUI", Ticker: "SUI", Synth: false}
 	// RuneNative RUNE on thorchain
 	RuneNative = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
 	TCY        = Asset{Chain: THORChain, Symbol: "TCY", Ticker: "TCY", Synth: false}
@@ -130,6 +131,7 @@ func NewAssetWithShortCodesV3_1_0(input string) (Asset, error) {
 	shorts[TRXAsset.ShortCode()] = TRXAsset.String()
 	shorts[XRPAsset.ShortCode()] = XRPAsset.String()
 	shorts[POLAsset.ShortCode()] = POLAsset.String()
+	shorts[SUIAsset.ShortCode()] = SUIAsset.String()
 
 	long, ok := shorts[input]
 	if ok {
@@ -334,6 +336,8 @@ func (a Asset) ShortCode() string {
 		return "z"
 	case "POL.POL":
 		return "p"
+	case "SUI.SUI":
+		return "u"
 	default:
 		return ""
 	}
