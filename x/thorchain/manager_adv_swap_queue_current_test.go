@@ -4601,3 +4601,192 @@ func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
 	c.Check(items[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true,
 		Commentf("Fourth should be 10 ETH market, got %d", items[3].msg.Tx.Coins[0].Amount.Uint64()))
 }
+
+func (s AdvSwapQueueSuite) TestGetSwapDirections(c *C) {
+	// Test 1: RUNE -> ETH (rune-to-asset)
+	msg := MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100))},
+		},
+		TargetAsset: common.ETHAsset,
+	}
+	dirs := getSwapDirections(msg)
+	c.Assert(len(dirs), Equals, 1)
+	c.Check(dirs[0].pool, Equals, common.ETHAsset.GetLayer1Asset().String())
+	c.Check(dirs[0].direction, Equals, RuneToAsset)
+
+	// Test 2: ETH -> RUNE (asset-to-rune)
+	msg = MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))},
+		},
+		TargetAsset: common.RuneAsset(),
+	}
+	dirs = getSwapDirections(msg)
+	c.Assert(len(dirs), Equals, 1)
+	c.Check(dirs[0].pool, Equals, common.ETHAsset.GetLayer1Asset().String())
+	c.Check(dirs[0].direction, Equals, AssetToRune)
+
+	// Test 3: ETH -> BTC (double swap)
+	msg = MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))},
+		},
+		TargetAsset: common.BTCAsset,
+	}
+	dirs = getSwapDirections(msg)
+	c.Assert(len(dirs), Equals, 2)
+	// First leg: ETH pool, asset-to-rune
+	c.Check(dirs[0].pool, Equals, common.ETHAsset.GetLayer1Asset().String())
+	c.Check(dirs[0].direction, Equals, AssetToRune)
+	// Second leg: BTC pool, rune-to-asset
+	c.Check(dirs[1].pool, Equals, common.BTCAsset.GetLayer1Asset().String())
+	c.Check(dirs[1].direction, Equals, RuneToAsset)
+}
+
+func (s AdvSwapQueueSuite) TestPoolSwapDirTracking(c *C) {
+	lastPoolDir := make(poolSwapDir)
+
+	// RUNE -> ETH market swap (rune-to-asset through ETH pool)
+	runeToEth := MsgSwap{
+		Tx:          common.Tx{Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100))}},
+		TargetAsset: common.ETHAsset,
+		SwapType:    types.SwapType_market,
+	}
+	// ETH -> RUNE market swap (asset-to-rune through ETH pool)
+	ethToRune := MsgSwap{
+		Tx:          common.Tx{Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}},
+		TargetAsset: common.RuneAsset(),
+		SwapType:    types.SwapType_market,
+	}
+	// ETH -> BTC market swap (double swap: ETH asset-to-rune + BTC rune-to-asset)
+	ethToBtc := MsgSwap{
+		Tx:          common.Tx{Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}},
+		TargetAsset: common.BTCAsset,
+		SwapType:    types.SwapType_market,
+	}
+
+	// No history yet - nothing should be skipped even on iteration > 0
+	c.Check(shouldSkipRapidSwapDirection(runeToEth, lastPoolDir, 1), Equals, false)
+
+	// Record a rune-to-asset direction through ETH pool
+	lastPoolDir[common.ETHAsset.GetLayer1Asset().String()] = RuneToAsset
+
+	// Same direction (rune-to-asset through ETH) should be skipped
+	c.Check(shouldSkipRapidSwapDirection(runeToEth, lastPoolDir, 1), Equals, true)
+
+	// Opposite direction (asset-to-rune through ETH) should NOT be skipped
+	c.Check(shouldSkipRapidSwapDirection(ethToRune, lastPoolDir, 1), Equals, false)
+
+	// BTC pool is independent - double swap touches ETH (asset-to-rune, different) so not skipped
+	c.Check(shouldSkipRapidSwapDirection(ethToBtc, lastPoolDir, 1), Equals, false)
+
+	// Now record ETH->BTC directions (ETH=asset-to-rune, BTC=rune-to-asset)
+	lastPoolDir[common.ETHAsset.GetLayer1Asset().String()] = AssetToRune
+	lastPoolDir[common.BTCAsset.GetLayer1Asset().String()] = RuneToAsset
+
+	// Another ETH->BTC would be same direction in both pools - should be skipped
+	c.Check(shouldSkipRapidSwapDirection(ethToBtc, lastPoolDir, 1), Equals, true)
+
+	// --- Partial-match: only one leg of a double swap matches ---
+	// Reset to only have ETH=AssetToRune recorded (no BTC entry)
+	lastPoolDir = make(poolSwapDir)
+	lastPoolDir[common.ETHAsset.GetLayer1Asset().String()] = AssetToRune
+
+	// ETH->BTC: ETH leg is AssetToRune (matches!) + BTC leg is RuneToAsset (no history)
+	// Should be skipped because ANY leg matching triggers a skip.
+	c.Check(shouldSkipRapidSwapDirection(ethToBtc, lastPoolDir, 1), Equals, true)
+
+	// Now record only BTC=RuneToAsset (no ETH entry)
+	lastPoolDir = make(poolSwapDir)
+	lastPoolDir[common.BTCAsset.GetLayer1Asset().String()] = RuneToAsset
+
+	// ETH->BTC: ETH leg is AssetToRune (no history) + BTC leg is RuneToAsset (matches!)
+	// Should be skipped because ANY leg matching triggers a skip.
+	c.Check(shouldSkipRapidSwapDirection(ethToBtc, lastPoolDir, 1), Equals, true)
+
+	// Partial match with OPPOSITE direction: only ETH recorded as RuneToAsset
+	lastPoolDir = make(poolSwapDir)
+	lastPoolDir[common.ETHAsset.GetLayer1Asset().String()] = RuneToAsset
+
+	// ETH->BTC: ETH leg is AssetToRune (opposite of RuneToAsset) + BTC leg has no history
+	// Should NOT be skipped since the only recorded pool has opposite direction.
+	c.Check(shouldSkipRapidSwapDirection(ethToBtc, lastPoolDir, 1), Equals, false)
+}
+
+func (s AdvSwapQueueSuite) TestSynthTradeAssetPoolKeyEquivalence(c *C) {
+	// Verify that synth and trade assets map to the same pool key via GetLayer1Asset(),
+	// ensuring direction tracking treats BTC/BTC (synth) and BTC.BTC (layer1) equivalently.
+	synthBTC := common.Asset{Chain: common.BTCChain, Symbol: "BTC", Ticker: "BTC", Synth: true}
+	tradeBTC := common.Asset{Chain: common.BTCChain, Symbol: "BTC", Ticker: "BTC", Trade: true}
+
+	// Both should normalize to the same layer1 asset string
+	c.Check(synthBTC.GetLayer1Asset().String(), Equals, common.BTCAsset.GetLayer1Asset().String())
+	c.Check(tradeBTC.GetLayer1Asset().String(), Equals, common.BTCAsset.GetLayer1Asset().String())
+
+	// Direction tracking: record direction using synth source, check with layer1 source
+	lastPoolDir := make(poolSwapDir)
+
+	// Swap from synth BTC -> RUNE (asset-to-rune through BTC pool)
+	synthBtcToRune := MsgSwap{
+		Tx:          common.Tx{Coins: common.Coins{common.NewCoin(synthBTC, cosmos.NewUint(100))}},
+		TargetAsset: common.RuneAsset(),
+		SwapType:    types.SwapType_market,
+	}
+	dirs := getSwapDirections(synthBtcToRune)
+	c.Assert(len(dirs), Equals, 1)
+	lastPoolDir[dirs[0].pool] = dirs[0].direction
+
+	// Now a layer1 BTC -> RUNE swap should be skipped (same pool key, same direction)
+	layer1BtcToRune := MsgSwap{
+		Tx:          common.Tx{Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(100))}},
+		TargetAsset: common.RuneAsset(),
+		SwapType:    types.SwapType_market,
+	}
+	c.Check(shouldSkipRapidSwapDirection(layer1BtcToRune, lastPoolDir, 1), Equals, true)
+
+	// And a trade BTC -> RUNE swap should also be skipped (same pool key)
+	tradeBtcToRune := MsgSwap{
+		Tx:          common.Tx{Coins: common.Coins{common.NewCoin(tradeBTC, cosmos.NewUint(100))}},
+		TargetAsset: common.RuneAsset(),
+		SwapType:    types.SwapType_market,
+	}
+	c.Check(shouldSkipRapidSwapDirection(tradeBtcToRune, lastPoolDir, 1), Equals, true)
+}
+
+func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipsMarketOnly(c *C) {
+	// Verify that the direction check only applies to market swaps,
+	// not limit swaps. This is a logic-level test of the condition.
+	lastPoolDir := make(poolSwapDir)
+	ethPool := common.ETHAsset.GetLayer1Asset().String()
+
+	// Record a rune-to-asset direction in ETH pool
+	lastPoolDir[ethPool] = RuneToAsset
+
+	// Market swap RUNE -> ETH (rune-to-asset, same direction)
+	marketMsg := MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100))},
+		},
+		TargetAsset: common.ETHAsset,
+		SwapType:    types.SwapType_market,
+	}
+
+	// Limit swap RUNE -> ETH (same direction, but should NOT be skipped)
+	limitMsg := MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100))},
+		},
+		TargetAsset: common.ETHAsset,
+		SwapType:    types.SwapType_limit,
+	}
+
+	// Market swap should be skipped (iteration > 0, is market swap, same direction)
+	c.Check(shouldSkipRapidSwapDirection(marketMsg, lastPoolDir, 1), Equals, true)
+
+	// Limit swap should NOT be skipped (is limit swap, not market)
+	c.Check(shouldSkipRapidSwapDirection(limitMsg, lastPoolDir, 1), Equals, false)
+
+	// On iteration 0, market swap should NOT be skipped even if same direction
+	c.Check(shouldSkipRapidSwapDirection(marketMsg, lastPoolDir, 0), Equals, false)
+}
