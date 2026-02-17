@@ -953,6 +953,10 @@ func ExtractReferenceFromAmount(ctx cosmos.Context, mgr Manager, asset common.As
 	}
 
 	// Normalize amount to THORChain decimals.
+	// Note: Only decimals < THORChainDecimals (8) need handling here. For chains with
+	// decimals >= THORChainDecimals (e.g. SOL at 9), Bifrost already normalizes all
+	// inbound amounts to 1e8 precision before they reach THORNode, so no scaling is
+	// needed in those cases.
 	if decimals < int64(common.THORChainDecimals) {
 		divisor := int64(1)
 		for i := decimals; i < int64(common.THORChainDecimals); i++ {
