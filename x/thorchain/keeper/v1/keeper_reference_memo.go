@@ -48,6 +48,13 @@ func (k KVStore) GetReferenceMemoIterator(ctx cosmos.Context) cosmos.Iterator {
 // swap memo details are publicly available on the blockchain. Reference memos are
 // also publicly queryable by anyone via the queryReferenceMemo endpoint using
 // asset + reference number. There is no sensitive information to be leaked.
+//
+// WARNING: All CRUD operations normalize reference keys using the current MemolessTxnRefCount
+// value. Changing MemolessTxnRefCount via Mimir governance (e.g., from 99999 to 999999) changes
+// the padding length (5 → 6 digits), making all previously stored references inaccessible
+// through the public API. Existing entries become orphaned state: they cannot be retrieved,
+// checked, or deleted. If MemolessTxnRefCount must be changed, ensure all existing references
+// have expired first (see MemolessTxnTTL), or coordinate a store migration.
 func (k KVStore) SetReferenceMemo(ctx cosmos.Context, record ReferenceMemo) {
 	// Normalize the reference with leading zeros if needed
 	refCount := k.GetConfigInt64(ctx, constants.MemolessTxnRefCount)

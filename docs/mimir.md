@@ -56,7 +56,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 ## Memoless Transactions
 
 - `MemolessTxnTTL`\*: Number of blocks before a registered reference memo expires (default: 3600 blocks ≈ 6 hours)
-- `MemolessTxnRefCount`\*: Maximum number of reference IDs available per chain (default: 99,999). Reference numbers range from 1 to this value.
+- `MemolessTxnRefCount`\*: Maximum number of reference IDs available per chain (default: 99,999). Reference numbers range from 1 to this value. **CAUTION:** Changing this value alters the zero-padding length used to normalize reference keys in the KV store. All existing (non-expired) references will become inaccessible under the new normalization. Only change this value after all current references have expired (see `MemolessTxnTTL`), or coordinate a store migration.
 - `MemolessTxnCost`\*: Optional RUNE cost for registering reference memos (default: 0, in 1e8 notation). Only charged on successful registration.
 - `MemolessTxnMaxUse`\*: Maximum number of times a reference can be used before being invalidated (default: 1). Set to 0 for unlimited usage.
 - `HaltMemoless`#: Emergency halt for all memoless transaction functionality (registration and usage)
