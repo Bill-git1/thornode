@@ -65,6 +65,13 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				if err != nil {
 					return fmt.Errorf("fail to get vault: %w", err)
 				}
+				// If the vault is no longer active or retiring and lacks sufficient
+				// balance for this refund, clear it so prepareTxOutItem discovers an
+				// appropriate active vault. This handles expired limit order refunds
+				// where the original inbound vault has been churned out and emptied.
+				if !vault.IsActive() && !vault.IsRetiring() && vault.GetCoin(coin.Asset).Amount.LT(coin.Amount) {
+					vault = Vault{}
+				}
 			}
 
 			toi := TxOutItem{

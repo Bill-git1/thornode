@@ -897,10 +897,13 @@ func (HandlerSuite) TestIsPeriodLastBlock(c *C) {
 
 type SettleSwapTestKeeper struct {
 	keeper.KVStoreDummy
-	advSwapItems map[string]types.MsgSwap
-	failRemove   bool
-	voter        ObservedTxVoter
-	pools        map[common.Asset]Pool
+	advSwapItems  map[string]types.MsgSwap
+	failRemove    bool
+	voter         ObservedTxVoter
+	pools         map[common.Asset]Pool
+	overrideVault bool
+	vaultStatus   VaultStatus
+	vaultCoins    common.Coins
 }
 
 func (k *SettleSwapTestKeeper) GetObservedTxInVoter(_ cosmos.Context, txID common.TxID) (ObservedTxVoter, error) {
@@ -933,6 +936,11 @@ func (k *SettleSwapTestKeeper) GetPool(_ cosmos.Context, asset common.Asset) (Po
 }
 
 func (k *SettleSwapTestKeeper) GetVault(_ cosmos.Context, pk common.PubKey) (Vault, error) {
+	if k.overrideVault {
+		vault := NewVault(0, k.vaultStatus, AsgardVault, pk, common.Chains{common.BTCChain, common.ETHChain}.Strings(), nil)
+		vault.Coins = k.vaultCoins
+		return vault, nil
+	}
 	// Return a dummy vault for testing
 	vault := NewVault(0, ActiveVault, AsgardVault, pk, common.Chains{common.BTCChain, common.ETHChain}.Strings(), nil)
 	vault.Coins = common.Coins{
@@ -1111,6 +1119,80 @@ func (HelperSuite) TestSettleSwap(c *C) {
 	err = settleSwap(ctx, mgr, msg, "test with removal failure")
 	c.Assert(err, IsNil) // Should not fail, just log errors
 	keeper.failRemove = false
+}
+
+func (HelperSuite) TestSettleSwapRefundFromInactiveVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	txID := GetRandomTxHash()
+	observedPubKey := GetRandomPubKey()
+
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+
+	// Keeper returns an inactive vault with no coins (simulates churned-out vault)
+	k := &SettleSwapTestKeeper{
+		advSwapItems: make(map[string]types.MsgSwap),
+		pools:        make(map[common.Asset]Pool),
+		voter: ObservedTxVoter{
+			Tx: ObservedTx{
+				Tx: common.Tx{
+					ID: txID,
+				},
+				ObservedPubKey: observedPubKey,
+			},
+		},
+		overrideVault: true,
+		vaultStatus:   InactiveVault,
+		vaultCoins:    common.Coins{}, // empty — funds migrated away
+	}
+	k.pools[common.BTCAsset] = btcPool
+	mgr.K = k
+	mgr.txOutStore = NewTxStoreDummy()
+
+	btcAddr := GetRandomBTCAddress()
+	tx := common.NewTx(
+		txID,
+		btcAddr,
+		GetRandomBTCAddress(),
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))},
+		"SWAP:ETH.ETH",
+	)
+	msg := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.ETHAsset,
+		Destination: GetRandomETHAddress(),
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1000),
+			In:      cosmos.NewUint(600), // Only 600 used, 400 to refund
+			Out:     cosmos.NewUint(550),
+		},
+	}
+
+	err := settleSwap(ctx, mgr, msg, "expired limit order")
+	c.Assert(err, IsNil)
+
+	outItems, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	// Expect 2 items: swap outbound + refund
+	c.Assert(len(outItems), Equals, 2)
+
+	// Find the refund item (the one in the original BTC asset)
+	var refundItem *TxOutItem
+	for i, item := range outItems {
+		if item.Coin.Asset.Equals(common.BTCAsset) {
+			refundItem = &outItems[i]
+			break
+		}
+	}
+	c.Assert(refundItem, NotNil)
+	c.Assert(refundItem.Coin.Amount.Equal(cosmos.NewUint(400)), Equals, true)
+	// VaultPubKey should be empty so prepareTxOutItem uses dynamic vault discovery
+	c.Assert(refundItem.VaultPubKey.IsEmpty(), Equals, true)
 }
 
 func (s *HelperSuite) TestSettleSwapLimitSwapBasic(c *C) {
