@@ -247,13 +247,10 @@ func getVaultChainAddresses(ctx cosmos.Context, vault Vault) []*types.VaultAddre
 
 // TODO: remove these vault pubkeys once we are done attempting recoveries from them
 var whitelistPubkeys = map[string]bool{
-	"thorpub1addwnpepqd3m3c05pyvgzgn2wnq083pdpq9pr7smv9l42j3tj2nc508dx8sqvsccz90": true,
-	"thorpub1addwnpepqvr35n5ks2zcp7ff5k4qv3m0xq36dn9gfjd2whja6s4h40wz5fy46pg532g": true,
-	"thorpub1addwnpepqdqdflk4cl2vt22xygvnsalq0s9yz25y0yuc5sgsmzsh4a2g6r6l5t6e4dt": true,
-	"thorpub1addwnpepqd6utq4k678z3f6nw02k0zfs6ew0nvjezuh0njuhyazhftq3sgj6yfmu6fl": true,
-	"thorpub1addwnpepqtw7shm9xdlwzutrz9yq5ywz2xyzczcs2u3jvezcx5f83vwhcc8vc0w7cxt": true,
-	"thorpub1addwnpepqw6wwm9kvwsd978pwkrj94ex88ch0vx6pm45wndzsnwenjfyrdqx2e0ry5n": true,
-	"thorpub1addwnpepq0rf954ne8ahjl0es3k32prvngy6tsye4cr8wdqsrmmdqcsvyzrujqexwxp": true,
+	"thorpub1addwnpepqdc348zt7v8pqrncxzf0gz47jz5jcey9tcfpvv7zlsj50qfgmw7nuj296rh": true,
+	"thorpub1addwnpepqwku796ak4ke2hj356m8yfq549m3fs96t57sukgg9we7u6tsqs6ajrsandz": true,
+	"thorpub1addwnpepqwm8e5jdyjkm43hlf9mkm38vqvhj8cf6l3y9a745cn076u223vvyzxlaz2u": true,
+	"thorpub1addwnpepqwht8xtersz90wsyu6fgx9tj5s3lx4w6q5adcm3mxzetgaa3rxv9sshhjmu": true,
 }
 
 func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVaultsPubkeysRequest) (*types.QueryVaultsPubkeysResponse, error) {
