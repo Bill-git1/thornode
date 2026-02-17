@@ -24,16 +24,38 @@ Halt flags are Boolean. For clarity `0` = false, no issues and `> 0` = true (usu
 
 Each chain has granular control allowing each chain to be halted or resumed on a specific chain as required. Network-level halting is also possible.
 
-1. **Specific Chain Signing Halt** - Allows inbound transactions but stops the signing of outbound transactions. Outbound transactions are [queued](https://thornode.ninerealms.com/thorchain/queue). This is the least impactful halt.
-   1. Mimir setting is `HALTSIGNING[Chain]`, e.g., `HALTSIGNINGETH`
-2. **Specific Chain Liquidity Provider Pause -** addition and withdrawal of liquidity are suspended but swaps and other transactions are processed.
-   1. Mimir setting is `PAUSELP[Chain]`, e.g., `PAUSELPBCH` for BCH
-3. **Specific Chain Trading Halt** - Transactions on external chains are observed but not processed, only [refunds](memos.md#refunds) are given. THORNode's Bifrost is running, nodes are synced to the tip therefore trading resumption can happen very quickly.
-   1. Mimir setting is `HALT[Chain]TRADING`, e.g., `HALTBCHTRADING` for BCH
-4. **Specific Chain Halt** - Serious halt where transitions on that chain are no longer observed and THORNodes will not be synced to the chain tip, usually their Bifrost offline. Resumption will require a majority of nodes syncing to the tip before trading can commence.
-   1. Mimir setting is `HALT[Chain]CHAIN`, e.g., `HALTBCHCHAIN` for BCH.
-5. **Specific Pool Liquidity Provider Pause** - suspends deposits into a specific Liquidity Pool
-   1. Mimir setting is `PAUSELPDEPOSIT-<Asset>`, e.g., `PAUSELPDEPOSIT-BTC-BTC` for BTC pool
+### Chain Halt Types
+
+The three primary chain-level halts node operators use:
+
+| Halt Type        | Mimir Key            | Example          | Effect                                                                             |
+| ---------------- | -------------------- | ---------------- | ---------------------------------------------------------------------------------- |
+| **Trading Halt** | `HALT<CHAIN>TRADING` | `HALTETHTRADING` | Stops swaps; inbound observations continue; outbounds processed; Bifrost online    |
+| **Signing Halt** | `HALTSIGNING<CHAIN>` | `HALTSIGNINGETH` | Stops outbound signing; outbounds queued; swaps/quotes still active                |
+| **Chain Halt**   | `HALT<CHAIN>CHAIN`   | `HALTETHCHAIN`   | Full halt; chain not observed; Bifrost offline; requires majority resync to resume |
+
+```admonish info
+When issues arise, halt **both trading and signing**. Halting only signing keeps quoting active, potentially allowing integrations to send funds that won't process.
+```
+
+```admonish warning
+A chain halt (`HALT<CHAIN>CHAIN`) blocks ALL swap activity involving that chain - including L1, Trade Account, and Secured Asset swaps. Halting the chain also stops all scanning, so should only be used in emergencies (lest the chain scanner fall behind and require significant time to catch up).
+```
+
+### Chain-Specific Halts (Detailed)
+
+1. **Signing Halt** - Allows inbound transactions but stops the signing of outbound transactions. Outbound transactions are [queued](https://thornode.ninerealms.com/thorchain/queue). This is the least impactful halt.
+   - Mimir setting: `HALTSIGNING<CHAIN>`, e.g., `HALTSIGNINGETH`
+2. **Liquidity Provider Pause** - Addition and withdrawal of liquidity are suspended but swaps and other transactions are processed.
+   - Mimir setting: `PAUSELP<CHAIN>`, e.g., `PAUSELPBCH` for BCH
+3. **Trading Halt** - Transactions on external chains are observed but not processed, only [refunds](memos.md#refunds) are given. THORNode's Bifrost is running, nodes are synced to the tip therefore trading resumption can happen very quickly.
+   - Mimir setting: `HALT<CHAIN>TRADING`, e.g., `HALTBCHTRADING` for BCH
+4. **Chain Halt** - Serious halt where transactions on that chain are no longer observed and THORNodes will not be synced to the chain tip, usually with their Bifrost offline. Resumption will require a majority of nodes syncing to the tip before trading can commence.
+   - Mimir setting: `HALT<CHAIN>CHAIN`, e.g., `HALTBCHCHAIN` for BCH
+5. **Pool Deposit Pause** - Suspends deposits into a specific Liquidity Pool.
+   - Mimir setting: `PAUSELPDEPOSIT-<ASSET>`, e.g., `PAUSELPDEPOSIT-BTC-BTC` for BTC pool
+6. **Streaming Swap Pause** - Pauses streaming swaps, affecting user slip protection.
+   - Mimir setting: `StreamingSwapPause`
 
 ```admonish warning
 Chain specific halts do occur and need to be monitored and reacted to when they occur. Users should not be able to send transactions via an interface when a halt is in effect.
@@ -43,8 +65,7 @@ Chain specific halts do occur and need to be monitored and reacted to when they 
 
 - **Network Pause LP** `PAUSELP = 1` Addition and withdrawal of liquidity are suspended for all pools but swaps and other transactions are processed.
 - **Network Trading Halt** `HALTTRADING = 1` Will stop all trading for every connected chain. The THORChain blockchain will continue and native RUNE transactions will be processed.
-
-There is no Network level chain halt setting as the THORChain Blockchain continually needs to produce blocks.
+- **Global Chain Halt** `HaltChainGlobal = 1` Halts all external chains simultaneously. Single key that causes `IsChainHalted()` to return true for any chain. Does not set individual chain halt keys.
 
 A chain halt is possible in which case Mimir or Midgard will not return data. This can happen if the chain suffers consensus failure or more than 1/3 of nodes are switched off. If this occurs the Dev Discord Server `#interface-alerts` will issue alerts.
 
@@ -57,38 +78,59 @@ While very rare, a network level halt is possible and should be monitored for.
 1. **Global Secured Asset Halt** - Disables deposits and withdrawals of all secured assets across base and App Layers.
    1. Mimir setting is `HaltSecuredGlobal`, set to `1` to disable all operations.
 2. **Specific Secured Asset Deposit Halt** - Disables deposits of secured assets in base and App Layer for the specified chain.
-   1. Mimir setting is `HaltSecuredDeposit-<Chain>`, e.g., `HaltSecuredDeposit-ETH = 1` disabled deposits for ETH-ETH and all ERC20 secured assets.
-3. **Specific Secured Asset Withdrawal Halt** - Same as `HaltSecuredDeposit-<Chain>` except for Secured Asset Withdrawal.
-   1. Mimir setting is `HaltSecuredWithdraw-<Chain>`, e.g., `HaltSecuredWithdraw-ETH =``, set to      `1`to disable;`0` to enable.
+   1. Mimir setting is `HaltSecuredDeposit-<CHAIN>`, e.g., `HaltSecuredDeposit-ETH = 1` disabled deposits for ETH-ETH and all ERC20 secured assets.
+3. **Specific Secured Asset Withdrawal Halt** - Same as `HaltSecuredDeposit-<CHAIN>` except for Secured Asset Withdrawal.
+   1. Mimir setting is `HaltSecuredWithdraw-<CHAIN>`, e.g., `HaltSecuredWithdraw-ETH = 1` disables withdrawals for ETH-ETH and all ERC20 secured assets.
 
 ### Smart Contract Halt Management
 
-Smart contract halts, introduced in v3.2.0 (February 2025), control CosmWasm contract execution in the App Layer. These halts pause specific or all contract activities during vulnerabilities, ensuring network security. Interfaces must monitor these settings and prevent unsupported actions.
+Smart contract halts control CosmWasm contract execution in the App Layer. These halts pause specific or all contract activities during vulnerabilities. Ordered by scope:
 
-1. **Global Smart Contract Halt** - Disables all CosmWasm contract executions in the App Layer. Used for critical vulnerabilities or network-wide issues.
-   1. Mimir setting is `HaltWasmGlobal`, set to `1` to disable all contracts; `0` to enable.
-2. **Contract Code Halt** - Disables all instances of a specific CosmWasm contract by its code checksum. Targets contract code with known issues.
-   1. Mimir setting is `HaltWasmCs-<checksum>`, e.g., `HaltWasmCs-4UMPB3SYCM6Z5WRT5DINB66N462U5VVQVDOIFKMP5G55WKRR7VDA` disabled smart code with the checksum `4UMPB3SYCM6Z5WRT5DINB66N462U5VVQVDOIFKMP5G55WKRR7VDA`.
-3. **Specific Contract Halt** - Disables a single CosmWasm contract instance by its contract address address suffix (last 6 characters). Isolates a specific contract instance.
-   1. Mimir setting is `HaltWasmContract-<address suffix>`, e.g., `HaltWasmContract-w58u9f`, disabled the smart contract with a contract address ending in `w58u9f`.
+1. **Global Smart Contract Halt** - Disables all CosmWasm contract executions.
+   - Mimir setting: `HaltWasmGlobal`, set to `1` to disable; `0` to enable.
+2. **Deployer Halt** - Disables all contracts deployed by a specific address (last 6 characters).
+   - Mimir setting: `HaltWasmDeployer-<SUFFIX>`, e.g., `HaltWasmDeployer-abc123`
+3. **Contract Code Halt** - Disables all instances of a contract by its code checksum.
+   - Mimir setting: `HaltWasmCs-<CHECKSUM>`, e.g., `HaltWasmCs-4UMPB3...`
+4. **Specific Contract Halt** - Disables a single contract instance by address suffix (last 6 characters).
+   - Mimir setting: `HaltWasmContract-<SUFFIX>`, e.g., `HaltWasmContract-w58u9f`
+
+### Oracle
+
+- `HaltOracle`: Disables oracle price feeds used by smart contracts for lending and perps.
 
 ### TCY Management
 
 Claiming and Staking of $TCY can be enabled and disabled using flags.
 
-- `TCYClaimingSwapHalt`: Enables/disables RUNE-to-TCY swaps in the claiming module (default: 1, halted).
-- `TCYStakeDistributionHalt`: Enables/disables distribution of RUNE revenue to TCY stakers (default: 1, halted).
-- `TCYStakingHalt`: Enables/disables staking of TCY tokens (default: 1, halted).
-- `TCYUnstakingHalt`: Enables/disables unstaking of TCY tokens (default: 1, halted).
-- `TCYClaimingHalt`: Enables/disables claiming of TCY tokens for THORFi deposits (default: 1, halted).
+- `HaltTCYTrading`: Halts all TCY trading/swaps.
+- `TCYClaimingSwapHalt`: Disables RUNE-to-TCY swaps in the claiming module (default: 1, halted).
+- `TCYStakeDistributionHalt`: Disables distribution of RUNE revenue to TCY stakers (default: 1, halted).
+- `TCYStakingHalt`: Disables staking of TCY tokens (default: 1, halted).
+- `TCYUnstakingHalt`: Disables unstaking of TCY tokens (default: 1, halted).
+- `TCYClaimingHalt`: Disables claiming of TCY tokens for THORFi deposits (default: 1, halted).
 
 ### Trade Accounts
 
 **Trade Accounts Pause** `TradeAccountsEnabled = 1` - Adding to and withdrawing from the Trade Account is enabled.
 
+### RUNEPool Halts
+
+- `RUNEPoolHaltDeposit`: Disables RUNEPool deposits.
+- `RUNEPoolHaltWithdraw`: Disables RUNEPool withdrawals.
+
 ### Memoless Transactions
 
 **Memoless Halt** `HaltMemoless = 1` - Emergency halt that disables all memoless transaction functionality, including both registration of new reference memos and usage of existing ones. When enabled, transactions using reference memos will be rejected.
+
+### Node Operator Halts
+
+These halts affect node operations rather than trading:
+
+- `PauseBond`: Disables bonding.
+- `PauseUnbond`: Disables unbonding.
+- `HaltRebond`: Halts rebond operations.
+- `HaltOperatorRotate`: Halts operator rotation during churn.
 
 ## Monitoring Mimir Keys
 
@@ -101,25 +143,73 @@ curl https://thornode.thorchain.org/thorchain/mimir
 
 ## Quick Reference Table
 
-| Key                           | Description                             | Scope         | Effect                                             |
-| ----------------------------- | --------------------------------------- | ------------- | -------------------------------------------------- |
-| `HALTSIGNING[Chain]`          | Stop outbound tx signing on chain       | Chain         | Outbound txs queued, no tx broadcast               |
-| `PAUSELP[Chain]`              | Pause LP add/withdraw on chain          | Chain         | LPs cannot add/remove liquidity                    |
-| `HALT[Chain]TRADING`          | Halt trading on a specific chain        | Chain         | Only refunds allowed, no new swaps                 |
-| `HALT[Chain]CHAIN`            | Full halt on a chain                    | Chain         | Chain not observed, Bifrost offline                |
-| `PAUSELPDEPOSIT-<Asset>`      | Pause LP deposit on specific asset pool | Pool          | Deposits disabled for the asset pool               |
-| `PAUSELP`                     | Pause LP actions globally               | Global        | All pools pause LP adds/removals                   |
-| `HALTTRADING`                 | Halt all trading                        | Global        | No swaps across any chain                          |
-| `HaltSecuredGlobal`           | Disable all secured asset txs           | Global        | Disable deposits/withdrawals of all secured assets |
-| `HaltSecuredDeposit-<Chain>`  | Disable secured deposits on chain       | Chain         | No secured asset deposits allowed                  |
-| `HaltSecuredWithdraw-<Chain>` | Disable secured withdrawals on chain    | Chain         | No secured asset withdrawals allowed               |
-| `HaltWasmGlobal`              | Halt all CosmWasm contracts             | Global        | Disable contract execution                         |
-| `HaltWasmCs-<checksum>`       | Halt contract code by checksum          | Contract Code | Disable all instances of matching contract code    |
-| `HaltWasmContract-<address>`  | Halt specific contract instance         | Contract      | Disable one specific contract                      |
-| `TCYClaimingSwapHalt`         | Halt TCY claiming swap                  | Global        | Prevent RUNE→TCY swaps                             |
-| `TCYStakeDistributionHalt`    | Halt TCY staking rewards                | Global        | Stops TCY revenue distribution                     |
-| `TCYStakingHalt`              | Halt staking of TCY                     | Global        | Disable TCY staking                                |
-| `TCYUnstakingHalt`            | Halt unstaking of TCY                   | Global        | Disable TCY unstaking                              |
-| `TCYClaimingHalt`             | Halt TCY claiming                       | Global        | Prevent TCY claims from THORFi deposits            |
-| `TradeAccountsEnabled`        | Enable/disable Trade Accounts           | Global        | Allow/disallow Trade Account usage                 |
-| `HaltMemoless`                | Halt memoless transactions              | Global        | Disable memoless tx registration and usage         |
+### Chain Halts
+
+| Key                      | Example                  | Effect                                            |
+| ------------------------ | ------------------------ | ------------------------------------------------- |
+| `HALTSIGNING<CHAIN>`     | `HALTSIGNINGETH`         | Outbound txs queued, no broadcast                 |
+| `PAUSELP<CHAIN>`         | `PAUSELPBCH`             | LPs cannot add/remove liquidity                   |
+| `HALT<CHAIN>TRADING`     | `HALTBCHTRADING`         | Refunds only, no swaps (includes TA/SA swaps)     |
+| `HALT<CHAIN>CHAIN`       | `HALTBCHCHAIN`           | Full halt, Bifrost offline (includes TA/SA swaps) |
+| `PAUSELPDEPOSIT-<ASSET>` | `PAUSELPDEPOSIT-BTC-BTC` | LP deposits disabled for specific pool            |
+| `StreamingSwapPause`     | -                        | Streaming swaps paused, affects user slip         |
+
+### Global Halts
+
+| Key               | Effect                           |
+| ----------------- | -------------------------------- |
+| `PAUSELP`         | All pools pause LP adds/removals |
+| `HALTTRADING`     | No swaps across any chain        |
+| `HaltChainGlobal` | All external chains halted       |
+
+### Secured Assets
+
+| Key                           | Example                   | Effect                                 |
+| ----------------------------- | ------------------------- | -------------------------------------- |
+| `HaltSecuredGlobal`           | -                         | All secured asset operations disabled  |
+| `HaltSecuredDeposit-<CHAIN>`  | `HaltSecuredDeposit-ETH`  | Secured deposits disabled for chain    |
+| `HaltSecuredWithdraw-<CHAIN>` | `HaltSecuredWithdraw-ETH` | Secured withdrawals disabled for chain |
+
+### Smart Contracts (CosmWasm)
+
+| Key                         | Example                   | Effect                                  |
+| --------------------------- | ------------------------- | --------------------------------------- |
+| `HaltWasmGlobal`            | -                         | All contract execution disabled         |
+| `HaltWasmDeployer-<SUFFIX>` | `HaltWasmDeployer-abc123` | All contracts by deployer disabled      |
+| `HaltWasmCs-<CHECKSUM>`     | `HaltWasmCs-4UMPB3...`    | All instances of contract code disabled |
+| `HaltWasmContract-<SUFFIX>` | `HaltWasmContract-w58u9f` | Specific contract instance disabled     |
+| `HaltOracle`                | -                         | Oracle price feeds disabled             |
+
+### TCY
+
+| Key                        | Effect                                        |
+| -------------------------- | --------------------------------------------- |
+| `HaltTCYTrading`           | TCY trading/swaps disabled                    |
+| `TCYClaimingSwapHalt`      | RUNE→TCY swaps in claiming module disabled    |
+| `TCYStakeDistributionHalt` | RUNE revenue distribution to stakers disabled |
+| `TCYStakingHalt`           | TCY staking disabled                          |
+| `TCYUnstakingHalt`         | TCY unstaking disabled                        |
+| `TCYClaimingHalt`          | TCY claims from THORFi deposits disabled      |
+
+### RUNEPool
+
+| Key                    | Effect                        |
+| ---------------------- | ----------------------------- |
+| `RUNEPoolHaltDeposit`  | RUNEPool deposits disabled    |
+| `RUNEPoolHaltWithdraw` | RUNEPool withdrawals disabled |
+
+### Trade Accounts & Memoless
+
+| Key                    | Effect                                      |
+| ---------------------- | ------------------------------------------- |
+| `TradeAccountsEnabled` | `0` = disabled, `1` = enabled               |
+| `HaltMemoless`         | Memoless tx registration and usage disabled |
+
+### Node Operator
+
+| Key                  | Effect                   |
+| -------------------- | ------------------------ |
+| `PauseBond`          | Bonding disabled         |
+| `PauseUnbond`        | Unbonding disabled       |
+| `HaltRebond`         | Rebond operations halted |
+| `HaltOperatorRotate` | Operator rotation halted |

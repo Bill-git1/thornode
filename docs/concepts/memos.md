@@ -192,7 +192,7 @@ A withdrawal can be either dual-sided (withdrawn based on pool's price) or entir
 
 ### Claim TCY
 
-Claim TCY tokens for THORFi debt. Claims must be sent form an address within [`tcy_claimers_mainnet`](https://gitlab.com/thorchain/thornode/-/raw/develop/common/tcyclaimlist/tcy_claimers_mainnet.json). Claimed TCY is assigned to the specified thor address and automatically staked.
+Claim TCY tokens for THORFi debt. Claims must be sent from an address within [`tcy_claimers_mainnet`](https://gitlab.com/thorchain/thornode/-/raw/develop/common/tcyclaimlist/tcy_claimers_mainnet.json). Claimed TCY is assigned to the specified thor address and automatically staked.
 
 **`TCY:ADDR`**
 
