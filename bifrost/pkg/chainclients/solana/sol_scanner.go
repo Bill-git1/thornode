@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -663,9 +664,13 @@ func (s *SOLScanner) getTxIn(slot uint64, transactions []*rpc.TransactionResult)
 	return txIn
 }
 
-// Calculates the median of a slice of uint64
+// Calculates the median of a slice of uint64.
+// Makes a copy to avoid mutating the original slice.
 func calculateMedian(arr []uint64) uint64 {
-	sort.Slice(arr, func(i, j int) bool { return arr[i] < arr[j] })
+	sorted := make([]uint64, len(arr))
+	copy(sorted, arr)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	arr = sorted
 	n := len(arr)
 	if n%2 == 0 {
 		return (arr[n/2-1] + arr[n/2]) / 2
@@ -773,38 +778,22 @@ func (s *SOLScanner) getTxInItem(txn *rpc.TransactionResult, blockHeight int64) 
 
 			fromIdx := instruction.Accounts[0]
 			toIdx := instruction.Accounts[1]
+			// TODO: V0 transactions using Address Lookup Tables (ALTs) can have account
+			// indices that reference addresses in Meta.LoadedAddresses rather than
+			// Message.AccountKeys. These transactions are silently dropped here. To
+			// support them, parse LoadedAddresses and extend the account resolution.
 			if fromIdx >= len(txn.Transaction.Message.AccountKeys) || toIdx >= len(txn.Transaction.Message.AccountKeys) {
 				s.logger.Debug().Msg("Account index out of range")
 				return nil
 			}
-			if fromIdx >= len(txn.Meta.PreBalances) || fromIdx >= len(txn.Meta.PostBalances) {
-				s.logger.Debug().Msg("Account index out of range for balances")
-				return nil
-			}
-
 			fromAccount = txn.Transaction.Message.AccountKeys[fromIdx]
 			toAccount = txn.Transaction.Message.AccountKeys[toIdx]
 
-			// verify prebalance is greater than postbalance to avoid underflow
-			if txn.Meta.PreBalances[fromIdx] < txn.Meta.PostBalances[fromIdx] {
-				s.logger.Debug().
-					Str("txid", txn.Transaction.Signatures[0]).
-					Msg("skipping tx with prebalance less than postbalance")
+			if len(data) < 12 {
+				s.logger.Debug().Msg("Transfer instruction data too short")
 				return nil
 			}
-
-			amountMoved = txn.Meta.PreBalances[fromIdx] - txn.Meta.PostBalances[fromIdx]
-
-			// Adjust for fee if fromAccount is the fee payer
-			if fromAccount == txn.Transaction.Message.AccountKeys[0] {
-				if amountMoved < fee {
-					s.logger.Debug().
-						Str("txID", txn.Transaction.Signatures[0]).
-						Msg("Amount moved is less than fee; skipping")
-					return nil
-				}
-				amountMoved -= fee
-			}
+			amountMoved = binary.LittleEndian.Uint64(data[4:12])
 		}
 	}
 
