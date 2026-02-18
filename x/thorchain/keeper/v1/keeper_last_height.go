@@ -64,7 +64,9 @@ func (k KVStore) GetLastChainHeights(ctx cosmos.Context) (map[common.Chain]int64
 			return nil, fmt.Errorf("fail to parse chain: %w", err)
 		}
 		value := ProtoInt64{}
-		k.cdc.MustUnmarshal(iter.Value(), &value)
+		if err := k.cdc.Unmarshal(iter.Value(), &value); err != nil {
+			return nil, fmt.Errorf("fail to unmarshal last chain height for %s: %w", chain, err)
+		}
 		result[chain] = value.Value
 	}
 	return result, nil
@@ -109,7 +111,9 @@ func (k KVStore) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddr
 			return nil, fmt.Errorf("fail to parse chain: %w", err)
 		}
 		value := ProtoInt64{}
-		k.cdc.MustUnmarshal(iter.Value(), &value)
+		if err := k.cdc.Unmarshal(iter.Value(), &value); err != nil {
+			return nil, fmt.Errorf("fail to unmarshal last observe height for %s: %w", chain, err)
+		}
 		result[chain] = value.Value
 	}
 	return result, nil
