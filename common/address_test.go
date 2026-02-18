@@ -278,6 +278,16 @@ func (s *AddressSuite) TestAddress(c *C) {
 			Chain:   SUIChain,
 			Network: CurrentChainNetwork,
 		},
+		{
+			Address: "addr1vyacmg042vn3r6g9e5uv25sjj4jmm27vewztphr9qrtafkgl35pq2",
+			Chain:   ADAChain,
+			Network: notMockNet,
+		},
+		{
+			Address: "addr_test1vqacmg042vn3r6g9e5uv25sjj4jmm27vewztphr9qrtafkgyeqa00",
+			Chain:   ADAChain,
+			Network: MockNet,
+		},
 	}
 
 	networks := []string{

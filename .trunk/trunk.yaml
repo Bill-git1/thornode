@@ -76,7 +76,7 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
-    - go@1.23.8
+    - go@1.24.0
     - node@18.20.5
     - python@3.10.8
   definitions:

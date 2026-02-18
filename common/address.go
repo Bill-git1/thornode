@@ -22,6 +22,8 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+
+	adacommon "github.com/blinklabs-io/gouroboros/ledger/common"
 )
 
 type Address string
@@ -34,7 +36,7 @@ const (
 	// TreasuryAddress is defined in address_treasury_*.go with build tags for network-specific addresses
 )
 
-var alphaNumRegex = regexp.MustCompile("^[:A-Za-z0-9]*$")
+var alphaNumRegex = regexp.MustCompile("^[:_A-Za-z0-9]*$")
 
 // NewAddress create a new Address. Supports ETH/bech2/BTC/LTC/BCH/DOGE/XRP.
 func NewAddress(address string) (Address, error) {
@@ -48,6 +50,10 @@ func NewAddress(address string) (Address, error) {
 
 	// Check is tron address
 	if IsValidTRONAddress(address) {
+		return Address(address), nil
+	}
+
+	if IsValidADAAddress(address) {
 		return Address(address), nil
 	}
 
@@ -139,6 +145,14 @@ func IsValidSUIAddress(address string) bool {
 		return false
 	}
 	_, err := hex.DecodeString(address[2:])
+	return err == nil
+}
+
+func IsValidADAAddress(address string) bool {
+	if !strings.HasPrefix(address, "addr1") && !strings.HasPrefix(address, "addr_test1") {
+		return false
+	}
+	_, err := adacommon.NewAddress(address)
 	return err == nil
 }
 
@@ -303,6 +317,8 @@ func (addr Address) IsChain(chain Chain) bool {
 		return IsValidZECAddress(addr.String())
 	case SUIChain:
 		return IsValidSUIAddress(addr.String())
+	case ADAChain:
+		return IsValidADAAddress(addr.String())
 	default:
 		return true // if THORNode don't specifically check a chain yet, assume its ok.
 	}
@@ -311,7 +327,7 @@ func (addr Address) IsChain(chain Chain) bool {
 // Note that this will always return ETHChain for an AVAXChain address,
 // so perhaps only use it when determining a network (e.g. mainnet/testnet).
 func (addr Address) GetChain() Chain {
-	for _, chain := range []Chain{ETHChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, GAIAChain, AVAXChain, XRPChain, ZECChain} {
+	for _, chain := range []Chain{ETHChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, GAIAChain, AVAXChain, XRPChain, ZECChain, ADAChain} {
 		if addr.IsChain(chain) {
 			return chain
 		}
@@ -437,6 +453,15 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 					return MockNet
 				}
 			}
+		}
+	case ADAChain:
+		addrStr := addr.String()
+		if strings.HasPrefix(addrStr, "addr1") {
+			return mainNetPredicate()
+		}
+
+		if strings.HasPrefix(addrStr, "addr_test1") {
+			return MockNet
 		}
 	}
 	return currentNetwork

@@ -26,6 +26,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 	"golang.org/x/crypto/blake2b"
 
+	adacommon "github.com/blinklabs-io/gouroboros/ledger/common"
 	xrpkm "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/xrp/keymanager"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -272,6 +273,31 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 		hash := blake2b.Sum256(pub)
 
 		addressString = "0x" + hex.EncodeToString(hash[:])
+	case ADAChain:
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, p.String())
+		if err != nil {
+			return NoAddress, err
+		}
+
+		var network uint8
+		switch chainNetwork {
+		case MockNet:
+			network = adacommon.AddressNetworkTestnet
+		default:
+			network = adacommon.AddressNetworkMainnet
+		}
+
+		addr, err := adacommon.NewAddressFromParts(
+			adacommon.AddressTypeKeyNone,
+			network,
+			pk.Bytes(),
+			nil,
+		)
+		if err != nil {
+			return NoAddress, err
+		}
+
+		addressString = addr.String()
 	default:
 		// Only EVM chains remain.
 		if !chain.IsEVM() {

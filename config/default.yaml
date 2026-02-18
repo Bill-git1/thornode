@@ -529,6 +529,24 @@ bifrost:
       scanner_leveldb: *default-leveldb
       solvency_blocks: 200
 
+    ada:
+      <<: *default-chain
+      disabled: true
+      chain_id: ADA
+      block_scanner:
+        <<: *default-block-scanner
+        block_height_discover_back_off: 1s
+        max_reorg_rescan_blocks: 2500
+        chain_id: ADA
+        observation_flexibility_blocks: 0
+        gas_cache_blocks: 100
+        gas_price_resolution: 1000 # 1000 lovelace
+        max_gas_limit: 0
+        max_contract_tx_logs: 0
+      mempool_tx_id_cache_size: 0
+      scanner_leveldb: *default-leveldb
+      solvency_blocks: 3
+
   oracle:
     log_level: info
     enabled: false

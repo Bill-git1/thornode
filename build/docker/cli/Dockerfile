@@ -3,7 +3,7 @@ FROM registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-28.0
 FROM registry.gitlab.com/thorchain/devops/node-launcher:dogecoin-daemon-1.14.9 as dogecoin
 FROM registry.gitlab.com/thorchain/devops/node-launcher:litecoin-daemon-0.21.4 as litecoin
 
-FROM golang:1.23.8 AS build
+FROM golang:1.24.6 AS build
 
 # build geth since the image is alpine based
 RUN go install github.com/ethereum/go-ethereum/cmd/geth@v1.16.3

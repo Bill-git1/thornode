@@ -1,4 +1,4 @@
-image: golang:1.23.8
+image: golang:1.24.6
 
 workflow:
   rules:
@@ -18,9 +18,9 @@ variables:
   SAST_EXCLUDED_PATHS: spec, test, tests, tmp, .cache
 
 .use_dind: &use_dind
-  image: docker:27.5.0
+  image: docker:28.5.2
   services:
-    - docker:27.5.0-dind
+    - docker:28.5.2-dind
 
 stages:
   - .pre
