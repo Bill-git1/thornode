@@ -1,6 +1,8 @@
 package keeperv1
 
 import (
+	"math"
+
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -87,4 +89,46 @@ func (s *KeeperOutboundFeesSuite) TestOutboundRuneRecords(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(feeWithheldRune.String(), Equals, initialWithheldETH.String())
 	c.Check(feeSpentRune.String(), Equals, "0")
+}
+
+func (s *KeeperOutboundFeesSuite) TestOutboundFeeOverflowSafety(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	// Set spent to max uint64.
+	maxUint := cosmos.NewUint(math.MaxUint64)
+	err := k.AddToOutboundFeeSpentRune(ctx, common.BTCAsset, maxUint)
+	c.Assert(err, IsNil)
+
+	// Adding more should not panic; it should return an error.
+	c.Assert(func() {
+		err = k.AddToOutboundFeeSpentRune(ctx, common.BTCAsset, cosmos.NewUint(1))
+	}, Not(Panics), nil)
+	c.Assert(err, NotNil)
+	c.Check(err.Error(), Matches, ".*overflow.*")
+
+	// Same test for withheld rune: adding MaxUint64 overflows because
+	// GetOutboundFeeWithheldRune initializes with a non-zero surplus value.
+	c.Assert(func() {
+		err = k.AddToOutboundFeeWithheldRune(ctx, common.DOGEAsset, maxUint)
+	}, Not(Panics), nil)
+	c.Assert(err, NotNil)
+	c.Check(err.Error(), Matches, ".*overflow.*")
+}
+
+func (s *KeeperOutboundFeesSuite) TestSafeUint64(c *C) {
+	// Normal value
+	val, err := safeUint64(cosmos.NewUint(42))
+	c.Assert(err, IsNil)
+	c.Check(val, Equals, uint64(42))
+
+	// Max uint64 value
+	val, err = safeUint64(cosmos.NewUint(math.MaxUint64))
+	c.Assert(err, IsNil)
+	c.Check(val, Equals, uint64(math.MaxUint64))
+
+	// Overflow: MaxUint64 + 1 should return an error
+	overflow := cosmos.NewUint(math.MaxUint64).Add(cosmos.NewUint(1))
+	_, err = safeUint64(overflow)
+	c.Assert(err, NotNil)
+	c.Check(err.Error(), Matches, ".*overflows uint64.*")
 }

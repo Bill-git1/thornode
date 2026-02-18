@@ -1,6 +1,8 @@
 package keeperv1
 
 import (
+	"fmt"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
@@ -11,7 +13,7 @@ func (k KVStore) GetOutboundTxFee(ctx cosmos.Context) cosmos.Uint {
 		return k.DollarConfigInRune(ctx, constants.NativeOutboundFeeUSD)
 	}
 	fee := k.GetConfigInt64(ctx, constants.OutboundTransactionFee)
-	return cosmos.NewUint(uint64(fee))
+	return cosmos.SafeUintFromInt64(fee)
 }
 
 // GetOutboundFeeWithheldRune - record of RUNE collected by the Reserve for an Asset's outbound fees
@@ -27,7 +29,11 @@ func (k KVStore) GetOutboundFeeWithheldRune(ctx cosmos.Context, outAsset common.
 	if withheld.IsZero() {
 		withheld = k.GetSurplusForTargetMultiplier(ctx, cosmos.NewUint(10_000))
 		// use set instead of AddToOutboundFeeWithheldRune to avoid infinite loop
-		k.setUint64(ctx, k.GetKey(prefixOutboundFeeWithheldRune, outAsset.String()), withheld.Uint64())
+		val, err := safeUint64(withheld)
+		if err != nil {
+			return cosmos.ZeroUint(), fmt.Errorf("outbound fee withheld rune overflow for %s: %w", outAsset, err)
+		}
+		k.setUint64(ctx, k.GetKey(prefixOutboundFeeWithheldRune, outAsset.String()), val)
 		return withheld, nil
 	}
 
@@ -42,7 +48,11 @@ func (k KVStore) AddToOutboundFeeWithheldRune(ctx cosmos.Context, outAsset commo
 	}
 
 	outboundFeeWithheldRune = outboundFeeWithheldRune.Add(withheld)
-	k.setUint64(ctx, k.GetKey(prefixOutboundFeeWithheldRune, outAsset.String()), outboundFeeWithheldRune.Uint64())
+	val, err := safeUint64(outboundFeeWithheldRune)
+	if err != nil {
+		return fmt.Errorf("outbound fee withheld rune overflow for %s: %w", outAsset, err)
+	}
+	k.setUint64(ctx, k.GetKey(prefixOutboundFeeWithheldRune, outAsset.String()), val)
 	return nil
 }
 
@@ -61,9 +71,9 @@ func (k KVStore) GetSurplusForTargetMultiplier(ctx cosmos.Context, targetMultipl
 	//	(max - 10_000) = (surplus / target) * (max - min)
 	//	surplus = ((max - 10_000) / (max - min)) * target
 
-	targetSurplus := cosmos.NewUint(uint64(k.GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune)))
-	maxMultiplier := cosmos.NewUint(uint64(k.GetConfigInt64(ctx, constants.MaxOutboundFeeMultiplierBasisPoints)))
-	minMultiplier := cosmos.NewUint(uint64(k.GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)))
+	targetSurplus := cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune))
+	maxMultiplier := cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.MaxOutboundFeeMultiplierBasisPoints))
+	minMultiplier := cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints))
 
 	if targetMultiplierBps.LT(minMultiplier) {
 		targetMultiplierBps = minMultiplier
@@ -127,7 +137,11 @@ func (k KVStore) AddToOutboundFeeSpentRune(ctx cosmos.Context, outAsset common.A
 	}
 
 	outboundFeeSpentRune = outboundFeeSpentRune.Add(spent)
-	k.setUint64(ctx, k.GetKey(prefixOutboundFeeSpentRune, outAsset.String()), outboundFeeSpentRune.Uint64())
+	val, err := safeUint64(outboundFeeSpentRune)
+	if err != nil {
+		return fmt.Errorf("outbound fee spent rune overflow for %s: %w", outAsset, err)
+	}
+	k.setUint64(ctx, k.GetKey(prefixOutboundFeeSpentRune, outAsset.String()), val)
 	return nil
 }
 
@@ -135,4 +149,13 @@ func (k KVStore) AddToOutboundFeeSpentRune(ctx cosmos.Context, outAsset common.A
 // (e.g. for hard-fork GenesisState export)
 func (k KVStore) GetOutboundFeeSpentRuneIterator(ctx cosmos.Context) cosmos.Iterator {
 	return k.getIterator(ctx, prefixOutboundFeeSpentRune)
+}
+
+// safeUint64 converts a cosmos.Uint to uint64, returning an error if the value
+// exceeds MaxUint64 so callers can log and surface the anomaly for investigation.
+func safeUint64(v cosmos.Uint) (uint64, error) {
+	if !v.BigInt().IsUint64() {
+		return 0, fmt.Errorf("value %s overflows uint64", v.String())
+	}
+	return v.Uint64(), nil
 }
