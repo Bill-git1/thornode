@@ -363,3 +363,81 @@ func (s *KeeperNodeAccountSuite) TestRemoveLowBondValidatorAccounts(c *C) {
 	c.Check(na3Store.IsEmpty(), Equals, false)
 	c.Check(na3Store.String(), Equals, na3.String())
 }
+
+func (s *KeeperNodeAccountSuite) TestRemoveLowBondValidatorAccounts_PartialSendFailure(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(10)
+
+	// Create a standby validator with bond <= 1 RUNE (eligible for removal)
+	na := GetRandomValidatorNode(NodeStandby)
+	na.Bond = cosmos.NewUint(common.One) // exactly 1 RUNE
+
+	providerAddr1 := GetRandomBech32Addr()
+	providerAddr2 := GetRandomBech32Addr()
+	halfBond := cosmos.NewUint(common.One / 2)
+
+	bps := BondProviders{
+		NodeAddress:     na.NodeAddress,
+		NodeOperatorFee: cosmos.ZeroUint(),
+		Providers: []BondProvider{
+			{BondAddress: providerAddr1, Bond: halfBond},
+			{BondAddress: providerAddr2, Bond: halfBond},
+		},
+	}
+
+	// Only fund the bond module with enough for ONE provider (half the total bond).
+	// The second SendFromModuleToAccount should fail due to insufficient funds.
+	fundCoin := common.NewCoin(common.RuneAsset(), halfBond)
+	c.Assert(k.MintToModule(ctx, ModuleName, fundCoin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, BondName, common.NewCoins(fundCoin)), IsNil)
+
+	c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+	c.Assert(k.SetBondProviders(ctx, bps), IsNil)
+	c.Assert(k.RemoveLowBondValidatorAccounts(ctx), IsNil)
+
+	// Node account should be PRESERVED (not deleted) since one send failed.
+	naStore, err := k.GetNodeAccount(ctx, na.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(naStore.IsEmpty(), Equals, false, Commentf("node account should be preserved on partial send failure"))
+
+	// Bond should be reduced by only the successfully sent amount.
+	c.Check(naStore.Bond.Equal(halfBond), Equals, true,
+		Commentf("bond should equal unsent amount, got %s", naStore.Bond))
+
+	// Bond providers should be PRESERVED so the remaining funds are recoverable.
+	bpsStore, err := k.GetBondProviders(ctx, na.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(len(bpsStore.Providers), Equals, 2,
+		Commentf("bond providers should be preserved on partial send failure"))
+
+	// The first provider should have received their funds.
+	bal1 := k.GetBalance(ctx, providerAddr1)
+	c.Check(bal1[0].Amount.Int64(), Equals, int64(halfBond.Uint64()),
+		Commentf("first provider should have received their bond"))
+
+	// The second provider should have received nothing.
+	bal2 := k.GetBalance(ctx, providerAddr2)
+	c.Check(len(bal2), Equals, 0,
+		Commentf("second provider should not have received funds"))
+}
+
+func (s *KeeperNodeAccountSuite) TestRemoveLowBondValidatorAccounts_NoBondProvidersSendFailure(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(10)
+
+	// Create a standby validator with a small non-zero bond and no bond providers.
+	na := GetRandomValidatorNode(NodeStandby)
+	na.Bond = cosmos.NewUint(common.One) // exactly 1 RUNE
+
+	// Do NOT fund the bond module — SendFromModuleToAccount will fail.
+	c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+	c.Assert(k.RemoveLowBondValidatorAccounts(ctx), IsNil)
+
+	// Node account should be PRESERVED (not deleted) since the send failed.
+	naStore, err := k.GetNodeAccount(ctx, na.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(naStore.IsEmpty(), Equals, false,
+		Commentf("node account should be preserved when send fails with no bond providers"))
+	c.Check(naStore.Bond.Equal(na.Bond), Equals, true,
+		Commentf("bond should remain unchanged, got %s", naStore.Bond))
+}
