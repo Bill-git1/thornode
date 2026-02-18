@@ -141,7 +141,7 @@ func (s *EddsaKeysignTestSuite) SetUpTest(c *C) {
 			comm, err := p2p.NewCommunication(&p2p.Config{
 				RendezvousString: "asgard",
 				Port:             ports[i],
-			}, nil)
+			}, nil, nil)
 			c.Assert(err, IsNil)
 			c.Assert(comm.Start(buf), IsNil)
 			s.comms[i] = comm
@@ -151,7 +151,7 @@ func (s *EddsaKeysignTestSuite) SetUpTest(c *C) {
 			RendezvousString: "asgard",
 			BootstrapPeers:   []maddr.Multiaddr{multiAddr},
 			Port:             ports[i],
-		}, nil)
+		}, nil, nil)
 		c.Assert(err, IsNil)
 		c.Assert(comm.Start(buf), IsNil)
 		s.comms[i] = comm

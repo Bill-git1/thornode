@@ -214,7 +214,7 @@ func (s *ObserverSuite) TestProcess(c *C) {
 	comm, err := p2p.NewCommunication(&p2p.Config{
 		RendezvousString: "rendezvous",
 		Port:             1234,
-	}, nil)
+	}, nil, nil)
 	c.Assert(err, IsNil)
 	c.Assert(comm, NotNil)
 
@@ -261,7 +261,7 @@ func (s *ObserverSuite) TestErrataTx(c *C) {
 	comm, err := p2p.NewCommunication(&p2p.Config{
 		RendezvousString: "rendezvous",
 		Port:             1234,
-	}, nil)
+	}, nil, nil)
 	c.Assert(err, IsNil)
 	c.Assert(comm, NotNil)
 	priv, err := s.thorKeys.GetPrivateKey()
@@ -775,7 +775,7 @@ func (s *ObserverSuite) TestPeerConcurrencyLimits(c *C) {
 	comm, err := p2p.NewCommunication(&p2p.Config{
 		RendezvousString: "test-rendezvous",
 		Port:             1234,
-	}, nil)
+	}, nil, nil)
 	c.Assert(err, IsNil)
 
 	priv, err := s.thorKeys.GetPrivateKey()

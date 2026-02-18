@@ -107,7 +107,7 @@ func TestObserverRoundTrip(t *testing.T) {
 	comm, err := p2p.NewCommunication(&p2p.Config{
 		RendezvousString: "rendezvous",
 		Port:             1234,
-	}, nil)
+	}, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, comm)
 	err = comm.Start(priv.Bytes())

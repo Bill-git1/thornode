@@ -184,6 +184,7 @@ const (
 	MemolessTxnMaxUse
 	StrictBondLiquidityRatio
 	SwapOutDexAggregationDisabled
+	P2PGateDisabled
 )
 
 // ConstantValues define methods used to get constant values

@@ -143,13 +143,13 @@ func (s *TssECDSAKeysignTestSuite) SetUpTest(c *C) {
 		buf, err := base64.StdEncoding.DecodeString(testPriKeyArr[i])
 		c.Assert(err, IsNil)
 		if i == 0 {
-			comm, err := p2p.NewCommunication(&p2p.Config{Port: ports[i], RendezvousString: "asgard"}, nil)
+			comm, err := p2p.NewCommunication(&p2p.Config{Port: ports[i], RendezvousString: "asgard"}, nil, nil)
 			c.Assert(err, IsNil)
 			c.Assert(comm.Start(buf), IsNil)
 			s.comms[i] = comm
 			continue
 		}
-		comm, err := p2p.NewCommunication(&p2p.Config{Port: ports[i], RendezvousString: "asgard", BootstrapPeers: []maddr.Multiaddr{multiAddr}}, nil)
+		comm, err := p2p.NewCommunication(&p2p.Config{Port: ports[i], RendezvousString: "asgard", BootstrapPeers: []maddr.Multiaddr{multiAddr}}, nil, nil)
 		c.Assert(err, IsNil)
 		c.Assert(comm.Start(buf), IsNil)
 		s.comms[i] = comm

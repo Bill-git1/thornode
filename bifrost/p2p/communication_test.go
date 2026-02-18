@@ -18,7 +18,7 @@ type CommunicationTestSuite struct{}
 var _ = Suite(&CommunicationTestSuite{})
 
 func (CommunicationTestSuite) TestBasicCommunication(c *C) {
-	comm, err := NewCommunication(&Config{Port: 6688, RendezvousString: "rendezvous"}, nil)
+	comm, err := NewCommunication(&Config{Port: 6688, RendezvousString: "rendezvous"}, nil, nil)
 	c.Assert(err, IsNil)
 	c.Assert(comm, NotNil)
 	comm.SetSubscribe(messages.TSSKeyGenMsg, "hello", make(chan *Message))
@@ -47,7 +47,7 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	c.Assert(err, IsNil)
 	privKey, err := base64.StdEncoding.DecodeString(bootstrapPrivKey)
 	c.Assert(err, IsNil)
-	comm, err := NewCommunication(&Config{Port: 2220, RendezvousString: "commTest", ExternalIP: fakeExternalIP}, nil)
+	comm, err := NewCommunication(&Config{Port: 2220, RendezvousString: "commTest", ExternalIP: fakeExternalIP}, nil, nil)
 	c.Assert(err, IsNil)
 	c.Assert(comm.Start(privKey), IsNil)
 
@@ -58,7 +58,7 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	sk1, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	sk1raw, _ := sk1.Raw()
 	c.Assert(err, IsNil)
-	comm2, err := NewCommunication(&Config{Port: 2221, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{validMultiAddr}}, nil)
+	comm2, err := NewCommunication(&Config{Port: 2221, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{validMultiAddr}}, nil, nil)
 	c.Assert(err, IsNil)
 	err = comm2.Start(sk1raw)
 	c.Assert(err, IsNil)
@@ -75,7 +75,7 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	invalidAddr := "/ip4/127.0.0.1/tcp/2220/p2p/" + id.String()
 	invalidMultiAddr, err := maddr.NewMultiaddr(invalidAddr)
 	c.Assert(err, IsNil)
-	comm3, err := NewCommunication(&Config{Port: 2222, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{invalidMultiAddr}}, nil)
+	comm3, err := NewCommunication(&Config{Port: 2222, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{invalidMultiAddr}}, nil, nil)
 	c.Assert(err, IsNil)
 	err = comm3.Start(sk1raw)
 	c.Assert(err, ErrorMatches, "fail to connect to bootstrap peer: fail to connect to any peer")
@@ -85,7 +85,7 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	}()
 
 	// we connect to one invalid and one valid address
-	comm4, err := NewCommunication(&Config{Port: 2223, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{invalidMultiAddr, validMultiAddr}}, nil)
+	comm4, err := NewCommunication(&Config{Port: 2223, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{invalidMultiAddr, validMultiAddr}}, nil, nil)
 	c.Assert(err, IsNil)
 	err = comm4.Start(sk1raw)
 	c.Assert(err, IsNil)

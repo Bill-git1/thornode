@@ -22,15 +22,16 @@ func (b *thorchainBridge) GetNodeAccount(thorAddr string) (*types.NodeAccount, e
 }
 
 // GetNodeAccounts retrieves all node accounts from thorchain
-func (b *thorchainBridge) GetNodeAccounts() ([]*types.NodeAccount, error) {
+// Returns QueryNodeResponse which includes PreflightStatus for each node
+func (b *thorchainBridge) GetNodeAccounts() ([]*types.QueryNodeResponse, error) {
 	path := NodeAccountsEndpoint
 	body, _, err := b.getWithPath(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get node account: %w", err)
+		return nil, fmt.Errorf("failed to get node accounts: %w", err)
 	}
-	var na []*types.NodeAccount
-	if err = json.Unmarshal(body, &na); err != nil {
+	var nodes []*types.QueryNodeResponse
+	if err = json.Unmarshal(body, &nodes); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal node accounts: %w", err)
 	}
-	return na, nil
+	return nodes, nil
 }

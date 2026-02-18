@@ -116,6 +116,7 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 		constants.OverSolvencyCheckInterval.String(),
 		constants.MimirKeyScheduledMigration,
 		constants.MaxRetiredVaultRecoveryAttempts.String(),
+		constants.P2PGateDisabled.String(),
 	}
 	for i := range exactMatches {
 		if strings.EqualFold(key, exactMatches[i]) {

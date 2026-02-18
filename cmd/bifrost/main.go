@@ -139,10 +139,12 @@ func main() {
 			Msg("keysign timeout must be shorter than jail time")
 	}
 
-	comm, stateManager, err := p2p.StartP2P(
+	// Start P2P with bonded node gating enabled
+	comm, stateManager, err := p2p.StartP2PWithBridge(
 		cfg.TSS,
 		tmPrivateKey,
 		app.DefaultNodeHome,
+		thorchainBridge,
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("fail to start p2p")

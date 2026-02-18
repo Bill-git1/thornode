@@ -113,7 +113,7 @@ type ThorchainBridge interface {
 	BroadcastWithBlocking(msgs ...sdk.Msg) (common.TxID, error)
 	GetKeysign(blockHeight int64, pk string) (types.TxOut, error)
 	GetNodeAccount(string) (*stypes.NodeAccount, error)
-	GetNodeAccounts() ([]*stypes.NodeAccount, error)
+	GetNodeAccounts() ([]*stypes.QueryNodeResponse, error)
 	GetKeygenBlock(int64, string) (stypes.KeygenBlock, error)
 	GetReferenceMemo(chain common.Chain, ref string) (string, error)
 	GetReferenceMemoByTxHash(hash string) (string, error)
@@ -449,7 +449,8 @@ func (b *thorchainBridge) FetchActiveNodes() ([]common.PubKey, error) {
 	}
 	active := make([]common.PubKey, 0)
 	for _, item := range na {
-		if item.Status == stypes.NodeStatus_Active {
+		// QueryNodeResponse.Status is a string, compare against the string representation
+		if item.Status == stypes.NodeStatus_Active.String() {
 			active = append(active, item.PubKeySet.Secp256k1)
 		}
 	}

@@ -27,6 +27,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
+	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 )
 
 var (
@@ -69,6 +70,7 @@ type Communication struct {
 	BroadcastMsgChan chan *messages.BroadcastMsgChan
 	externalAddr     maddr.Multiaddr
 	streamMgr        *StreamMgr
+	nodeGater        *NodeGater // gater to restrict connections to allowed nodes only
 }
 
 type P2PConfig interface {
@@ -83,12 +85,23 @@ func StartP2P(
 	priKey tcrypto.PrivKey,
 	baseFolder string,
 ) (*Communication, *storage.FileStateMgr, error) {
+	return StartP2PWithBridge(cfg, priKey, baseFolder, nil)
+}
+
+// StartP2PWithBridge starts the P2P communication layer with optional node gating.
+// If bridge is provided, only active or ready nodes will be allowed for inbound connections.
+func StartP2PWithBridge(
+	cfg P2PConfig,
+	priKey tcrypto.PrivKey,
+	baseFolder string,
+	bridge thorclient.ThorchainBridge,
+) (*Communication, *storage.FileStateMgr, error) {
 	stateManager, err := storage.NewFileStateMgr(baseFolder)
 	if err != nil {
 		return nil, nil, fmt.Errorf("fail to create file state manager")
 	}
 
-	comm, err := NewCommunication(cfg, stateManager)
+	comm, err := NewCommunication(cfg, stateManager, bridge)
 	if err != nil {
 		return nil, nil, fmt.Errorf("fail to create communication layer: %w", err)
 	}
@@ -105,7 +118,7 @@ func StartP2P(
 }
 
 // NewCommunication create a new instance of Communication
-func NewCommunication(cfg P2PConfig, stateManager *storage.FileStateMgr) (*Communication, error) {
+func NewCommunication(cfg P2PConfig, stateManager *storage.FileStateMgr, bridge thorclient.ThorchainBridge) (*Communication, error) {
 	port, externalIP := cfg.GetP2PPort(), cfg.GetExternalIP()
 	addr, err := maddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port))
 	if err != nil {
@@ -118,7 +131,8 @@ func NewCommunication(cfg P2PConfig, stateManager *storage.FileStateMgr) (*Commu
 			return nil, fmt.Errorf("fail to create listen with given external IP: %w", err)
 		}
 	}
-	return &Communication{
+
+	comm := &Communication{
 		config:           cfg,
 		stateManager:     stateManager,
 		logger:           log.With().Str("module", "communication").Logger(),
@@ -131,7 +145,17 @@ func NewCommunication(cfg P2PConfig, stateManager *storage.FileStateMgr) (*Commu
 		BroadcastMsgChan: make(chan *messages.BroadcastMsgChan, 1024),
 		externalAddr:     externalAddr,
 		streamMgr:        NewStreamMgr(),
-	}, nil
+	}
+
+	// If bridge is provided, create the node gater
+	if bridge != nil {
+		// Create gater with 60 second refresh interval
+		gater := NewNodeGater(bridge, 60*time.Second)
+		comm.nodeGater = gater
+		comm.logger.Info().Msg("node gater enabled - only allowed nodes can connect")
+	}
+
+	return comm, nil
 }
 
 // GetHost return the host
@@ -312,11 +336,20 @@ func (c *Communication) startChannel(privKeyBytes []byte) error {
 		return addrs
 	}
 
-	h, err := libp2p.New(ctx,
+	// Build libp2p options
+	opts := []libp2p.Option{
 		libp2p.ListenAddrs([]maddr.Multiaddr{c.listenAddr}...),
 		libp2p.Identity(p2pPriKey),
 		libp2p.AddrsFactory(addressFactory),
-	)
+	}
+
+	// Add connection gater if configured
+	if c.nodeGater != nil {
+		c.logger.Info().Msg("configuring libp2p with node gater")
+		opts = append(opts, libp2p.ConnectionGater(c.nodeGater))
+	}
+
+	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		return fmt.Errorf("fail to create p2p host: %w", err)
 	}
@@ -423,16 +456,28 @@ func (c *Communication) connectToBootstrapPeers() error {
 
 // Start will start the communication
 func (c *Communication) Start(priKeyBytes []byte) error {
+	// Start the node gater if configured
+	if c.nodeGater != nil {
+		c.nodeGater.Start()
+	}
+
 	err := c.startChannel(priKeyBytes)
 	if err == nil {
 		c.wg.Add(1)
 		go c.ProcessBroadcast()
+	} else if c.nodeGater != nil {
+		c.nodeGater.Stop()
 	}
 	return err
 }
 
 // Stop communication
 func (c *Communication) Stop() error {
+	// Stop the node gater if configured
+	if c.nodeGater != nil {
+		c.nodeGater.Stop()
+	}
+
 	// we need to stop the handler and the p2p services firstly, then terminate the our communication threads
 	if err := c.host.Close(); err != nil {
 		c.logger.Err(err).Msg("fail to close host network")
