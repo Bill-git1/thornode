@@ -308,7 +308,8 @@ build-test-regression:
 	@DOCKER_BUILDKIT=1 docker build . \
 		-t thornode-regtest \
 		-f ci/Dockerfile.regtest \
-		--build-arg COMMIT=$(COMMIT)
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg DOCKER_MIRROR
 
 test-regression-coverage:
 	@go tool cover -html=test/regression/mnt/coverage/coverage.txt
@@ -351,6 +352,7 @@ build-test-simulation:
 		-t thornode-simtest \
 		-f ci/Dockerfile.simtest \
 		--build-arg COMMIT=$(COMMIT) \
+		--build-arg DOCKER_MIRROR
 
 test-simulation-events:
 	@docker compose $(DOCKER_COMPOSE_FILES) run --rm events
@@ -448,7 +450,8 @@ docker-gitlab-build:
 		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version)) \
 		-t registry.gitlab.com/thorchain/thornode:${GITREF} \
 		--build-arg COMMIT=$(COMMIT) \
-		--build-arg TAG=$(BUILDTAG)
+		--build-arg TAG=$(BUILDTAG) \
+		--build-arg DOCKER_MIRROR
 
 ########################################################################################
 # Tools
@@ -465,7 +468,8 @@ thorscan-gitlab-push: docker-gitlab-login
 events-build:
 	@docker build . -f tools/events/Dockerfile \
 		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode events-${BRANCH} $(shell cat version)) \
-		--build-arg TAG=$(BUILDTAG)
+		--build-arg TAG=$(BUILDTAG) \
+		--build-arg DOCKER_MIRROR
 
 events-gitlab-push: docker-gitlab-login
 	@./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode events-${BRANCH} $(shell cat version) \

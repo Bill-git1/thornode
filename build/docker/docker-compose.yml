@@ -49,6 +49,8 @@ services:
     build:
       context: ../..
       dockerfile: ./build/docker/cli/Dockerfile
+      args:
+        DOCKER_MIRROR: ${DOCKER_MIRROR:-}
     environment:
       <<: *thorchain-environment
     entrypoint: /bin/bash
@@ -68,6 +70,7 @@ services:
       dockerfile: ./tools/events/Dockerfile
       args:
         TAG: mocknet
+        DOCKER_MIRROR: ${DOCKER_MIRROR:-}
     environment:
       CONSOLE: 1
       ENDPOINTS_THORNODE: http://thornode:1317
@@ -149,6 +152,7 @@ services:
       dockerfile: ./build/docker/Dockerfile
       args:
         TAG: mocknet
+        DOCKER_MIRROR: ${DOCKER_MIRROR:-}
     profiles:
       - thornode
       - mocknet
@@ -332,7 +336,7 @@ services:
   midgard-db:
     profiles:
       - midgard
-    image: timescale/timescaledb:2.13.0-pg15
+    image: ${DOCKER_MIRROR:-}timescale/timescaledb:2.13.0-pg15
     restart: unless-stopped
     environment:
       - POSTGRES_USER=midgard
@@ -588,7 +592,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.16.8
+    image: ${DOCKER_MIRROR:-}ethereum/client-go:v1.16.8
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -623,7 +627,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: xrpllabsofficial/xrpld:3.0.0
+    image: ${DOCKER_MIRROR:-}xrpllabsofficial/xrpld:3.0.0
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -732,7 +736,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: anzaxyz/agave:v2.3.8
+    image: ${DOCKER_MIRROR:-}anzaxyz/agave:v2.3.8
     volumes:
       - "./mocknet/solana:/mocknet"
     entrypoint: /mocknet/entrypoint.sh
@@ -752,7 +756,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: 0xpolygon/bor:2.5.7
+    image: ${DOCKER_MIRROR:-}0xpolygon/bor:2.5.7
     ports:
       - 8548:8545
     volumes:
@@ -779,7 +783,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: electriccoinco/zcashd:v6.10.0
+    image: ${DOCKER_MIRROR:-}electriccoinco/zcashd:v6.10.0
     restart: unless-stopped
     environment:
       ZCASH_MASTER_ADDR: ${ZCASH_MASTER_ADDR:-tmGn7qKhnpbnwZPsaPt9XXAQz1Q3HAUCrwh}

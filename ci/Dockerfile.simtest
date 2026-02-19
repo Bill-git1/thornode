@@ -1,4 +1,5 @@
-FROM golang:1.24.6
+ARG DOCKER_MIRROR=
+FROM ${DOCKER_MIRROR}golang:1.24.6
 
 ENV GOBIN=/go/bin
 ENV GOPATH=/go

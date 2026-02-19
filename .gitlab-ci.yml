@@ -110,6 +110,11 @@ generate:
   before_script:
     - apk -U add bash curl findutils git go jq make protoc sed wget python3
     - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
+    - |
+      if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
+        export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
+        echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
+      fi
   script:
     - |
       export PATH="$PATH:/root/go/bin"
@@ -200,6 +205,11 @@ build-thornode:
       done
     - apk -U add make git jq curl protoc
     - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
+    - |
+      if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
+        export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
+        echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
+      fi
     - make docker-gitlab-login
   script:
     - make docker-gitlab-build
@@ -289,6 +299,11 @@ test-simulation:
     - apk -U add git make protoc bash
     - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
     - |
+      if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
+        export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
+        echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
+      fi
+    - |
       PLUGIN="$HOME/.docker/cli-plugins/docker-compose"
       mkdir -p $(dirname $PLUGIN)
       wget https://github.com/docker/compose/releases/download/v2.28.1/docker-compose-linux-x86_64 -O $PLUGIN
@@ -328,6 +343,11 @@ test-regression:
   before_script:
     - apk -U add make git bash
     - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
+    - |
+      if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
+        export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
+        echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
+      fi
   script:
     - make test-regression
 
