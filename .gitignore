@@ -3,13 +3,31 @@
 *.swo
 *.swp
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .env*
 .envrc
 .idea
 .vscode
+*~
 
-# Build
+# Dependencies
+node_modules/
+*/node_modules/
+jspm_packages/
+
+# Build outputs and artifacts
 *.exe
+dist/
+artifacts/
+cache/
+*/artifacts/
+*/cache/
+*/dist/
 /.cache
 /.go
 /app/data
@@ -18,7 +36,21 @@
 /public
 /tmp
 __pycache__
-node_modules
+typechain/
+typechain-types/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
 
 # Coverage
 .testCoverage.txt
@@ -27,11 +59,33 @@ coverage.txt
 coverage.xml
 report.xml
 test/regression/mnt/coverage
+coverage/
+*.lcov
 
-# hardhat cache
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Solidity compiler outputs
+*.sol.js
+
+# Hardhat cache
 **/evm/cache/*
 
-# Test
+# Rust/Cargo (for grinder tool)
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Grinder
+chain/ethereum/deployment/routerv6/grinder/gpu-miner
+chain/ethereum/deployment/routerv6/grinder/target
+
+# Test outputs
+test-results/
+results/
 test/regression/mnt/blocks/**/[0-9]*.json
 *.prof
 test/performance/results
@@ -40,3 +94,4 @@ thorchain.test
 CLAUDE.local.md
 .claude/*.local.*
 **/.claude/*.local.*
+

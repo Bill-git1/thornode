@@ -211,28 +211,15 @@ build-thornode:
         BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-push
       fi
 
-chain-avalanche:
+chain-evm:
   rules:
     - changes:
         paths:
-          - chain/avalanche/**/*
+          - chain/evm/**/*
   stage: test
-  image: node:16
+  image: node:18
   script:
-    - cd chain/avalanche/
-    - yarn install --non-interactive
-    - yarn hardhat compile
-    - yarn hardhat test
-
-chain-ethereum:
-  rules:
-    - changes:
-        paths:
-          - chain/ethereum/**/*
-  stage: test
-  image: node:16
-  script:
-    - cd chain/ethereum/
+    - cd chain/evm/
     - yarn install --non-interactive
     - yarn hardhat test
 

@@ -88,13 +88,20 @@ HTTPS_GIT := gitlab.com/thorchain/thornode.git
 
 # ------------------------------ Generate ------------------------------
 
-generate: go-generate openapi proto-gen
+generate: go-generate generate-abi openapi proto-gen
 	@./scripts/generate.py
 	@cd test/simulation && go mod tidy
 
 go-generate:
 	@go install golang.org/x/tools/cmd/stringer@v0.28.0
 	@go generate ./...
+
+# mirror router abi from single source of truth to reference locations
+generate-abi:
+	@cp chain/evm/router-abi.json bifrost/pkg/chainclients/evm/abi/router.json
+	@cp chain/evm/router-abi.json bifrost/pkg/chainclients/ethereum/abi/router.json
+	@cp chain/evm/router-abi.json build/scripts/evm/router-abi.json
+	@cp chain/evm/router-abi.json test/simulation/pkg/evm/abi/router.json
 
 openapi:
 	@docker run --rm \
@@ -206,7 +213,7 @@ test-all: test-network-specific
 	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} "./..."
 
 test-go-tss:
-	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} --race "./bifrost/tss/go-tss/..."
+	@go teat ${TEST_BUILD_FLAGS} ${RUN_FLAG} --race "./bifrost/tss/go-tss/..."
 
 test-network-specific:
 	@go test -tags stagenet ${RUN_FLAG} ./common

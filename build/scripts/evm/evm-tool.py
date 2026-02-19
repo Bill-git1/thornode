@@ -155,20 +155,19 @@ class EVMSetupTool:
     # NOTE: returns the router contract and the constructor args
     def router_contract(self, address=None):
         abi_file = "router-abi.json"
-        bytecode_file = "router-bytecode.txt"
+        # Polygon's Bor dev mode only supports up to London fork (no PUSH0/Shanghai),
+        # so use the paris-compiled bytecode which avoids the PUSH0 opcode.
+        if self.chain == "POL":
+            bytecode_file = "router-bytecode-paris.txt"
+        else:
+            bytecode_file = "router-bytecode.txt"
         args = []
-
-        # if on eth the router constructor takes ERC20 RUNE token address
-        if self.chain == "ETH":
-            abi_file = "eth-" + abi_file
-            bytecode_file = "eth-" + bytecode_file
-            args = [self.erc20rune]
 
         # load abi and bytecode
         with open(os.path.join(os.path.dirname(__file__), abi_file), "r") as f:
             abi = json.load(f)
         with open(os.path.join(os.path.dirname(__file__), bytecode_file), "r") as f:
-            bytecode = f.read()
+            bytecode = f.read().strip()
         return self.web3.eth.contract(abi=abi, bytecode=bytecode, address=address), args
 
     def dex_contract(self, address=None):

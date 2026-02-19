@@ -759,9 +759,51 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		return nil, nil, nil, err
 	}
 
-	// Update nonce if approval was needed
+	// If approval transaction was created, sign and broadcast it before building the outbound.
+	// The V6 router uses transferFrom for ERC20 transfers, which requires the vault to have
+	// approved the router. The approval must be on-chain before gas estimation for the outbound
+	// can succeed, so we broadcast it first and let the outbound be rescheduled if needed.
 	if approvalTx != nil {
+		// Sign approval transaction
+		var approvalRawTx []byte
+		approvalRawTx, err = c.sign(approvalTx, tx.VaultPubKey, height, tx)
+		if err != nil {
+			c.logger.Err(err).Msg("fail to sign approval transaction")
+			return nil, nonceBytes, nil, fmt.Errorf("fail to sign approval transaction: %w", err)
+		}
+
+		// Broadcast approval transaction
+		broadcastTx := &etypes.Transaction{}
+		if err = broadcastTx.UnmarshalJSON(approvalRawTx); err != nil {
+			c.logger.Err(err).Msg("fail to unmarshal approval tx")
+			return nil, nonceBytes, nil, fmt.Errorf("fail to unmarshal approval transaction: %w", err)
+		}
+
+		ctx, cancel := c.getContext()
+		defer cancel()
+		err = c.client.SendTransaction(ctx, broadcastTx)
+		if err != nil && err.Error() != txpool.ErrAlreadyKnown.Error() && err.Error() != ecore.ErrNonceTooLow.Error() {
+			c.logger.Err(err).Str("hash", broadcastTx.Hash().String()).Msg("fail to broadcast approval transaction")
+			return nil, nonceBytes, nil, fmt.Errorf("fail to broadcast approval transaction: %w", err)
+		}
+
+		tokenAddr = getTokenAddressFromAsset(tx.Coins[0].Asset)
+		contractAddr = c.getSmartContractAddr(tx.VaultPubKey)
+
+		c.logger.Info().
+			Str("approval_txid", broadcastTx.Hash().String()).
+			Str("token", tokenAddr).
+			Str("router", contractAddr.String()).
+			Msg("successfully broadcast approval transaction")
+
+		// Update nonce past the approval tx
 		nonce++
+
+		// Update the checkpoint nonce so the rescheduled outbound uses the correct nonce
+		nonceBytes, err = json.Marshal(nonce)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to marshal nonce: %w", err)
+		}
 	}
 
 	// Convert TxOutItem gas rate units to Wei.
@@ -807,13 +849,20 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 
 	// outbound tx always send to smart contract address
 	estimatedETHValue := big.NewInt(0)
+	estimateData := data
 	if ethValue.Uint64() > 0 {
-		// when the ETH value is none zero , here override it with a fix value for estimate gas purpose
-		// when ETH value is none zero , if we send the real value for estimate gas , some times it will fail , for many reasons, a few I saw during test
-		// 1. insufficient fund
-		// 2. gas required exceeds allowance
-		// as long as we pass in an ETH value , which we almost guarantee it will not exceed the ETH balance , so we can avoid the above two errors
+		// Use a small fixed value to estimate gas to avoid "insufficient fund" or "gas required
+		// exceeds allowance" errors that can occur with the real value.
 		estimatedETHValue = estimatedETHValue.SetInt64(21000)
+		// The V6 router's transferOut requires msg.value == amount, so for transferOut calls
+		// (non-aggregator native transfers) we must repack the call data with the matching
+		// small value. transferOutAndCall doesn't have this check, so it uses data as-is.
+		if tx.Aggregator == "" {
+			estimateData, err = c.vaultABI.Pack("transferOut", dest, ecommon.HexToAddress(tokenAddr), estimatedETHValue, tx.Memo)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("fail to pack gas estimation transferOut: %w", err)
+			}
+		}
 	}
 
 	var createdTx *etypes.Transaction
@@ -826,13 +875,13 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 			Value:     estimatedETHValue,
 			GasFeeCap: gasRate, // maxFeePerGas
 			GasTipCap: tipCap,  // maxPriorityFeePerGas
-			Data:      data,
+			Data:      estimateData,
 
 			// gas is ignored in estimate gas call
 			// Gas: c.cfg.BlockScanner.MaxGasLimit,
 		})
 	} else {
-		createdTx = etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedETHValue, c.cfg.BlockScanner.MaxGasLimit, gasRate, data)
+		createdTx = etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedETHValue, c.cfg.BlockScanner.MaxGasLimit, gasRate, estimateData)
 	}
 
 	estimatedGas, err := c.estimateGas(fromAddr.String(), createdTx)
@@ -842,7 +891,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		// when this fail , chain client should skip the outbound and move on to the next. The network will reschedule the outbound
 		// after 300 blocks
 		c.logger.Err(err).Msgf("fail to estimate gas")
-		return nil, nil, nil, nil
+		return nil, nonceBytes, nil, nil
 	}
 	c.logger.Info().Msgf("memo:%s estimated gas unit: %d", tx.Memo, estimatedGas)
 
@@ -954,53 +1003,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	// Declare rawTx at function level for proper scoping
 	var rawTx []byte
 
-	// If approval transaction was created, sign and broadcast it first
-	if approvalTx != nil {
-		// Sign approval transaction first
-		var approvalRawTx []byte
-		approvalRawTx, err = c.sign(approvalTx, tx.VaultPubKey, height, tx)
-		if err != nil {
-			c.logger.Err(err).Msg("fail to sign approval transaction")
-			return nil, nonceBytes, nil, fmt.Errorf("fail to sign approval transaction: %w", err)
-		}
-
-		// Broadcast approval transaction
-		broadcastTx := &etypes.Transaction{}
-		if err = broadcastTx.UnmarshalJSON(approvalRawTx); err != nil {
-			c.logger.Err(err).Msg("fail to unmarshal approval tx")
-			return nil, nonceBytes, nil, fmt.Errorf("fail to unmarshal approval transaction: %w", err)
-		}
-
-		ctx, cancel := c.getContext()
-		defer cancel()
-		err = c.client.SendTransaction(ctx, broadcastTx)
-		if err != nil && err.Error() != txpool.ErrAlreadyKnown.Error() && err.Error() != ecore.ErrNonceTooLow.Error() {
-			c.logger.Err(err).Str("hash", broadcastTx.Hash().String()).Msg("fail to broadcast approval transaction")
-			return nil, nonceBytes, nil, fmt.Errorf("fail to broadcast approval transaction: %w", err)
-		}
-
-		// If the approval transaction broadcast successfully, update the checkpoint nonce
-		nonceBytes, err = json.Marshal(nonce)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("fail to marshal nonce: %w", err)
-		}
-
-		tokenAddr = getTokenAddressFromAsset(tx.Coins[0].Asset)
-		contractAddr = c.getSmartContractAddr(tx.VaultPubKey)
-
-		c.logger.Info().
-			Str("approval_txid", broadcastTx.Hash().String()).
-			Str("token", tokenAddr).
-			Str("router", contractAddr.String()).
-			Msg("successfully broadcast approval transaction")
-
-		// NOTE: Unlike unstuck transactions, approval transactions do NOT update signer cache
-		// because they are internal operations, not THORChain outbound transactions
-
-		// Only proceed with main transaction if approval succeeded
-	}
-
-	// Sign main transaction (only reached if no approval needed OR approval succeeded)
+	// Sign main transaction
 	rawTx, err = c.sign(createdTx, tx.VaultPubKey, height, tx)
 	if err != nil || len(rawTx) == 0 {
 		return nil, nonceBytes, nil, fmt.Errorf("fail to sign message: %w", err)

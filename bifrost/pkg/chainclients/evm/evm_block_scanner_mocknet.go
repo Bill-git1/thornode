@@ -30,6 +30,8 @@ func (e *EVMScanner) ApprovalTxRateDustWei() *big.Int {
 		return big.NewInt(2)
 	case common.BSCChain:
 		return big.NewInt(3)
+	case common.POLChain:
+		return big.NewInt(4)
 	default:
 		e.logger.Fatal().Msg("unsupported chain id for approval tx dust wei")
 		return nil
