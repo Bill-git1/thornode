@@ -297,6 +297,13 @@ func (k KVStore) SetNodeAccount(ctx cosmos.Context, na NodeAccount) error {
 // EnsureNodeKeysUnique check the given consensus pubkey and pubkey set against all the the node account
 // return an error when it is overlap with any existing account
 func (k KVStore) EnsureNodeKeysUnique(ctx cosmos.Context, consensusPubKey string, pubKeys common.PubKeySet) error {
+	if strings.TrimSpace(consensusPubKey) == "" {
+		return dbError(ctx, "", errors.New("Validator Consensus Key cannot be empty"))
+	}
+	if pubKeys.IsEmpty() {
+		return dbError(ctx, "", errors.New("PubKeySet cannot be empty"))
+	}
+
 	iter := k.GetNodeAccountIterator(ctx)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
@@ -304,15 +311,8 @@ func (k KVStore) EnsureNodeKeysUnique(ctx cosmos.Context, consensusPubKey string
 		if err := k.cdc.Unmarshal(iter.Value(), &na); err != nil {
 			return dbError(ctx, "Unmarshal: node account", err)
 		}
-		if strings.EqualFold("", consensusPubKey) {
-			return dbError(ctx, "", errors.New("Validator Consensus Key cannot be empty"))
-		}
 		if na.ValidatorConsPubKey == consensusPubKey {
 			return dbError(ctx, "", fmt.Errorf("%s already exist", na.ValidatorConsPubKey))
-		}
-
-		if pubKeys.IsEmpty() {
-			return dbError(ctx, "", errors.New("PubKeySet cannot be empty"))
 		}
 		if na.PubKeySet.Contains(pubKeys.Secp256k1) {
 			return dbError(ctx, "", fmt.Errorf("%s already exist", pubKeys))
