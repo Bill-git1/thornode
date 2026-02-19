@@ -45,7 +45,6 @@ var (
 	POLAsset = Asset{Chain: POLChain, Symbol: "POL", Ticker: "POL", Synth: false}
 	// SUIAsset SUI
 	SUIAsset = Asset{Chain: SUIChain, Symbol: "SUI", Ticker: "SUI", Synth: false}
-
 	// ADAAsset ADA
 	ADAAsset = Asset{Chain: ADAChain, Symbol: "ADA", Ticker: "ADA", Synth: false}
 	// RuneNative RUNE on thorchain
@@ -136,6 +135,7 @@ func NewAssetWithShortCodesV3_1_0(input string) (Asset, error) {
 	shorts[POLAsset.ShortCode()] = POLAsset.String()
 	shorts[SUIAsset.ShortCode()] = SUIAsset.String()
 	shorts[ADAAsset.ShortCode()] = ADAAsset.String()
+	shorts[ZECAsset.ShortCode()] = ZECAsset.String()
 
 	long, ok := shorts[input]
 	if ok {
