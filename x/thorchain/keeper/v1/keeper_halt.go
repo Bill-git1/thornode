@@ -134,7 +134,7 @@ func (k KVStore) IsPoolDepositPaused(ctx cosmos.Context, asset common.Asset) boo
 
 func (k KVStore) IsTCYTradingHalted(ctx cosmos.Context) bool {
 	haltTCYTrading, err := k.GetMimir(ctx, "HaltTCYTrading")
-	if err == nil && (haltTCYTrading > 0 && haltTCYTrading < ctx.BlockHeight()) {
+	if err == nil && (haltTCYTrading > 0 && haltTCYTrading <= ctx.BlockHeight()) {
 		ctx.Logger().Debug("TCY trading is halt")
 		return true
 	}

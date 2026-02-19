@@ -308,6 +308,31 @@ func (s *KeeperHaltSuite) TestIsLPPaused(c *C) {
 	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, false)
 }
 
+func (s *KeeperHaltSuite) TestIsTCYTradingHalted(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(10)
+
+	// no halts
+	c.Check(k.IsTCYTradingHalted(ctx), Equals, false)
+
+	// pending TCY trading halt
+	k.SetMimir(ctx, "HaltTCYTrading", 11)
+	c.Check(k.IsTCYTradingHalted(ctx), Equals, false)
+
+	// current-block TCY trading halt
+	k.SetMimir(ctx, "HaltTCYTrading", 10)
+	c.Check(k.IsTCYTradingHalted(ctx), Equals, true)
+
+	// current TCY trading halt
+	k.SetMimir(ctx, "HaltTCYTrading", 1)
+	c.Check(k.IsTCYTradingHalted(ctx), Equals, true)
+
+	_ = k.DeleteMimir(ctx, "HaltTCYTrading")
+
+	// no halts
+	c.Check(k.IsTCYTradingHalted(ctx), Equals, false)
+}
+
 func (s *KeeperHaltSuite) TestIsPoolDepositPaused(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(10)
