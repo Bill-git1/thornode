@@ -14,6 +14,9 @@ func (k KVStore) IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool {
 	checkAssets := []common.Asset{}
 	switch m := msg.(type) {
 	case *MsgSwap:
+		if len(m.Tx.Coins) == 0 {
+			return k.IsGlobalTradingHalted(ctx)
+		}
 		// regardless ragnarok, synth to equivalent layer1 asset is allowed
 		source := m.Tx.Coins[0].Asset
 		if !(source.IsSyntheticAsset() && m.TargetAsset.Equals(source.GetLayer1Asset())) {
@@ -31,8 +34,9 @@ func (k KVStore) IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool {
 	switch m := msg.(type) {
 	case *MsgSwap:
 		source := common.EmptyChain
-		sourceAsset := m.Tx.Coins[0].Asset
+		sourceAsset := common.EmptyAsset
 		if len(m.Tx.Coins) > 0 {
+			sourceAsset = m.Tx.Coins[0].Asset
 			source = m.Tx.Coins[0].Asset.GetLayer1Asset().Chain
 		}
 		target := m.TargetAsset.GetLayer1Asset().Chain

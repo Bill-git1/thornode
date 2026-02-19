@@ -110,6 +110,13 @@ func (s *KeeperHaltSuite) TestIsTradingHalt(c *C) {
 	c.Check(k.IsTradingHalt(ctx, swapMsg), Equals, false)
 	c.Check(k.IsTradingHalt(ctx, addMsg), Equals, false)
 	c.Check(k.IsTradingHalt(ctx, withdrawMsg), Equals, false)
+
+	// empty coins should not panic and should fall back to global trading halt check
+	emptyCoinsSwap := &MsgSwap{Tx: common.Tx{Coins: common.Coins{}}, TargetAsset: common.ETHAsset}
+	c.Check(k.IsTradingHalt(ctx, emptyCoinsSwap), Equals, false)
+	k.SetMimir(ctx, "HaltTrading", 1)
+	c.Check(k.IsTradingHalt(ctx, emptyCoinsSwap), Equals, true)
+	_ = k.DeleteMimir(ctx, "HaltTrading")
 }
 
 func (s *KeeperHaltSuite) TestIsGlobalTradingHalted(c *C) {
