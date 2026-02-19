@@ -81,15 +81,17 @@ func (a *SolvencyCheckActor) checkSolvency(config *OpConfig) OpResult {
 
 	// find a user to lookup L1 balances
 	var user *User
+	userAcquired := false
 	for _, user = range config.Users {
 		a.SetLogger(a.Log().With().Str("user", user.Name()).Logger())
 
 		// skip users already being used
 		if user.Acquire() {
+			userAcquired = true
 			break
 		}
 	}
-	if user == nil {
+	if !userAcquired {
 		a.Log().Error().Msg("no user available")
 		return OpResult{
 			Continue: false,

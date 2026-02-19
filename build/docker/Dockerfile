@@ -13,7 +13,20 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+COPY api api
+COPY app app
+COPY bifrost bifrost
+COPY cmd cmd
+COPY common common
+COPY config config
+COPY constants constants
+COPY log log
+COPY openapi openapi
+COPY x x
+COPY Makefile Makefile
+COPY version version
+COPY tools/thorscan tools/thorscan
+COPY tools/recover-keyshare-backup tools/recover-keyshare-backup
 
 ARG TAG=mainnet
 ARG COMMIT=unknown

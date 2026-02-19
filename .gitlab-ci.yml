@@ -14,6 +14,8 @@ variables:
   DOCKER_TLS_CERTDIR: /certs
   DOCKER_TLS_VERIFY: 1
   DOCKER_CERT_PATH: $DOCKER_TLS_CERTDIR/client
+  GOMODCACHE: /go-mod-cache
+  GOCACHE: /go-build-cache
   SAST_EXCLUDED_ANALYZERS: eslint,bandit,semgrep
   SAST_EXCLUDED_PATHS: spec, test, tests, tmp, .cache
 
@@ -156,6 +158,8 @@ lint:
     - if: $CI == "true"
       when: on_success
   stage: test
+  variables:
+    XDG_CACHE_HOME: /trunk-cache
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends jq
   script:

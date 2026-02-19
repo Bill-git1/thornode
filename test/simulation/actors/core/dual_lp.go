@@ -119,6 +119,11 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 		}
 		userMaxRune = thorBalances.GetCoin(common.RuneAsset()).Amount
 
+		// release the previous candidate before overwriting
+		if a.account != nil {
+			a.account.Release()
+		}
+
 		// set acquired account and amounts in state context
 		a.Log().Info().
 			Stringer("address", thorAddress).
