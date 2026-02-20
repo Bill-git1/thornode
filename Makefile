@@ -213,7 +213,7 @@ test-all: test-network-specific
 	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} "./..."
 
 test-go-tss:
-	@go teat ${TEST_BUILD_FLAGS} ${RUN_FLAG} --race "./bifrost/tss/go-tss/..."
+	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} --race "./bifrost/tss/go-tss/..."
 
 test-network-specific:
 	@go test -tags stagenet ${RUN_FLAG} ./common
