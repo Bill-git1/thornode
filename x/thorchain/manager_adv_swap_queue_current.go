@@ -282,14 +282,7 @@ func (vm *SwapQueueAdv) IsDone(ctx cosmos.Context, msg MsgSwap) bool {
 // Uses State.Interval if specified and valid, otherwise falls back to maxAge
 func (vm *SwapQueueAdv) getTTL(ctx cosmos.Context, msg MsgSwap) int64 {
 	maxAge := vm.k.GetConfigInt64(ctx, constants.StreamingLimitSwapMaxAge)
-
-	// Use custom TTL if specified via State.Interval, with validation
-	ttl := maxAge // default to maxAge
-	if msg.State.Interval > 0 && msg.State.Interval <= uint64(maxAge) {
-		ttl = int64(msg.State.Interval)
-	}
-
-	return ttl
+	return getLimitSwapTTL(msg, maxAge)
 }
 
 func (vm *SwapQueueAdv) checkFeelessSwap(pools Pools, pair tradePair, indexRatio uint64) bool {
@@ -595,6 +588,7 @@ func (vm *SwapQueueAdv) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, msg *M
 		expiryHeight := msg.InitialBlockHeight + ttl
 		if err := vm.k.AddToLimitSwapTTL(ctx, expiryHeight, msg.Tx.ID); err != nil {
 			ctx.Logger().Error("fail to add limit swap to TTL", "error", err, "txID", msg.Tx.ID.String(), "expiryHeight", expiryHeight)
+			return err
 		}
 	}
 

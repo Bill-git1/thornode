@@ -3470,6 +3470,59 @@ func (s AdvSwapQueueSuite) TestProcessExpiredLimitSwapsWithMixedSwapTypes(c *C) 
 	c.Assert(retrievedMarketSwap.Tx.ID.Equals(txID2), Equals, true)
 }
 
+func (s AdvSwapQueueSuite) TestAddSwapQueueItemFailsWhenTTLWriteFails(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	swapQueue := newSwapQueueAdv(k)
+
+	mgr.Keeper().SetMimir(ctx, "EnableAdvSwapQueue", 1)
+
+	// Setup pools required for validation.
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	pool = NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	msg := NewMsgSwap(
+		common.NewTx(
+			common.TxID("0000000000000000000000000000000000000000000000000000000000000099"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1500000))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"=<:ETH.ETH:"+GetRandomETHAddress().String()+":999999999",
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.NewUint(999999999),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit,
+		0, 0, types.SwapVersion_v2,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+
+	// Force TTL write failure by overflowing expiry height calculation.
+	msg.InitialBlockHeight = 9223372036854775800
+	msg.State.Interval = 100
+
+	err := swapQueue.AddSwapQueueItem(ctx, mgr, msg)
+	c.Assert(err, NotNil)
+
+	_, err = k.GetAdvSwapQueueItem(ctx, msg.Tx.ID, int(msg.Index))
+	c.Assert(err, NotNil)
+}
+
 func (s AdvSwapQueueSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
@@ -4814,4 +4867,269 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipsMarketOnly(c *C) {
 
 	// On iteration 0, market swap should NOT be skipped even if same direction
 	c.Check(shouldSkipRapidSwapDirection(marketMsg, lastPoolDir, 0), Equals, false)
+}
+
+func (s AdvSwapQueueSuite) TestRapidSwapDirectionIntegration(c *C) {
+	type swapDef struct {
+		sourceAsset common.Asset
+		targetAsset common.Asset
+		amount      uint64 // whole units, multiplied by common.One
+	}
+
+	type scenario struct {
+		name           string
+		rapidSwapMax   int64
+		needDoge       bool
+		swaps          []swapDef
+		expectedCounts []uint64
+	}
+
+	scenarios := []scenario{
+		{
+			name:         "all same direction single pool",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.RuneAsset(), common.ETHAsset, 10},
+				{common.RuneAsset(), common.ETHAsset, 10},
+				{common.RuneAsset(), common.ETHAsset, 10},
+			},
+			// Iter 0: all 3 execute (RuneToAsset on ETH). Iter 1: all skipped (same dir). Early exit.
+			expectedCounts: []uint64{1, 1, 1},
+		},
+		{
+			name:         "counter-directional single pool",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.ETHAsset, common.RuneAsset(), 10}, // ~10 RUNE/sub, scores higher
+				{common.RuneAsset(), common.ETHAsset, 10}, // ~1 RUNE/sub, scores lower
+			},
+			// ETH→RUNE and RUNE→ETH alternate direction on ETH pool each iteration.
+			// Both proceed every iteration because within-iteration updates flip the direction.
+			expectedCounts: []uint64{3, 3},
+		},
+		{
+			name:         "non-overlapping pools same direction",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.RuneAsset(), common.ETHAsset, 10},
+				{common.RuneAsset(), common.BTCAsset, 10},
+			},
+			// Both are RuneToAsset but in different pools. Iter 0: both succeed.
+			// Iter 1: both skipped (each pool's last dir is RuneToAsset). Early exit.
+			expectedCounts: []uint64{1, 1},
+		},
+		{
+			name:         "double swap plus counter-directional single",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.RuneAsset(), common.ETHAsset, 1000}, // sub=100 RUNE, single-leg fee dominates
+				{common.ETHAsset, common.BTCAsset, 10},      // sub=1 ETH (~10 RUNE), double-swap scores lower
+			},
+			// RUNE→ETH scores highest (sub=100 RUNE, large single-leg fee).
+			// Iter 0: RUNE→ETH (ETH=RuneToAsset), ETH→BTC (ETH=AssetToRune, BTC=RuneToAsset). Both succeed.
+			// After iter 0: ETH=AssetToRune, BTC=RuneToAsset.
+			// Iter 1: RUNE→ETH (RuneToAsset vs AssetToRune: diff) → succeeds, ETH=RuneToAsset.
+			//         ETH→BTC: BTC leg RuneToAsset vs RuneToAsset → SAME → skipped.
+			// Iter 2: RUNE→ETH (RuneToAsset vs RuneToAsset: same) → skipped.
+			//         ETH→BTC: BTC still same → skipped. iterationSuccess=0 → exit.
+			expectedCounts: []uint64{2, 1},
+		},
+		{
+			name:         "fully counter-directional double swaps",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.BTCAsset, common.ETHAsset, 10}, // sub=0.1 BTC (~10 RUNE), scores higher
+				{common.ETHAsset, common.BTCAsset, 10}, // sub=0.1 ETH (~1 RUNE), scores lower
+			},
+			// BTC→ETH: BTC=AssetToRune, ETH=RuneToAsset. ETH→BTC: ETH=AssetToRune, BTC=RuneToAsset.
+			// All legs are opposite of each other, so both proceed every iteration.
+			expectedCounts: []uint64{3, 3},
+		},
+		{
+			name:         "double swaps with shared BTC pool",
+			rapidSwapMax: 3,
+			needDoge:     true,
+			swaps: []swapDef{
+				{common.ETHAsset, common.BTCAsset, 10},    // ETH=AssetToRune, BTC=RuneToAsset
+				{common.DOGEAsset, common.BTCAsset, 1000}, // DOGE=AssetToRune, BTC=RuneToAsset
+			},
+			// Both share BTC=RuneToAsset. Iter 0: both succeed.
+			// Iter 1: both have BTC=RuneToAsset matching → both skipped. Early exit.
+			expectedCounts: []uint64{1, 1},
+		},
+		{
+			name:         "early exit despite high rapidSwapMax",
+			rapidSwapMax: 5,
+			swaps: []swapDef{
+				{common.RuneAsset(), common.ETHAsset, 10},
+				{common.RuneAsset(), common.ETHAsset, 10},
+			},
+			// Same direction in same pool. Iter 0: both succeed. Iter 1: both skipped. Early exit at 2 despite max=5.
+			expectedCounts: []uint64{1, 1},
+		},
+		{
+			name:         "mixed some skipped some keep iteration alive",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.ETHAsset, common.RuneAsset(), 100}, // sub=10 ETH (~100 RUNE), scores highest
+				{common.RuneAsset(), common.ETHAsset, 10},  // sub=1 RUNE, scores lower
+				{common.RuneAsset(), common.BTCAsset, 10},  // sub=1 RUNE, scores lower
+			},
+			// Iter 0: all 3 succeed. ETH→RUNE (AssetToRune) then RUNE→ETH (RuneToAsset) alternate ETH.
+			// BTC=RuneToAsset from RUNE→BTC.
+			// Iter 1: ETH→RUNE (AssetToRune vs RuneToAsset: diff) succeeds → ETH=AssetToRune.
+			//         RUNE→ETH (RuneToAsset vs AssetToRune: diff) succeeds → ETH=RuneToAsset.
+			//         RUNE→BTC (RuneToAsset vs RuneToAsset: same) → skipped.
+			// Iter 2: same pattern. ETH pair keeps iterating, BTC skipped.
+			expectedCounts: []uint64{3, 3, 1},
+		},
+		{
+			name:         "direction updated mid-iteration enables next swap",
+			rapidSwapMax: 2,
+			swaps: []swapDef{
+				{common.BTCAsset, common.RuneAsset(), 10}, // sub=0.1 BTC (~10 RUNE), scores highest
+				{common.RuneAsset(), common.BTCAsset, 10}, // sub=1 RUNE, scores lower
+			},
+			// Iter 0: BTC→RUNE (BTC=AssetToRune), then RUNE→BTC (BTC=RuneToAsset). Both succeed.
+			// Iter 1: BTC→RUNE (AssetToRune vs RuneToAsset: diff) → succeeds, BTC=AssetToRune.
+			//         RUNE→BTC (RuneToAsset vs AssetToRune: diff) → succeeds.
+			expectedCounts: []uint64{2, 2},
+		},
+		{
+			name:         "L1 synth and trade targets same direction same pool",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.RuneAsset(), common.ETHAsset, 10},                     // RUNE → L1 ETH
+				{common.RuneAsset(), common.ETHAsset.GetSyntheticAsset(), 10}, // RUNE → Synth ETH
+				{common.RuneAsset(), common.ETHAsset.GetTradeAsset(), 10},     // RUNE → Trade ETH
+			},
+			// All three target the ETH pool as RuneToAsset. GetLayer1Asset() normalizes
+			// synth/trade targets to the same pool key.
+			// Iter 0: all 3 succeed. Iter 1: all same dir → skipped. Early exit.
+			expectedCounts: []uint64{1, 1, 1},
+		},
+		{
+			name:         "counter-directional synth source vs L1 target",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.ETHAsset.GetSyntheticAsset(), common.RuneAsset(), 100}, // Synth ETH → RUNE, scores highest
+				{common.RuneAsset(), common.ETHAsset, 10},                      // RUNE → L1 ETH, scores lower
+			},
+			// Synth ETH→RUNE is AssetToRune on ETH. RUNE→ETH is RuneToAsset on ETH.
+			// Counter-directional through same pool → both proceed every iteration.
+			expectedCounts: []uint64{3, 3},
+		},
+		{
+			name:         "trade source and L1 same direction same pool",
+			rapidSwapMax: 3,
+			swaps: []swapDef{
+				{common.ETHAsset.GetTradeAsset(), common.RuneAsset(), 100}, // Trade ETH → RUNE, scores highest
+				{common.ETHAsset, common.RuneAsset(), 10},                  // L1 ETH → RUNE, scores lower
+			},
+			// Both are AssetToRune on ETH pool. GetLayer1Asset() normalizes trade source.
+			// Iter 0: both succeed. Iter 1: both same dir → skipped. Early exit.
+			expectedCounts: []uint64{1, 1},
+		},
+	}
+
+	for _, sc := range scenarios {
+		c.Log("--- Scenario:", sc.name)
+
+		ctx, mgr := setupManagerForTest(c)
+		book := newSwapQueueAdv(mgr.Keeper())
+
+		// Setup ETH pool: 10000 RUNE / 1000 ETH (1 ETH ≈ 10 RUNE)
+		ethPool := NewPool()
+		ethPool.Asset = common.ETHAsset
+		ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+		ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+		ethPool.Status = PoolAvailable
+		c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+		// Setup BTC pool: 10000 RUNE / 100 BTC (1 BTC ≈ 100 RUNE)
+		btcPool := NewPool()
+		btcPool.Asset = common.BTCAsset
+		btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+		btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+		btcPool.Status = PoolAvailable
+		c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+		if sc.needDoge {
+			// Setup DOGE pool: 10000 RUNE / 100000 DOGE (1 DOGE ≈ 0.1 RUNE)
+			dogePool := NewPool()
+			dogePool.Asset = common.DOGEAsset
+			dogePool.BalanceAsset = cosmos.NewUint(100000 * common.One)
+			dogePool.BalanceRune = cosmos.NewUint(10000 * common.One)
+			dogePool.Status = PoolAvailable
+			c.Assert(mgr.Keeper().SetPool(ctx, dogePool), IsNil)
+		}
+
+		mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", sc.rapidSwapMax)
+
+		// Create swaps and track their txIDs
+		txIDs := make([]common.TxID, len(sc.swaps))
+		for i, sd := range sc.swaps {
+			tx := GetRandomTx()
+
+			// Synth source: mint synths into Asgard so the swap can burn them
+			if sd.sourceAsset.IsSyntheticAsset() {
+				synthCoin := common.NewCoin(sd.sourceAsset, cosmos.NewUint(sd.amount*common.One))
+				c.Assert(mgr.Keeper().MintToModule(ctx, ModuleName, synthCoin), IsNil)
+				c.Assert(mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(synthCoin)), IsNil)
+			}
+
+			// Trade source: deposit into trade account and set bech32 from address
+			if sd.sourceAsset.IsTradeAsset() {
+				owner := GetRandomBech32Addr()
+				_, err := mgr.TradeAccountManager().Deposit(ctx, sd.sourceAsset,
+					cosmos.NewUint(sd.amount*common.One), owner, common.NoAddress, common.BlankTxID)
+				c.Assert(err, IsNil)
+				tx.FromAddress = common.Address(owner.String())
+			}
+
+			tx.Coins = common.NewCoins(common.NewCoin(sd.sourceAsset, cosmos.NewUint(sd.amount*common.One)))
+
+			// Derive destination address from target asset type/chain
+			var destAddr common.Address
+			switch {
+			case sd.targetAsset.IsSyntheticAsset() || sd.targetAsset.IsTradeAsset():
+				destAddr = GetRandomTHORAddress()
+			case sd.targetAsset.GetChain().Equals(common.ETHChain):
+				destAddr = GetRandomETHAddress()
+			case sd.targetAsset.GetChain().Equals(common.BTCChain):
+				destAddr = GetRandomBTCAddress()
+			case sd.targetAsset.GetChain().Equals(common.DOGEChain):
+				destAddr = GetRandomDOGEAddress()
+			default:
+				destAddr = GetRandomTHORAddress()
+			}
+
+			tx.Memo = fmt.Sprintf("=:%s:%s", sd.targetAsset, destAddr)
+
+			swap := NewMsgSwap(tx, sd.targetAsset, destAddr, cosmos.ZeroUint(),
+				"", cosmos.ZeroUint(), "", "", nil,
+				types.SwapType_market, 0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+			swap.State = &types.SwapState{
+				Quantity:   10,
+				Count:      0,
+				Interval:   0,
+				Deposit:    cosmos.NewUint(sd.amount * common.One),
+				In:         cosmos.ZeroUint(),
+				Out:        cosmos.ZeroUint(),
+				LastHeight: ctx.BlockHeight() - 1,
+			}
+			c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+			txIDs[i] = tx.ID
+		}
+
+		c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+		for i, expectedCount := range sc.expectedCounts {
+			result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDs[i], 0)
+			c.Assert(err, IsNil, Commentf("scenario %q, swap %d: failed to get swap", sc.name, i))
+			c.Assert(result.State.Count, Equals, expectedCount,
+				Commentf("scenario %q, swap %d: expected Count=%d, got %d, FailedSwaps=%v, FailedReasons=%v",
+					sc.name, i, expectedCount, result.State.Count, result.State.FailedSwaps, result.State.FailedSwapReasons))
+		}
+	}
 }

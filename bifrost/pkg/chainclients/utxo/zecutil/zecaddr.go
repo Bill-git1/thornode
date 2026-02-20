@@ -69,7 +69,7 @@ func Encode(pkHash []byte, net *chaincfg.Params) (_ string, err error) {
 	return EncodeHash(btcutil.Hash160(addrPubKey.ScriptAddress())[:ripemd160.Size], NetList[net.Name].PubHashPrefixes)
 }
 
-func EncodeHash(addrHash []byte, prefix []byte) (_ string, err error) {
+func EncodeHash(addrHash, prefix []byte) (_ string, err error) {
 	if len(addrHash) != ripemd160.Size {
 		return "", errors.New("incorrect hash length")
 	}
@@ -86,7 +86,7 @@ func EncodeHash(addrHash []byte, prefix []byte) (_ string, err error) {
 }
 
 // DecodeAddress zec address string
-func DecodeAddress(address string, netName string) (btcutil.Address, error) {
+func DecodeAddress(address, netName string) (btcutil.Address, error) {
 	var (
 		net ChainParams
 		ok  bool
@@ -132,7 +132,7 @@ func DecodeAddress(address string, netName string) (btcutil.Address, error) {
 }
 
 // decode tex/textest address
-func decodeTexAddress(address string, netName string) (btcutil.Address, error) {
+func decodeTexAddress(address, netName string) (btcutil.Address, error) {
 	// 1. bech32 decode
 	hrp, data, ver, err := bech32.DecodeGeneric(address)
 	if err != nil {

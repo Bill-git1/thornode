@@ -1574,13 +1574,6 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "5000000000 THOR.RUNE",
-              "target": "0 ETH.USDX-0X9999999999999999999999999999999999999999",
-              "txid": "4C0CA037FA8C659BEBEF5F51DA62E4F4F421DA551DA5AA9ABDFB21E6BC3BACA0",
-              "type": "limit_swap"
             }
           ]
         }
@@ -1901,13 +1894,6 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "5000000000 THOR.RUNE",
-              "target": "0 ETH.USDY-0X9999999999999999999999999999999999999999",
-              "txid": "527EBC24FA226A6885E0B9BFD88FBC9F576B1FB90E8723A792E8E7DA5E89989E",
-              "type": "limit_swap"
             }
           ]
         }
@@ -2228,13 +2214,6 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "5000000000 THOR.RUNE",
-              "target": "0 ETH.USDZ-0X9999999999999999999999999999999999999999",
-              "txid": "DB495C4375F914882AADBB42B8C6F87D77C3FBEA0228ED2D56FAF15DA8C29502",
-              "type": "limit_swap"
             }
           ]
         }

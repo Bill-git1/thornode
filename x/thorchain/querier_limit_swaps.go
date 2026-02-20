@@ -78,7 +78,7 @@ func (qs queryServer) queryLimitSwaps(ctx cosmos.Context, req *types.QueryLimitS
 
 		// Calculate details
 		blocksSinceCreated := currentBlockHeight - msg.InitialBlockHeight
-		timeToExpiryBlocks := maxAge - blocksSinceCreated
+		timeToExpiryBlocks := getLimitSwapTTL(msg, maxAge) - blocksSinceCreated
 		if timeToExpiryBlocks < 0 {
 			timeToExpiryBlocks = 0
 		}

@@ -1680,13 +1680,6 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "10000000000 THOR.RUNE",
-              "target": "0 THOR.NAMI",
-              "txid": "23C4BE5A41F2438E6D42BE8C7B6AD7093AEBF82BF1C8005AC673CEC0F4A2B865",
-              "type": "limit_swap"
             }
           ]
         }

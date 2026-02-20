@@ -385,7 +385,6 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		args := []any{hex.EncodeToString(payload)}
 
 		err = c.rpc.Call(&txid, "sendrawtransaction", args...)
-
 		if err != nil {
 			c.log.Err(err).Msg("fail to call SendRawTransaction")
 		}

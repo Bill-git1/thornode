@@ -4608,13 +4608,6 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "10000000 BTC.BTC",
-              "target": "0 ETH-ETH",
-              "txid": "000000000000000000000000000000000000000000000000000000000000000c",
-              "type": "limit_swap"
             }
           ]
         }

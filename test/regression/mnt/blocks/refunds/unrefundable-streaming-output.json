@@ -350,13 +350,6 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "500000000000 THOR.RUNE",
-              "target": "0 BTC.BTC",
-              "txid": "F409194110562EBBFBA69E53DD3F304F25A4C70117CDD680C77BB724FAC4209C",
-              "type": "limit_swap"
             }
           ]
         }

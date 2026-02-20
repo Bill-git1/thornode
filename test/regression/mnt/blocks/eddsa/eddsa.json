@@ -424,13 +424,6 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "100000000 THOR.RUNE",
-              "target": "0 SOL.SOL",
-              "txid": "30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
-              "type": "limit_swap"
             }
           ]
         }

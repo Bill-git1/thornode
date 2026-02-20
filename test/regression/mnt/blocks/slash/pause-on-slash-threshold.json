@@ -817,13 +817,6 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "15000000000 THOR.RUNE",
-              "target": "0 ETH.USDX-0X9999999999999999999999999999999999999999",
-              "txid": "69A1E2025E1E45D051F31CB5B770F31A169907AD040BFD1C2A2D2F409EFCF11F",
-              "type": "limit_swap"
             }
           ]
         }

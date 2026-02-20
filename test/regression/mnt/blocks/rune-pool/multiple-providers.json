@@ -1715,13 +1715,6 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "200000000000 THOR.RUNE",
-              "target": "0 BTC/BTC",
-              "txid": "506631CF180A23EA2CF212CAD267E54D9892DCAEACA3491387708FE382314B7F",
-              "type": "limit_swap"
             }
           ]
         }
@@ -1841,13 +1834,6 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "50000000000 THOR.RUNE",
-              "target": "0 BTC/BTC",
-              "txid": "24890481A6BD928ADAB9725C3E4257A219059560CDC9C0868B0A9E73BC8A34B7",
-              "type": "limit_swap"
             }
           ]
         }
@@ -2611,13 +2597,6 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "24489542 BTC/BTC",
-              "target": "0 THOR.RUNE",
-              "txid": "2E76F7D3819660BC419E082D3189017C5F027EE7B00D17942912F5AE14BE333C",
-              "type": "limit_swap"
             }
           ]
         }

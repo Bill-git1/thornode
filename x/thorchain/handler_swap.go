@@ -312,6 +312,14 @@ func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Re
 
 	// for advanced swap queue, copy the current count from msg.State
 	if msg.State != nil {
+		// For advanced queue swaps, execution state is tracked in msg.State.
+		// Keep StreamingSwap fields in sync so downstream logic (for example,
+		// limit checks with outbound-fee allocation) uses the actual sub-swap state.
+		swp.Quantity = msg.State.Quantity
+		swp.Interval = msg.State.Interval
+		swp.Deposit = msg.State.Deposit
+		swp.In = msg.State.In
+		swp.Out = msg.State.Out
 		swp.Count = msg.State.Count
 	}
 

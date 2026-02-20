@@ -80,16 +80,17 @@ func addSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap) error {
 	if msg.IsV2() {
 		// TODO: swap to synth if layer1 asset (follow on PR)
 		// TODO: create handler to modify/cancel a limit swap (follow on PR)
-
-		source := msg.Tx.Coins[0]
-		target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
-		evt := NewEventLimitSwap(source, target, msg.Tx.ID)
-		if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
-			ctx.Logger().Error("fail to emit swap event", "error", err)
-		}
 		if err := mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, mgr, &msg); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 			return err
+		}
+		if msg.IsLimitSwap() {
+			source := msg.Tx.Coins[0]
+			target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
+			evt := NewEventLimitSwap(source, target, msg.Tx.ID)
+			if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+				ctx.Logger().Error("fail to emit swap event", "error", err)
+			}
 		}
 	} else {
 		return addSwapDirect(ctx, mgr.Keeper(), msg)

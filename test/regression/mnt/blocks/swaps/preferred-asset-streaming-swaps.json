@@ -1801,13 +1801,6 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "15000000000 THOR.RUNE",
-              "target": "0 BTC.BTC",
-              "txid": "A07AD6E81DD474CBEE3A17560CBBD89F3AD1A5DB25D0486FF6F02F21A73F07B6",
-              "type": "limit_swap"
             }
           ]
         }
@@ -2664,13 +2657,6 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "15000000 BTC.BTC",
-              "target": "0 THOR.RUNE",
-              "txid": "0000000000000000000000000000000000000000000000000000000000000002",
-              "type": "limit_swap"
             }
           ]
         }
@@ -2939,7 +2925,7 @@
         "pool": "ETH.ETH",
         "pool_slip": "50",
         "streaming_swap_count": "1",
-        "streaming_swap_quantity": "1",
+        "streaming_swap_quantity": "6",
         "swap_slip": "50",
         "swap_target": "0",
         "to": "0xd58610f89265a2fb637ac40edf59141ff873b266",
@@ -3103,13 +3089,6 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "30000000 ETH.ETH",
-              "target": "0 THOR.RUNE",
-              "txid": "0000000000000000000000000000000000000000000000000000000000000003",
-              "type": "limit_swap"
             }
           ]
         }
@@ -3188,8 +3167,8 @@
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "50",
-        "streaming_swap_count": "1",
-        "streaming_swap_quantity": "1",
+        "streaming_swap_count": "2",
+        "streaming_swap_quantity": "6",
         "swap_slip": "50",
         "swap_target": "0",
         "to": "0xd58610f89265a2fb637ac40edf59141ff873b266",
@@ -3328,8 +3307,8 @@
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "49",
-        "streaming_swap_count": "1",
-        "streaming_swap_quantity": "1",
+        "streaming_swap_count": "3",
+        "streaming_swap_quantity": "6",
         "swap_slip": "50",
         "swap_target": "0",
         "to": "0xd58610f89265a2fb637ac40edf59141ff873b266",
@@ -3468,8 +3447,8 @@
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "49",
-        "streaming_swap_count": "1",
-        "streaming_swap_quantity": "1",
+        "streaming_swap_count": "4",
+        "streaming_swap_quantity": "6",
         "swap_slip": "50",
         "swap_target": "0",
         "to": "0xd58610f89265a2fb637ac40edf59141ff873b266",
@@ -3608,8 +3587,8 @@
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "49",
-        "streaming_swap_count": "1",
-        "streaming_swap_quantity": "1",
+        "streaming_swap_count": "5",
+        "streaming_swap_quantity": "6",
         "swap_slip": "50",
         "swap_target": "0",
         "to": "0xd58610f89265a2fb637ac40edf59141ff873b266",
@@ -3748,8 +3727,8 @@
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "49",
-        "streaming_swap_count": "1",
-        "streaming_swap_quantity": "1",
+        "streaming_swap_count": "6",
+        "streaming_swap_quantity": "6",
         "swap_slip": "50",
         "swap_target": "0",
         "to": "0xd58610f89265a2fb637ac40edf59141ff873b266",

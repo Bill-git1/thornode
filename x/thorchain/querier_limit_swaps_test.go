@@ -545,3 +545,41 @@ func (s *QuerierLimitSwapsSuite) TestQueryLimitSwapsSummaryDisabledQueue(c *C) {
 	c.Assert(resp.OldestSwapBlocks, Equals, int64(0))
 	c.Assert(resp.AverageAgeBlocks, Equals, int64(0))
 }
+
+func (s *QuerierLimitSwapsSuite) TestQueryLimitSwapsUsesCustomTTLForExpiry(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	qs := &queryServer{mgr: mgr}
+
+	k.SetMimir(ctx, constants.EnableAdvSwapQueue.String(), 1)
+	k.SetMimir(ctx, constants.StreamingLimitSwapMaxAge.String(), 1000)
+
+	txID := GetRandomTxHash()
+	swap := types.MsgSwap{
+		Tx: common.Tx{
+			ID:          txID,
+			FromAddress: GetRandomETHAddress(),
+			Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+		},
+		TargetAsset:        common.BTCAsset,
+		TradeTarget:        cosmos.NewUint(50000000),
+		SwapType:           types.SwapType_limit,
+		InitialBlockHeight: 100,
+		State: &types.SwapState{
+			Deposit:  cosmos.NewUint(10 * common.One),
+			In:       cosmos.ZeroUint(),
+			Out:      cosmos.ZeroUint(),
+			Interval: 50, // custom TTL
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, swap), IsNil)
+
+	ctx = ctx.WithBlockHeight(120)
+	resp, err := qs.queryLimitSwaps(ctx, &types.QueryLimitSwapsRequest{Limit: 10})
+	c.Assert(err, IsNil)
+	c.Assert(resp, NotNil)
+	c.Assert(len(resp.LimitSwaps), Equals, 1)
+
+	// custom TTL is 50 blocks, age is 20 blocks => 30 blocks remaining
+	c.Assert(resp.LimitSwaps[0].TimeToExpiryBlocks, Equals, int64(30))
+}

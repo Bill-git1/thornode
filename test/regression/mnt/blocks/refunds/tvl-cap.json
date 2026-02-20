@@ -292,13 +292,6 @@
               "type": "message"
             },
             {
-              "msg_index": "0",
-              "source": "5000000000 BTC.BTC",
-              "target": "0 BTC/BTC",
-              "txid": "0000000000000000000000000000000000000000000000000000000000000001",
-              "type": "limit_swap"
-            },
-            {
               "coins": "7000 BTC.BTC",
               "msg_index": "0",
               "pool_deduct": "6999586",

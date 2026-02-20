@@ -974,13 +974,6 @@
               "msg_index": "0",
               "sender": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "10000000000 THOR.RUNE",
-              "target": "0 THOR.TCY",
-              "txid": "CF285513C8D712B26C1D8286542DE03E221E8079FA6560D846BA674C2CE61011",
-              "type": "limit_swap"
             }
           ]
         }
@@ -1218,13 +1211,6 @@
               "msg_index": "0",
               "sender": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "1000000000 THOR.TCY",
-              "target": "0 THOR.RUNE",
-              "txid": "84320EBF62F69C6D036FFB4474A57F8086E1BCAF2EA50A2A8FF37D364628BB27",
-              "type": "limit_swap"
             }
           ]
         }
@@ -1474,13 +1460,6 @@
               "msg_index": "0",
               "sender": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "500000000 THOR.RUNE",
-              "target": "0 THOR.TCY",
-              "txid": "EF4522B2562360AB87F119AED7608934ABA0EE45EC78806A6EBBD4E49695B110",
-              "type": "limit_swap"
             }
           ]
         }
@@ -1905,13 +1884,6 @@
               "msg_index": "0",
               "sender": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav",
               "type": "message"
-            },
-            {
-              "msg_index": "0",
-              "source": "6540496773 THOR.TCY",
-              "target": "0 THOR.RUNE",
-              "txid": "13E5C0D0E1EE1F1EB3707F7B68518112AA506314BAF0D46E923BDB94EF8E6779",
-              "type": "limit_swap"
             }
           ]
         }

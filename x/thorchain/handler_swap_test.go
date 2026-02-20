@@ -475,6 +475,65 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	c.Check(swp.Out.String(), Equals, "1654583341")
 }
 
+func (s *HandlerSwapSuite) TestHandleWithEmitUsesStateStreamingQuantityForV2Swaps(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.DOGEAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	handler := NewSwapHandler(mgr)
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomDOGEAddress(),
+		GetRandomDOGEAddress(),
+		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(5*common.One))},
+		common.Gas{common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000))},
+		"=:DOGE.DOGE:"+GetRandomDOGEAddress().String(),
+	)
+
+	msg := NewMsgSwap(tx, common.DOGEAsset, GetRandomDOGEAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, na.NodeAddress)
+	msg.State = &types.SwapState{
+		Quantity:   5,
+		Interval:   1,
+		Count:      0,
+		Deposit:    cosmos.NewUint(5 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		Withdrawn:  cosmos.ZeroUint(),
+		LastHeight: 0,
+	}
+
+	_, _, err := handler.handleWithEmit(ctx, *msg)
+	c.Assert(err, IsNil)
+
+	foundSwapEvent := false
+	for _, evt := range ctx.EventManager().Events() {
+		if evt.Type != types.SwapEventType {
+			continue
+		}
+		foundSwapEvent = true
+		var quantityAttr, countAttr string
+		for _, attr := range evt.Attributes {
+			switch attr.Key {
+			case "streaming_swap_quantity":
+				quantityAttr = attr.Value
+			case "streaming_swap_count":
+				countAttr = attr.Value
+			}
+		}
+		c.Check(quantityAttr, Equals, "5")
+		c.Check(countAttr, Equals, "1")
+	}
+	c.Check(foundSwapEvent, Equals, true)
+}
+
 func (s *HandlerSwapSuite) TestSwapSynthERC20(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.txOutStore = NewTxStoreDummy()
