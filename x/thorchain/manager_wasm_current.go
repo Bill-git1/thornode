@@ -52,6 +52,10 @@ func (m WasmMgr) StoreCode(
 		return 0, nil, err
 	}
 
+	if err = m.checkCanStore(ctx, creator); err != nil {
+		return 0, nil, err
+	}
+
 	codeID, checksum, err = m.permissionedKeeper().Create(
 		ctx,
 		creator,
@@ -63,10 +67,6 @@ func (m WasmMgr) StoreCode(
 	}
 
 	if err := m.checkChecksumHalt(ctx, checksum); err != nil {
-		return 0, nil, err
-	}
-
-	if err := m.checkCanStore(ctx, creator); err != nil {
 		return 0, nil, err
 	}
 
@@ -376,8 +376,7 @@ func (m WasmMgr) checkCanInstantiate(ctx cosmos.Context, actor cosmos.AccAddress
 }
 
 func (m WasmMgr) checkActor(ctx cosmos.Context, actor cosmos.AccAddress) error {
-	actorStr := actor.String()
-	actorKey := actorStr[len(actorStr)-6:]
+	actorKey := actor.String()
 	v, err := m.keeper.GetMimirWithRef(ctx, constants.MimirTemplateWasmHaltDeployer, actorKey)
 	if err != nil {
 		return err
@@ -400,11 +399,10 @@ func (m WasmMgr) checkInstantiateAuthorization(ctx cosmos.Context, actor cosmos.
 }
 
 func (m WasmMgr) checkIsContractAdmin(contractInfo *wasmtypes.ContractInfo, actor cosmos.AccAddress) error {
-	// If MimirKeyWasmPermissionless is enabled, we still need to restrict who can call Sudo on and Migrate contracts
-	// Check this against the admin value that is stored on instantiation, as is default x/wasm behaviour
-	// Current limitations of x/wasm mean we can't access the storage for ContractInfo to support updating of this value
-	policy := wasmkeeper.DefaultAuthorizationPolicy{}
-	if !policy.CanModifyContract(contractInfo.AdminAddr(), actor) {
+	// Migration authorization is handled here, not by the wasmkeeper's GovAuthorizationPolicy
+	// (which always returns true for CanModifyContract). We use a direct equality check to
+	// ensure only the contract admin can migrate or sudo.
+	if !actor.Equals(contractInfo.AdminAddr()) {
 		return errors.ErrUnauthorized
 	}
 

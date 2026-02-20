@@ -26,7 +26,10 @@ func AsgardInvariant(k KVStore) common.Invariant {
 	return func(ctx cosmos.Context) (msg []string, broken bool) {
 		// sum all rune liquidity on pools, including pending
 		var poolCoins common.Coins
-		pools, _ := k.GetPools(ctx)
+		pools, err := k.GetPools(ctx)
+		if err != nil {
+			return []string{fmt.Sprintf("fail to get pools: %s", err)}, true
+		}
 		for _, pool := range pools {
 			switch {
 			case pool.Asset.IsSyntheticAsset():
@@ -100,13 +103,13 @@ func AsgardInvariant(k KVStore) common.Invariant {
 						// adjust for stream swap amount, the amount In has been added
 						// to the pool but not deducted from the tx or module, so deduct
 						// that In amount from the tx coin
-						coin.Amount = coin.Amount.Sub(ss.In)
+						coin.Amount = common.SafeSub(coin.Amount, ss.In)
 					}
 					if swap.State != nil && !swap.State.In.IsZero() { // advanced swap queue
 						// adjust for stream swap amount, the amount In has been added
 						// to the pool but not deducted from the tx or module, so deduct
 						// that In amount from the tx coin
-						coin.Amount = coin.Amount.Sub(swap.State.In)
+						coin.Amount = common.SafeSub(coin.Amount, swap.State.In)
 					}
 					swapCoins = swapCoins.Add(coin)
 				}
@@ -250,7 +253,10 @@ func AffilliateCollectorInvariant(k KVStore) common.Invariant {
 // of units and pending rune/asset for all lps
 func PoolsInvariant(k KVStore) common.Invariant {
 	return func(ctx cosmos.Context) (msg []string, broken bool) {
-		pools, _ := k.GetPools(ctx)
+		pools, err := k.GetPools(ctx)
+		if err != nil {
+			return []string{fmt.Sprintf("fail to get pools: %s", err)}, true
+		}
 		for _, pool := range pools {
 			if pool.Asset.IsNative() {
 				continue // only looking at layer-one pools
@@ -261,7 +267,6 @@ func PoolsInvariant(k KVStore) common.Invariant {
 			lpPendingAsset := cosmos.ZeroUint()
 
 			lpIter := k.GetLiquidityProviderIterator(ctx, pool.Asset)
-			defer lpIter.Close()
 			for ; lpIter.Valid(); lpIter.Next() {
 				var lp LiquidityProvider
 				k.Cdc().MustUnmarshal(lpIter.Value(), &lp)
@@ -269,6 +274,7 @@ func PoolsInvariant(k KVStore) common.Invariant {
 				lpPendingRune = lpPendingRune.Add(lp.PendingRune)
 				lpPendingAsset = lpPendingAsset.Add(lp.PendingAsset)
 			}
+			_ = lpIter.Close()
 
 			check := func(poolValue, lpValue cosmos.Uint, valueType string) {
 				if poolValue.GT(lpValue) {

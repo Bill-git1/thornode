@@ -658,6 +658,9 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	}
 
 	ctx.Logger().Info("current pool status", "pool units", newPoolUnits, "liquidity units", liquidityUnits)
+	if liquidityUnits.IsZero() && (!pendingRuneAmt.IsZero() || !pendingAssetAmt.IsZero()) {
+		return ErrInternal(nil, "liquidity units cannot be zero when deposit amounts are non-zero")
+	}
 	// NOTE: pendingRuneAmt and pendingAssetAmt are derived from amounts verified by:
 	// - External chains: Bifrost observers verify actual on-chain transactions before reporting
 	// - Native chain: Cosmos SDK bank module ante handler validates transfers
@@ -670,7 +673,7 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	pool.BalanceAsset = poolAsset
 	ctx.Logger().Info("post add liquidity", "pool", pool.Asset, "rune", pool.BalanceRune, "asset", pool.BalanceAsset, "LP units", pool.LPUnits, "synth units", pool.SynthUnits, "add liquidity units", liquidityUnits)
 	if (pool.BalanceRune.IsZero() && !asset.IsSyntheticAsset()) || pool.BalanceAsset.IsZero() {
-		return ErrInternal(err, "pool cannot have zero rune or asset balance")
+		return ErrInternal(nil, "pool cannot have zero rune or asset balance")
 	}
 
 	// CalcUnits to set the correct SynthUnits before the DepositValue calculations

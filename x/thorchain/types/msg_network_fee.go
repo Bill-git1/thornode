@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -46,8 +47,14 @@ func (m *MsgNetworkFee) ValidateBasic() error {
 	if m.TransactionSize <= 0 {
 		return cosmos.ErrUnknownRequest("invalid transaction size")
 	}
+	if m.TransactionSize > math.MaxInt64 {
+		return cosmos.ErrUnknownRequest("transaction size exceeds max int64")
+	}
 	if m.TransactionFeeRate <= 0 {
 		return cosmos.ErrUnknownRequest("invalid transaction fee rate")
+	}
+	if m.TransactionFeeRate > math.MaxInt64 {
+		return cosmos.ErrUnknownRequest("transaction fee rate exceeds max int64")
 	}
 	return nil
 }

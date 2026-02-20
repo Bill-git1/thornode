@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"fmt"
+
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -45,6 +47,9 @@ func (h NetworkFeeQuorumHandler) handle(ctx cosmos.Context, msg types.MsgNetwork
 		return nil, err
 	}
 
+	if msg.QuoNetFee == nil || msg.QuoNetFee.NetworkFee == nil {
+		return nil, cosmos.ErrUnknownRequest("QuoNetFee and NetworkFee cannot be nil")
+	}
 	nf := msg.QuoNetFee.NetworkFee
 
 	voter, err := h.mgr.Keeper().GetObservedNetworkFeeVoter(ctx, nf.Height, nf.Chain, int64(nf.TransactionRate), int64(nf.TransactionSize))
@@ -70,7 +75,7 @@ func (h NetworkFeeQuorumHandler) handle(ctx cosmos.Context, msg types.MsgNetwork
 		}
 
 		if err := processNetworkFeeAttestation(ctx, h.mgr, &voter, accAddr, active, nf, false); err != nil {
-			ctx.Logger().Error("fail to process network fee attestation", "error", err)
+			return nil, fmt.Errorf("fail to process network fee attestation: %w", err)
 		}
 	}
 

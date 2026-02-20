@@ -192,6 +192,9 @@ func (k KVStore) HasAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) (bool, er
 
 // RemoveAdvSwapQueueIndex - removes a adv swap queue item from the kv store
 func (k KVStore) RemoveAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error {
+	if len(msg.Tx.Coins) == 0 {
+		return fmt.Errorf("cannot remove swap queue index: msg has no coins")
+	}
 	key := k.getAdvSwapQueueIndexKey(ctx, msg)
 	record := make([]string, 0)
 	_, err := k.getStrings(ctx, key, &record)
@@ -336,8 +339,7 @@ func (k KVStore) AddToLimitSwapTTL(ctx cosmos.Context, blockHeight int64, txHash
 	// Get existing TTL list
 	existingHashes, err := k.GetLimitSwapTTL(ctx, blockHeight)
 	if err != nil {
-		// If no existing list, start with empty slice
-		existingHashes = []common.TxID{}
+		return fmt.Errorf("fail to get existing TTL list: %w", err)
 	}
 
 	// Check if hash already exists

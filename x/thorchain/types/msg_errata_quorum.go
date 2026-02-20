@@ -33,6 +33,9 @@ func (m *MsgErrataTxQuorum) ValidateBasic() error {
 	if m.Signer.Empty() {
 		return cosmos.ErrInvalidAddress(m.Signer.String())
 	}
+	if m.QuoErrata == nil {
+		return cosmos.ErrUnknownRequest("QuoErrata cannot be nil")
+	}
 	tx := m.QuoErrata.ErrataTx
 	if tx.Id.IsEmpty() {
 		return cosmos.ErrUnknownRequest("Tx ID cannot be empty")

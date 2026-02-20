@@ -52,6 +52,9 @@ func (h ReferenceMemoHandler) validate(ctx cosmos.Context, msg MsgReferenceMemo)
 
 	// Check if memoless transactions are halted
 	haltMemoless, err := h.mgr.Keeper().GetMimir(ctx, constants.HaltMemoless.String())
+	if err != nil {
+		ctx.Logger().Error("fail to get HaltMemoless mimir", "error", err)
+	}
 	if err == nil && haltMemoless > 0 {
 		return errors.New("memoless transactions are currently halted")
 	}
@@ -128,14 +131,14 @@ func (h ReferenceMemoHandler) nextReference(ctx cosmos.Context, asset common.Ass
 
 	if pos > end {
 		pos = 1
-		posStr = leadingZeros(txnRefLength, fmt.Sprintf("%d", end))
 	}
 
 	// reachedEnd prevents infinite loops by tracking wraparounds.
 	// We allow looping to the start once to search all references,
 	// but return empty if we reach the end a second time (no available refs).
 	reachedEnd := false
-	for {
+	maxIter := end + 1 // bound iterations to prevent excessive keeper reads
+	for iter := int64(0); iter < maxIter; iter++ {
 		if pos > end {
 			pos = 1
 			if reachedEnd {
@@ -155,11 +158,7 @@ func (h ReferenceMemoHandler) nextReference(ctx cosmos.Context, asset common.Ass
 		if refMemo.Height == 0 || refMemo.IsExpired(ctx.BlockHeight(), ttl) {
 			return ref
 		}
-		// we've done a complete circle ending where we started. There are no
-		// reference ids available right now
-		if posStr == ref {
-			return ""
-		}
 		pos++
 	}
+	return ""
 }

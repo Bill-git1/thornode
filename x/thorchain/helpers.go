@@ -1257,11 +1257,11 @@ func settleSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason strin
 		voter, voterErr := mgr.Keeper().GetObservedTxInVoter(ctx, msg.Tx.ID)
 		if voterErr == nil && !voter.Tx.IsEmpty() {
 			if refundErr := refundTx(ctx, ObservedTx{Tx: refundCoinTx, ObservedPubKey: voter.Tx.ObservedPubKey}, mgr, CodeSwapFail, settleReason, ""); refundErr != nil {
-				ctx.Logger().Error("fail to refund swap remainder", "error", refundErr)
+				return fmt.Errorf("fail to refund swap remainder: %w", refundErr)
 			}
 		} else {
 			if refundErr := refundTx(ctx, ObservedTx{Tx: refundCoinTx}, mgr, CodeSwapFail, settleReason, ""); refundErr != nil {
-				ctx.Logger().Error("fail to refund swap remainder", "error", refundErr)
+				return fmt.Errorf("fail to refund swap remainder: %w", refundErr)
 			}
 		}
 	}

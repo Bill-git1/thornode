@@ -149,9 +149,6 @@ type UpgradeQuorum struct {
 // it additionally returns the current approving val count, the total active val count, and the
 // additional active validators needed to reach quorum, if not already approved.
 func UpgradeApprovedByMajority(ctx cosmos.Context, k keeper.Keeper, name string) (*UpgradeQuorum, error) {
-	iterA := k.GetNodeAccountIterator(ctx)
-	defer iterA.Close()
-
 	activeVals, err := k.ListActiveValidators(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list active validators: %w", err)

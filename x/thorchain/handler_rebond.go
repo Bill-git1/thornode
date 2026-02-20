@@ -57,7 +57,7 @@ func (h ReBondHandler) validate(ctx cosmos.Context, msg MsgReBond) error {
 	}
 
 	if nodeAccount.Status == NodeUnknown {
-		return ErrInternal(err, "node account status is unknown")
+		return ErrInternal(nil, "node account status is unknown")
 	}
 
 	nodeAccountAddress, err := nodeAccount.BondAddress.AccAddress()

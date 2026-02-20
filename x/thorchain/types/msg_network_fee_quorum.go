@@ -31,6 +31,9 @@ func NewMsgNetworkFeeQuorum(quoNetFee *common.QuorumNetworkFee, signer cosmos.Ac
 // used to be routed using the external handler and only when HasValidateBasic is implemented.
 // No versioning is used there.
 func (m *MsgNetworkFeeQuorum) ValidateBasic() error {
+	if m.QuoNetFee == nil || m.QuoNetFee.NetworkFee == nil {
+		return cosmos.ErrUnknownRequest("QuoNetFee and NetworkFee cannot be nil")
+	}
 	nf := m.QuoNetFee.NetworkFee
 	if nf.Height <= 0 {
 		return cosmos.ErrUnknownRequest("block height can't be negative, or zero")

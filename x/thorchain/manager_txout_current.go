@@ -3,6 +3,7 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -458,9 +459,16 @@ func (tos *TxOutStorage) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmo
 				}
 			}
 
+			estimate := toi.Coin.Amount.Quo(vault.GetCoin(toi.Coin.Asset).Amount)
+			var estimateU64 uint64
+			if estimate.BigInt().IsUint64() {
+				estimateU64 = estimate.Uint64()
+			} else {
+				estimateU64 = math.MaxUint64
+			}
 			vaultsNecessary = append(vaultsNecessary, VaultsNecessary{
 				Vault:    vault,
-				Estimate: toi.Coin.Amount.Quo(vault.GetCoin(toi.Coin.Asset).Amount).Uint64(),
+				Estimate: estimateU64,
 			})
 		}
 
@@ -660,7 +668,7 @@ func (tos *TxOutStorage) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) ([]
 			var activeAsgards Vaults
 			activeAsgards, err = tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
 			if err != nil {
-				ctx.Logger().Error("fail to get active vaults", "error", err)
+				return nil, cosmos.ZeroUint(), fmt.Errorf("fail to get active vaults: %w", err)
 			}
 
 			// All else being equal, prefer lower-security vaults for outbounds.
@@ -676,7 +684,7 @@ func (tos *TxOutStorage) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) ([]
 			var retiringAsgards Vaults
 			retiringAsgards, err = tos.keeper.GetAsgardVaultsByStatus(ctx, RetiringVault)
 			if err != nil {
-				ctx.Logger().Error("fail to get retiring vaults", "error", err)
+				return nil, cosmos.ZeroUint(), fmt.Errorf("fail to get retiring vaults: %w", err)
 			}
 
 			// All else being equal, prefer lower-security vaults for outbounds.
@@ -1240,7 +1248,7 @@ func (tos *TxOutStorage) nativeTxOut(ctx cosmos.Context, mgr Manager, toi TxOutI
 	}
 
 	if sdkErr != nil {
-		return errors.New(sdkErr.Error())
+		return sdkErr
 	}
 
 	from, err := tos.keeper.GetModuleAddress(toi.ModuleName)

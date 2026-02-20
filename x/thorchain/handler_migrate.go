@@ -62,13 +62,18 @@ func (h MigrateHandler) handle(ctx cosmos.Context, msg MsgMigrate) (*cosmos.Resu
 		// it use migrate:{block height} to mark a tx out caused by vault rotation
 		// this type of tx out is special , because it doesn't have relevant tx in to trigger it, it is trigger by thorchain itself.
 		var fromAddress common.Address
+		var addrErr error
 		switch tx.Chain.GetSigningAlgo() {
 		case common.SigningAlgoSecp256k1:
-			fromAddress, _ = tx.VaultPubKey.GetAddress(tx.Chain)
+			fromAddress, addrErr = tx.VaultPubKey.GetAddress(tx.Chain)
 		case common.SigningAlgoEd25519:
-			fromAddress, _ = tx.VaultPubKeyEddsa.GetAddress(tx.Chain)
+			fromAddress, addrErr = tx.VaultPubKeyEddsa.GetAddress(tx.Chain)
 		default:
 			ctx.Logger().Error("unknown signing algo", "signing_algo", tx.Chain.GetSigningAlgo())
+		}
+		if addrErr != nil {
+			ctx.Logger().Error("fail to get address from pubkey", "chain", tx.Chain, "error", addrErr)
+			continue
 		}
 
 		if tx.InHash.Equals(common.BlankTxID) &&

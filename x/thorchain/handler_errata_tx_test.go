@@ -439,7 +439,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerDifferentError(c *C) {
 			},
 		},
 		{
-			name: " fail to save pool should not error out",
+			name: "fail to save pool should error out",
 			messageProvider: func(ctx cosmos.Context, helper *ErrataTxHandlerTestHelper) cosmos.Msg {
 				// add an active node account
 				nodeAccount := GetRandomValidatorNode(NodeActive)
@@ -464,8 +464,8 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerDifferentError(c *C) {
 				return NewMsgErrataTx(voter.TxID, common.BTCChain, nodeAccount.NodeAddress)
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *ErrataTxHandlerTestHelper, name string) {
-				c.Check(result, NotNil, Commentf(name))
-				c.Check(err, IsNil, Commentf(name))
+				c.Check(result, IsNil, Commentf(name))
+				c.Check(err, NotNil, Commentf(name))
 			},
 		},
 	}

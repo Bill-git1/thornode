@@ -166,7 +166,7 @@ func processErrataTxAttestation(
 	}
 
 	if err := k.SetPool(ctx, pool); err != nil {
-		ctx.Logger().Error("fail to save pool", "error", err)
+		return fmt.Errorf("fail to save pool: %w", err)
 	}
 
 	// send errata event

@@ -296,13 +296,13 @@ func (k KVStore) getString(ctx cosmos.Context, key string, record *string) (bool
 
 func (k KVStore) setStrings(ctx cosmos.Context, key []byte, record []string) {
 	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if len(record) == 0 {
+		store.Delete(key)
+		return
+	}
 	value := ProtoStrings{Value: record}
 	buf := k.cdc.MustMarshal(&value)
-	if buf == nil {
-		store.Delete(key)
-	} else {
-		store.Set(key, buf)
-	}
+	store.Set(key, buf)
 }
 
 func (k KVStore) getStrings(ctx cosmos.Context, key []byte, record *[]string) (bool, error) {
@@ -556,7 +556,7 @@ func (k KVStore) RagnarokAccount(ctx cosmos.Context, addr cosmos.AccAddress) {
 				ctx.Logger().Error("invalid denom", "error", err)
 				continue
 			}
-			coin := common.NewCoin(asset, cosmos.NewUint(bal.Amount.Uint64()))
+			coin := common.NewCoin(asset, cosmos.NewUintFromBigInt(bal.Amount.BigInt()))
 			coins := common.NewCoins(coin)
 			if asset.IsRune() {
 				err = k.SendFromAccountToModule(ctx, addr, ReserveName, coins)

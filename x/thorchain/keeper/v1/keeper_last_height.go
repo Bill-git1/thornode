@@ -84,6 +84,9 @@ func (k KVStore) SetLastObserveHeight(ctx cosmos.Context, chain common.Chain, ad
 	key := k.GetKey(prefixLastObserveHeight, address.String(), "/", chain.String())
 	exist, err := k.getInt64(ctx, key, &lastHeight)
 	if err != nil {
+		// Log but continue: overwriting corrupted data with a valid height
+		// is intentional self-healing behavior, consistent with
+		// SetLastSignedHeight and SetLastChainHeight.
 		ctx.Logger().Error("fail to get last observe height", "error", err)
 	}
 	// if the last height is already larger then current height , then just bail out

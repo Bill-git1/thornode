@@ -35,6 +35,7 @@ func (vm *VolumeMgr) EndBlock(ctx cosmos.Context) error {
 	for _, pool := range pools {
 		volume, err := vm.keeper.GetVolume(ctx, pool.Asset)
 		if err != nil {
+			ctx.Logger().Error("fail to get volume", "asset", pool.Asset, "error", err)
 			continue
 		}
 

@@ -192,12 +192,8 @@ func (h ModifyLimitSwapHandler) donateToPool(ctx cosmos.Context, asset common.As
 		}
 	}
 
-	// Add the amount to the appropriate balance
-	if asset.IsRune() {
-		pool.BalanceRune = pool.BalanceRune.Add(amount)
-	} else {
-		pool.BalanceAsset = pool.BalanceAsset.Add(amount)
-	}
+	// Add the amount to the pool's asset balance (RUNE is handled by early return above)
+	pool.BalanceAsset = pool.BalanceAsset.Add(amount)
 
 	// Save the updated pool
 	if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {

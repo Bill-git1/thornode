@@ -215,16 +215,19 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 					cloutOut, err = h.mgr.Keeper().GetSwapperClout(ctx, outTxn.ToAddress)
 					if err != nil {
 						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
+						break
 					}
 					var inVoter ObservedTxVoter
 					inVoter, err = h.mgr.Keeper().GetObservedTxInVoter(ctx, outTxn.InHash)
 					if err != nil {
 						ctx.Logger().Error("fail to get txin for clout calculation", "error", err)
+						break
 					}
 					var cloutIn SwapperClout
 					cloutIn, err = h.mgr.Keeper().GetSwapperClout(ctx, inVoter.Tx.Tx.FromAddress)
 					if err != nil {
-						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
+						ctx.Logger().Error("fail to get swapper clout source address", "error", err)
+						break
 					}
 
 					clout1, clout2 := calcReclaim(cloutIn.Claimable(), cloutOut.Claimable(), *spent)

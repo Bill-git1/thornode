@@ -72,7 +72,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.code == 0
-  - .txs[0].result.events[3].new_admin_address == "{{ addr_thor_cat }}"
+  - .txs[0].result.events[4].new_admin_address == "{{ addr_thor_cat }}"
 ---
 type: check
 endpoint: http://localhost:1317/cosmwasm/wasm/v1/contract/tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f
@@ -105,7 +105,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.code == 0
-  - .txs[0].result.events[3].new_admin_address == ""
+  - .txs[0].result.events[4].new_admin_address == ""
 ---
 type: check
 endpoint: http://localhost:1317/cosmwasm/wasm/v1/contract/tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f

@@ -61,6 +61,12 @@ func processSolvencyAttestation(
 		// solvency tx already processed
 		return nil
 	}
+	vault, err := k.GetVault(ctx, voter.PubKey)
+	if err != nil {
+		ctx.Logger().Error("fail to get vault", "error", err)
+		return fmt.Errorf("fail to get vault: %w", err)
+	}
+
 	voter.ConsensusBlockHeight = ctx.BlockHeight()
 
 	// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
@@ -70,12 +76,6 @@ func processSolvencyAttestation(
 	nonSigners := getNonSigners(active, signers)
 	slasher.DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 	slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
-
-	vault, err := k.GetVault(ctx, voter.PubKey)
-	if err != nil {
-		ctx.Logger().Error("fail to get vault", "error", err)
-		return fmt.Errorf("fail to get vault: %w", err)
-	}
 
 	// Do checks for whether to act on this consensus or not.
 	const StopSolvencyCheckKey = `StopSolvencyCheck`
@@ -154,7 +154,8 @@ func processSolvencyAttestation(
 func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.Coins, chain common.Chain) bool {
 	adjustVault, err := excludePendingOutboundFromVault(ctx, mgr, vault)
 	if err != nil {
-		return false
+		ctx.Logger().Error("fail to exclude pending outbound from vault, assuming insolvent", "error", err)
+		return true
 	}
 	// Get the permitted solvency gap in RUNE (converted from USD)
 	permittedGapInRune := mgr.Keeper().DollarConfigInRune(ctx, constants.PermittedSolvencyGapUSD)

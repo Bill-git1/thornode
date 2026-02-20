@@ -53,7 +53,10 @@ func (k KVStore) GetPools(ctx cosmos.Context) (Pools, error) {
 	return pools, nil
 }
 
-// GetPool get the entire Pool metadata struct based on given asset
+// GetPool get the entire Pool metadata struct based on given asset.
+// Note: returns a default-initialized Pool (with empty Asset) when the pool
+// does not exist, with err==nil. Callers should check pool.IsEmpty() or use
+// PoolExist() to distinguish between a nonexistent pool and an existing one.
 func (k KVStore) GetPool(ctx cosmos.Context, asset common.Asset) (Pool, error) {
 	record := NewPool()
 	_, err := k.getPool(ctx, k.GetKey(prefixPool, asset.String()), &record)

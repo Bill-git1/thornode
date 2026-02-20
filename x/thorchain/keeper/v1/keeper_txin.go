@@ -76,7 +76,9 @@ func (k KVStore) SetObservedLink(ctx cosmos.Context, inhash, outhash common.TxID
 func (k KVStore) setObservedLink(ctx cosmos.Context, inhash, outhash common.TxID) {
 	key := k.GetKey(prefixObservedLink, inhash.String())
 	record := make([]string, 0)
-	_, _ = k.getStrings(ctx, key, &record)
+	if _, err := k.getStrings(ctx, key, &record); err != nil {
+		ctx.Logger().Error("fail to get observed link", "inhash", inhash, "error", err)
+	}
 	for _, s := range record {
 		if s == outhash.String() {
 			return
@@ -92,7 +94,9 @@ func (k KVStore) GetObservedLink(ctx cosmos.Context, inhash common.TxID) []commo
 	strs := make([]string, 0)
 
 	key := k.GetKey(prefixObservedLink, inhash.String())
-	_, _ = k.getStrings(ctx, key, &strs)
+	if _, err := k.getStrings(ctx, key, &strs); err != nil {
+		ctx.Logger().Error("fail to get observed link", "inhash", inhash, "error", err)
+	}
 
 	for _, s := range strs {
 		hash, err := common.NewTxID(s)

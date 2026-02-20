@@ -35,6 +35,9 @@ func NewMsgSolvencyQuorum(solvency *common.QuorumSolvency, signer cosmos.AccAddr
 // used to be routed using the external handler and only when HasValidateBasic is implemented.
 // No versioning is used there.
 func (m *MsgSolvencyQuorum) ValidateBasic() error {
+	if m.QuoSolvency == nil || m.QuoSolvency.Solvency == nil {
+		return cosmos.ErrUnknownRequest("QuoSolvency and Solvency cannot be nil")
+	}
 	s := m.QuoSolvency.Solvency
 	if s.Id.IsEmpty() {
 		return cosmos.ErrUnknownRequest("invalid id")

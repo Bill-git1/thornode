@@ -160,7 +160,7 @@ func (h MimirHandler) handle(ctx cosmos.Context, msg MsgMimir) error {
 	h.mgr.Keeper().SetMimir(ctx, msg.Key, effectiveValue)
 	mimirEvent := NewEventSetMimir(strings.ToUpper(msg.Key), strconv.FormatInt(effectiveValue, 10))
 	if err = h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
-		ctx.Logger().Error("fail to emit set_mimir event", "error", err)
+		return fmt.Errorf("fail to emit set_mimir event: %w", err)
 	}
 
 	return nil

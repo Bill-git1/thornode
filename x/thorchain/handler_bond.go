@@ -57,16 +57,19 @@ func (h BondHandler) validate(ctx cosmos.Context, msg MsgBond) error {
 	}
 
 	if nodeAccount.Status == NodeReady {
-		return ErrInternal(err, "cannot add bond while node is ready status")
+		return ErrInternal(nil, "cannot add bond while node is ready status")
 	}
 
 	bondPause := h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseBond)
 	if bondPause > 0 {
-		return ErrInternal(err, "bonding has been paused")
+		return ErrInternal(nil, "bonding has been paused")
 	}
 
 	bond := msg.Bond.Add(nodeAccount.Bond)
 	maxBond, err := h.mgr.Keeper().GetMimir(ctx, "MaximumBondInRune")
+	if err != nil {
+		ctx.Logger().Error("fail to get MaximumBondInRune mimir", "error", err)
+	}
 	if maxBond > 0 && err == nil {
 		maxValidatorBond := cosmos.NewUint(uint64(maxBond))
 		if bond.GT(maxValidatorBond) {

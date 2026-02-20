@@ -44,7 +44,7 @@ asserts:
   - .contracts|length == 1
 ---
 type: tx-mimir
-key: HaltWasmDeployer-h6k85m
+key: HaltWasmDeployer-tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m
 value: 1
 signer: {{ addr_thor_dog }}
 ---

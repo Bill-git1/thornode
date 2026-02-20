@@ -113,6 +113,8 @@ func (ad WasmExecuteAnteDecorator) AnteHandle(
 			*wasmtypes.MsgExecuteContract,
 			*wasmtypes.MsgMigrateContract,
 			*wasmtypes.MsgSudoContract,
+			*wasmtypes.MsgClearAdmin,
+			*wasmtypes.MsgUpdateAdmin,
 			*authz.MsgGrant,
 			*authz.MsgRevoke,
 			*authz.MsgExec:

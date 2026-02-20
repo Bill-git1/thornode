@@ -197,7 +197,9 @@ func (h PriceFeedQuorumBatchHandler) handle(ctx cosmos.Context, msg types.MsgPri
 		}
 	}
 
-	h.telemetryLatency(time.UnixMilli(common.GetMedianInt64(timestamps)))
+	if len(timestamps) > 0 {
+		h.telemetryLatency(time.UnixMilli(common.GetMedianInt64(timestamps)))
+	}
 
 	return &cosmos.Result{}, nil
 }

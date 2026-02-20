@@ -33,6 +33,9 @@ func (m *MsgObservedTxQuorum) ValidateBasic() error {
 	if m.Signer.Empty() {
 		return cosmos.ErrInvalidAddress(m.Signer.String())
 	}
+	if m.QuoTx == nil {
+		return cosmos.ErrUnknownRequest("QuoTx cannot be nil")
+	}
 
 	tx := m.QuoTx.ObsTx
 

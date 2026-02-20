@@ -49,6 +49,9 @@ func (h ObservedTxQuorumHandler) handle(ctx cosmos.Context, msg types.MsgObserve
 	}
 	handler := NewInternalHandler(h.mgr)
 
+	if msg.QuoTx == nil {
+		return nil, cosmos.ErrUnknownRequest("QuoTx cannot be nil")
+	}
 	quoTx := msg.QuoTx
 	obsTx := quoTx.ObsTx
 	inbound := quoTx.Inbound

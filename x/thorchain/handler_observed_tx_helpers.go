@@ -284,7 +284,7 @@ func handleObservedTxInQuorum(
 	if txErr != nil {
 		ctx.Logger().Error("fail to process inbound tx", "error", txErr.Error(), "tx hash", tx.Tx.ID.String())
 		if newErr := refundTx(ctx, tx, mgr, CodeInvalidMemo, txErr.Error(), ""); nil != newErr {
-			ctx.Logger().Error("fail to refund", "error", err)
+			ctx.Logger().Error("fail to refund", "error", newErr)
 		}
 		return nil
 	}
@@ -296,7 +296,7 @@ func handleObservedTxInQuorum(
 	if isSwap || isAddLiquidity {
 		if k.IsTradingHalt(ctx, m) || k.RagnarokInProgress(ctx) {
 			if newErr := refundTx(ctx, tx, mgr, se.ErrUnauthorized.ABCICode(), "trading halted", ""); nil != newErr {
-				ctx.Logger().Error("fail to refund for halted trading", "error", err)
+				ctx.Logger().Error("fail to refund for halted trading", "error", newErr)
 			}
 			return nil
 		}
@@ -319,7 +319,7 @@ func handleObservedTxInQuorum(
 	// Check is independent of the mimir to enable the handler in order to support
 	// bifrost & switch whitelisting prior to switching commencing
 	_, isSwitch := m.(*MsgSwitch)
-	if !isSwitch && mgr.SwitchManager().IsSwitch(ctx, tx.Tx.Coins[0].Asset) {
+	if !isSwitch && len(tx.Tx.Coins) > 0 && mgr.SwitchManager().IsSwitch(ctx, tx.Tx.Coins[0].Asset) {
 		if err = refundTx(ctx, tx, mgr, CodeTxFail, "asset is a switch asset", ""); err != nil {
 			ctx.Logger().Error("fail to refund", "error", err)
 		}
@@ -587,8 +587,12 @@ func handleObservedTxOutQuorum(
 		}
 	}
 
+	if tx.Tx.Chain.IsEmpty() {
+		ctx.Logger().Error("fail to process txOut: chain is empty", "tx", tx.Tx.String())
+		return nil
+	}
 	m, err := processOneTxIn(ctx, k, *txOut, signer)
-	if err != nil || tx.Tx.Chain.IsEmpty() {
+	if err != nil {
 		ctx.Logger().Error("fail to process txOut",
 			"error", err,
 			"tx", tx.Tx.String())

@@ -45,6 +45,9 @@ func (h SolvencyQuorumHandler) validate(ctx cosmos.Context, msg types.MsgSolvenc
 //     that is insolvent will be halt
 //  3. When chain is halt , bifrost will not observe inbound , and will not sign outbound txs until the issue has been investigated , and enabled it again using mimir
 func (h SolvencyQuorumHandler) handle(ctx cosmos.Context, msg types.MsgSolvencyQuorum) (*cosmos.Result, error) {
+	if msg.QuoSolvency == nil || msg.QuoSolvency.Solvency == nil {
+		return nil, cosmos.ErrUnknownRequest("QuoSolvency and Solvency cannot be nil")
+	}
 	s := msg.QuoSolvency.Solvency
 
 	ctx.Logger().Debug("handle Solvency request", "id", s.Id.String(), "signer", msg.Signer.String())
