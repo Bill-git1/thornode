@@ -800,6 +800,28 @@ func (s AdvSwapQueueSuite) TestGetMaxSwapQuantity(c *C) {
 	quantity, err = vm.getMaxSwapQuantity(ctx, mgr, common.ETHAsset, common.BTCAsset, msg)
 	c.Assert(err, IsNil)
 	c.Assert(quantity, Equals, uint64(1)) // Should return 1 as minimum
+
+	// Test 13: Limit swap with TTL (interval) greater than StreamingSwapMaxLength.
+	// For limit swaps, State.Interval is the custom TTL, not the sub-swap interval.
+	// Previously, dividing maxLength (14400) by a large TTL (100800) produced 0 via
+	// integer division, setting quantity to 0 and causing every swap attempt to fail
+	// with "amount cannot be zero".
+	k.SetMimir(ctx, "L1SlipMinBps", 100)
+	k.SetMimir(ctx, "StreamingSwapMaxLength", 14400)
+	msg = types.MsgSwap{
+		SwapType: types.SwapType_limit,
+		State: &types.SwapState{
+			Quantity: 0,
+			Interval: 100800, // TTL of ~7 days, larger than StreamingSwapMaxLength
+			Deposit:  cosmos.NewUint(50 * common.One),
+		},
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
+		},
+	}
+	quantity, err = vm.getMaxSwapQuantity(ctx, mgr, common.ETHAsset, common.BTCAsset, msg)
+	c.Assert(err, IsNil)
+	c.Assert(quantity > 0, Equals, true, Commentf("limit swap quantity must not be zero, got: %d", quantity))
 }
 
 func (s AdvSwapQueueSuite) TestIsSwapReady(c *C) {
@@ -3538,6 +3560,9 @@ func (s AdvSwapQueueSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
 
 	err = swapQueue.AddSwapQueueItem(ctx, mgr, msg2)
 	c.Assert(err, IsNil)
+
+	// Verify the interval was capped to maxAge
+	c.Assert(msg2.State.Interval, Equals, uint64(maxAge))
 
 	// Verify the TTL fell back to maxAge
 	defaultExpiryHeight := currentHeight + maxAge

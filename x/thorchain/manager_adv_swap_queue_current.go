@@ -493,8 +493,10 @@ func (vm *SwapQueueAdv) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sour
 	} else {
 		maxLength = vm.k.GetConfigInt64(ctx, constants.StreamingSwapMaxLength)
 	}
+	// For limit swaps, State.Interval represents the custom TTL (expiry in blocks),
+	// not the interval between sub-swaps. Limit swaps execute every block (interval=1).
 	interval := msg.State.Interval
-	if interval == 0 {
+	if interval == 0 || msg.IsLimitSwap() {
 		interval = 1
 	}
 	maxSwapInMaxLength := uint64(maxLength) / interval
@@ -554,6 +556,18 @@ func (vm *SwapQueueAdv) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, msg *M
 	// Initialize deposit state if not already set
 	if msg.State.Deposit.IsZero() {
 		msg.State.Deposit = msg.Tx.Coins[0].Amount
+	}
+
+	// Cap limit swap custom TTL (stored in State.Interval) to maxAge so the
+	// stored value is always within bounds for downstream consumers.
+	if msg.IsLimitSwap() && msg.State.Interval > 0 {
+		swapMaxAge := vm.k.GetConfigInt64(ctx, constants.StreamingLimitSwapMaxAge)
+		if swapMaxAge < 0 {
+			return fmt.Errorf("%s returned maxAge < 0", constants.StreamingLimitSwapMaxAge)
+		}
+		if maxAge := uint64(swapMaxAge); msg.State.Interval > maxAge {
+			msg.State.Interval = maxAge
+		}
 	}
 
 	maxSwapQuantity, err := vm.getMaxSwapQuantity(ctx, mgr, msg.Tx.Coins[0].Asset, msg.TargetAsset, *msg)
