@@ -453,7 +453,7 @@ func (s *EthereumSuite) TestGetAccount(c *C) {
 	acct, err := e.GetAccountByAddress("0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da", nil)
 	c.Assert(err, IsNil)
 	c.Assert(acct.Sequence, Equals, int64(0))
-	b, err := e.GetBalance("0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da", "0x3b7FA4dd21c6f9BA3ca375217EAD7CAb9D6bF483", nil)
+	b, err := e.GetBalance("0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da", "0x3b7FA4dd21c6f9BA3ca375217EAD7CAb9D6bF483", nil, "0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44")
 	c.Assert(err, IsNil)
 	c.Assert(b, NotNil)
 }

@@ -684,7 +684,7 @@ func (e *ETHScanner) getSymbol(token string) (string, error) {
 // isToValidContractAddress this method make sure the transaction to address is to THORChain router or a whitelist address
 func (e *ETHScanner) isToValidContractAddress(addr *ecommon.Address, includeWhiteList bool) bool {
 	// get the smart contract used by thornode
-	contractAddresses := e.pubkeyMgr.GetContracts(common.ETHChain)
+	contractAddresses := e.pubkeyMgr.GetContracts(common.ETHChain, false)
 	if includeWhiteList || useWhitelistSmartContract {
 		contractAddresses = append(contractAddresses, whitelistSmartContractAddress...)
 	}
@@ -815,6 +815,31 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 	if _, err = p.GetTxInItem(receipt.Logs, txInItem); err != nil {
 		return nil, fmt.Errorf("fail to parse logs, err: %w", err)
 	}
+	// Validate that the deposit's target vault is associated with the router
+	// that emitted the event. This prevents an attacker from depositing to an
+	// old router targeting the current active vault (or vice versa), which would
+	// cause bifrost to observe an inbound the vault cannot actually spend.
+	// Skip this check for vault-initiated transactions (e.g. migrations), which
+	// legitimately use the old router to send to a vault on a new router.
+	if txInItem.To != "" && tx.To() != nil {
+		senderIsVault, _ := e.pubkeyMgr.IsValidPoolAddress(txInItem.Sender, common.ETHChain)
+		if !senderIsVault {
+			ok, cpi := e.pubkeyMgr.IsValidPoolAddress(txInItem.To, common.ETHChain)
+			if ok {
+				expectedRouter := e.pubkeyMgr.GetContract(common.ETHChain, cpi.PubKey)
+				if expectedRouter != common.NoAddress && !strings.EqualFold(expectedRouter.String(), tx.To().String()) {
+					e.logger.Warn().
+						Str("vault", txInItem.To).
+						Str("sender", txInItem.Sender).
+						Str("expected_router", expectedRouter.String()).
+						Str("actual_router", tx.To().String()).
+						Msg("deposit targets vault via wrong router, ignoring")
+					return nil, nil
+				}
+			}
+		}
+	}
+
 	// under no circumstance ETH gas price will be less than 1 Gwei , unless it is in dev environment
 	txGasPrice := receipt.EffectiveGasPrice
 
@@ -925,6 +950,13 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 		destination := tx.To()
 		isToVault, _ := e.pubkeyMgr.IsValidPoolAddress(destination.String(), e.cfg.ChainID)
 
+		// resolve sender upfront to check vault outbounds (approvals, cancels, etc.)
+		sender, senderErr := e.eipSigner.Sender(tx)
+		var isFromVault bool
+		if senderErr == nil {
+			isFromVault, _ = e.pubkeyMgr.IsValidPoolAddress(sender.String(), e.cfg.ChainID)
+		}
+
 		switch {
 		case isToVault:
 			// Tx to a vault
@@ -932,19 +964,13 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 		case e.isToValidContractAddress(destination, true):
 			// Deposit directly to router
 			return e.getTxInFromSmartContract(tx, receipt, 0)
+		case isFromVault:
+			// Tx from a vault (outbound, approval, cancel, etc.)
+			return e.getTxInFromTransaction(tx, receipt)
 		case evm.IsSmartContractCall(tx, receipt):
 			// Tx to a different contract, attempt to parse with max allowable logs
 			return e.getTxInFromSmartContract(tx, receipt, int64(e.cfg.MaxContractTxLogs))
 		default:
-			// check if tx is from a vault (outbound)
-			sender, err := e.eipSigner.Sender(tx)
-			if err != nil {
-				return nil, nil // ignore tx if we cannot determine sender
-			}
-			isFromVault, _ := e.pubkeyMgr.IsValidPoolAddress(sender.String(), e.cfg.ChainID)
-			if isFromVault {
-				return e.getTxInFromTransaction(tx, receipt)
-			}
 			// ignore tx not involving any vault
 			return nil, nil
 		}

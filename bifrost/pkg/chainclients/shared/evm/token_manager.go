@@ -294,7 +294,8 @@ func (h *TokenManager) getSymbol(token string) (string, error) {
 	return sanitiseSymbol(symbol), nil
 }
 
-// GetBalance call smart contract to find out the balance of the given address and token
+// GetBalance call smart contract to find out the balance of the given address and token.
+// For ERC20 tokens, it queries vaultAllowance on the vault's specific router contract.
 func (h *TokenManager) GetBalance(addr, token string, height *big.Int, vaultAddr string) (*big.Int, error) {
 	ctx, cancel := h.getContext()
 	defer cancel()

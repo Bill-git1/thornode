@@ -525,7 +525,7 @@ func (s *EVMSuite) TestGetAccount(c *C) {
 	acct, err := e.GetAccountByAddress("0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da", nil)
 	c.Assert(err, IsNil)
 	c.Assert(acct.Sequence, Equals, int64(0))
-	b, err := e.GetBalance("0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da", "0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d", nil)
+	b, err := e.GetBalance("0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da", "0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d", nil, "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25")
 	c.Assert(err, IsNil)
 	c.Assert(b, NotNil)
 }

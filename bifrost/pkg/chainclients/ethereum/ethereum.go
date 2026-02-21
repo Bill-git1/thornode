@@ -984,7 +984,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 
 	// before signing, confirm the vault has enough gas asset
 	// use nil height to get the latest confirmed balance (not pending, to avoid masking attacks)
-	gasBalance, err := c.GetBalance(fromAddr.String(), ethToken, nil)
+	gasBalance, err := c.GetBalance(fromAddr.String(), ethToken, nil, "")
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to get gas asset balance: %w", err)
 	}
@@ -1072,8 +1072,9 @@ func (c *Client) sign(tx *etypes.Transaction, poolPubKey common.PubKey, height i
 	return nil, fmt.Errorf("fail to sign tx: %w", err)
 }
 
-// GetBalance call smart contract to find out the balance of the given address and token
-func (c *Client) GetBalance(addr, token string, height *big.Int) (*big.Int, error) {
+// GetBalance call smart contract to find out the balance of the given address and token.
+// For ERC20 tokens, it queries vaultAllowance on the vault's specific router contract.
+func (c *Client) GetBalance(addr, token string, height *big.Int, contractAddr string) (*big.Int, error) {
 	ctx, cancel := c.getContext()
 	defer cancel()
 	if IsETH(token) {
@@ -1082,16 +1083,15 @@ func (c *Client) GetBalance(addr, token string, height *big.Int) (*big.Int, erro
 		}
 		return c.client.BalanceAt(ctx, ecommon.HexToAddress(addr), height)
 	}
-	contractAddresses := c.pubkeyMgr.GetContracts(common.ETHChain)
-	if len(contractAddresses) == 0 {
-		return nil, fmt.Errorf("fail to get contract address")
+	if contractAddr == "" {
+		return nil, fmt.Errorf("fail to get contract address for vault")
 	}
 	input, err := c.vaultABI.Pack("vaultAllowance", ecommon.HexToAddress(addr), ecommon.HexToAddress(token))
 	if err != nil {
 		return nil, fmt.Errorf("fail to create vaultAllowance data to call smart contract")
 	}
-	c.logger.Debug().Msgf("query contract:%s for balance", contractAddresses[0].String())
-	toAddr := ecommon.HexToAddress(contractAddresses[0].String())
+	c.logger.Debug().Msgf("query contract:%s for balance", contractAddr)
+	toAddr := ecommon.HexToAddress(contractAddr)
 	res, err := c.client.CallContract(ctx, ethereum.CallMsg{
 		From: ecommon.HexToAddress(addr),
 		To:   &toAddr,
@@ -1111,8 +1111,9 @@ func (c *Client) GetBalance(addr, token string, height *big.Int) (*big.Int, erro
 	return *value, nil
 }
 
-// GetBalances gets all the balances of the given address
-func (c *Client) GetBalances(addr string, height *big.Int) (common.Coins, error) {
+// GetBalances gets all the balances of the given address.
+// contractAddr is the router contract for the vault.
+func (c *Client) GetBalances(addr string, height *big.Int, contractAddr string) (common.Coins, error) {
 	// for all the tokens , this chain client have deal with before
 	tokens, err := c.ethScanner.GetTokens()
 	if err != nil {
@@ -1121,7 +1122,7 @@ func (c *Client) GetBalances(addr string, height *big.Int) (common.Coins, error)
 	coins := common.Coins{}
 	for _, token := range tokens {
 		var balance *big.Int
-		balance, err = c.GetBalance(addr, token.Address, height)
+		balance, err = c.GetBalance(addr, token.Address, height, contractAddr)
 		if err != nil {
 			c.logger.Err(err).Msgf("fail to get balance for token:%s", token.Address)
 			continue
@@ -1147,7 +1148,8 @@ func (c *Client) GetAccount(pk common.PubKey, height *big.Int) (common.Account, 
 	if err != nil {
 		return common.Account{}, err
 	}
-	coins, err := c.GetBalances(addr, height)
+	contractAddr := c.getSmartContractAddr(pk)
+	coins, err := c.GetBalances(addr, height, contractAddr.String())
 	if err != nil {
 		return common.Account{}, err
 	}
@@ -1161,7 +1163,8 @@ func (c *Client) GetAccountByAddress(address string, height *big.Int) (common.Ac
 	if err != nil {
 		return common.Account{}, err
 	}
-	coins, err := c.GetBalances(address, height)
+	contractAddr := c.getSmartContractByAddress(common.Address(address))
+	coins, err := c.GetBalances(address, height, contractAddr.String())
 	if err != nil {
 		return common.Account{}, err
 	}

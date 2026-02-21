@@ -566,7 +566,8 @@ func (c *EVMClient) GetAccount(pk common.PubKey, height *big.Int) (common.Accoun
 	if err != nil {
 		return common.Account{}, err
 	}
-	coins, err := c.GetBalances(addr, height)
+	contractAddr := c.getSmartContractAddr(pk)
+	coins, err := c.GetBalances(addr, height, contractAddr.String())
 	if err != nil {
 		return common.Account{}, err
 	}
@@ -580,7 +581,8 @@ func (c *EVMClient) GetAccountByAddress(address string, height *big.Int) (common
 	if err != nil {
 		return common.Account{}, err
 	}
-	coins, err := c.GetBalances(address, height)
+	contractAddr := c.getSmartContractByAddress(common.Address(address))
+	coins, err := c.GetBalances(address, height, contractAddr.String())
 	if err != nil {
 		return common.Account{}, err
 	}
@@ -622,18 +624,14 @@ func (c *EVMClient) getTokenAddressFromAsset(asset common.Asset) string {
 // --------------------------------- balances ---------------------------------
 
 // GetBalance returns the balance of the provided address.
-func (c *EVMClient) GetBalance(addr, token string, height *big.Int) (*big.Int, error) {
-	contractAddresses := c.pubkeyMgr.GetContracts(c.cfg.ChainID)
-	c.logger.Debug().Interface("contractAddresses", contractAddresses).Msg("got contracts")
-	if len(contractAddresses) == 0 {
-		return nil, fmt.Errorf("fail to get contract address")
-	}
-
-	return c.evmScanner.tokenManager.GetBalance(addr, token, height, contractAddresses[0].String())
+// contractAddr is the router contract for the vault; for native tokens it is unused.
+func (c *EVMClient) GetBalance(addr, token string, height *big.Int, contractAddr string) (*big.Int, error) {
+	return c.evmScanner.tokenManager.GetBalance(addr, token, height, contractAddr)
 }
 
 // GetBalances returns the balances of the provided address.
-func (c *EVMClient) GetBalances(addr string, height *big.Int) (common.Coins, error) {
+// contractAddr is the router contract for the vault.
+func (c *EVMClient) GetBalances(addr string, height *big.Int, contractAddr string) (common.Coins, error) {
 	// for all the tokens the chain client has dealt with before
 	tokens, err := c.evmScanner.GetTokens()
 	if err != nil {
@@ -642,7 +640,7 @@ func (c *EVMClient) GetBalances(addr string, height *big.Int) (common.Coins, err
 	coins := common.Coins{}
 	for _, token := range tokens {
 		var balance *big.Int
-		balance, err = c.GetBalance(addr, token.Address, height)
+		balance, err = c.GetBalance(addr, token.Address, height, contractAddr)
 		if err != nil {
 			c.logger.Err(err).Str("token", token.Address).Msg("fail to get balance for token")
 			continue
@@ -1068,7 +1066,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	}
 
 	// before signing, confirm the vault has enough gas asset
-	gasBalance, err := c.GetBalance(fromAddr.String(), evm.NativeTokenAddr, nil)
+	gasBalance, err := c.GetBalance(fromAddr.String(), evm.NativeTokenAddr, nil, "")
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to get gas asset balance: %w", err)
 	}

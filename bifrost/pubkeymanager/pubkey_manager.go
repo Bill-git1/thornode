@@ -30,7 +30,7 @@ type PubKeyValidator interface {
 	GetPubKeys() common.PubKeys
 	GetAlgoPubKeys(algo common.SigningAlgo, includeInactive bool) common.PubKeys
 	RegisterCallback(callback OnNewPubKey)
-	GetContracts(chain common.Chain) []common.Address
+	GetContracts(chain common.Chain, includeInactive bool) []common.Address
 	GetContract(chain common.Chain, pk common.PubKey) common.Address
 }
 
@@ -352,13 +352,17 @@ func (pkm *PubKeyManager) fireCallback(pk common.PubKey) {
 	wg.Wait()
 }
 
-// GetContracts return all the contracts for the requested chain
-func (pkm *PubKeyManager) GetContracts(chain common.Chain) []common.Address {
+// GetContracts return all the contracts for the requested chain.
+// When includeInactive is false, only contracts from active/retiring vaults are returned.
+func (pkm *PubKeyManager) GetContracts(chain common.Chain, includeInactive bool) []common.Address {
 	pkm.rwMutex.RLock()
 	defer pkm.rwMutex.RUnlock()
 	var result []common.Address
 	seen := map[common.Address]bool{} // avoid duplicates of router address
 	for _, pk := range pkm.pubkeys {
+		if !includeInactive && pk.Inactive {
+			continue
+		}
 		if len(pk.Contracts) == 0 {
 			continue
 		}
