@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -87,7 +88,9 @@ func (g *NodeGater) Stop() {
 
 // refreshAllowlist fetches the current list of node accounts from THORChain
 // and updates the allowlist of peer IDs that are permitted to connect.
-// Uses PreflightStatus from THORNode to determine if Standby nodes should be allowed.
+// Allows any node with bond >= the current minimum bond requirement.
+// This ensures nodes that are jailed or otherwise temporarily excluded from
+// preflight checks can still maintain p2p connectivity and recover.
 // Checks P2PGateDisabled mimir to determine if gating should be bypassed.
 func (g *NodeGater) refreshAllowlist() {
 	// Check if gating is disabled via mimir
@@ -111,56 +114,59 @@ func (g *NodeGater) refreshAllowlist() {
 		return
 	}
 
+	// Get the minimum bond requirement
+	minBond, err := g.getMinimumBond()
+	if err != nil {
+		g.logger.Error().Err(err).Msg("failed to fetch minimum bond, keeping existing allowlist")
+		return
+	}
+
 	newAllowed := make(map[peer.ID]string) // maps peer ID to node address
 
 	for _, node := range nodes {
-		// Parse the node status
-		status := parseNodeStatus(node.Status)
+		// Parse the node's total bond
+		nodeBond, err := strconv.ParseInt(node.TotalBond, 10, 64)
+		if err != nil {
+			g.logger.Warn().Err(err).Str("node_addr", node.NodeAddress).Str("total_bond", node.TotalBond).Msg("failed to parse node bond")
+			continue
+		}
 
-		// Always include Active and Ready nodes
-		if status == types.NodeStatus_Active || status == types.NodeStatus_Ready {
+		// Allow any node with bond >= minimum bond
+		if nodeBond >= minBond {
 			if err := g.addNodeToAllowlist(node, newAllowed); err != nil {
-				g.logger.Warn().Err(err).Str("node_addr", node.NodeAddress).Msg("failed to add active/ready node")
+				g.logger.Warn().Err(err).Str("node_addr", node.NodeAddress).Msg("failed to add node to allowlist")
 			}
-			continue
 		}
-
-		// For Standby nodes, check if their PreflightStatus indicates they would become Ready
-		if status == types.NodeStatus_Standby && node.PreflightStatus != nil {
-			preflightStatus := parseNodeStatus(node.PreflightStatus.Status)
-
-			if preflightStatus == types.NodeStatus_Ready {
-				// This Standby node passes all preflight checks and would become Ready
-				if err := g.addNodeToAllowlist(node, newAllowed); err != nil {
-					g.logger.Warn().Err(err).Str("node_addr", node.NodeAddress).Msg("failed to add standby node")
-				} else {
-					g.logger.Info().
-						Str("node_addr", node.NodeAddress).
-						Msg("included standby node with Ready preflight status")
-				}
-			} else {
-				// Log why the standby node was excluded
-				reason := "unknown"
-				if node.PreflightStatus.Reason != "" {
-					reason = node.PreflightStatus.Reason
-				}
-				g.logger.Info().
-					Str("node_addr", node.NodeAddress).
-					Str("preflight_status", node.PreflightStatus.Status).
-					Str("reason", reason).
-					Msg("excluded standby node that fails preflight checks")
-			}
-			continue
-		}
-
-		// All other statuses (Whitelisted, Disabled, Unknown) or Standby without preflight data are excluded
 	}
 
 	g.mu.Lock()
 	g.allowedPeers = newAllowed
 	g.mu.Unlock()
 
-	g.logger.Info().Int("count", len(newAllowed)).Msg("refreshed node allowlist")
+	g.logger.Info().Int("count", len(newAllowed)).Int64("min_bond", minBond).Msg("refreshed node allowlist")
+}
+
+// getMinimumBond fetches the current minimum bond requirement.
+// It first checks for a mimir override, then falls back to the constants.
+func (g *NodeGater) getMinimumBond() (int64, error) {
+	// Check for mimir override first
+	mimirBond, err := g.bridge.GetMimir(constants.MinimumBondInRune.String())
+	if err == nil && mimirBond > 0 {
+		return mimirBond, nil
+	}
+
+	// Fall back to constants
+	consts, err := g.bridge.GetConstants()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get constants: %w", err)
+	}
+
+	minBond, ok := consts[constants.MinimumBondInRune.String()]
+	if !ok {
+		return 0, fmt.Errorf("MinimumBondInRune not found in constants")
+	}
+
+	return minBond, nil
 }
 
 // addNodeToAllowlist converts a node's pubkey to a peer ID and adds it to the allowlist
@@ -176,24 +182,6 @@ func (g *NodeGater) addNodeToAllowlist(node *types.QueryNodeResponse, allowlist 
 
 	allowlist[peerID] = node.NodeAddress
 	return nil
-}
-
-// parseNodeStatus converts a status string to NodeStatus enum
-func parseNodeStatus(statusStr string) types.NodeStatus {
-	switch statusStr {
-	case "Active":
-		return types.NodeStatus_Active
-	case "Ready":
-		return types.NodeStatus_Ready
-	case "Standby":
-		return types.NodeStatus_Standby
-	case "Whitelisted":
-		return types.NodeStatus_Whitelisted
-	case "Disabled":
-		return types.NodeStatus_Disabled
-	default:
-		return types.NodeStatus_Unknown
-	}
 }
 
 // isPeerAllowed checks if a peer ID is in the current allowlist.

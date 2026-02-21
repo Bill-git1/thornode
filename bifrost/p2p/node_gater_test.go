@@ -36,6 +36,7 @@ type MockThorchainBridge struct {
 	nodeAccountsError error
 	mimirValues       map[string]int64
 	mimirError        error
+	constants         map[string]int64
 }
 
 func NewMockThorchainBridge() *MockThorchainBridge {
@@ -102,8 +103,22 @@ func (m *MockThorchainBridge) GetVault(pubkey string) (types.Vault, error) { ret
 func (m *MockThorchainBridge) GetConfig() config.BifrostClientConfiguration {
 	return config.BifrostClientConfiguration{}
 }
-func (m *MockThorchainBridge) GetConstants() (map[string]int64, error) { return nil, nil }
-func (m *MockThorchainBridge) GetContext() client.Context              { return client.Context{} }
+
+func (m *MockThorchainBridge) GetConstants() (map[string]int64, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.constants != nil {
+		return m.constants, nil
+	}
+	return map[string]int64{}, nil
+}
+
+func (m *MockThorchainBridge) SetConstants(c map[string]int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.constants = c
+}
+func (m *MockThorchainBridge) GetContext() client.Context { return client.Context{} }
 func (m *MockThorchainBridge) GetContractAddress() ([]thorclient.PubKeyContractAddressPair, error) {
 	return nil, nil
 }
@@ -186,6 +201,10 @@ func (m *MockThorchainBridge) GetBlockTimestamp(height int64) (time.Time, error)
 func (s *NodeGaterTestSuite) SetUpTest(c *C) {
 	conversion.SetupBech32Prefix()
 	s.mockBridge = NewMockThorchainBridge()
+	// Set default minimum bond for tests
+	s.mockBridge.SetConstants(map[string]int64{
+		constants.MinimumBondInRune.String(): 100_000_000, // 1 RUNE
+	})
 }
 
 // Test valid secp256k1 pubkeys for creating test nodes (from conversion_test.go)
@@ -207,11 +226,12 @@ func (s *NodeGaterTestSuite) TestNewNodeGater(c *C) {
 func (s *NodeGaterTestSuite) TestStartStop(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Millisecond*100)
 
-	// Set up some test nodes
+	// Set up some test nodes with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -244,11 +264,12 @@ func (s *NodeGaterTestSuite) TestStartStop(c *C) {
 func (s *NodeGaterTestSuite) TestStartStopMultipleTimes(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Millisecond*100)
 
-	// Set up some test nodes
+	// Set up some test nodes with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -269,14 +290,15 @@ func (s *NodeGaterTestSuite) TestStartStopMultipleTimes(c *C) {
 	gater.Stop()
 }
 
-func (s *NodeGaterTestSuite) TestRefreshAllowlistActiveNodes(c *C) {
+func (s *NodeGaterTestSuite) TestRefreshAllowlistBondBasedFiltering(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 
-	// Set up active nodes
+	// Set up nodes with various statuses but all with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -284,6 +306,7 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistActiveNodes(c *C) {
 		{
 			NodeAddress: "thor1test2",
 			Status:      "Ready",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey2),
 			},
@@ -295,24 +318,27 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistActiveNodes(c *C) {
 	c.Assert(len(gater.allowedPeers), Equals, 2)
 }
 
-func (s *NodeGaterTestSuite) TestRefreshAllowlistStandbyWithPreflight(c *C) {
+func (s *NodeGaterTestSuite) TestRefreshAllowlistJailedNodeWithBond(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 
-	// Set up standby node with Ready preflight status
+	// A jailed standby node with sufficient bond should still be allowed for p2p
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Standby",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
 			PreflightStatus: &types.NodePreflightStatus{
-				Status: "Ready",
+				Status: "Standby",
+				Reason: "node account is currently jailed",
 			},
 		},
 		{
 			NodeAddress: "thor1test2",
 			Status:      "Standby",
+			TotalBond:   "50000000", // below minimum bond
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey2),
 			},
@@ -325,18 +351,19 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistStandbyWithPreflight(c *C) {
 
 	gater.refreshAllowlist()
 
-	// Only the standby node with Ready preflight should be allowed
+	// Only the node with sufficient bond should be allowed, regardless of jail status
 	c.Assert(len(gater.allowedPeers), Equals, 1)
 }
 
-func (s *NodeGaterTestSuite) TestRefreshAllowlistDisabledStatuses(c *C) {
+func (s *NodeGaterTestSuite) TestRefreshAllowlistInsufficientBond(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 
-	// Set up nodes with various statuses
+	// Set up nodes with various statuses but all with insufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Disabled",
+			TotalBond:   "50000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -344,13 +371,15 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistDisabledStatuses(c *C) {
 		{
 			NodeAddress: "thor1test2",
 			Status:      "Whitelisted",
+			TotalBond:   "0",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey2),
 			},
 		},
 		{
 			NodeAddress: "thor1test3",
-			Status:      "Unknown",
+			Status:      "Active",
+			TotalBond:   "50000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey3),
 			},
@@ -359,8 +388,31 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistDisabledStatuses(c *C) {
 
 	gater.refreshAllowlist()
 
-	// None of these should be allowed
+	// None of these should be allowed (all below minimum bond of 100_000_000)
 	c.Assert(len(gater.allowedPeers), Equals, 0)
+}
+
+func (s *NodeGaterTestSuite) TestRefreshAllowlistMimirBondOverride(c *C) {
+	gater := NewNodeGater(s.mockBridge, time.Minute)
+
+	// Set mimir override for minimum bond (lower than constants)
+	s.mockBridge.SetMimir(constants.MinimumBondInRune.String(), 50_000_000)
+
+	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
+		{
+			NodeAddress: "thor1test1",
+			Status:      "Standby",
+			TotalBond:   "75000000", // above mimir override, below constants
+			PubKeySet: common.PubKeySet{
+				Secp256k1: common.PubKey(testPubKey1),
+			},
+		},
+	})
+
+	gater.refreshAllowlist()
+
+	// Should be allowed because mimir override is 50M and node has 75M
+	c.Assert(len(gater.allowedPeers), Equals, 1)
 }
 
 func (s *NodeGaterTestSuite) TestRefreshAllowlistGatingDisabled(c *C) {
@@ -369,11 +421,12 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistGatingDisabled(c *C) {
 	// Enable the P2PGateDisabled mimir
 	s.mockBridge.SetMimir(constants.P2PGateDisabled.String(), 1)
 
-	// Set up active nodes
+	// Set up active nodes with bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -396,6 +449,7 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistError(c *C) {
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -417,11 +471,12 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistError(c *C) {
 func (s *NodeGaterTestSuite) TestRefreshAllowlistEmptyPubkey(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 
-	// Set up node with empty pubkey
+	// Set up node with empty pubkey but sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(""),
 			},
@@ -429,6 +484,7 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistEmptyPubkey(c *C) {
 		{
 			NodeAddress: "thor1test2",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -444,11 +500,12 @@ func (s *NodeGaterTestSuite) TestRefreshAllowlistEmptyPubkey(c *C) {
 func (s *NodeGaterTestSuite) TestIsPeerAllowed(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 
-	// Set up active nodes
+	// Set up nodes with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -504,11 +561,12 @@ func (s *NodeGaterTestSuite) TestInterceptAccept(c *C) {
 func (s *NodeGaterTestSuite) TestInterceptSecured(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 
-	// Set up active nodes
+	// Set up nodes with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -551,11 +609,12 @@ func (s *NodeGaterTestSuite) TestInterceptSecuredGatingDisabled(c *C) {
 func (s *NodeGaterTestSuite) TestInterceptUpgraded(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 
-	// Set up active nodes
+	// Set up nodes with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -608,11 +667,12 @@ func (s *NodeGaterTestSuite) TestInterceptUpgradedGatingDisabled(c *C) {
 func (s *NodeGaterTestSuite) TestPeriodicRefresh(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Millisecond*100)
 
-	// Set up initial nodes
+	// Set up initial nodes with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -630,6 +690,7 @@ func (s *NodeGaterTestSuite) TestPeriodicRefresh(c *C) {
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
@@ -637,6 +698,7 @@ func (s *NodeGaterTestSuite) TestPeriodicRefresh(c *C) {
 		{
 			NodeAddress: "thor1test2",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey2),
 			},
@@ -655,11 +717,12 @@ func (s *NodeGaterTestSuite) TestPeriodicRefresh(c *C) {
 func (s *NodeGaterTestSuite) TestConcurrentAccess(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Millisecond*50)
 
-	// Set up active nodes
+	// Set up nodes with sufficient bond
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
 		{
 			NodeAddress: "thor1test1",
 			Status:      "Active",
+			TotalBond:   "200000000",
 			PubKeySet: common.PubKeySet{
 				Secp256k1: common.PubKey(testPubKey1),
 			},
