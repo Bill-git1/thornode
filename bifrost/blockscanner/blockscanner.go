@@ -165,11 +165,16 @@ func (b *BlockScanner) GetMessages() <-chan int64 {
 func (b *BlockScanner) Start(globalTxsQueue chan types.TxIn, globalNetworkFeeQueue chan common.NetworkFee) {
 	b.globalTxsQueue = globalTxsQueue
 	b.globalNetworkFeeQueue = globalNetworkFeeQueue
-	currentPos, err := b.scannerStorage.GetScanPos()
-	if err != nil {
-		b.logger.Error().Err(err).Msgf("fail to get current block scan pos, %s will start from %d", b.cfg.ChainID, b.previousBlock)
-	} else if currentPos > b.previousBlock {
-		b.previousBlock = currentPos
+	// Only use persisted scan position if no explicit start height was configured.
+	// When StartBlockHeight is set, it should always take precedence so operators
+	// can force a rescan from a specific height.
+	if b.cfg.StartBlockHeight <= 0 {
+		currentPos, err := b.scannerStorage.GetScanPos()
+		if err != nil {
+			b.logger.Error().Err(err).Msgf("fail to get current block scan pos, %s will start from %d", b.cfg.ChainID, b.previousBlock)
+		} else if currentPos > b.previousBlock {
+			b.previousBlock = currentPos
+		}
 	}
 	b.wg.Add(2)
 	go b.scanBlocks()
