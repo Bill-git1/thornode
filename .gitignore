@@ -94,4 +94,5 @@ thorchain.test
 CLAUDE.local.md
 .claude/*.local.*
 **/.claude/*.local.*
+.claude/worktrees
 
