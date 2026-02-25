@@ -84,6 +84,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `WasmMinGasPrice`#: Sets the minimum gas price for CosmWasm transactions in the App Layer in RUNE.
 - `HaltWasmGlobal`#: Pauses all CosmWasm smart contract executions in the App Layer.
 - `HaltWasmCs-<checksum>`#: Halts a specific CosmWasm contract by its base32-encoded checksum.
+- `HaltWasmDeployer-<address>`#: Halts all contracts deployed by a specific address using the full bech32 address.
 - `HaltWasmContract-<address suffix>`#: Halts a specific CosmWasm contract using the last 6 characters of its address.
 
 ## LP Management

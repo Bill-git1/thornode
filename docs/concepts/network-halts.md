@@ -88,8 +88,8 @@ Smart contract halts control CosmWasm contract execution in the App Layer. These
 
 1. **Global Smart Contract Halt** - Disables all CosmWasm contract executions.
    - Mimir setting: `HaltWasmGlobal`, set to `1` to disable; `0` to enable.
-2. **Deployer Halt** - Disables all contracts deployed by a specific address (last 6 characters).
-   - Mimir setting: `HaltWasmDeployer-<SUFFIX>`, e.g., `HaltWasmDeployer-abc123`
+2. **Deployer Halt** - Disables all contracts deployed by a specific address.
+   - Mimir setting: `HaltWasmDeployer-<ADDRESS>`, e.g., `HaltWasmDeployer-tthor1abc...xyz`
 3. **Contract Code Halt** - Disables all instances of a contract by its code checksum.
    - Mimir setting: `HaltWasmCs-<CHECKSUM>`, e.g., `HaltWasmCs-4UMPB3...`
 4. **Specific Contract Halt** - Disables a single contract instance by address suffix (last 6 characters).
@@ -172,13 +172,13 @@ curl https://thornode.thorchain.org/thorchain/mimir
 
 ### Smart Contracts (CosmWasm)
 
-| Key                         | Example                   | Effect                                  |
-| --------------------------- | ------------------------- | --------------------------------------- |
-| `HaltWasmGlobal`            | -                         | All contract execution disabled         |
-| `HaltWasmDeployer-<SUFFIX>` | `HaltWasmDeployer-abc123` | All contracts by deployer disabled      |
-| `HaltWasmCs-<CHECKSUM>`     | `HaltWasmCs-4UMPB3...`    | All instances of contract code disabled |
-| `HaltWasmContract-<SUFFIX>` | `HaltWasmContract-w58u9f` | Specific contract instance disabled     |
-| `HaltOracle`                | -                         | Oracle price feeds disabled             |
+| Key                          | Example                            | Effect                                  |
+| ---------------------------- | ---------------------------------- | --------------------------------------- |
+| `HaltWasmGlobal`             | -                                  | All contract execution disabled         |
+| `HaltWasmDeployer-<ADDRESS>` | `HaltWasmDeployer-tthor1abc...xyz` | All contracts by deployer disabled      |
+| `HaltWasmCs-<CHECKSUM>`      | `HaltWasmCs-4UMPB3...`             | All instances of contract code disabled |
+| `HaltWasmContract-<SUFFIX>`  | `HaltWasmContract-w58u9f`          | Specific contract instance disabled     |
+| `HaltOracle`                 | -                                  | Oracle price feeds disabled             |
 
 ### TCY
 
