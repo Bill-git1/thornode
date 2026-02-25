@@ -88,6 +88,27 @@ func (s *MimirTestSuite) TestValueOfOperational(c *C) {
 	}
 	c.Assert(m.ValueOfOperational(key, 2, active), Equals, int64(-1))
 
+	// Test 3b: Clear winner with lower-count tie should return the winner (not -1).
+	// Ensures the tie flag is reset when a strictly higher count is found,
+	// regardless of map iteration order.
+	active6 := []types.AccAddress{
+		types.AccAddress("addr1"),
+		types.AccAddress("addr2"),
+		types.AccAddress("addr3"),
+		types.AccAddress("addr4"),
+		types.AccAddress("addr5"),
+		types.AccAddress("addr6"),
+	}
+	m.Mimirs = []NodeMimir{
+		{Key: key, Value: 100, Signer: types.AccAddress("addr1")},
+		{Key: key, Value: 100, Signer: types.AccAddress("addr2")},
+		{Key: key, Value: 100, Signer: types.AccAddress("addr3")},
+		{Key: key, Value: 200, Signer: types.AccAddress("addr4")},
+		{Key: key, Value: 300, Signer: types.AccAddress("addr5")},
+	}
+	// Value 100 has 3 votes (clear winner), 200 and 300 each have 1 vote (tie among losers).
+	c.Assert(m.ValueOfOperational(key, 2, active6), Equals, int64(100))
+
 	// Test 4: Not meeting minVotes
 	m.Mimirs = []NodeMimir{
 		{Key: key, Value: 100, Signer: types.AccAddress("addr1")},

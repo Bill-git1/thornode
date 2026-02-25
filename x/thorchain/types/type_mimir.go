@@ -176,6 +176,7 @@ func (m NodeMimirs) ValueOfOperational(key string, minVotes int64, active []cosm
 		if count > maxVotes {
 			mostVotedValue = value
 			maxVotes = count
+			tie = false
 		} else if count == maxVotes {
 			tie = true
 		}
