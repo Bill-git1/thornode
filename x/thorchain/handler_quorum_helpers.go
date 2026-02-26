@@ -9,6 +9,32 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
+// deduplicateAttestations returns attestations deduplicated by pubkey, capped at maxCount.
+// This prevents a malicious block proposer from including thousands of duplicate attestations
+// to cause excessive signature verification and KV store operations.
+func deduplicateAttestations(attestations []*common.Attestation, maxCount int) []*common.Attestation {
+	if len(attestations) == 0 {
+		return attestations
+	}
+	seen := make(map[string]struct{})
+	result := make([]*common.Attestation, 0, min(len(attestations), maxCount))
+	for _, att := range attestations {
+		if att == nil {
+			continue
+		}
+		key := string(att.PubKey)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, att)
+		if len(result) >= maxCount {
+			break
+		}
+	}
+	return result
+}
+
 func verifyQuorumAttestation(activeNodeAccounts NodeAccounts, signBz []byte, att *common.Attestation) (cosmos.AccAddress, error) {
 	if att == nil {
 		return nil, fmt.Errorf("attestation is nil")

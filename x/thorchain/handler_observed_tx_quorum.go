@@ -80,7 +80,8 @@ func (h ObservedTxQuorumHandler) handle(ctx cosmos.Context, msg types.MsgObserve
 
 	var crossedQuorum bool
 	var accAddrs []cosmos.AccAddress
-	for _, att := range msg.QuoTx.Attestations {
+	attestations := deduplicateAttestations(msg.QuoTx.Attestations, len(activeNodeAccounts))
+	for _, att := range attestations {
 		accAddr, err := verifyQuorumAttestation(activeNodeAccounts, signBz, att)
 		if err != nil {
 			ctx.Logger().Error("fail to verify quorum tx in attestation", "error", err)

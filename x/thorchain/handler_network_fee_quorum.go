@@ -67,7 +67,8 @@ func (h NetworkFeeQuorumHandler) handle(ctx cosmos.Context, msg types.MsgNetwork
 		return &cosmos.Result{}, nil
 	}
 
-	for _, att := range msg.QuoNetFee.Attestations {
+	attestations := deduplicateAttestations(msg.QuoNetFee.Attestations, len(active))
+	for _, att := range attestations {
 		accAddr, err := verifyQuorumAttestation(active, signBz, att)
 		if err != nil {
 			ctx.Logger().Error("fail to verify quorum network fee attestation", "error", err)
