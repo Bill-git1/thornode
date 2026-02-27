@@ -209,6 +209,10 @@ func (m WasmMgr) MigrateContract(
 		return nil, err
 	}
 
+	// NOTE: checkChecksumHalt is intentionally NOT called here. A halted checksum
+	// indicates buggy execute entry point code, but migrating a contract onto a halted
+	// code ID is valid — it serves as the halt mechanism itself (the "halt contract mimic").
+
 	err = m.maybePin(ctx, newCodeID)
 	if err != nil {
 		return nil, err
