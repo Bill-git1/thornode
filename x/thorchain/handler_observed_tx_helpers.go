@@ -442,6 +442,21 @@ func processTxOutAttestation(
 			// event the tx had been processed , given the signer just a bit late , so we still take away their slash points
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
 		}
+
+		// Gas correction for re-org re-observations.
+		// When a voter is finalized but a re-observation has the same tx except gas
+		// (likely due to a reorg changing the effective gas price), check if enough
+		// nodes agree on the corrected gas to update vault accounting.
+		if voter.FinalisedHeight > 0 &&
+			voter.Tx.IsFinal() == tx.IsFinal() &&
+			!voter.Tx.Tx.Gas.Equals(tx.Tx.Gas) &&
+			voter.Tx.Tx.EqualsExIgnoreGas(tx.Tx) {
+			gasCorrectionSigners := countMatchingSigners(voter, tx, nas)
+			if HasSuperMajority(gasCorrectionSigners, len(nas)) {
+				correctOutboundGas(ctx, mgr, voter.Tx, tx)
+				voter.Tx.Tx.Gas = tx.Tx.Gas
+			}
+		}
 	}
 	if !ok && voter.HasConsensus(nas) && !tx.IsFinal() && voter.FinalisedHeight == 0 {
 		if voter.Height == 0 {
@@ -471,12 +486,105 @@ func processTxOutAttestation(
 			// but only when the tx signer are voting is the tx that already reached consensus
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
 		}
+
+		// Gas correction for re-org re-observations (non-finalized consensus path).
+		if voter.Height > 0 &&
+			!voter.Tx.Tx.Gas.Equals(tx.Tx.Gas) &&
+			voter.Tx.Tx.EqualsExIgnoreGas(tx.Tx) {
+			gasCorrectionSigners := countMatchingSigners(voter, tx, nas)
+			if HasSuperMajority(gasCorrectionSigners, len(nas)) {
+				correctOutboundGas(ctx, mgr, voter.Tx, tx)
+				voter.Tx.Tx.Gas = tx.Tx.Gas
+			}
+		}
 	}
 
 	k.SetObservedTxOutVoter(ctx, voter)
 
 	// Check to see if we have enough identical observations to process the transaction
 	return voter, ok
+}
+
+// countMatchingSigners counts the number of unique active node signers that have observed
+// the exact same tx (including gas) as the given observation.
+func countMatchingSigners(voter ObservedTxVoter, tx ObservedTx, nas NodeAccounts) int {
+	signers := make(map[string]struct{})
+	for _, otherTx := range voter.Txs {
+		if otherTx.IsFinal() != tx.IsFinal() {
+			continue
+		}
+		if !otherTx.Tx.EqualsEx(tx.Tx) {
+			continue
+		}
+		for _, s := range otherTx.GetSigners() {
+			if !nas.IsNodeKeys(s) {
+				continue
+			}
+			signers[s.String()] = struct{}{}
+		}
+	}
+	return len(signers)
+}
+
+// correctOutboundGas adjusts a vault's gas accounting when a reorg results in
+// a different gas amount for the same outbound transaction. It computes the delta
+// between the original consensus gas and the corrected gas, then adjusts the vault
+// balance and gas manager accordingly.
+func correctOutboundGas(ctx cosmos.Context, mgr Manager, consensusTx common.ObservedTx, correctedTx ObservedTx) {
+	oldGas := consensusTx.Tx.Gas
+	newGas := correctedTx.Tx.Gas
+
+	vault, err := mgr.Keeper().GetVault(ctx, correctedTx.ObservedPubKey)
+	if err != nil {
+		ctx.Logger().Error("fail to get vault for gas correction", "error", err)
+		return
+	}
+
+	// Calculate gas delta per asset and adjust vault balance.
+	var additionalGas common.Gas
+	for _, newGasCoin := range newGas {
+		oldAmount := oldGas.ToCoins().GetCoin(newGasCoin.Asset).Amount
+		if newGasCoin.Amount.GT(oldAmount) {
+			// More gas was actually spent - deduct additional from vault.
+			delta := common.NewCoin(newGasCoin.Asset, newGasCoin.Amount.Sub(oldAmount))
+			vault.SubFunds(common.NewCoins(delta))
+			additionalGas = additionalGas.Add(delta)
+		} else if oldAmount.GT(newGasCoin.Amount) {
+			// Less gas was actually spent - credit back to vault.
+			delta := common.NewCoin(newGasCoin.Asset, oldAmount.Sub(newGasCoin.Amount))
+			vault.AddFunds(common.NewCoins(delta))
+		}
+	}
+
+	if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+		ctx.Logger().Error("fail to save vault after gas correction", "error", err)
+		return
+	}
+
+	// If more gas was spent, add the delta to the gas manager for reserve reimbursement,
+	// skipping reimbursement for inactive vaults and during ragnarok (matching addGasFees behavior).
+	if !additionalGas.IsEmpty() {
+		if vault.Status == InactiveVault {
+			return
+		}
+		if mgr.Keeper().RagnarokInProgress(ctx) {
+			gasAsset := correctedTx.Tx.Chain.GetGasAsset()
+			if !correctedTx.Tx.Coins.GetCoin(gasAsset).IsEmpty() {
+				return
+			}
+		}
+		outAsset := common.EmptyAsset
+		if len(correctedTx.Tx.Coins) != 0 {
+			outAsset = correctedTx.Tx.Coins[0].Asset
+		}
+		mgr.GasMgr().AddGasAsset(outAsset, additionalGas, false)
+	}
+
+	ctx.Logger().Info("corrected outbound gas after reorg",
+		"txid", correctedTx.Tx.ID,
+		"old_gas", common.Coins(oldGas).String(),
+		"new_gas", common.Coins(newGas).String(),
+	)
 }
 
 // ensureVaultAndGetTxOutVoter will make sure the vault exists, then get the ObservedTxOutVoter from the store.

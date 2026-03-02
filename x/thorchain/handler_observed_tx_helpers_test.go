@@ -757,3 +757,505 @@ func (s *HandlerObservedTxHelpersSuite) TestTxOutItemHashConsistency(c *C) {
 	hash3 := item2.Hash()
 	c.Assert(hash1, Not(Equals), hash3)
 }
+
+func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionOnReorg(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Create 4 active node accounts (need supermajority: 3 out of 4)
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+
+	// Set up a vault with funds
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Create the outbound tx with original gas (G1 = 22131)
+	txID := GetRandomTxHash()
+	originalGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+		Gas:         originalGas,
+		Memo:        "OUT:xyz",
+	}
+
+	// Create observed tx with original gas, finalized
+	obsTx := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+
+	// Create empty voter
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+
+	// All 4 nodes observe with the original gas (G1) - reaching consensus and finalization.
+	for _, na := range nas {
+		voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, obsTx, na.NodeAddress, false)
+	}
+
+	// Voter should be finalized with G1
+	c.Assert(voter.FinalisedHeight, Equals, int64(100))
+	c.Assert(voter.Tx.Tx.Gas.Equals(originalGas), Equals, true)
+
+	// Record vault balance before gas correction
+	vault, err := mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	vaultBalanceBefore := vault.GetCoin(common.ETHAsset).Amount
+
+	// Now simulate reorg: nodes re-observe with different gas (G2 = 23061)
+	reorgGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+	reorgTx := baseTx
+	reorgTx.Gas = reorgGas
+	reorgObsTx := common.NewObservedTx(reorgTx, 100, vaultPubKey, 100)
+
+	ctx = ctx.WithBlockHeight(101) // Slightly later block
+
+	// First 2 nodes re-observe with G2 - not enough for supermajority yet
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, reorgObsTx, nas[0].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, reorgObsTx, nas[1].NodeAddress, false)
+
+	// Gas should NOT be corrected yet (only 2 out of 4)
+	c.Assert(voter.Tx.Tx.Gas.Equals(originalGas), Equals, true)
+
+	// Third node re-observes with G2 - now we have 3/4 supermajority
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, reorgObsTx, nas[2].NodeAddress, false)
+
+	// Gas should now be corrected
+	c.Assert(voter.Tx.Tx.Gas.Equals(reorgGas), Equals, true)
+
+	// Vault should have been debited the additional gas delta (23061 - 22131 = 930)
+	vault, err = mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	vaultBalanceAfter := vault.GetCoin(common.ETHAsset).Amount
+	expectedDelta := cosmos.NewUint(23061 - 22131)
+	c.Assert(vaultBalanceBefore.Sub(vaultBalanceAfter).Equal(expectedDelta), Equals, true,
+		Commentf("vault balance delta should equal gas delta: got %s, expected %s",
+			vaultBalanceBefore.Sub(vaultBalanceAfter), expectedDelta))
+
+	// Fourth node re-observes with G2 - gas correction should NOT happen again
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, reorgObsTx, nas[3].NodeAddress, false)
+	vault, err = mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	// Balance should remain the same (no double correction)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(vaultBalanceAfter), Equals, true)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionFinalizedIgnoresNonFinalObservations(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Create 4 active node accounts (need supermajority: 3 out of 4)
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+
+	// Set up a vault with funds
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Finalized outbound tx with original gas (G1 = 22131)
+	txID := GetRandomTxHash()
+	originalGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+		Gas:         originalGas,
+		Memo:        "OUT:xyz",
+	}
+	finalObsTx := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+	for _, na := range nas {
+		voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, finalObsTx, na.NodeAddress, false)
+	}
+
+	// Voter should be finalized with G1
+	c.Assert(voter.FinalisedHeight, Equals, int64(100))
+	c.Assert(voter.Tx.IsFinal(), Equals, true)
+	c.Assert(voter.Tx.Tx.Gas.Equals(originalGas), Equals, true)
+
+	vault, err := mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	vaultBalanceBefore := vault.GetCoin(common.ETHAsset).Amount
+
+	// Re-observations are NON-final (FinaliseHeight > BlockHeight) with different gas (G2).
+	// Even if a supermajority agrees on these non-final observations, a finalized voter
+	// should not accept them for gas correction.
+	reorgGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+	reorgTx := baseTx
+	reorgTx.Gas = reorgGas
+	nonFinalReorgObsTx := common.NewObservedTx(reorgTx, 100, vaultPubKey, 101)
+
+	ctx = ctx.WithBlockHeight(101)
+
+	// 3 out of 4 nodes submit non-final re-observations (supermajority)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, nonFinalReorgObsTx, nas[0].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, nonFinalReorgObsTx, nas[1].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, nonFinalReorgObsTx, nas[2].NodeAddress, false)
+
+	// Gas should NOT be corrected from non-final observations once voter is finalized.
+	c.Assert(voter.Tx.Tx.Gas.Equals(originalGas), Equals, true)
+	c.Assert(voter.Tx.IsFinal(), Equals, true)
+
+	vault, err = mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(vaultBalanceBefore), Equals, true)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionDecrease(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Create 3 active node accounts
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+
+	// Set up a vault with funds
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Create the outbound tx with original gas (G1 = 23061, higher)
+	txID := GetRandomTxHash()
+	originalGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+		Gas:         originalGas,
+		Memo:        "OUT:xyz",
+	}
+
+	obsTx := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+
+	// All nodes observe with G1
+	for _, na := range nas {
+		voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, obsTx, na.NodeAddress, false)
+	}
+
+	c.Assert(voter.FinalisedHeight, Equals, int64(100))
+
+	vault, err := mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	vaultBalanceBefore := vault.GetCoin(common.ETHAsset).Amount
+
+	// Gas DECREASED after reorg (G2 = 22131)
+	reorgGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	reorgTx := baseTx
+	reorgTx.Gas = reorgGas
+	reorgObsTx := common.NewObservedTx(reorgTx, 100, vaultPubKey, 100)
+
+	ctx = ctx.WithBlockHeight(101)
+
+	// All 3 nodes re-observe with G2 (2 gives supermajority for 3 nodes)
+	for _, na := range nas {
+		voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, reorgObsTx, na.NodeAddress, false)
+	}
+
+	// Gas should be corrected
+	c.Assert(voter.Tx.Tx.Gas.Equals(reorgGas), Equals, true)
+
+	// Vault should have GAINED back the gas delta (23061 - 22131 = 930)
+	vault, err = mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	vaultBalanceAfter := vault.GetCoin(common.ETHAsset).Amount
+	expectedDelta := cosmos.NewUint(23061 - 22131)
+	c.Assert(vaultBalanceAfter.Sub(vaultBalanceBefore).Equal(expectedDelta), Equals, true,
+		Commentf("vault should gain back over-deducted gas: got %s, expected %s",
+			vaultBalanceAfter.Sub(vaultBalanceBefore), expectedDelta))
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionSkipsInactiveVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Set up an INACTIVE vault with funds
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.Status = InactiveVault
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Original consensus gas and corrected (higher) gas
+	oldGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	newGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+
+	consensusTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    GetRandomTxHash(),
+			Chain: common.ETHChain,
+			Coins: common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+			Gas:   oldGas,
+		},
+	}
+	correctedTx := ObservedTx{
+		Tx: common.Tx{
+			ID:    consensusTx.Tx.ID,
+			Chain: common.ETHChain,
+			Coins: common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+			Gas:   newGas,
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	// Call correctOutboundGas
+	correctOutboundGas(ctx, mgr, consensusTx, correctedTx)
+
+	// Vault balance should be debited (vault accounting still happens)
+	vault, err := mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	_ = vault
+
+	// But gas manager should NOT have the additional gas (no reimbursement for inactive vault)
+	gasEvents := mgr.GasMgr().GetGas()
+	c.Assert(gasEvents, HasLen, 0, Commentf("inactive vault should not trigger reserve reimbursement"))
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionSkipsDuringRagnarokGasAsset(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Set ragnarok in progress
+	mgr.Keeper().SetRagnarokBlockHeight(ctx, 50)
+
+	// Set up an active vault with funds
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.Status = ActiveVault
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Original consensus gas and corrected (higher) gas
+	oldGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	newGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+
+	// Outbound coins contain the gas asset (ETH) - should skip reimbursement
+	consensusTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    GetRandomTxHash(),
+			Chain: common.ETHChain,
+			Coins: common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+			Gas:   oldGas,
+		},
+	}
+	correctedTx := ObservedTx{
+		Tx: common.Tx{
+			ID:    consensusTx.Tx.ID,
+			Chain: common.ETHChain,
+			Coins: common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+			Gas:   newGas,
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	correctOutboundGas(ctx, mgr, consensusTx, correctedTx)
+
+	// Gas manager should NOT have the additional gas (ragnarok + gas asset in coins)
+	gasEvents := mgr.GasMgr().GetGas()
+	c.Assert(gasEvents, HasLen, 0, Commentf("ragnarok with gas asset coins should not trigger reserve reimbursement"))
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionAllowedDuringRagnarokNonGasAsset(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Set ragnarok in progress
+	mgr.Keeper().SetRagnarokBlockHeight(ctx, 50)
+
+	// Set up an active vault with funds
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.Status = ActiveVault
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Original consensus gas and corrected (higher) gas
+	oldGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	newGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+
+	// Outbound coins contain a NON-gas asset (USDC token on ETH) - should still reimburse
+	usdcAsset := common.Asset{Chain: common.ETHChain, Symbol: "USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48", Ticker: "USDC", Synth: false}
+	consensusTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    GetRandomTxHash(),
+			Chain: common.ETHChain,
+			Coins: common.NewCoins(common.NewCoin(usdcAsset, cosmos.NewUint(1000000))),
+			Gas:   oldGas,
+		},
+	}
+	correctedTx := ObservedTx{
+		Tx: common.Tx{
+			ID:    consensusTx.Tx.ID,
+			Chain: common.ETHChain,
+			Coins: common.NewCoins(common.NewCoin(usdcAsset, cosmos.NewUint(1000000))),
+			Gas:   newGas,
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	correctOutboundGas(ctx, mgr, consensusTx, correctedTx)
+
+	// Gas manager SHOULD have the additional gas (ragnarok but non-gas asset in coins)
+	gasEvents := mgr.GasMgr().GetGas()
+	c.Assert(gasEvents, HasLen, 1, Commentf("ragnarok with non-gas-asset coins should still trigger reserve reimbursement"))
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestCountMatchingSigners(c *C) {
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+
+	txID := GetRandomTxHash()
+	gas1 := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	gas2 := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+		Gas:         gas1,
+		Memo:        "OUT:xyz",
+	}
+
+	vaultPubKey := GetRandomPubKey()
+	obsTx1 := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+	obsTx1.Signers = []string{nas[0].NodeAddress.String(), nas[1].NodeAddress.String()}
+
+	reorgTx := baseTx
+	reorgTx.Gas = gas2
+	obsTx2 := common.NewObservedTx(reorgTx, 100, vaultPubKey, 100)
+	obsTx2.Signers = []string{nas[2].NodeAddress.String()}
+
+	obsTx3 := common.NewObservedTx(reorgTx, 101, vaultPubKey, 101)
+	obsTx3.Signers = []string{nas[2].NodeAddress.String(), nas[0].NodeAddress.String()}
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{obsTx1, obsTx2, obsTx3})
+
+	// Count signers matching gas2
+	count := countMatchingSigners(voter, obsTx2, nas)
+	c.Assert(count, Equals, 2, Commentf("duplicate signer across matching observations should only count once"))
+
+	// Count signers matching gas1
+	testTx := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+	count = countMatchingSigners(voter, testTx, nas)
+	c.Assert(count, Equals, 2)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionRequiresFinalityParity(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Create 4 active node accounts (supermajority = 3 out of 4)
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+
+	// Set up a vault with funds
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Create the outbound tx with original gas
+	txID := GetRandomTxHash()
+	originalGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(22131))}
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+		Gas:         originalGas,
+		Memo:        "OUT:xyz",
+	}
+
+	// All 4 nodes observe with original gas as FINAL (BlockHeight == FinaliseHeight)
+	obsTx := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+
+	for _, na := range nas {
+		voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, obsTx, na.NodeAddress, false)
+	}
+
+	c.Assert(voter.FinalisedHeight, Equals, int64(100))
+	c.Assert(voter.Tx.IsFinal(), Equals, true)
+	c.Assert(voter.Tx.Tx.Gas.Equals(originalGas), Equals, true)
+
+	// Record vault balance before re-observations
+	vault, err := mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	vaultBalanceBefore := vault.GetCoin(common.ETHAsset).Amount
+
+	// Now simulate re-observations with different gas but NON-FINAL (BlockHeight != FinaliseHeight)
+	reorgGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+	reorgTx := baseTx
+	reorgTx.Gas = reorgGas
+	nonFinalReorgObsTx := common.NewObservedTx(reorgTx, 100, vaultPubKey, 200) // not final
+
+	ctx = ctx.WithBlockHeight(101)
+
+	// All 4 nodes re-observe with non-final corrected gas
+	for _, na := range nas {
+		voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, nonFinalReorgObsTx, na.NodeAddress, false)
+	}
+
+	// Gas should NOT be corrected because non-final re-observations must not mutate finalized gas
+	c.Assert(voter.Tx.Tx.Gas.Equals(originalGas), Equals, true,
+		Commentf("non-final re-observations should not correct gas on finalized voter"))
+
+	// Vault balance should be unchanged
+	vault, err = mgr.Keeper().GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(vaultBalanceBefore), Equals, true,
+		Commentf("vault balance should be unchanged when non-final re-observations are rejected"))
+}

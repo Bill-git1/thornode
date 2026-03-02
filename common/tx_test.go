@@ -98,3 +98,66 @@ func (s TxSuite) TestTx(c *C) {
 	c.Check(tx.Coins[0].Equals(NewCoin(ETHAsset, cosmos.NewUint(5*One))), Equals, true)
 	c.Check(tx.Memo, Equals, "hello memo")
 }
+
+func (s TxSuite) TestEqualsExIgnoreGas(c *C) {
+	id, err := NewTxID("0xb41cf456e942f3430681298c503def54b79a96e3373ef9d44ea314d7eae41952")
+	c.Assert(err, IsNil)
+
+	tx1 := NewTx(
+		id,
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635b"),
+		Coins{NewCoin(ETHAsset, cosmos.NewUint(5*One))},
+		Gas{NewCoin(ETHAsset, cosmos.NewUint(22131))},
+		"OUT:xyz",
+	)
+
+	// Same tx with different gas should match with EqualsExIgnoreGas but not EqualsEx
+	tx2 := NewTx(
+		id,
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635b"),
+		Coins{NewCoin(ETHAsset, cosmos.NewUint(5*One))},
+		Gas{NewCoin(ETHAsset, cosmos.NewUint(23061))},
+		"OUT:xyz",
+	)
+
+	c.Check(tx1.EqualsEx(tx2), Equals, false)
+	c.Check(tx1.EqualsExIgnoreGas(tx2), Equals, true)
+
+	// Same gas should match both
+	tx3 := NewTx(
+		id,
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635b"),
+		Coins{NewCoin(ETHAsset, cosmos.NewUint(5*One))},
+		Gas{NewCoin(ETHAsset, cosmos.NewUint(22131))},
+		"OUT:xyz",
+	)
+	c.Check(tx1.EqualsEx(tx3), Equals, true)
+	c.Check(tx1.EqualsExIgnoreGas(tx3), Equals, true)
+
+	// Different coins should fail both
+	tx4 := NewTx(
+		id,
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635b"),
+		Coins{NewCoin(ETHAsset, cosmos.NewUint(6*One))},
+		Gas{NewCoin(ETHAsset, cosmos.NewUint(22131))},
+		"OUT:xyz",
+	)
+	c.Check(tx1.EqualsEx(tx4), Equals, false)
+	c.Check(tx1.EqualsExIgnoreGas(tx4), Equals, false)
+
+	// Different memo should fail both
+	tx5 := NewTx(
+		id,
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635b"),
+		Coins{NewCoin(ETHAsset, cosmos.NewUint(5*One))},
+		Gas{NewCoin(ETHAsset, cosmos.NewUint(22131))},
+		"OUT:abc",
+	)
+	c.Check(tx1.EqualsEx(tx5), Equals, false)
+	c.Check(tx1.EqualsExIgnoreGas(tx5), Equals, false)
+}
