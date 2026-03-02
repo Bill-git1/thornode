@@ -803,6 +803,57 @@ func (s *SlashingSuite) TestNeedsNewVault(c *C) {
 	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 }
 
+func (s *SlashingSuite) TestNeedsNewVaultEdDSA(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	inhash := GetRandomTxHash()
+	outhash := GetRandomTxHash()
+	pk1 := GetRandomPubKey()
+	pk2 := GetRandomPubKey()
+	pk3 := GetRandomPubKey()
+	sig1, _ := pk1.GetThorAddress()
+	sig2, _ := pk2.GetThorAddress()
+	sig3, _ := pk3.GetThorAddress()
+
+	// Use separate ECDSA and EdDSA keys for the vault, as would be the case for SOL.
+	ecdsaPK := GetRandomPubKey()
+	eddsaPK := GetRandomPubKey()
+
+	tx := GetRandomTx()
+	tx.ID = outhash
+	obs := NewObservedTx(tx, 0, eddsaPK, 0)
+	obs.ObservedPubKey = eddsaPK // observation uses the EdDSA key (as SOL bifrost would)
+	obs.Signers = []string{sig1.String(), sig2.String(), sig3.String()}
+
+	vault := GetRandomVault()
+	vault.Membership = []string{pk1.String(), pk2.String(), pk3.String()}
+
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
+
+	c.Assert(len(tx.Coins), Equals, 1)
+	toi := TxOutItem{
+		InHash:           inhash,
+		Coin:             tx.Coins[0],
+		VaultPubKey:      ecdsaPK, // ECDSA key on the toi
+		VaultPubKeyEddsa: eddsaPK, // EdDSA key on the toi
+	}
+
+	// No observation yet, should need new vault.
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, true)
+
+	voter := NewObservedTxVoter(outhash, []common.ObservedTx{obs})
+	mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
+	mgr.Keeper().SetObservedLink(ctx, inhash, outhash)
+
+	// Observation exists with EdDSA key matching toi.VaultPubKeyEddsa,
+	// even though it doesn't match toi.VaultPubKey (ECDSA). Should NOT need new vault.
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
+
+	// Confirm it still returns false at later block heights.
+	ctx = ctx.WithBlockHeight(999999999)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
+}
+
 func (s *SlashingSuite) TestTreasuryRecoveryForMaxAttempts(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
