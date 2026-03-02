@@ -166,9 +166,12 @@ func addModuleInitFlags(startCmd *cobra.Command) {
 			serverCtx.Logger = thorlog.SdkLogWrapper{
 				Logger: &logger,
 			}
-			return server.SetCmdServerContext(startCmd, serverCtx)
 		}
-		return nil
+
+		// Wrap the logger to detect CometBFT consensus failures and crash the
+		// process instead of hanging indefinitely with a dead consensus goroutine.
+		serverCtx.Logger = NewConsensusFailureLogger(serverCtx.Logger)
+		return server.SetCmdServerContext(startCmd, serverCtx)
 	}
 	wasm.AddModuleInitFlags(startCmd)
 	ebifrost.AddModuleInitFlags(startCmd)
