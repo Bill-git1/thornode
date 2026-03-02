@@ -155,7 +155,7 @@ bifrost:
         solana:
           scan_interval: 15s
           scan_inactive_vaults: false
-          fee_update_interval: 100
+          fee_update_interval: 50
           fee_sample_slots: 10
 
       # the following defaults must be defined to override with environment
