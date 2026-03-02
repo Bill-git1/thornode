@@ -60,7 +60,7 @@ THORNode follows a custom variation of semantic version structure: `MAJOR.MINOR.
 
    ```text
    - **Proposed Block**: `21210000`
-   - **Date**: 22-May-2025 @ ~1:00pm EDT - https://runescan.io/block/21jj210000
+   - **Date**: 22-May-2025 @ ~1:00pm EDT - https://runescan.io/block/21210000
    - **Note**: Block time is an estimate and may fluctuate.
 
    **Changelog**
@@ -83,7 +83,7 @@ THORNode follows a custom variation of semantic version structure: `MAJOR.MINOR.
    **Changelog**: https://gitlab.com/thorchain/thornode/-/releases/v3.6.0
    **Block**: `21210000`
    **Date**: 22-May-2025 @ ~1:00pm EDT - https://runescan.io/block/21210000
-   **Note**: Block time is presently fluctuating - this time is an estimate, but may fluctuate by hours.
+   **Note**: Block time is presently fluctuating - this time is an estimate and may fluctuate.
 
    <short description here>
 
@@ -97,18 +97,18 @@ THORNode follows a custom variation of semantic version structure: `MAJOR.MINOR.
    @everyone
    ```
 
-7. Relay the announcement any relevant chats with exchanges to notify them of the upcoming fork.
+7. Relay the announcement to any relevant chats with exchanges to notify them of the upcoming fork.
 
 8. PR in `node-launcher` to extend the [`thornode.versions`](https://gitlab.com/thorchain/devops/node-launcher/-/blob/master/thornode-stack/mainnet.yaml?ref_type=heads#L5) with the upgrade height and new version image.
 
 9. Send an announcement in Discord `#thornode-mainnet` channel instructing nodes to apply so the upgrade is configured and the Cosmos Operator will make the switch at the upgrade height. The announcement can follow the format:
 
    ````text
-   ## THORNODE ❗️MAINNET❗️UPDATE 3.7.0
+   ## THORNODE ❗️ MAINNET ❗️ UPDATE 3.7.0
    https://gitlab.com/thorchain/thornode/-/releases/v3.7.0
 
    NETWORK: MAINNET
-   TYPE: Non-coordianted
+   TYPE: Non-coordinated
    URGENCY: ASAP
 
    The upgrade proposal has passed. Please install to schedule the upgrade at the proposed height. Nodes will automatically update to the new image at the scheduled height, and the node version for active validators will be automatically set at that time. All non-active validators must run `make set-version` after the upgrade height to be eligible for the subsequent churn.
@@ -140,3 +140,63 @@ In the case of a private mainnet release with security patches, the process rema
    ```text
    > Please note that this release is a private image containing a security patch. Any nodes that wish to review the patch can make relay an `age` public key and one of the devs or THORSec will reply with an encrypted patch and instructions to verify the reproducible build hash.
    ```
+
+## Bifrost-Only Patch Release
+
+Bifrost-only patches do not break consensus and can generally be released without an upgrade proposal or coordinated upgrade height. These are used for fixes isolated to the Bifrost component (observer/signer changes, chain client fixes, etc).
+
+1. Merge the patch PR(s) to `develop`.
+
+2. Ensure your local `mainnet` branch is up to date with `origin`:
+
+   ```bash
+   git checkout origin/mainnet
+   git branch -D mainnet
+   git checkout -b mainnet
+   ```
+
+3. Cherry pick the patch commit(s) from `develop` to `mainnet`:
+
+   ```bash
+   git cherry-pick <commit hash>
+   ```
+
+4. Create a commit (example: https://gitlab.com/thorchain/thornode/-/commit/989f58a4402640f5d82a606d81a42676030a2f23) with the version upgrade titled in the form `Release 3.15.1` containing:
+
+   - Bump the `version` file.
+   - Committed changes after `make generate`.
+   - Update `app/upgrades.go` following the detailed instructions in the file comments to explicitly create a `standard.NewUpgrade` using the current network consensus version. Otherwise the patch version will be automatically set in the app upgrades and cause consensus failure when a node is updated.
+
+5. Push the `mainnet` branch to the remote:
+
+   ```bash
+   git push origin mainnet
+   ```
+
+6. Create a new release at https://gitlab.com/thorchain/thornode/-/releases for the patch version (e.g. `v3.15.1`) creating the tag based on the tip commit of the just pushed `mainnet` branch.
+
+7. The `build-thornode` job in the pipeline for the `mainnet` branch will build and push the release image.
+
+8. PR in `node-launcher` to update the last entry in [`thornode.versions`](https://gitlab.com/thorchain/devops/node-launcher/-/blob/master/thornode-stack/mainnet.yaml?ref_type=heads#L5) image to the new patch version. If there are any dependency changes it is safest to only update the Bifrost image and leave the THORNode consensus image unchanged, in case any dependency changes have potential to cause a consensus break. Otherwise both images can be updated and nodes can be instructed to `make set-version` after applying to ensure they report the upgrade to the latest version and do not get churned out for low version.
+
+9. Send an announcement in Discord `#thornode-mainnet` channel instructing nodes to apply the patch release. The announcement can follow the format:
+
+   ````text
+   ## THORNODE ❗️ MAINNET ❗️ UPDATE 3.15.1 (Bifrost) ❗️ VALIDATORS ONLY
+   https://gitlab.com/thorchain/thornode/-/releases/v3.15.1
+
+   NETWORK: MAINNET
+   TYPE: Non-coordinated
+   URGENCY: ASAP
+
+   This is a Bifrost patch release containing a fix for <short description of issue>.
+
+   ```
+   make pull
+   make install
+   ```
+
+   @everyone
+   ````
+
+10. Click the "Publish" button (horn emoji) on the announcement message to relay to other servers and the Telegram relay bot.
