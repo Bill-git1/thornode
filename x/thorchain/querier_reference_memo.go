@@ -75,6 +75,25 @@ func (qs queryServer) queryReferenceMemoPreflight(ctx cosmos.Context, req *types
 		return nil, fmt.Errorf("invalid asset: %w", err)
 	}
 
+	// Check if memoless transactions are halted
+	haltMemoless, err := qs.mgr.Keeper().GetMimir(ctx, constants.HaltMemoless.String())
+	if err == nil && haltMemoless > 0 {
+		return nil, fmt.Errorf("memoless transactions are currently halted")
+	}
+
+	// Check if memoless transactions are enabled
+	ttl := qs.mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnTTL)
+	if ttl <= 0 {
+		return nil, fmt.Errorf("memoless transactions are currently disabled")
+	}
+
+	// Only gas assets are eligible for memoless deposits; non-gas assets
+	// (e.g. ERC20 tokens) require the chain router and cannot be sent
+	// directly to Asgard vaults without a memo.
+	if !asset.IsGasAsset() {
+		return nil, fmt.Errorf("asset %s is not eligible for memoless transactions, only gas assets are supported", asset)
+	}
+
 	amount, err := cosmos.ParseUint(req.Amount)
 	if err != nil {
 		return nil, fmt.Errorf("invalid amount: %w", err)
@@ -99,7 +118,6 @@ func (qs queryServer) queryReferenceMemoPreflight(ctx cosmos.Context, req *types
 	}
 
 	// Check if the reference is available (not registered or expired)
-	ttl := qs.mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnTTL)
 	if refMemo.Height == 0 || refMemo.IsExpired(ctx.BlockHeight(), ttl) {
 		response.Available = true
 		response.CanRegister = true
