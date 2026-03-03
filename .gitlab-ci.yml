@@ -356,6 +356,14 @@ test-regression:
       fi
   script:
     - make test-regression
+    - |
+      CHANGES=$(git status --porcelain test/regression/mnt/exports/ test/regression/mnt/blocks/)
+      if [ -n "$CHANGES" ]; then
+        echo "Detected uncommitted regression test exports or blocks:"
+        echo "$CHANGES"
+        echo "Please run 'make test-regression' locally and commit the changes."
+        exit 1
+      fi
 
 include:
   - template: Security/SAST.gitlab-ci.yml
