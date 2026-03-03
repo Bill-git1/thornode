@@ -87,6 +87,9 @@ func (h MimirHandler) handle(ctx cosmos.Context, msg MsgMimir) error {
 		return cosmos.ErrUnauthorized(fmt.Sprintf("%s is not authorized", msg.Signer))
 	}
 	cost := h.mgr.Keeper().GetNativeTxFee(ctx)
+	if cost.GT(nodeAccount.Bond) {
+		cost = nodeAccount.Bond
+	}
 	nodeAccount.Bond = common.SafeSub(nodeAccount.Bond, cost)
 	if err = h.mgr.Keeper().SetNodeAccount(ctx, nodeAccount); err != nil {
 		ctx.Logger().Error("fail to save node account", "error", err)
