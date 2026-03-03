@@ -1,8 +1,11 @@
 package thorchain
 
 import (
+	"fmt"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
 	. "gopkg.in/check.v1"
@@ -1019,4 +1022,80 @@ func (s *HandlerModifyLimitSwapSuite) TestDonateToPool(c *C) {
 		err := handler.donateToPool(ctx, common.RuneAsset(), donationAmount, fromAddr)
 		c.Assert(err, IsNil)
 	}
+}
+
+// TestModifyLimitSwapIterationLimit verifies that the handle() loop respects
+// the ModifyLimitSwapMaxIterations limit to prevent DoS via bloated index buckets.
+func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapIterationLimit(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewModifyLimitSwapHandler(mgr)
+
+	// Set a low iteration limit for testing
+	mgr.Keeper().SetMimir(ctx, constants.ModifyLimitSwapMaxIterations.String(), 5)
+
+	fromAddr := GetRandomBTCAddress()
+	victimAddr := GetRandomBTCAddress()
+	sourceAsset := common.BTCAsset
+	targetAsset := common.RuneAsset()
+	sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
+	targetCoin := common.NewCoin(targetAsset, cosmos.NewUint(500*common.One))
+	signer := GetRandomBech32Addr()
+
+	// Create many swaps from different addresses at the same ratio to fill the index bucket
+	for i := 0; i < 10; i++ {
+		addr := GetRandomBTCAddress()
+		txID := GetRandomTxHash()
+		tx := common.NewTx(txID, addr, addr, common.Coins{sourceCoin}, common.Gas{}, "")
+		swap := NewMsgSwap(tx, targetAsset, addr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *swap), IsNil)
+	}
+
+	// Create victim's swap (appended after the 10 above)
+	victimTxID := GetRandomTxHash()
+	victimTx := common.NewTx(victimTxID, victimAddr, victimAddr, common.Coins{sourceCoin}, common.Gas{}, "")
+	victimSwap := NewMsgSwap(victimTx, targetAsset, victimAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *victimSwap), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *victimSwap), IsNil)
+
+	// Try to modify the victim's swap - should fail because max iterations (5) is exceeded
+	// before reaching the victim's entry (at position 10)
+	msg := types.NewMsgModifyLimitSwap(victimAddr, sourceCoin, targetCoin, cosmos.NewUint(600*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
+	result, err := handler.Run(ctx, msg)
+	c.Assert(err, NotNil)
+	c.Assert(result, IsNil)
+	c.Assert(err.Error(), Equals, fmt.Sprintf("swap index too large, exceeded max iterations (%d)", 5))
+
+	// Verify the victim's swap was NOT modified
+	unchangedSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, victimTxID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(unchangedSwap.TradeTarget.Equal(targetCoin.Amount), Equals, true)
+
+	// Now set a higher limit and verify the modification succeeds
+	mgr.Keeper().SetMimir(ctx, constants.ModifyLimitSwapMaxIterations.String(), 100)
+	result, err = handler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+
+	// Verify the victim's swap WAS modified
+	modifiedSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, victimTxID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(modifiedSwap.TradeTarget.Equal(cosmos.NewUint(600*common.One)), Equals, true)
+
+	// Test that swap found within the limit succeeds
+	// Create a swap from fromAddr in a DIFFERENT ratio bucket (different target amount = different ratio)
+	earlyTxID := GetRandomTxHash()
+	earlySourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
+	earlyTargetCoin := common.NewCoin(targetAsset, cosmos.NewUint(1000*common.One)) // different ratio than 100:500
+	earlyTx := common.NewTx(earlyTxID, fromAddr, fromAddr, common.Coins{earlySourceCoin}, common.Gas{}, "")
+	earlySwap := NewMsgSwap(earlyTx, targetAsset, fromAddr, earlyTargetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *earlySwap), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *earlySwap), IsNil)
+
+	// Set low iteration limit - swap at position 0 in its own ratio bucket should still be found
+	mgr.Keeper().SetMimir(ctx, constants.ModifyLimitSwapMaxIterations.String(), 1)
+	earlyMsg := types.NewMsgModifyLimitSwap(fromAddr, earlySourceCoin, earlyTargetCoin, cosmos.NewUint(1200*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
+	result, err = handler.Run(ctx, earlyMsg)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
 }

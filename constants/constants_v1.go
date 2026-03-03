@@ -154,6 +154,7 @@ func NewConstantValue() *ConstantVals {
 			OverSolvencyToReserveBps:            0,                  // basis points (0-10000) of over-solvent liquidity to swap to RUNE and transfer to reserve
 			OverSolvencyCheckInterval:           600,                // interval in blocks for over-solvency checks (approximately 30 days)
 			MaxRetiredVaultRecoveryAttempts:     100,                // maximum retries for retired vault recovery refunds
+			ModifyLimitSwapMaxIterations:        100,                // maximum iterations when searching for a user's swap in a ratio-grouped index
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,
