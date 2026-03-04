@@ -72,7 +72,7 @@ func (h NodePauseChainHandler) handle(ctx cosmos.Context, msg MsgNodePauseChain)
 
 	// check that node hasn't used this handler since the last churn already
 	nodeHeight := h.mgr.Keeper().GetNodePauseChain(ctx, msg.Signer)
-	if nodeHeight > lastChurn {
+	if nodeHeight > 0 && nodeHeight >= lastChurn {
 		return fmt.Errorf("node has already chosen pause/resume since the last churn")
 	}
 

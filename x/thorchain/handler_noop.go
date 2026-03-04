@@ -9,7 +9,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-// NoOpHandler is to handle donate message
+// NoOpHandler is to handle no-op messages (e.g. vault balance adjustments)
 type NoOpHandler struct {
 	mgr Manager
 }
@@ -21,7 +21,7 @@ func NewNoOpHandler(mgr Manager) NoOpHandler {
 	}
 }
 
-// Run is the main entry point to execute donate logic
+// Run is the main entry point to execute no-op logic
 func (h NoOpHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error) {
 	msg, ok := m.(*MsgNoOp)
 	if !ok {
@@ -64,8 +64,8 @@ func (h NoOpHandler) validateV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
 	return nil
 }
 
-// handle process MsgNoOp, MsgNoOp add asset and RUNE to the asset pool
-// it simply increase the pool asset/RUNE balance but without taking any of the pool units
+// handle process MsgNoOp
+// For "novault" action, it subtracts coins from the vault balance (e.g. to correct for already-observed funds)
 func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 	action := msg.GetAction()
 	if len(action) == 0 {

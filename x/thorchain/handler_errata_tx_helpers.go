@@ -80,9 +80,6 @@ func processErrataTxAttestation(
 	if len(observedVoter.Txs) == 0 {
 		return processErrataOutboundTx(ctx, k, eventMgr, er)
 	}
-	// set the observed Tx to reverted
-	observedVoter.SetReverted()
-	k.SetObservedTxInVoter(ctx, observedVoter)
 	if observedVoter.Tx.IsEmpty() {
 		ctx.Logger().Info("tx has not reach consensus yet, so nothing need to be done", "tx_id", er.Id)
 		return nil
@@ -93,6 +90,10 @@ func processErrataTxAttestation(
 		// does not match chain
 		return nil
 	}
+
+	// set the observed Tx to reverted only after chain validation passes
+	observedVoter.SetReverted()
+	k.SetObservedTxInVoter(ctx, observedVoter)
 	if observedVoter.UpdatedVault {
 		vaultPubKey := observedVoter.Tx.ObservedPubKey
 		if !vaultPubKey.IsEmpty() {

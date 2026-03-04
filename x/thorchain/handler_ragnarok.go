@@ -131,6 +131,11 @@ func (h RagnarokHandler) handle(ctx cosmos.Context, msg MsgRagnarok) (*cosmos.Re
 
 			}
 		}
+		// If the TxOutItem matching the observed outbound has been found,
+		// do not check other block heights.
+		if !shouldSlash {
+			break
+		}
 	}
 
 	if shouldSlash {

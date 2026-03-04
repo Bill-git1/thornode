@@ -108,10 +108,12 @@ func (h RunePoolWithdrawHandler) handle(ctx cosmos.Context, msg MsgRunePoolWithd
 	if !msg.AffiliateBasisPoints.IsZero() {
 		totalUnits := runePool.TotalUnits()
 		currentValue := common.GetSafeShare(runeProvider.Units, totalUnits, totalRunePoolValue)
+		withdrawShare := common.GetSafeShare(msg.BasisPoints, maxBps, runeProvider.Units)
 		depositRemaining := common.SafeSub(runeProvider.DepositAmount, runeProvider.WithdrawAmount)
-		currentYield := common.SafeSub(currentValue, depositRemaining)
-		withdrawYield := common.GetSafeShare(msg.BasisPoints, maxBps, currentYield)
-		affiliateAmount = common.GetSafeShare(msg.AffiliateBasisPoints, maxBps, withdrawYield)
+		withdrawPrincipal := common.GetSafeShare(withdrawShare, runeProvider.Units, depositRemaining)
+		withdrawValue := common.GetSafeShare(msg.BasisPoints, maxBps, currentValue)
+		currentYield := common.SafeSub(withdrawValue, withdrawPrincipal)
+		affiliateAmount = common.GetSafeShare(msg.AffiliateBasisPoints, maxBps, currentYield)
 	}
 
 	// compute withdraw amount
@@ -130,7 +132,7 @@ func (h RunePoolWithdrawHandler) handle(ctx cosmos.Context, msg MsgRunePoolWithd
 		// logic to trigger POL withdraw and sacrifice pool depth to satisfy withdrawals.
 		maxReserveBackstop := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolMaxReserveBackstop)
 		polMaxNetworkDeposit := h.mgr.Keeper().GetConfigInt64(ctx, constants.POLMaxNetworkDeposit)
-		maxReserveUsage := cosmos.NewInt(maxReserveBackstop + polMaxNetworkDeposit)
+		maxReserveUsage := cosmos.NewInt(maxReserveBackstop).Add(cosmos.NewInt(polMaxNetworkDeposit))
 		var pol ProtocolOwnedLiquidity
 		pol, err = h.mgr.Keeper().GetPOL(ctx)
 		if err != nil {

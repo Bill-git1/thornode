@@ -168,36 +168,46 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 			continue
 		}
 		walletCoin := coins.GetCoin(c.Asset)
+
+		// Compute the gap between vault and wallet balances
+		gap := cosmos.ZeroUint()
 		if walletCoin.IsEmpty() {
-			ctx.Logger().Info("asset exist in vault , but not in wallet, insolvent", "asset", c.Asset.String(), "amount", c.Amount.String())
+			gap = c.Amount
+		} else if c.Amount.GT(walletCoin.Amount) {
+			gap = c.Amount.Sub(walletCoin.Amount)
+		}
+		if gap.IsZero() {
+			continue
+		}
+
+		// Convert the gap to RUNE value using the pool
+		pool, err := mgr.Keeper().GetPool(ctx, c.Asset.GetLayer1Asset())
+		if err != nil {
+			ctx.Logger().Error("fail to get pool for solvency check", "asset", c.Asset.String(), "error", err)
+			// If we can't get the pool, treat as insolvent to be safe
 			return true
 		}
-		if c.Amount.GT(walletCoin.Amount) {
-			gap := c.Amount.Sub(walletCoin.Amount)
-			// Convert the gap to RUNE value using the pool
-			pool, err := mgr.Keeper().GetPool(ctx, c.Asset.GetLayer1Asset())
-			if err != nil {
-				ctx.Logger().Error("fail to get pool for solvency check", "asset", c.Asset.String(), "error", err)
-				// If we can't get the pool, treat as insolvent to be safe
-				return true
-			}
-			gapInRune := pool.AssetValueInRune(gap)
-			// If pool has no liquidity, we can't value the gap - skip this asset
-			// (this allows solvency checks to continue for chains with empty pools)
-			if gapInRune.IsZero() && !gap.IsZero() {
-				ctx.Logger().Info("cannot value gap for solvency check (pool has no liquidity)", "asset", c.Asset.String(), "gap", gap.String())
-				continue
-			}
-			if gapInRune.GT(permittedGapInRune) {
-				ctx.Logger().Info("vault has more asset than wallet, insolvent", "asset", c.Asset.String(), "vault amount", c.Amount.String(), "wallet amount", walletCoin.Amount.String(), "gap", gap.String(), "gap in rune", gapInRune.String(), "permitted gap in rune", permittedGapInRune.String())
-				return true
-			}
+		gapInRune := pool.AssetValueInRune(gap)
+		// If pool has no liquidity, we can't value the gap - skip this asset
+		// (this allows solvency checks to continue for chains with empty pools)
+		if gapInRune.IsZero() {
+			ctx.Logger().Info("cannot value gap for solvency check (pool has no liquidity)", "asset", c.Asset.String(), "gap", gap.String())
+			continue
+		}
+		if gapInRune.GT(permittedGapInRune) {
+			ctx.Logger().Info("vault insolvent", "asset", c.Asset.String(), "vault amount", c.Amount.String(), "wallet amount", walletCoin.Amount.String(), "gap", gap.String(), "gap in rune", gapInRune.String(), "permitted gap in rune", permittedGapInRune.String())
+			return true
 		}
 	}
 	return false
 }
 
 func excludePendingOutboundFromVault(ctx cosmos.Context, mgr Manager, vault Vault) (Vault, error) {
+	// Deep copy vault coins to avoid mutating the shared backing array
+	coinsCopy := make(common.Coins, len(vault.Coins))
+	copy(coinsCopy, vault.Coins)
+	vault.Coins = coinsCopy
+
 	// go back SigningTransactionPeriod blocks to see whether there are outstanding tx, the vault need to send out
 	// if there is , deduct it from their balance
 	signingPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)

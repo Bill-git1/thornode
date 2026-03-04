@@ -26,11 +26,11 @@ func (h TCYStakeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 	if !ok {
 		return nil, errInvalidMessage
 	}
-	ctx.Logger().Info("receive MsgTCYStake", "address", msg.Tx.FromAddress, "amount", msg.Tx.Coins[0].Amount)
 	if err := h.validate(ctx, *msg); err != nil {
 		ctx.Logger().Error("MsgTCYStake failed validation", "error", err)
 		return nil, err
 	}
+	ctx.Logger().Info("receive MsgTCYStake", "address", msg.Tx.FromAddress, "amount", msg.Tx.Coins[0].Amount)
 
 	result, err := h.handle(ctx, *msg)
 	if err != nil {

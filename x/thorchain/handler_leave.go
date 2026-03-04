@@ -107,7 +107,9 @@ func (h LeaveHandler) handle(ctx cosmos.Context, msg MsgLeave) error {
 			age := cosmos.NewUint(uint64((ctx.BlockHeight() - nodeAcc.StatusSince) * common.One))
 			slashPts, err := h.mgr.Keeper().GetNodeAccountSlashPoints(ctx, nodeAcc.NodeAddress)
 			if err != nil || slashPts == 0 {
-				ctx.Logger().Error("fail to get node account slash points", "error", err)
+				if err != nil {
+					ctx.Logger().Error("fail to get node account slash points", "error", err)
+				}
 				nodeAcc.LeaveScore = age.Uint64()
 			} else {
 				nodeAcc.LeaveScore = age.QuoUint64(uint64(slashPts)).Uint64()

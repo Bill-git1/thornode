@@ -1113,7 +1113,8 @@ func IsModuleAccAddress(keeper keeper.Keeper, accAddr cosmos.AccAddress) bool {
 		accAddr.Equals(keeper.GetModuleAccAddress(AffiliateCollectorName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(ModuleName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(TCYClaimingName)) ||
-		accAddr.Equals(keeper.GetModuleAccAddress(TCYStakeName))
+		accAddr.Equals(keeper.GetModuleAccAddress(TCYStakeName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(TreasuryName))
 }
 
 func NewSwapMemo(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, destination common.Address, limit cosmos.Uint, affiliate string, affiliateBps cosmos.Uint) string {
@@ -1172,7 +1173,7 @@ func getLastChurnHeight(ctx cosmos.Context, k keeper.Keeper) int64 {
 	vaults, err := k.GetAsgardVaultsByStatus(ctx, ActiveVault)
 	if err != nil {
 		ctx.Logger().Error("failed to get asgard vaults", "error", err)
-		return ctx.BlockHeight()
+		return 0
 	}
 	// calculate last churn block height
 	var lastChurnHeight int64 // the last block height we had a successful churn

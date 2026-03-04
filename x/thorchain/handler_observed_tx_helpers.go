@@ -3,6 +3,7 @@ package thorchain
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -1019,7 +1020,11 @@ func generateReferenceMemoID(ctx cosmos.Context, mgr Manager, asset common.Asset
 		return "", fmt.Errorf("no coins in transaction for reference generation")
 	}
 
-	amount := tx.Tx.Coins[0].Amount.Uint64()
+	coinAmount := tx.Tx.Coins[0].Amount
+	if coinAmount.GT(cosmos.NewUint(math.MaxUint64)) {
+		return "", fmt.Errorf("coin amount exceeds uint64 max")
+	}
+	amount := coinAmount.Uint64()
 	return ExtractReferenceFromAmount(ctx, mgr, asset, amount)
 }
 

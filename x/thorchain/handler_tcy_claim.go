@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/tcysmartcontract"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -52,6 +53,11 @@ func (h TCYClaimHandler) validate(ctx cosmos.Context, msg MsgTCYClaim) error {
 
 	if !msg.RuneAddress.IsChain(common.THORChain) {
 		return cosmos.ErrUnknownRequest("invalid rune address")
+	}
+
+	// reject smart contract addresses to prevent deposits to non-retrievable addresses
+	if tcysmartcontract.IsTCYSmartContractAddress(msg.RuneAddress) {
+		return fmt.Errorf("cannot claim to TCY smart contract address: %s", msg.RuneAddress)
 	}
 
 	return nil

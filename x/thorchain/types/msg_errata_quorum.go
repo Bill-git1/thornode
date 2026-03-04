@@ -37,6 +37,9 @@ func (m *MsgErrataTxQuorum) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest("QuoErrata cannot be nil")
 	}
 	tx := m.QuoErrata.ErrataTx
+	if tx == nil {
+		return cosmos.ErrUnknownRequest("ErrataTx cannot be nil")
+	}
 	if tx.Id.IsEmpty() {
 		return cosmos.ErrUnknownRequest("Tx ID cannot be empty")
 	}

@@ -14,9 +14,9 @@ func NewTssKeygenMetric(pubkey common.PubKey) *TssKeygenMetric {
 
 // AddNodeTssTime add node tss time
 func (m *TssKeygenMetric) AddNodeTssTime(addr cosmos.AccAddress, keygenTime int64) {
-	for _, item := range m.NodeTssTimes {
+	for i, item := range m.NodeTssTimes {
 		if item.Address.Equals(addr) {
-			item.TssTime = keygenTime
+			m.NodeTssTimes[i].TssTime = keygenTime
 			return
 		}
 	}
@@ -37,9 +37,9 @@ func NewTssKeysignMetric(txID common.TxID) *TssKeysignMetric {
 
 // AddNodeTssTime add node tss time
 func (m *TssKeysignMetric) AddNodeTssTime(addr cosmos.AccAddress, keygenTime int64) {
-	for _, item := range m.NodeTssTimes {
+	for i, item := range m.NodeTssTimes {
 		if item.Address.Equals(addr) {
-			item.TssTime = keygenTime
+			m.NodeTssTimes[i].TssTime = keygenTime
 			return
 		}
 	}

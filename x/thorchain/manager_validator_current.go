@@ -615,7 +615,7 @@ func (vm *ValidatorMgr) payNodeAccountBondAward(ctx cosmos.Context, lastChurnHei
 		coin := common.NewCoin(common.RuneNative, nodeOperatorFees)
 		sdkErr := vm.k.SendFromModuleToAccount(ctx, BondName, nodeOperatorAccAddr, common.NewCoins(coin))
 		if sdkErr != nil {
-			return errors.New(sdkErr.Error())
+			return fmt.Errorf("fail to send node operator fees: %w", sdkErr)
 		}
 
 		// TODO: Remove this NewAddress call entirely in the next version of this manager.

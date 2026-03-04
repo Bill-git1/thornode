@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"fmt"
+	"math"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -52,6 +53,9 @@ func (h NetworkFeeQuorumHandler) handle(ctx cosmos.Context, msg types.MsgNetwork
 	}
 	nf := msg.QuoNetFee.NetworkFee
 
+	if nf.TransactionRate > uint64(math.MaxInt64) || nf.TransactionSize > uint64(math.MaxInt64) {
+		return nil, fmt.Errorf("transaction rate or size exceeds int64 max")
+	}
 	voter, err := h.mgr.Keeper().GetObservedNetworkFeeVoter(ctx, nf.Height, nf.Chain, int64(nf.TransactionRate), int64(nf.TransactionSize))
 	if err != nil {
 		return nil, err
@@ -64,7 +68,7 @@ func (h NetworkFeeQuorumHandler) handle(ctx cosmos.Context, msg types.MsgNetwork
 	signBz, err := nf.GetSignablePayload()
 	if err != nil {
 		ctx.Logger().Error("fail to marshal network fee sign payload", "error", err)
-		return &cosmos.Result{}, nil
+		return nil, fmt.Errorf("fail to marshal network fee sign payload: %w", err)
 	}
 
 	attestations := deduplicateAttestations(msg.QuoNetFee.Attestations, len(active))

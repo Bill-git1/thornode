@@ -115,18 +115,25 @@ func (h OperatorRotateHandler) rotate(ctx cosmos.Context, operator cosmos.AccAdd
 		return ErrInternal(err, "fail to get bond address")
 	}
 
-	// rotate the operator address
-	nodeAcc.BondAddress = common.Address(operator.String())
-
 	// get current bond provider records
 	bp, err := h.mgr.Keeper().GetBondProviders(ctx, nodeAcc.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to get bond providers(%s)", nodeAcc.NodeAddress))
 	}
+
+	// check for duplicate bond provider before making changes
+	if bp.Has(operator) {
+		return fmt.Errorf("operator %s is already a bond provider for node %s", operator, nodeAcc.NodeAddress)
+	}
+
+	// call passiveBackfill before mutating BondAddress so it reads the correct operator
 	err = passiveBackfill(ctx, h.mgr, nodeAcc, &bp)
 	if err != nil {
 		return err
 	}
+
+	// rotate the operator address after passiveBackfill
+	nodeAcc.BondAddress = common.Address(operator.String())
 
 	// update the corresponding bond provider record
 	updated := false

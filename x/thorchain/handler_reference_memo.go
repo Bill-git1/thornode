@@ -124,6 +124,9 @@ func (h ReferenceMemoHandler) handle(ctx cosmos.Context, msg MsgReferenceMemo) (
 // nextReference finds the next available reference for the asset
 func (h ReferenceMemoHandler) nextReference(ctx cosmos.Context, asset common.Asset, posStr string, ttl int64) string {
 	end := h.mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnRefCount)
+	if end <= 0 {
+		return ""
+	}
 	pos, _ := strconv.ParseInt(posStr, 10, 64)
 	pos++ // next
 
@@ -137,7 +140,8 @@ func (h ReferenceMemoHandler) nextReference(ctx cosmos.Context, asset common.Ass
 	// We allow looping to the start once to search all references,
 	// but return empty if we reach the end a second time (no available refs).
 	reachedEnd := false
-	maxIter := end + 1 // bound iterations to prevent excessive keeper reads
+	// Cap iterations to end (which equals the total number of references)
+	maxIter := end
 	for iter := int64(0); iter < maxIter; iter++ {
 		if pos > end {
 			pos = 1

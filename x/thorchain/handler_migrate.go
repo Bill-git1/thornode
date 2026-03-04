@@ -70,6 +70,7 @@ func (h MigrateHandler) handle(ctx cosmos.Context, msg MsgMigrate) (*cosmos.Resu
 			fromAddress, addrErr = tx.VaultPubKeyEddsa.GetAddress(tx.Chain)
 		default:
 			ctx.Logger().Error("unknown signing algo", "signing_algo", tx.Chain.GetSigningAlgo())
+			continue
 		}
 		if addrErr != nil {
 			ctx.Logger().Error("fail to get address from pubkey", "chain", tx.Chain, "error", addrErr)
