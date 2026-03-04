@@ -678,6 +678,12 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 			return checkpoint, nil, err
 		}
 		elapse = time.Since(startKeySign)
+
+		// store immediately after a successful sign so the signed payload is saved even if broadcast crashes
+		item.SignedTx = signedTx
+		if storeErr := s.storage.Set(item); storeErr != nil {
+			s.logger.Error().Err(storeErr).Msg("fail to persist signed tx before broadcast")
+		}
 	}
 
 	// looks like the transaction is already signed
