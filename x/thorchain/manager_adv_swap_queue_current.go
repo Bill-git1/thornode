@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/hashicorp/go-metrics"
-	"github.com/jinzhu/copier"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -626,16 +626,12 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 	todo := make(tradePairs, 0)
 	var pairs tradePairs
 	var pools Pools
-	// Skip getAssetPairs during simulations as it uses an iterator and we don't need pairs/pools
-	if !isSimulation {
-		pairs, pools = vm.getAssetPairs(ctx)
-	}
 	iterationCount := int64(0)
 
-	// Telemetry tracking variables
-	totalSwapsProcessed := int64(0)
-	marketSwapCount := int64(0)
-	limitSwapCount := int64(0)
+	// Telemetry tracking variables (counts reflect successful swap executions only)
+	swapSuccesses := int64(0)
+	marketSwapSuccesses := int64(0)
+	limitSwapSuccesses := int64(0)
 	completedSwapCount := int64(0)
 
 	// Track the last swap direction per pool for rapid swap safety.
@@ -650,6 +646,12 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 		}
 
 		iterationCount = iteration + 1
+
+		// Re-fetch pools each iteration so limit swap discovery and scoring
+		// use up-to-date balances after swaps committed in prior iterations.
+		if !isSimulation {
+			pairs, pools = vm.getAssetPairs(ctx)
+		}
 
 		swaps, err := vm.FetchQueue(ctx, mgr, pairs, pools, todo)
 		if err != nil {
@@ -669,31 +671,35 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 		}
 		swaps = swaps.Sort()
 
+		budget := vm.getTodoNum(int64(len(swaps)), minSwapsPerBlock, maxSwapsPerBlock)
 		iterationSuccess := int64(0)
-		for i := int64(0); i < vm.getTodoNum(int64(len(swaps)), minSwapsPerBlock, maxSwapsPerBlock); i++ {
-			pick := swaps[i]
-			var msg MsgSwap
-			if err := copier.Copy(&msg, &pick.msg); err != nil {
-				ctx.Logger().Error("fail copy msg", "msg", msg.Tx.String(), "error", err)
+		attempted := int64(0)
+		for _, pick := range swaps {
+			if attempted >= budget {
+				break
+			}
+			data, marshalErr := proto.Marshal(&pick.msg)
+			if marshalErr != nil {
+				ctx.Logger().Error("fail to marshal msg swap", "error", marshalErr)
+				continue
+			}
+			if len(data) == 0 {
+				ctx.Logger().Error("skip empty swap message", "tx", pick.msg.Tx.ID)
+				continue
+			}
+			msg := &MsgSwap{}
+			if marshalErr = proto.Unmarshal(data, msg); marshalErr != nil {
+				ctx.Logger().Error("fail to unmarshal msg swap", "error", marshalErr)
 				continue
 			}
 
-			// Skip market swaps that would go in the same direction as the last
+			// Skip market swaps that would go in the same direction as a previous
 			// swap through any pool they touch, preventing pool draining.
-			// Note: skipped swaps still consume a slot in the getTodoNum budget,
-			// so N is a cap on candidates considered, not swaps executed. This
-			// matches the existing behavior for failed market swaps (line ~700).
-			if shouldSkipRapidSwapDirection(msg, lastPoolDir, iteration) {
+			// Direction-skipped swaps do NOT consume a budget slot, so the budget
+			// is a cap on actual swap attempts, not candidates considered.
+			if shouldSkipRapidSwapDirection(*msg, lastPoolDir, iteration) {
 				continue
 			}
-
-			// Track swap types for telemetry
-			if msg.IsLimitSwap() {
-				limitSwapCount++
-			} else {
-				marketSwapCount++
-			}
-			totalSwapsProcessed++
 
 			// Preserve original values before modification
 			originalAmount := msg.Tx.Coins[0].Amount
@@ -707,7 +713,7 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 
 			// make the primary swap using the cached context
 			var settleMsg string
-			_, emit, handleErr := swapHandler.RunWithEmit(cacheCtx, &msg)
+			_, emit, handleErr := swapHandler.RunWithEmit(cacheCtx, msg)
 			if handleErr != nil {
 				// On iteration 1+ (second rapid swap iteration and beyond), failed market swaps
 				// should not count as attempts. This prevents rapid swaps from burning through
@@ -716,19 +722,21 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 				if iteration > 0 && msg.IsMarketSwap() {
 					continue
 				}
+				attempted++
 				// Don't commit - this discards all state changes
 				ctx.Logger().Error("fail to execute streaming swap interval", "error", handleErr)
 				msg.State.FailedSwaps = append(msg.State.FailedSwaps, msg.State.Count)
 				msg.State.FailedSwapReasons = append(msg.State.FailedSwapReasons, handleErr.Error())
 				settleMsg = handleErr.Error()
 			} else {
+				attempted++
 				// Success - commit the changes
 				commit()
 				settleMsg = "swap has been completed"
 				iterationSuccess++
 
 				// Track swap direction for rapid swap safety check
-				for _, d := range getSwapDirections(msg) {
+				for _, d := range getSwapDirections(*msg) {
 					lastPoolDir[d.pool] = d.direction
 				}
 
@@ -740,6 +748,14 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 				if !isSimulation {
 					todo = todo.findMatchingTrades(genTradePair(msg.Tx.Coins[0].Asset, msg.TargetAsset), pairs)
 				}
+
+				// Track successful swap types for telemetry
+				if msg.IsLimitSwap() {
+					limitSwapSuccesses++
+				} else {
+					marketSwapSuccesses++
+				}
+				swapSuccesses++
 			}
 			msg.State.Count += 1
 			msg.State.LastHeight = ctx.BlockHeight()
@@ -749,11 +765,11 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 			msg.TradeTarget = originalTradeTarget
 
 			// Save the updated swap state back to the keeper
-			if err := vm.k.SetAdvSwapQueueItem(ctx, msg); err != nil {
+			if err := vm.k.SetAdvSwapQueueItem(ctx, *msg); err != nil {
 				ctx.Logger().Error("fail to save swap item", "error", err)
 			}
-			if vm.IsDone(ctx, msg) {
-				if err := settleSwap(ctx, mgr, msg, settleMsg); err != nil {
+			if vm.IsDone(ctx, *msg) {
+				if err := settleSwap(ctx, mgr, *msg, settleMsg); err != nil {
 					ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
 				}
 				completedSwapCount++
@@ -777,7 +793,7 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 
 	// Emit telemetry metrics only if telemetry is enabled
 	if telemetryEnabled && !isSimulation {
-		vm.emitAdvSwapQueueTelemetry(ctx, mgr, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount)
+		vm.emitAdvSwapQueueTelemetry(ctx, mgr, iterationCount, swapSuccesses, marketSwapSuccesses, limitSwapSuccesses, completedSwapCount)
 	}
 
 	return nil
@@ -969,17 +985,17 @@ func (vm *SwapQueueAdv) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager
 
 // emitAdvSwapQueueTelemetry emits telemetry metrics for the advanced swap queue
 // This method should only be called when telemetry is enabled
-func (vm *SwapQueueAdv) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Manager, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount int64) {
-	// Emit core metrics
+func (vm *SwapQueueAdv) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Manager, iterationCount, swapSuccesses, marketSwapSuccesses, limitSwapSuccesses, completedSwapCount int64) {
+	// Emit core metrics (counts reflect successful swap executions only)
 	telemetry.SetGauge(float32(iterationCount), "thornode", "adv_swap_queue", "iterations_per_block")
-	telemetry.SetGauge(float32(totalSwapsProcessed), "thornode", "adv_swap_queue", "total_swaps_per_block")
-	telemetry.SetGauge(float32(marketSwapCount), "thornode", "adv_swap_queue", "market_swaps_per_block")
-	telemetry.SetGauge(float32(limitSwapCount), "thornode", "adv_swap_queue", "limit_swaps_per_block")
+	telemetry.SetGauge(float32(swapSuccesses), "thornode", "adv_swap_queue", "total_swaps_per_block")
+	telemetry.SetGauge(float32(marketSwapSuccesses), "thornode", "adv_swap_queue", "market_swaps_per_block")
+	telemetry.SetGauge(float32(limitSwapSuccesses), "thornode", "adv_swap_queue", "limit_swaps_per_block")
 	telemetry.SetGauge(float32(completedSwapCount), "thornode", "adv_swap_queue", "completed_swaps_per_block")
 
 	// Emit total counters (these will accumulate over time)
-	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "market_swaps_total"}, float32(marketSwapCount), nil)
-	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "limit_swaps_total"}, float32(limitSwapCount), nil)
+	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "market_swaps_total"}, float32(marketSwapSuccesses), nil)
+	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "limit_swaps_total"}, float32(limitSwapSuccesses), nil)
 	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "swaps_completed_total"}, float32(completedSwapCount), nil)
 
 	// Emit queue depth and trading pair metrics

@@ -1096,7 +1096,9 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	var streamSwapBlocks int64
 	if streamingQuantity > 0 {
 		if streamingInterval == 0 {
-			// Rapid streaming: multiple swaps per block limited by AdvSwapQueueRapidSwapMax
+			// Rapid streaming: multiple swaps per block limited by AdvSwapQueueRapidSwapMax.
+			// Note: this is a best-case estimate; actual execution may take longer due to
+			// direction-based skipping, swap failures, or budget exhaustion from other swaps.
 			rapidSwapMax := max(qs.mgr.Keeper().GetConfigInt64(ctx, constants.AdvSwapQueueRapidSwapMax), 1)
 			// Calculate blocks needed: ceil(quantity / rapidSwapMax)
 			streamSwapBlocks = (int64(streamingQuantity) + rapidSwapMax - 1) / rapidSwapMax
@@ -1159,6 +1161,9 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		res.Notes += " " + outboundNotes
 	}
 	res.Warning = quoteWarning
+	if streamingQuantity > 0 && streamingInterval == 0 {
+		res.Warning += " Rapid streaming time is a best-case estimate. Actual execution may take longer due to direction skipping, swap failures, or queue budget limits."
+	}
 	res.Expiry = ctx.BlockTime().Add(quoteExpiration).Unix()
 	res.RecommendedMinAmountIn = minSwapAmount.String()
 

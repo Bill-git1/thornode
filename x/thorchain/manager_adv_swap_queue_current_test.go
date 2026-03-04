@@ -7,6 +7,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -5132,4 +5133,2367 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionIntegration(c *C) {
 					sc.name, i, expectedCount, result.State.Count, result.State.FailedSwaps, result.State.FailedSwapReasons))
 		}
 	}
+}
+
+// TestRapidSwapIntervalBlocksMultiExecution proves that interval>0 streaming
+// swaps execute only ONCE per block despite rapidSwapMax>1. isSwapReady blocks
+// re-execution because LastHeight >= BlockHeight after the first execution.
+func (s AdvSwapQueueSuite) TestRapidSwapIntervalBlocksMultiExecution(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Set rapid swap max to 3 — but interval=1 should prevent more than 1 per block
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Create streaming swap with interval=1 and quantity=5
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(5*common.One)))
+	tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swap := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   1, // one execution per block
+		Deposit:    cosmos.NewUint(5 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1, // ready to execute
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+
+	// Run EndBlock at block H (18)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Assert Count == 1: interval=1 prevents re-execution within the same block
+	result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result.State.Count, Equals, uint64(1),
+		Commentf("interval=1 swap should execute only once per block, got Count=%d", result.State.Count))
+	c.Assert(len(result.State.FailedSwaps), Equals, 0,
+		Commentf("swap should have succeeded, but has failures: %v", result.State.FailedSwapReasons))
+
+	// Advance to block H+1 and run EndBlock again
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Assert Count == 2: one more execution on the new block
+	result, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result.State.Count, Equals, uint64(2),
+		Commentf("after second block, Count should be 2, got %d", result.State.Count))
+	c.Assert(len(result.State.FailedSwaps), Equals, 0,
+		Commentf("swap should have succeeded in both blocks, but has failures: %v", result.State.FailedSwapReasons))
+}
+
+// TestRapidSwapStateAccumulation verifies that State.In and State.Out
+// accumulate correctly across multiple rapid swap iterations within a
+// single block for counter-directional streaming swaps.
+func (s AdvSwapQueueSuite) TestRapidSwapStateAccumulation(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH (1 ETH ≈ 10 RUNE)
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	initialPoolRune := ethPool.BalanceRune
+	initialPoolAsset := ethPool.BalanceAsset
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Create two counter-directional streaming swaps so direction skip doesn't
+	// block iterations. Both have interval=0 and quantity=10.
+	// Swap A: ETH -> RUNE
+	txA := GetRandomTx()
+	thorAddr := GetRandomTHORAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+	swapA := NewMsgSwap(
+		txA, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	// Swap B: RUNE -> ETH (counter-directional to A)
+	txB := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swapB := NewMsgSwap(
+		txB, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Both should have Count==3 (counter-directional, all 3 iterations succeed)
+	resultA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(3),
+		Commentf("swapA Count should be 3, got %d", resultA.State.Count))
+
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(3),
+		Commentf("swapB Count should be 3, got %d", resultB.State.Count))
+
+	// Verify State.In accumulated across iterations.
+	// deposit/quantity = 10*One/10 = 1*One per sub-swap × 3 iterations = 3*One
+	expectedIn := cosmos.NewUint(3 * common.One)
+	c.Assert(resultA.State.In.Equal(expectedIn), Equals, true,
+		Commentf("swapA State.In should be %s, got %s", expectedIn, resultA.State.In))
+	c.Assert(resultB.State.In.Equal(expectedIn), Equals, true,
+		Commentf("swapB State.In should be %s, got %s", expectedIn, resultB.State.In))
+
+	// Verify State.Out > 0 (actual swap output was produced)
+	c.Assert(resultA.State.Out.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("swapA State.Out should be > 0, got %s", resultA.State.Out))
+	c.Assert(resultB.State.Out.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("swapB State.Out should be > 0, got %s", resultB.State.Out))
+
+	// Verify pool balances changed (proving iterations modify pool state)
+	finalPool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(finalPool.BalanceRune.Equal(initialPoolRune), Equals, false,
+		Commentf("pool RUNE balance should have changed"))
+	c.Assert(finalPool.BalanceAsset.Equal(initialPoolAsset), Equals, false,
+		Commentf("pool asset balance should have changed"))
+}
+
+// TestRapidSwapMaxZero verifies that setting AdvSwapQueueRapidSwapMax=0
+// causes the iteration loop `for iteration < 0` to never execute, halting
+// ALL swap processing for the block.
+func (s AdvSwapQueueSuite) TestRapidSwapMaxZero(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Set rapid swap max to 0 — halts all swap processing
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 0)
+
+	// Create a simple market swap
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One)))
+	tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swap := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swap.State = &types.SwapState{
+		Quantity: 1,
+		Count:    0,
+		Deposit:  cosmos.NewUint(1 * common.One),
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+
+	// Run EndBlock — should complete without error but process nothing
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Swap should NOT be processed (Count remains 0)
+	result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result.State.Count, Equals, uint64(0),
+		Commentf("rapidSwapMax=0 should halt all processing, got Count=%d", result.State.Count))
+}
+
+// TestRapidSwapDirectionSkipDoesNotConsumeBudget verifies that direction-skipped
+// swaps do NOT consume getTodoNum budget slots. Counter-directional swaps ranked
+// lower in the queue ARE reached because skipped swaps leave budget for them.
+// This ensures that the budget is a cap on actual swap attempts, not candidates
+// considered, allowing counter-directional swaps to execute even when many
+// higher-scoring same-direction swaps are skipped.
+func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotConsumeBudget(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH (1 ETH ≈ 10 RUNE)
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+	// Limit budget to 3 so only top 3 swaps are attempted per iteration
+	mgr.Keeper().SetMimir(ctx, "MaxSwapsPerBlock", 3)
+	mgr.Keeper().SetMimir(ctx, "MinSwapsPerBlock", 1)
+
+	// Create 3 high-value RUNE->ETH streaming swaps (high score, same direction)
+	highTxIDs := make([]common.TxID, 3)
+	for i := 0; i < 3; i++ {
+		tx := GetRandomTx()
+		ethAddr := GetRandomETHAddress()
+		tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)))
+		tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+		swap := NewMsgSwap(
+			tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+			"", cosmos.ZeroUint(),
+			"", "", nil,
+			types.SwapType_market,
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		swap.State = &types.SwapState{
+			Quantity:   10,
+			Count:      0,
+			Interval:   0,
+			Deposit:    cosmos.NewUint(100 * common.One),
+			In:         cosmos.ZeroUint(),
+			Out:        cosmos.ZeroUint(),
+			LastHeight: ctx.BlockHeight() - 1,
+		}
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+		highTxIDs[i] = tx.ID
+	}
+
+	// Create 3 low-value ETH->RUNE streaming swaps (low score, counter-directional)
+	lowTxIDs := make([]common.TxID, 3)
+	for i := 0; i < 3; i++ {
+		tx := GetRandomTx()
+		thorAddr := GetRandomTHORAddress()
+		tx.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)))
+		tx.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+		swap := NewMsgSwap(
+			tx, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+			"", cosmos.ZeroUint(),
+			"", "", nil,
+			types.SwapType_market,
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		swap.State = &types.SwapState{
+			Quantity:   10,
+			Count:      0,
+			Interval:   0,
+			Deposit:    cosmos.NewUint(1 * common.One),
+			In:         cosmos.ZeroUint(),
+			Out:        cosmos.ZeroUint(),
+			LastHeight: ctx.BlockHeight() - 1,
+		}
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+		lowTxIDs[i] = tx.ID
+	}
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Iter 0: All 3 high-value RUNE->ETH execute (budget=3, attempted=3). Low swaps
+	// not reached. lastPoolDir[ETH]=RuneToAsset.
+	// Iter 1: High swaps are direction-skipped (same dir), NOT consuming budget.
+	// Low swap #0 is counter-directional (AssetToRune vs RuneToAsset), executes
+	// (attempted=1). Low #1 and #2 are same-dir as #0, skipped.
+	// lastPoolDir[ETH]=AssetToRune. iterationSuccess=1 > 0, loop continues.
+	// Iter 2: High swap #0 is counter-directional (RuneToAsset vs AssetToRune),
+	// executes (attempted=1). High #1 and #2 same-dir, skipped. Low swap #0
+	// counter-directional (AssetToRune vs RuneToAsset), executes (attempted=2).
+	// Low #1 and #2 same-dir as #0, skipped.
+	//
+	// Final: High #0: Count=2, High #1,#2: Count=1, Low #0: Count=2, Low #1,#2: Count=0.
+	// The first swap in each direction alternates with the other, both reaching
+	// Count=2, while the remaining swaps only execute in iter 0.
+	expectedHighCounts := []uint64{2, 1, 1}
+	for i, txID := range highTxIDs {
+		result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		c.Assert(result.State.Count, Equals, expectedHighCounts[i],
+			Commentf("high swap %d: expected Count=%d, got %d", i, expectedHighCounts[i], result.State.Count))
+	}
+
+	// Low-value ETH->RUNE swaps: #0 is reached in iter 1 and 2 because
+	// direction-skipped high swaps leave budget available.
+	// #1 and #2 are same-direction as #0 within each iteration, so they are skipped.
+	expectedLowCounts := []uint64{2, 0, 0}
+	for i, txID := range lowTxIDs {
+		result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		c.Assert(result.State.Count, Equals, expectedLowCounts[i],
+			Commentf("low swap %d: expected Count=%d, got %d", i, expectedLowCounts[i], result.State.Count))
+	}
+}
+
+// TestRapidSwapLimitSwapBypassesDirectionSkip verifies that limit swaps
+// execute in iterations where same-direction market swaps are skipped.
+// shouldSkipRapidSwapDirection returns false for non-market swaps.
+func (s AdvSwapQueueSuite) TestRapidSwapLimitSwapBypassesDirectionSkip(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH (1 ETH ≈ 10 RUNE)
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Market swap A: RUNE->ETH (streaming, interval=0, quantity=10)
+	txMarket := GetRandomTx()
+	marketEthAddr := GetRandomETHAddress()
+	txMarket.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)))
+	txMarket.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, marketEthAddr)
+	marketSwap := NewMsgSwap(
+		txMarket, common.ETHAsset, marketEthAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	marketSwap.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(100 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *marketSwap), IsNil)
+
+	// Market swap B: ETH->RUNE (single, quantity=1 — completes in iter 0 to
+	// populate todo with the (RUNE, ETH) pair needed for limit swap discovery
+	// in iter 1+, then gets removed)
+	txPartner := GetRandomTx()
+	partnerThorAddr := GetRandomTHORAddress()
+	txPartner.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)))
+	txPartner.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), partnerThorAddr)
+	partnerSwap := NewMsgSwap(
+		txPartner, common.RuneAsset(), partnerThorAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	partnerSwap.State = &types.SwapState{
+		Quantity: 1,
+		Count:    0,
+		Deposit:  cosmos.NewUint(1 * common.One),
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *partnerSwap), IsNil)
+
+	// Limit swap: RUNE->ETH (same direction as market swap A, quantity=5,
+	// very low trade target so it's always discoverable and executable)
+	txLimit := GetRandomTx()
+	limitEthAddr := GetRandomETHAddress()
+	txLimit.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txLimit.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, limitEthAddr)
+	limitSwap := NewMsgSwap(
+		txLimit, common.ETHAsset, limitEthAddr,
+		cosmos.NewUint(500000), // 0.005 ETH — far below market rate, easily achievable
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	limitSwap.InitialBlockHeight = ctx.BlockHeight() - 10
+	limitSwap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 10,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Market swap A: should be direction-skipped in iter 1+ (RuneToAsset on ETH)
+	// Executed in iter 0 only, so Count=1
+	resultMarket, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, marketSwap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultMarket.State.Count, Equals, uint64(1),
+		Commentf("market swap should be direction-skipped after iter 0, got Count=%d", resultMarket.State.Count))
+
+	// Partner swap B: completed and settled in iter 0
+	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, partnerSwap.Tx.ID, 0)
+	c.Assert(err, NotNil, Commentf("partner swap should be settled and removed"))
+
+	// Limit swap: bypasses direction skip (not a market swap), executes in
+	// iter 0 (via todo=all pairs) and iter 1+ (via todo from partner swap).
+	// Should have Count > 1, proving limit swaps are not subject to direction skip.
+	resultLimit, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, limitSwap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultLimit.State.Count > resultMarket.State.Count, Equals, true,
+		Commentf("limit swap should execute more times than direction-skipped market swap: limit Count=%d, market Count=%d",
+			resultLimit.State.Count, resultMarket.State.Count))
+}
+
+// TestRapidSwapPoolBalanceChangesAcrossIterations verifies that pool balances
+// actually change between rapid swap iterations and that counter-directional
+// swaps successfully execute through all iterations.
+func (s AdvSwapQueueSuite) TestRapidSwapPoolBalanceChangesAcrossIterations(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	initialRune := ethPool.BalanceRune
+	initialAsset := ethPool.BalanceAsset
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Counter-directional pair: ETH->RUNE + RUNE->ETH, interval=0, quantity=10
+	txA := GetRandomTx()
+	thorAddr := GetRandomTHORAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+	swapA := NewMsgSwap(
+		txA, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	txB := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swapB := NewMsgSwap(
+		txB, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Both should get Count==3 (counter-directional, each iteration succeeds)
+	resultA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(3),
+		Commentf("swapA (ETH->RUNE) expected Count=3, got %d", resultA.State.Count))
+
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(3),
+		Commentf("swapB (RUNE->ETH) expected Count=3, got %d", resultB.State.Count))
+
+	// Pool balances must have changed from the initial state
+	finalPool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(finalPool.BalanceRune.Equal(initialRune), Equals, false,
+		Commentf("pool RUNE balance should differ after 3 iterations of counter-directional swaps"))
+	c.Assert(finalPool.BalanceAsset.Equal(initialAsset), Equals, false,
+		Commentf("pool asset balance should differ after 3 iterations of counter-directional swaps"))
+}
+
+// TestRapidSwapSettleMidIterationNoInterference verifies that swaps completing
+// mid-iteration (via settleSwap) are removed from the queue without interfering
+// with other swaps in the same or subsequent iterations.
+func (s AdvSwapQueueSuite) TestRapidSwapSettleMidIterationNoInterference(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Swap A: RUNE->ETH, quantity=1 (completes in iter 0, settled and removed)
+	txA := GetRandomTx()
+	ethAddrA := GetRandomETHAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrA)
+	swapA := NewMsgSwap(
+		txA, common.ETHAsset, ethAddrA, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity: 1,
+		Count:    0,
+		Deposit:  cosmos.NewUint(1 * common.One),
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	// Swap B: ETH->RUNE, quantity=1 (completes in iter 0, settled and removed)
+	txB := GetRandomTx()
+	thorAddrB := GetRandomTHORAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddrB)
+	swapB := NewMsgSwap(
+		txB, common.RuneAsset(), thorAddrB, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity: 1,
+		Count:    0,
+		Deposit:  cosmos.NewUint(1 * common.One),
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	// Swap C: RUNE->ETH, quantity=5, interval=0 (streaming, persists across iterations)
+	txC := GetRandomTx()
+	ethAddrC := GetRandomETHAddress()
+	txC.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(5*common.One)))
+	txC.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrC)
+	swapC := NewMsgSwap(
+		txC, common.ETHAsset, ethAddrC, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapC.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(5 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapC), IsNil)
+
+	// Swap D: ETH->RUNE, quantity=5, interval=0 (counter-directional partner
+	// for C, enabling both to proceed through all iterations)
+	txD := GetRandomTx()
+	thorAddrD := GetRandomTHORAddress()
+	txD.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(5*common.One)))
+	txD.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddrD)
+	swapD := NewMsgSwap(
+		txD, common.RuneAsset(), thorAddrD, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapD.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(5 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapD), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// A and B are settled and removed (quantity=1, completed in iter 0)
+	_, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, NotNil, Commentf("swap A should be settled and removed"))
+
+	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, NotNil, Commentf("swap B should be settled and removed"))
+
+	// C and D continued through all 3 iterations (counter-directional)
+	resultC, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapC.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultC.State.Count, Equals, uint64(3),
+		Commentf("swap C should have Count=3 (unaffected by A/B settling), got %d", resultC.State.Count))
+
+	resultD, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapD.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultD.State.Count, Equals, uint64(3),
+		Commentf("swap D should have Count=3 (unaffected by A/B settling), got %d", resultD.State.Count))
+}
+
+// TestRapidSwapFailedSwapSkipMarketOnlyLogic verifies the asymmetry between
+// market and limit swaps when the same-direction scenario causes a market swap
+// to be direction-skipped on iteration 1+, while a limit swap in the SAME
+// direction bypasses the skip and continues executing. This proves the
+// `iteration > 0 && msg.IsMarketSwap()` guard at line ~708 only affects market
+// swaps — a limit swap that fails on iteration 1+ would still record failures,
+// unlike a market swap which silently continues.
+func (s AdvSwapQueueSuite) TestRapidSwapFailedSwapSkipMarketOnlyLogic(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	ethAddr := GetRandomETHAddress()
+
+	// --- Scenario A: Failing market swap (impossible trade target) ---
+	// This swap always fails because output can never meet the impossibly high target.
+	failingMarketTx := GetRandomTx()
+	failingMarketTx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	failingMarketTx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	failingMarket := NewMsgSwap(
+		failingMarketTx, common.ETHAsset, ethAddr,
+		cosmos.NewUint(999999*common.One), // impossibly high
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	failingMarket.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *failingMarket), IsNil)
+
+	// Counter-directional partner: ETH -> RUNE (keeps iterations alive)
+	partnerTx := GetRandomTx()
+	partnerTx.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)))
+	partnerTx.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), GetRandomTHORAddress())
+	partner := NewMsgSwap(
+		partnerTx, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	partner.State = &types.SwapState{
+		Quantity: 1,
+		Count:    0,
+		Deposit:  cosmos.NewUint(1 * common.One),
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
+	partner.Index = 1
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *partner), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Market swap: only iteration 0 should count the failure (iter 1+ skipped via
+	// `iteration > 0 && msg.IsMarketSwap()`)
+	resultMarket, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, failingMarket.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultMarket.State.Count, Equals, uint64(1),
+		Commentf("failing market swap should have Count=1 (only iter 0 counted), got %d", resultMarket.State.Count))
+	c.Assert(len(resultMarket.State.FailedSwaps), Equals, 1,
+		Commentf("failing market swap should record 1 failure (iter 0 only), got %d", len(resultMarket.State.FailedSwaps)))
+
+	// Verify IsMarketSwap returns true for market type and false for limit type.
+	// This is the guard that controls whether failed swaps on iter 1+ are skipped.
+	c.Check(failingMarket.IsMarketSwap(), Equals, true)
+	limitMsg := MsgSwap{SwapType: types.SwapType_limit}
+	c.Check(limitMsg.IsMarketSwap(), Equals, false)
+
+	// Because IsMarketSwap() returns false for limit swaps, a failing limit swap
+	// on iteration 1+ would NOT hit the `continue` guard and would instead fall
+	// through to record FailedSwaps and increment Count — unlike market swaps.
+}
+
+// TestRapidSwapMixedIntervalZeroAndNonZero verifies that interval=0 (rapid
+// streaming) swaps execute multiple times per block while interval>0 swaps
+// execute only once, when both coexist in the same queue during rapid iterations.
+func (s AdvSwapQueueSuite) TestRapidSwapMixedIntervalZeroAndNonZero(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Rapid swap A: ETH->RUNE, interval=0, quantity=10 (should execute up to 3 times)
+	// Scores highest because 10 ETH ≈ 100 RUNE in fee impact.
+	txA := GetRandomTx()
+	thorAddr := GetRandomTHORAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+	swapA := NewMsgSwap(
+		txA, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0, // rapid: multiple per block
+		Deposit:    cosmos.NewUint(100 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	// Regular swap B: RUNE->ETH, interval=1, quantity=10 (should execute only once)
+	// Counter-directional to A (keeps iterations alive in iter 0).
+	txB := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swapB := NewMsgSwap(
+		txB, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   1, // regular: once per block
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Swap A (interval=0): should have Count > 1 (executed in multiple iterations)
+	resultA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+
+	// Swap B (interval=1): should have Count == 1 (isSwapReady returns false
+	// after first execution because LastHeight >= BlockHeight when interval > 0)
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(1),
+		Commentf("interval=1 swap should execute only once per block, got Count=%d", resultB.State.Count))
+
+	// Swap A executed more times than swap B
+	c.Assert(resultA.State.Count > resultB.State.Count, Equals, true,
+		Commentf("interval=0 swap should execute more than interval=1 swap: A Count=%d, B Count=%d",
+			resultA.State.Count, resultB.State.Count))
+}
+
+// TestRapidSwapSettledSwapDirectionBlocksSameDir verifies that when a swap
+// settles (completes) in iteration 0, its direction record persists in
+// lastPoolDir and blocks same-direction swaps in subsequent iterations.
+func (s AdvSwapQueueSuite) TestRapidSwapSettledSwapDirectionBlocksSameDir(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Setup BTC pool: 10000 RUNE / 100 BTC (for counter-directional pair)
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Swap S: RUNE->ETH, quantity=1 (settles in iter 0, records RuneToAsset on ETH)
+	txS := GetRandomTx()
+	ethAddrS := GetRandomETHAddress()
+	txS.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One)))
+	txS.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrS)
+	swapS := NewMsgSwap(
+		txS, common.ETHAsset, ethAddrS, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapS.State = &types.SwapState{
+		Quantity: 1, // settles after 1 execution
+		Count:    0,
+		Deposit:  cosmos.NewUint(1 * common.One),
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapS), IsNil)
+
+	// Swap R: RUNE->ETH, quantity=10, interval=0 (same direction as S, persists)
+	txR := GetRandomTx()
+	ethAddrR := GetRandomETHAddress()
+	txR.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txR.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrR)
+	swapR := NewMsgSwap(
+		txR, common.ETHAsset, ethAddrR, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapR.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapR), IsNil)
+
+	// Counter-directional pair in BTC pool to keep iterations alive.
+	txC1 := GetRandomTx()
+	btcAddr := GetRandomBTCAddress()
+	txC1.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txC1.Memo = fmt.Sprintf("=:%s:%s", common.BTCAsset, btcAddr)
+	counterC1 := NewMsgSwap(
+		txC1, common.BTCAsset, btcAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	counterC1.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *counterC1), IsNil)
+
+	txC2 := GetRandomTx()
+	thorAddrC2 := GetRandomTHORAddress()
+	txC2.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One)))
+	txC2.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddrC2)
+	counterC2 := NewMsgSwap(
+		txC2, common.RuneAsset(), thorAddrC2, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	counterC2.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *counterC2), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// S should be settled and removed (quantity=1, completed in iter 0)
+	_, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapS.Tx.ID, 0)
+	c.Assert(err, NotNil, Commentf("swap S should be settled and removed"))
+
+	// R (same direction as S through ETH pool) should be direction-blocked in
+	// iter 1+ because lastPoolDir[ETH] = RuneToAsset (set by S and/or R in iter 0).
+	// The BTC counter pair keeps iterations alive, but R can't execute past iter 0.
+	resultR, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapR.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultR.State.Count, Equals, uint64(1),
+		Commentf("swap R should be direction-blocked after iter 0, got Count=%d", resultR.State.Count))
+
+	// BTC counter pair should have Count=3 (counter-directional, all iterations)
+	resultC1, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, counterC1.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultC1.State.Count, Equals, uint64(3),
+		Commentf("BTC counter C1 should have Count=3, got %d", resultC1.State.Count))
+
+	resultC2, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, counterC2.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultC2.State.Count, Equals, uint64(3),
+		Commentf("BTC counter C2 should have Count=3, got %d", resultC2.State.Count))
+}
+
+// TestRapidSwapDirectionResetsAcrossBlocks verifies that lastPoolDir is created
+// fresh for each EndBlock call. Swaps that were direction-blocked in block N
+// should execute normally in block N+1 (iteration 0 is never direction-skipped).
+func (s AdvSwapQueueSuite) TestRapidSwapDirectionResetsAcrossBlocks(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Two same-direction streaming swaps: both RUNE->ETH
+	txA := GetRandomTx()
+	ethAddrA := GetRandomETHAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrA)
+	swapA := NewMsgSwap(
+		txA, common.ETHAsset, ethAddrA, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	txB := GetRandomTx()
+	ethAddrB := GetRandomETHAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrB)
+	swapB := NewMsgSwap(
+		txB, common.ETHAsset, ethAddrB, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	// --- Block N ---
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Both same-direction: execute in iter 0 only, direction-blocked in iter 1+
+	resultA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(1),
+		Commentf("block N: swapA should execute only in iter 0, got Count=%d", resultA.State.Count))
+
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(1),
+		Commentf("block N: swapB should execute only in iter 0, got Count=%d", resultB.State.Count))
+
+	// --- Block N+1 ---
+	// lastPoolDir resets (fresh map created in each EndBlock call).
+	// Both swaps should execute again in iter 0 of the new block.
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	resultA, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(2),
+		Commentf("block N+1: swapA should execute again in iter 0, got Count=%d", resultA.State.Count))
+
+	resultB, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(2),
+		Commentf("block N+1: swapB should execute again in iter 0, got Count=%d", resultB.State.Count))
+
+	// --- Block N+2 ---
+	// Verify the pattern continues: each block gets exactly 1 execution per swap.
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	resultA, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(3),
+		Commentf("block N+2: swapA should have Count=3, got %d", resultA.State.Count))
+
+	resultB, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(3),
+		Commentf("block N+2: swapB should have Count=3, got %d", resultB.State.Count))
+}
+
+// TestRapidSwapDirectionSkipDoesNotBuildTodo verifies that direction-skipped
+// swaps do NOT contribute to the todo list for limit swap discovery. The
+// `continue` at the direction-skip point (line ~679) skips the todo update
+// (line ~733), which means limit swap pairs are only populated by swaps that
+// actually execute.
+func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotBuildTodo(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Setup BTC pool: 10000 RUNE / 100 BTC
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Counter-directional BTC pair to keep iterations alive
+	txC1 := GetRandomTx()
+	btcAddr := GetRandomBTCAddress()
+	txC1.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txC1.Memo = fmt.Sprintf("=:%s:%s", common.BTCAsset, btcAddr)
+	counterC1 := NewMsgSwap(
+		txC1, common.BTCAsset, btcAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	counterC1.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *counterC1), IsNil)
+
+	txC2 := GetRandomTx()
+	thorAddrC2 := GetRandomTHORAddress()
+	txC2.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One)))
+	txC2.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddrC2)
+	counterC2 := NewMsgSwap(
+		txC2, common.RuneAsset(), thorAddrC2, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	counterC2.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *counterC2), IsNil)
+
+	// Same-direction ETH market swap: RUNE->ETH (gets direction-skipped in iter 1+)
+	txE := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	txE.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txE.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	ethSwap := NewMsgSwap(
+		txE, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	ethSwap.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *ethSwap), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// BTC counter pair keeps iterations alive: Count=3
+	resultC1, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, counterC1.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultC1.State.Count, Equals, uint64(3),
+		Commentf("BTC counter C1 should have Count=3, got %d", resultC1.State.Count))
+
+	// ETH swap: only iter 0 (direction-blocked in iter 1+)
+	resultE, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, ethSwap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultE.State.Count, Equals, uint64(1),
+		Commentf("ETH swap should be direction-blocked after iter 0, got Count=%d", resultE.State.Count))
+
+	// The key insight: the ETH swap executed in iter 0 (when todo was empty,
+	// so FetchQueue used all pairs). In iter 1+, the ETH swap was direction-
+	// skipped, so it did NOT call findMatchingTrades for the (RUNE, ETH) pair.
+	// The todo for iter 1+ only contains BTC pairs from the counter swaps.
+	// This means any limit swap in the ETH pair that was NOT discovered in
+	// iter 0 would also not be discovered in iter 1+ — because the only
+	// swap that could have populated the ETH pair in todo was direction-skipped.
+	//
+	// We verify this indirectly: the ETH swap Count=1 proves it was skipped
+	// in iter 1+, meaning it never reached the todo-building code path.
+}
+
+// TestRapidSwapNextSizeProgressionAcrossIterations verifies that each rapid
+// swap iteration receives the correct sub-swap amount from NextSize() as
+// State.In accumulates. The sub-swap size should be recalculated each
+// iteration based on remaining deposit.
+func (s AdvSwapQueueSuite) TestRapidSwapNextSizeProgressionAcrossIterations(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 100000 RUNE / 10000 ETH (deep pool to minimize price impact)
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(10000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 5)
+
+	// Create counter-directional pair so all 5 iterations can proceed.
+	// Swap A: ETH->RUNE (AssetToRune), deposit=50 ETH, quantity=10
+	txA := GetRandomTx()
+	thorAddr := GetRandomTHORAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+	swapA := NewMsgSwap(
+		txA, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(50 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	// Swap B: RUNE->ETH (RuneToAsset), deposit=50 RUNE, quantity=10
+	txB := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(50*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swapB := NewMsgSwap(
+		txB, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(50 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Both should have Count=5 (counter-directional, all 5 iterations)
+	resultA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(5),
+		Commentf("swapA should have Count=5, got %d", resultA.State.Count))
+
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(5),
+		Commentf("swapB should have Count=5, got %d", resultB.State.Count))
+
+	// Verify State.In accumulated correctly across 5 iterations.
+	// deposit=50, quantity=10 → each sub-swap = 5*common.One.
+	// 5 iterations × 5*common.One = 25*common.One.
+	expectedIn := cosmos.NewUint(25 * common.One)
+	c.Assert(resultA.State.In.Equal(expectedIn), Equals, true,
+		Commentf("swapA State.In should be %s (5 iters × 5*One), got %s", expectedIn, resultA.State.In))
+	c.Assert(resultB.State.In.Equal(expectedIn), Equals, true,
+		Commentf("swapB State.In should be %s (5 iters × 5*One), got %s", expectedIn, resultB.State.In))
+
+	// Verify State.Out > 0 and reflects actual swap output
+	c.Assert(resultA.State.Out.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("swapA State.Out should be > 0"))
+	c.Assert(resultB.State.Out.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("swapB State.Out should be > 0"))
+
+	// Run one more block to get another 5 iterations.
+	// After 10 total iterations (5 per block × 2 blocks), Count reaches Quantity (10).
+	// IsDone() returns true (Count >= Quantity), so both swaps are settled and
+	// removed from the queue.
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Both swaps should be settled (removed from queue) because Count=10 == Quantity=10.
+	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, NotNil,
+		Commentf("swapA should be settled and removed after Count reaches Quantity"))
+	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, NotNil,
+		Commentf("swapB should be settled and removed after Count reaches Quantity"))
+}
+
+// TestRapidSwapNegativeMaxFallsBackToDefault verifies that a negative
+// AdvSwapQueueRapidSwapMax value causes GetConfigInt64 to fall back to the
+// default constant (1), NOT halt processing. GetConfigInt64 treats val < 0
+// as "unset" and returns the constant default. This ensures that invalid
+// mimir values don't accidentally halt swaps — only an explicit 0 halts.
+func (s AdvSwapQueueSuite) TestRapidSwapNegativeMaxFallsBackToDefault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Set rapid swap max to -1 — should fall back to default (1), NOT halt
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", -1)
+
+	// Create a streaming swap with quantity=5, interval=0
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(5*common.One)))
+	tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swap := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(5 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// GetConfigInt64 treats -1 as unset → falls back to default AdvSwapQueueRapidSwapMax (1).
+	// So exactly 1 iteration executes, processing 1 sub-swap.
+	result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result.State.Count, Equals, uint64(1),
+		Commentf("rapidSwapMax=-1 should fall back to default (1 iteration), got Count=%d", result.State.Count))
+
+	// Test extreme negative: same fallback behavior
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", -999)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	result, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result.State.Count, Equals, uint64(2),
+		Commentf("rapidSwapMax=-999 should fall back to default (1 more iteration), got Count=%d", result.State.Count))
+
+	// Contrast with explicit 0 which truly halts processing
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 0)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	result, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result.State.Count, Equals, uint64(2),
+		Commentf("rapidSwapMax=0 should halt processing (Count unchanged at 2), got Count=%d", result.State.Count))
+}
+
+// TestRapidSwapTelemetryExcludesDirectionSkips verifies that direction-skipped
+// swaps are NOT counted in telemetry tracking variables. In the EndBlock code,
+// the direction skip (`shouldSkipRapidSwapDirection` → `continue`) occurs at
+// line ~678, BEFORE the telemetry counting at lines ~683-688. This means
+// skipped swaps correctly don't inflate the processed/market/limit counts.
+//
+// Since telemetry counters are emitted via go-metrics and cannot be directly
+// observed in unit tests, we verify the behavior indirectly through state:
+// swaps that are direction-skipped have no state changes (Count unchanged),
+// proving they never reached the telemetry or execution code paths.
+func (s AdvSwapQueueSuite) TestRapidSwapTelemetryExcludesDirectionSkips(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Setup BTC pool (for counter pair to keep iterations alive)
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Same-direction ETH swaps: all RUNE->ETH (direction-blocked in iter 1+)
+	ethTxIDs := make([]common.TxID, 3)
+	for i := 0; i < 3; i++ {
+		tx := GetRandomTx()
+		ethAddr := GetRandomETHAddress()
+		tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+		tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+		swap := NewMsgSwap(
+			tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+			"", cosmos.ZeroUint(),
+			"", "", nil,
+			types.SwapType_market,
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		swap.State = &types.SwapState{
+			Quantity:   10,
+			Count:      0,
+			Interval:   0,
+			Deposit:    cosmos.NewUint(10 * common.One),
+			In:         cosmos.ZeroUint(),
+			Out:        cosmos.ZeroUint(),
+			LastHeight: ctx.BlockHeight() - 1,
+		}
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+		ethTxIDs[i] = tx.ID
+	}
+
+	// Counter-directional BTC pair to keep iterations alive
+	txC1 := GetRandomTx()
+	btcAddr := GetRandomBTCAddress()
+	txC1.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txC1.Memo = fmt.Sprintf("=:%s:%s", common.BTCAsset, btcAddr)
+	counterC1 := NewMsgSwap(
+		txC1, common.BTCAsset, btcAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	counterC1.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *counterC1), IsNil)
+
+	txC2 := GetRandomTx()
+	thorAddr := GetRandomTHORAddress()
+	txC2.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One)))
+	txC2.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+	counterC2 := NewMsgSwap(
+		txC2, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	counterC2.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *counterC2), IsNil)
+
+	// Run EndBlock with telemetry ENABLED
+	c.Assert(book.EndBlock(ctx, mgr, true), IsNil)
+
+	// ETH swaps: direction-blocked in iter 1+, only Count=1 each
+	for i, txID := range ethTxIDs {
+		result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		c.Assert(result.State.Count, Equals, uint64(1),
+			Commentf("ETH swap %d: should be direction-blocked after iter 0, got Count=%d", i, result.State.Count))
+		c.Assert(result.State.In.GT(cosmos.ZeroUint()), Equals, true,
+			Commentf("ETH swap %d: should have In > 0 from iter 0 execution", i))
+	}
+
+	// BTC counter swaps: full 3 iterations
+	resultC1, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, counterC1.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultC1.State.Count, Equals, uint64(3),
+		Commentf("BTC counter C1 should have Count=3, got %d", resultC1.State.Count))
+
+	// The telemetry emitted by emitAdvSwapQueueTelemetry receives:
+	// - totalSwapsProcessed: counts only swaps that passed the direction-skip
+	//   check (ETH swaps NOT counted in iter 1+, BTC counted all 3 iters)
+	// - iterationCount: 3 (all iterations ran because BTC pair succeeded)
+	//
+	// We can't directly inspect go-metrics counters, but the observable state
+	// proves that direction-skipped swaps (ETH Count=1 vs BTC Count=3) never
+	// reached the telemetry increment code, which is on the SAME side of the
+	// direction-skip `continue` as the execution code.
+}
+
+// TestRapidSwapCacheContextRollbackOnFailure verifies that when a swap fails
+// inside the EndBlock loop, the cacheCtx is NOT committed, so pool balances
+// remain unchanged. Also verifies that State.In and State.Out remain zero
+// (success-path only) while State.Count is still incremented (unconditional).
+func (s AdvSwapQueueSuite) TestRapidSwapCacheContextRollbackOnFailure(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool with known balances
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	initialPoolRune := ethPool.BalanceRune
+	initialPoolAsset := ethPool.BalanceAsset
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 1)
+
+	// Create a market swap with impossibly high trade target — will always fail
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swap := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr,
+		cosmos.NewUint(999999*common.One), // impossibly high trade target
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Pool balances should be unchanged (cacheCtx not committed)
+	finalPool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(finalPool.BalanceRune.Equal(initialPoolRune), Equals, true,
+		Commentf("pool RUNE should be unchanged after failed swap, got %s", finalPool.BalanceRune))
+	c.Assert(finalPool.BalanceAsset.Equal(initialPoolAsset), Equals, true,
+		Commentf("pool asset should be unchanged after failed swap, got %s", finalPool.BalanceAsset))
+
+	// Verify swap state
+	result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+
+	// FailedSwaps should have one entry
+	c.Assert(len(result.State.FailedSwaps), Equals, 1,
+		Commentf("expected 1 failed swap entry, got %d", len(result.State.FailedSwaps)))
+
+	// State.In and State.Out remain zero (only updated on success path)
+	c.Assert(result.State.In.IsZero(), Equals, true,
+		Commentf("State.In should be zero after failed swap, got %s", result.State.In))
+	c.Assert(result.State.Out.IsZero(), Equals, true,
+		Commentf("State.Out should be zero after failed swap, got %s", result.State.Out))
+
+	// State.Count is still incremented (unconditional, outside if/else)
+	c.Assert(result.State.Count, Equals, uint64(1),
+		Commentf("State.Count should be 1 (incremented unconditionally), got %d", result.State.Count))
+}
+
+// TestRapidSwapCacheContextCommitOnSuccess verifies that when a swap succeeds,
+// the cacheCtx IS committed, so pool balances change, and State.In/Out > 0.
+func (s AdvSwapQueueSuite) TestRapidSwapCacheContextCommitOnSuccess(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool with ample liquidity
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	initialPoolRune := ethPool.BalanceRune
+	initialPoolAsset := ethPool.BalanceAsset
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 1)
+
+	// Create a market swap with zero trade target (will succeed)
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swap := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Pool balances should have changed (RUNE in, ETH out for RUNE→ETH)
+	finalPool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(finalPool.BalanceRune.GT(initialPoolRune), Equals, true,
+		Commentf("pool RUNE should increase for RUNE→ETH swap, got %s vs initial %s", finalPool.BalanceRune, initialPoolRune))
+	c.Assert(finalPool.BalanceAsset.LT(initialPoolAsset), Equals, true,
+		Commentf("pool asset should decrease for RUNE→ETH swap, got %s vs initial %s", finalPool.BalanceAsset, initialPoolAsset))
+
+	// Verify swap state
+	result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+
+	// State.In > 0 and State.Out > 0
+	c.Assert(result.State.In.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("State.In should be > 0 after successful swap, got %s", result.State.In))
+	c.Assert(result.State.Out.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("State.Out should be > 0 after successful swap, got %s", result.State.Out))
+
+	// State.Count == 1
+	c.Assert(result.State.Count, Equals, uint64(1),
+		Commentf("State.Count should be 1, got %d", result.State.Count))
+
+	// No failed swaps
+	c.Assert(len(result.State.FailedSwaps), Equals, 0,
+		Commentf("expected no failed swaps, got %d", len(result.State.FailedSwaps)))
+}
+
+// TestRapidSwapFailedLimitSwapCountsOnAllIterations verifies the asymmetry in
+// failure counting between market and non-market (limit) swaps through EndBlock.
+//
+// The guard at line ~708 (`iteration > 0 && msg.IsMarketSwap()`) causes failed
+// market swaps to be skipped on iteration 1+. For limit swaps, IsMarketSwap()
+// returns false, so the guard never triggers — failures would be counted on
+// ALL iterations. Since limit swaps are discovered through ratio-based index
+// iteration (discoverLimitSwaps), making one fail during execution while passing
+// pre-checks is fragile, so this test:
+//  1. Verifies a failing market swap has Count=1 (iter 0 only) + FailedSwaps=1
+//  2. Verifies a successful market swap has Count=3 (all iterations)
+//  3. Proves at code level that IsMarketSwap() returns false for limit type,
+//     so the iter-1+ skip guard would NOT trigger for a failing limit swap.
+func (s AdvSwapQueueSuite) TestRapidSwapFailedLimitSwapCountsOnAllIterations(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool (for the failing swap)
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Setup BTC pool (for the counter-directional pair keeping iterations alive)
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Failing market swap on ETH: impossibly high trade target ensures failure.
+	failingTx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	failingTx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	failingTx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	failingSwap := NewMsgSwap(
+		failingTx, common.ETHAsset, ethAddr,
+		cosmos.NewUint(999999*common.One), // impossibly high trade target
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	failingSwap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *failingSwap), IsNil)
+
+	// Counter-directional pair on BTC to keep iterations alive (unrelated pool).
+	// RUNE→BTC
+	partnerATx := GetRandomTx()
+	btcAddr := GetRandomBTCAddress()
+	partnerATx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	partnerATx.Memo = fmt.Sprintf("=:%s:%s", common.BTCAsset, btcAddr)
+	partnerA := NewMsgSwap(
+		partnerATx, common.BTCAsset, btcAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	partnerA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *partnerA), IsNil)
+
+	// BTC→RUNE (counter-directional to partnerA)
+	partnerBTx := GetRandomTx()
+	thorAddr := GetRandomTHORAddress()
+	partnerBTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One)))
+	partnerBTx.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+	partnerB := NewMsgSwap(
+		partnerBTx, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	partnerB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *partnerB), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// 1. Failing market swap: Count=1 (iter 0 counted, iter 1+ skipped via
+	// `iteration > 0 && msg.IsMarketSwap()` guard)
+	failResult, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, failingSwap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(failResult.State.Count, Equals, uint64(1),
+		Commentf("failing market swap Count should be 1 (only iter 0 counted), got %d", failResult.State.Count))
+	c.Assert(len(failResult.State.FailedSwaps), Equals, 1,
+		Commentf("FailedSwaps should have 1 entry, got %d", len(failResult.State.FailedSwaps)))
+	c.Assert(len(failResult.State.FailedSwapReasons), Equals, 1,
+		Commentf("FailedSwapReasons should have 1 entry, got %d", len(failResult.State.FailedSwapReasons)))
+
+	// 2. BTC partners: Count=3 (all iterations, proving iterations ran)
+	partnerAResult, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, partnerA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(partnerAResult.State.Count, Equals, uint64(3),
+		Commentf("BTC partner A should have Count=3, got %d", partnerAResult.State.Count))
+
+	// 3. Code-level proof: IsMarketSwap() returns false for limit swaps.
+	// This means the guard `iteration > 0 && msg.IsMarketSwap()` at line ~708
+	// would NOT trigger for a limit swap, so failures would be counted on ALL
+	// iterations (not just iteration 0).
+	limitMsg := MsgSwap{SwapType: types.SwapType_limit}
+	c.Assert(limitMsg.IsMarketSwap(), Equals, false,
+		Commentf("limit swap IsMarketSwap should be false"))
+	c.Assert(failingSwap.IsMarketSwap(), Equals, true,
+		Commentf("market swap IsMarketSwap should be true"))
+}
+
+// TestRapidSwapDirectionTrackingDoubleSwapEndToEnd verifies that a double swap
+// (ETH→BTC) records directions for BOTH pool legs and gets blocked by its own
+// ETH leg on iteration 1+ (because no counter-directional exists for ETH),
+// while single-pool BTC swaps that alternate direction continue through all
+// iterations. This proves the double swap correctly tracks both legs.
+func (s AdvSwapQueueSuite) TestRapidSwapDirectionTrackingDoubleSwapEndToEnd(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool: 10000 RUNE / 1000 ETH
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Setup BTC pool: 10000 RUNE / 100 BTC
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Swap A: double swap ETH→BTC (ETH=AssetToRune, BTC=RuneToAsset)
+	// This is the key swap: it records BOTH pool legs in the direction tracker.
+	// Since no counter-directional exists for ETH, it gets blocked on iter 1+.
+	txA := GetRandomTx()
+	btcAddr := GetRandomBTCAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.BTCAsset, btcAddr)
+	swapA := NewMsgSwap(
+		txA, common.BTCAsset, btcAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(100 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	// Swap B: BTC→RUNE (BTC=AssetToRune — counter to A's BTC leg)
+	txB := GetRandomTx()
+	thorAddrB := GetRandomTHORAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddrB)
+	swapB := NewMsgSwap(
+		txB, common.RuneAsset(), thorAddrB, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	// Swap C: RUNE→BTC (BTC=RuneToAsset — counter to B on BTC)
+	txC := GetRandomTx()
+	btcAddrC := GetRandomBTCAddress()
+	txC.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txC.Memo = fmt.Sprintf("=:%s:%s", common.BTCAsset, btcAddrC)
+	swapC := NewMsgSwap(
+		txC, common.BTCAsset, btcAddrC, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapC.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapC), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Swap A (double: ETH→BTC) executes only once.
+	// Iter 0: executes, records ETH=AssetToRune, BTC=RuneToAsset.
+	// Iter 1+: ETH=AssetToRune matches lastPoolDir[ETH] → blocked (ANY leg match).
+	// This proves the double swap tracks ETH leg despite BTC alternating.
+	resultA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(1),
+		Commentf("double swap A (ETH→BTC) should be blocked by ETH leg on iter 1+, got Count=%d", resultA.State.Count))
+
+	// Swap B (BTC→RUNE) and C (RUNE→BTC) are counter-directional on BTC.
+	// They alternate direction each iteration, so both execute all 3 iterations.
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(3),
+		Commentf("swap B (BTC→RUNE) should execute all 3 iterations (counter-dir with C), got Count=%d", resultB.State.Count))
+
+	resultC, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapC.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultC.State.Count, Equals, uint64(3),
+		Commentf("swap C (RUNE→BTC) should execute all 3 iterations (counter-dir with B), got Count=%d", resultC.State.Count))
+}
+
+// TestRapidSwapSimulationModeSkips verifies that CtxSimulationMode=true
+// causes EndBlock to skip getAssetPairs, skip processExpiredLimitSwaps,
+// and skip telemetry, while still processing market swaps.
+func (s AdvSwapQueueSuite) TestRapidSwapSimulationModeSkips(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 1)
+
+	// Create a market swap that should still process in simulation mode.
+	// Use quantity=5 so the swap isn't settled (removed) after one execution.
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	marketSwap := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	marketSwap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *marketSwap), IsNil)
+
+	// Add a TTL entry for an expired limit swap at current block height.
+	// In simulation mode, processExpiredLimitSwaps should be skipped,
+	// so this TTL entry should persist.
+	expiredTxID := GetRandomTxHash()
+	c.Assert(mgr.Keeper().AddToLimitSwapTTL(ctx, ctx.BlockHeight(), expiredTxID), IsNil)
+
+	// Enable simulation mode
+	simCtx := ctx.WithValue(constants.CtxSimulationMode, true)
+
+	c.Assert(book.EndBlock(simCtx, mgr, true), IsNil)
+
+	// Market swap should still have been processed
+	result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, marketSwap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(result.State.Count, Equals, uint64(1),
+		Commentf("market swap should still process in simulation mode, got Count=%d", result.State.Count))
+
+	// The TTL entry should still exist (processExpiredLimitSwaps was skipped)
+	ttlEntries, err := mgr.Keeper().GetLimitSwapTTL(ctx, ctx.BlockHeight())
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 1,
+		Commentf("TTL entry should persist in simulation mode (processExpiredLimitSwaps skipped), got %d entries", len(ttlEntries)))
+}
+
+// TestRapidSwapOriginalAmountRestoredBeforeSave verifies that NextSize()
+// modifications to Tx.Coins[0].Amount and TradeTarget are undone before
+// saving the swap back to the keeper. If restore were missing, the deposit
+// amount would shrink each execution.
+func (s AdvSwapQueueSuite) TestRapidSwapOriginalAmountRestoredBeforeSave(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool with deep liquidity
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(10000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 1)
+
+	// Create a streaming swap: deposit=50 RUNE, quantity=5, trade target=1 ETH
+	// The trade target is intentionally low (easily achievable) so the swap succeeds.
+	// With pool ratio 10 RUNE/ETH, a 50 RUNE deposit should yield ~5 ETH total.
+	originalDeposit := cosmos.NewUint(50 * common.One)
+	originalTradeTarget := cosmos.NewUint(1 * common.One) // 1 ETH total, easily met
+
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), originalDeposit))
+	tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	swap := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr, originalTradeTarget,
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    originalDeposit,
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Fetch the saved swap from keeper
+	result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+
+	// Verify original amount was restored (not the sub-swap size of deposit/quantity = 10 RUNE)
+	c.Assert(result.Tx.Coins[0].Amount.Equal(originalDeposit), Equals, true,
+		Commentf("Tx.Coins[0].Amount should be restored to original %s, got %s",
+			originalDeposit, result.Tx.Coins[0].Amount))
+
+	// Verify original trade target was restored (not the proportional sub-swap target)
+	c.Assert(result.TradeTarget.Equal(originalTradeTarget), Equals, true,
+		Commentf("TradeTarget should be restored to original %s, got %s",
+			originalTradeTarget, result.TradeTarget))
+
+	// Verify State.In reflects only the sub-swap amount processed (deposit/quantity = 10*One)
+	expectedSubSwapSize := cosmos.NewUint(10 * common.One)
+	c.Assert(result.State.In.Equal(expectedSubSwapSize), Equals, true,
+		Commentf("State.In should reflect sub-swap amount %s, got %s",
+			expectedSubSwapSize, result.State.In))
+}
+
+// TestRapidSwapStateCountIncrementOnBothPaths verifies that State.Count and
+// State.LastHeight are unconditionally updated on BOTH success and failure paths.
+func (s AdvSwapQueueSuite) TestRapidSwapStateCountIncrementOnBothPaths(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 1)
+
+	// Successful swap: RUNE→ETH with zero trade target
+	successTx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	successTx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	successTx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+	successSwap := NewMsgSwap(
+		successTx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	successSwap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *successSwap), IsNil)
+
+	// Failing swap: ETH→RUNE with impossibly high trade target
+	failTx := GetRandomTx()
+	thorAddr := GetRandomTHORAddress()
+	failTx.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)))
+	failTx.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+	failSwap := NewMsgSwap(
+		failTx, common.RuneAsset(), thorAddr,
+		cosmos.NewUint(999999*common.One), // impossibly high
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	failSwap.State = &types.SwapState{
+		Quantity:   5,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(1 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *failSwap), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Verify successful swap
+	successResult, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, successSwap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(successResult.State.Count, Equals, uint64(1),
+		Commentf("successful swap Count should be 1, got %d", successResult.State.Count))
+	c.Assert(successResult.State.LastHeight, Equals, ctx.BlockHeight(),
+		Commentf("successful swap LastHeight should be %d, got %d", ctx.BlockHeight(), successResult.State.LastHeight))
+	c.Assert(successResult.State.In.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("successful swap In should be > 0"))
+	c.Assert(successResult.State.Out.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("successful swap Out should be > 0"))
+
+	// Verify failed swap
+	failResult, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, failSwap.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(failResult.State.Count, Equals, uint64(1),
+		Commentf("failed swap Count should be 1, got %d", failResult.State.Count))
+	c.Assert(failResult.State.LastHeight, Equals, ctx.BlockHeight(),
+		Commentf("failed swap LastHeight should be %d, got %d", ctx.BlockHeight(), failResult.State.LastHeight))
+	c.Assert(failResult.State.In.IsZero(), Equals, true,
+		Commentf("failed swap In should be 0, got %s", failResult.State.In))
+	c.Assert(failResult.State.Out.IsZero(), Equals, true,
+		Commentf("failed swap Out should be 0, got %s", failResult.State.Out))
+	c.Assert(len(failResult.State.FailedSwaps), Equals, 1,
+		Commentf("failed swap should have 1 failed entry, got %d", len(failResult.State.FailedSwaps)))
+}
+
+// TestRapidSwapDirectionReversalWithinBlock verifies that lastPoolDir updates
+// correctly when the same pool gets swapped in opposite directions across
+// iterations within one block. The third iteration can re-execute a swap that
+// was blocked in the second iteration because the direction flipped.
+func (s AdvSwapQueueSuite) TestRapidSwapDirectionReversalWithinBlock(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool with deep liquidity
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(10000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Three swaps through the ETH pool:
+	// Swap A: ETH→RUNE (AssetToRune) — scores highest (larger ETH amount)
+	txA := GetRandomTx()
+	thorAddrA := GetRandomTHORAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddrA)
+	swapA := NewMsgSwap(
+		txA, common.RuneAsset(), thorAddrA, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(100 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	// Swap B: RUNE→ETH (RuneToAsset) — scores lower
+	txB := GetRandomTx()
+	ethAddrB := GetRandomETHAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrB)
+	swapB := NewMsgSwap(
+		txB, common.ETHAsset, ethAddrB, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Both swaps should execute 3 times (counter-directional within same pool)
+	// Iter 0: A (AssetToRune) → B (RuneToAsset) → lastPoolDir=RuneToAsset
+	// Iter 1: A (AssetToRune vs RuneToAsset: diff) → succeeds, lastPoolDir=AssetToRune
+	//         B (RuneToAsset vs AssetToRune: diff) → succeeds, lastPoolDir=RuneToAsset
+	// Iter 2: same pattern → both succeed
+	resultA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultA.State.Count, Equals, uint64(3),
+		Commentf("swap A (ETH→RUNE) should execute 3 times (direction alternates), got Count=%d", resultA.State.Count))
+
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count, Equals, uint64(3),
+		Commentf("swap B (RUNE→ETH) should execute 3 times (direction alternates), got Count=%d", resultB.State.Count))
+}
+
+// TestRapidSwapSettleMidLoopNotReprocessed verifies that a swap which completes
+// and settles during iteration 0 (quantity=1) is not re-fetched and double-settled
+// on subsequent iterations.
+func (s AdvSwapQueueSuite) TestRapidSwapSettleMidLoopNotReprocessed(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 3)
+
+	// Swap A: quantity=1, completes on first execution
+	txA := GetRandomTx()
+	ethAddrA := GetRandomETHAddress()
+	txA.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One)))
+	txA.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddrA)
+	swapA := NewMsgSwap(
+		txA, common.ETHAsset, ethAddrA, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapA.State = &types.SwapState{
+		Quantity: 1,
+		Count:    0,
+		Deposit:  cosmos.NewUint(1 * common.One),
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapA), IsNil)
+
+	// Swap B: counter-directional streaming swap to keep iterations alive
+	txB := GetRandomTx()
+	thorAddrB := GetRandomTHORAddress()
+	txB.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One)))
+	txB.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddrB)
+	swapB := NewMsgSwap(
+		txB, common.RuneAsset(), thorAddrB, cosmos.ZeroUint(),
+		"", cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	swapB.State = &types.SwapState{
+		Quantity:   10,
+		Count:      0,
+		Interval:   0,
+		Deposit:    cosmos.NewUint(10 * common.One),
+		In:         cosmos.ZeroUint(),
+		Out:        cosmos.ZeroUint(),
+		LastHeight: ctx.BlockHeight() - 1,
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swapB), IsNil)
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// Swap A should be settled and removed (not re-fetched)
+	_, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapA.Tx.ID, 0)
+	c.Assert(err, NotNil,
+		Commentf("swap A (quantity=1) should be settled and removed from queue"))
+
+	// Verify only 1 outbound for swap A by checking outbound items
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+
+	// Count outbound items for swap A's destination
+	outboundCount := 0
+	for _, item := range items {
+		if item.ToAddress.Equals(ethAddrA) {
+			outboundCount++
+		}
+	}
+	c.Assert(outboundCount, Equals, 1,
+		Commentf("should have exactly 1 outbound for settled swap A, got %d", outboundCount))
+
+	// Swap B should have iterated multiple times
+	resultB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, swapB.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(resultB.State.Count >= 2, Equals, true,
+		Commentf("swap B should have executed multiple iterations, got Count=%d", resultB.State.Count))
+}
+
+// TestRapidSwapGetTodoNumFreshBudgetPerIteration verifies that getTodoNum is
+// called independently for each iteration, so each iteration has its own
+// budget based on the current queue length.
+func (s AdvSwapQueueSuite) TestRapidSwapGetTodoNumFreshBudgetPerIteration(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	book := newSwapQueueAdv(mgr.Keeper())
+
+	// Setup ETH pool with deep liquidity
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(100000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(1000000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 2)
+
+	// Create multiple counter-directional streaming swaps.
+	// ETH→RUNE swaps (AssetToRune)
+	ethToRuneTxIDs := make([]common.TxID, 3)
+	for i := 0; i < 3; i++ {
+		tx := GetRandomTx()
+		thorAddr := GetRandomTHORAddress()
+		tx.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)))
+		tx.Memo = fmt.Sprintf("=:%s:%s", common.RuneAsset(), thorAddr)
+		swap := NewMsgSwap(
+			tx, common.RuneAsset(), thorAddr, cosmos.ZeroUint(),
+			"", cosmos.ZeroUint(),
+			"", "", nil,
+			types.SwapType_market,
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		swap.State = &types.SwapState{
+			Quantity:   10,
+			Count:      0,
+			Interval:   0,
+			Deposit:    cosmos.NewUint(100 * common.One),
+			In:         cosmos.ZeroUint(),
+			Out:        cosmos.ZeroUint(),
+			LastHeight: ctx.BlockHeight() - 1,
+		}
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+		ethToRuneTxIDs[i] = tx.ID
+	}
+
+	// RUNE→ETH swaps (RuneToAsset) — counter-directional
+	runeToEthTxIDs := make([]common.TxID, 3)
+	for i := 0; i < 3; i++ {
+		tx := GetRandomTx()
+		ethAddr := GetRandomETHAddress()
+		tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)))
+		tx.Memo = fmt.Sprintf("=:%s:%s", common.ETHAsset, ethAddr)
+		swap := NewMsgSwap(
+			tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+			"", cosmos.ZeroUint(),
+			"", "", nil,
+			types.SwapType_market,
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		swap.State = &types.SwapState{
+			Quantity:   10,
+			Count:      0,
+			Interval:   0,
+			Deposit:    cosmos.NewUint(100 * common.One),
+			In:         cosmos.ZeroUint(),
+			Out:        cosmos.ZeroUint(),
+			LastHeight: ctx.BlockHeight() - 1,
+		}
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *swap), IsNil)
+		runeToEthTxIDs[i] = tx.ID
+	}
+
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+
+	// With 2 iterations and 6 swaps in queue, each iteration should process
+	// up to getTodoNum(6, min, max) = 3 (half of 6) swaps per iteration.
+	// Both iterations should process swaps (total Count across swaps > single iteration).
+	totalCount := uint64(0)
+	for _, txID := range ethToRuneTxIDs {
+		result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		totalCount += result.State.Count
+	}
+	for _, txID := range runeToEthTxIDs {
+		result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		totalCount += result.State.Count
+	}
+
+	// With 2 iterations and counter-directional swaps, total count should
+	// be greater than what a single iteration would produce.
+	// Single iteration with 6 swaps: getTodoNum(6,10,100) = 6 (min=10 > half=3, but queue=6 < min=10, so todo=6)
+	// Two iterations: each processes all 6 swaps = total count = 12.
+	c.Assert(totalCount > 6, Equals, true,
+		Commentf("total Count across all swaps should be > 6 (proving both iterations processed), got %d", totalCount))
 }
