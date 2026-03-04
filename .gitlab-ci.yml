@@ -158,6 +158,8 @@ lint:
     - if: $CI == "true"
       when: on_success
   stage: test
+  # limit to 1 concurrent execution as shared trunk cache can cause internal error
+  resource_group: trunk-lint
   variables:
     XDG_CACHE_HOME: /trunk-cache
   before_script:
