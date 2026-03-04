@@ -26,7 +26,7 @@ sub   cv25519 2025-12-15 [E] [expires: 2028-12-14]
 
 ## Categories
 
-Critical - any bug that could lead to loss of funds will pay out 10% of the value at risk, up to a cap of $1MM.
+Critical - any bug that could lead to loss of funds will pay out 10% of the value at risk, up to a cap of $100k.
 
 Any other type of bug will be considered on the normal spectrum of low/medium/high, and the bounty will be determined
 by a function of the total impact to the network. For example, a bug that crashes nodes and corrupts state will be
