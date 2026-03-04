@@ -2,16 +2,19 @@ package core
 
 import (
 	"fmt"
+	"math/big"
 	rand "math/rand/v2"
 	"strconv"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -57,16 +60,6 @@ func NewSwapMemolessActor(from, to common.Asset, memolessType MemolessType, rng 
 
 	// generate swap quote
 	a.Ops = append(a.Ops, a.getQuote)
-
-	// TODO: support tokens
-	if !from.IsGasAsset() {
-		log.Fatal().Msg("simulation only implemented for gas assets")
-	}
-
-	// TODO: support assets with less than 1e8 precision
-	if from.Chain.GetGasAssetDecimal() != 8 {
-		log.Fatal().Msg("simulation only implemented for assets with at least 1e8 precision")
-	}
 
 	switch memolessType {
 	case MemolessTypeRef:
@@ -229,10 +222,23 @@ func (a *SwapMemolessActor) prepareSwapMemolessByRef(config *OpConfig) OpResult 
 func (a *SwapMemolessActor) prepareSwapMemolessByAmount(config *OpConfig) OpResult {
 	// encode the memoless ref in the amount
 	modulus := a.amountModulus()
-	a.Log().Info().Uint64("modulus", modulus).Msg("preparing memoless by amount")
+	scalingDivisor := a.amountScalingDivisor()
+	a.Log().Info().
+		Uint64("modulus", modulus).
+		Uint64("scaling_divisor", scalingDivisor).
+		Msg("preparing memoless by amount")
 	before := a.swapAmount
-	a.swapAmount = a.swapAmount.Sub(a.swapAmount.Mod(sdkmath.NewUint(modulus))) // clear last digits
-	a.swapAmount = a.swapAmount.Add(sdkmath.NewUint(a.memolessRef))
+
+	if scalingDivisor > 1 {
+		normalizedAmount := a.swapAmount.QuoUint64(scalingDivisor)
+		normalizedAmount = normalizedAmount.Sub(normalizedAmount.Mod(sdkmath.NewUint(modulus))) // clear last digits
+		normalizedAmount = normalizedAmount.Add(sdkmath.NewUint(a.memolessRef))
+		a.swapAmount = normalizedAmount.MulUint64(scalingDivisor)
+	} else {
+		a.swapAmount = a.swapAmount.Sub(a.swapAmount.Mod(sdkmath.NewUint(modulus))) // clear last digits
+		a.swapAmount = a.swapAmount.Add(sdkmath.NewUint(a.memolessRef))
+	}
+
 	a.Log().Info().
 		Stringer("before", before).
 		Stringer("after", a.swapAmount).
@@ -249,6 +255,10 @@ func (a *SwapMemolessActor) prepareSwapMemolessByAmount(config *OpConfig) OpResu
 }
 
 func (a *SwapMemolessActor) signSwap(config *OpConfig) OpResult {
+	if a.from.Chain.IsEVM() && !a.from.IsGasAsset() {
+		return a.signTokenSwap()
+	}
+
 	// get inbound address
 	inboundAddr, _, err := thornode.GetInboundAddress(a.from.Chain)
 	if err != nil {
@@ -271,6 +281,102 @@ func (a *SwapMemolessActor) signSwap(config *OpConfig) OpResult {
 	a.signedSwap, err = client.SignTx(tx)
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to sign tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	return OpResult{
+		Continue: true,
+	}
+}
+
+func (a *SwapMemolessActor) signTokenSwap() OpResult {
+	// get router address
+	inboundAddr, routerAddr, err := thornode.GetInboundAddress(a.from.Chain)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to get inbound address")
+		return OpResult{
+			Continue: false,
+		}
+	}
+	if routerAddr == nil {
+		a.Log().Error().Msg("failed to get router address")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	token, ok := evm.Tokens(a.from.Chain)[a.from]
+	if !ok {
+		a.Log().Error().Stringer("asset", a.from).Msg("failed to find token metadata for source asset")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	// convert amount to token decimals
+	factor := sdkmath.NewUintFromBigInt(big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil))
+	tokenAmount := a.swapAmount.Mul(factor)
+	tokenAmount = tokenAmount.QuoUint64(common.One)
+
+	iClient := a.user.ChainClients[a.from.Chain]
+	client, ok := iClient.(*evm.Client)
+	if !ok {
+		a.Log().Error().Msg("failed to get evm client")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	// approve the router
+	eRouterAddr := ecommon.HexToAddress(routerAddr.String())
+	approveTx := SimContractTx{
+		Chain:    a.from.Chain,
+		Contract: common.Address(token.Address),
+		ABI:      evm.ERC20ABI(),
+		Method:   "approve",
+		Args:     []interface{}{eRouterAddr, tokenAmount.BigInt()},
+	}
+
+	signedApprove, err := client.SignContractTx(approveTx)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to sign router approve tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	approveTxID, err := client.BroadcastTx(signedApprove)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to broadcast router approve tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+	a.Log().Info().Str("txid", approveTxID).Msg("broadcasted router approve tx")
+
+	// call depositWithExpiry with memoless memo (or empty memo for amount mode)
+	expiry := time.Now().Add(time.Hour).Unix()
+	eInboundAddr := ecommon.HexToAddress(inboundAddr.String())
+	eTokenAddr := ecommon.HexToAddress(token.Address)
+	depositTx := SimContractTx{
+		Chain:    a.from.Chain,
+		Contract: *routerAddr,
+		ABI:      evm.RouterABI(),
+		Method:   "depositWithExpiry",
+		Args: []interface{}{
+			eInboundAddr,
+			eTokenAddr,
+			tokenAmount.BigInt(),
+			a.swapMemo,
+			big.NewInt(expiry),
+		},
+	}
+
+	a.signedSwap, err = client.SignContractTx(depositTx)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to sign token memoless swap tx")
 		return OpResult{
 			Continue: false,
 		}
@@ -315,4 +421,30 @@ func (a *SwapMemolessActor) amountModulus() uint64 {
 		modulus *= 10
 	}
 	return modulus
+}
+
+func (a *SwapMemolessActor) amountScalingDivisor() uint64 {
+	// ExtractReferenceFromAmount normalizes decimals < 1e8 by dividing the observed
+	// amount before modulo reference extraction. Mirror that behavior here so
+	// amount-encoded references can be generated for low-decimal gas assets and tokens.
+	decimals := int(common.THORChainDecimals)
+	if a.from.IsGasAsset() {
+		decimals = int(a.from.Chain.GetGasAssetDecimal())
+	} else if a.from.Chain.IsEVM() {
+		token, ok := evm.Tokens(a.from.Chain)[a.from]
+		if !ok {
+			return 1
+		}
+		decimals = token.Decimals
+	}
+
+	if decimals >= int(common.THORChainDecimals) {
+		return 1
+	}
+
+	divisor := uint64(1)
+	for i := decimals; i < int(common.THORChainDecimals); i++ {
+		divisor *= 10
+	}
+	return divisor
 }

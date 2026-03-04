@@ -18,15 +18,8 @@ func MemolessSwaps(rng *rand.Rand) *Actor {
 	a := NewActor("Memoless Swaps", rng)
 
 	// memoless swaps
-	simChains1e8 := []common.Chain{}
-	for _, chain := range acommon.SimChains {
-		if chain.GetGasAssetDecimal() == 8 {
-			simChains1e8 = append(simChains1e8, chain)
-		}
-	}
-
 	for _, t := range []core.MemolessType{core.MemolessTypeRef, core.MemolessTypeAmount} {
-		for _, chain := range simChains1e8 {
+		for _, chain := range acommon.SimChains {
 			// choose a random (other) pool to swap to
 			j := rng.IntN(len(acommon.SimChains))
 			for chain.Equals(acommon.SimChains[j]) {
@@ -34,6 +27,20 @@ func MemolessSwaps(rng *rand.Rand) *Actor {
 			}
 			a.Children[core.NewSwapMemolessActor(chain.GetGasAsset(), acommon.SimChains[j].GetGasAsset(), t, rng)] = true
 		}
+		// Add non-gas EVM token sources to exercise memoless router flow.
+		for _, chain := range acommon.SimChains {
+			if !chain.IsEVM() {
+				continue
+			}
+			for asset := range evm.Tokens(chain) {
+				if asset.IsGasAsset() {
+					continue
+				}
+				toAsset := acommon.SimChains[rng.IntN(len(acommon.SimChains))].GetGasAsset()
+				a.Children[core.NewSwapMemolessActor(asset, toAsset, t, rng)] = true
+			}
+		}
+
 	}
 
 	return a

@@ -1050,6 +1050,11 @@ func ExtractReferenceFromAmount(ctx cosmos.Context, mgr Manager, asset common.As
 			return "", err
 		}
 		decimals = pool.Decimals
+		if decimals == 0 {
+			// For non-gas assets, a pool decimal value of zero is used as a sentinel
+			// for THORChain default precision (1e8), not literal 0-decimal precision.
+			decimals = int64(common.THORChainDecimals)
+		}
 	}
 
 	baseEnd := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnRefCount)

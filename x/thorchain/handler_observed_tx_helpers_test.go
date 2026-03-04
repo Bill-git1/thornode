@@ -80,6 +80,26 @@ func (s *HandlerObservedTxHelpersSuite) TestGenerateReferenceMemoIDWithDifferent
 	c.Assert(refID, Equals, "78000") // 123456780000 / 10 = 12345678000, last 5 digits = 78000
 }
 
+func (s *HandlerObservedTxHelpersSuite) TestGenerateReferenceMemoIDWithZeroPoolDecimals(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// For non-gas assets, pool decimals of zero means THORChain default precision (1e8).
+	asset := common.Asset{Chain: common.ETHChain, Symbol: "TOKEN", Ticker: "TOKEN", Synth: false}
+	pool := NewPool()
+	pool.Asset = asset
+	pool.Decimals = 0
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	tx := GetRandomObservedTx()
+	tx.Tx.Coins = common.NewCoins(common.NewCoin(asset, cosmos.NewUint(626500002)))
+
+	refID, err := generateReferenceMemoID(ctx, mgr, asset, tx)
+	c.Assert(err, IsNil)
+	c.Assert(refID, Equals, "00002")
+}
+
 func (s *HandlerObservedTxHelpersSuite) TestGenerateReferenceMemoIDErrorCases(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
