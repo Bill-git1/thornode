@@ -87,13 +87,6 @@ func (qs queryServer) queryReferenceMemoPreflight(ctx cosmos.Context, req *types
 		return nil, fmt.Errorf("memoless transactions are currently disabled")
 	}
 
-	// Only gas assets are eligible for memoless deposits; non-gas assets
-	// (e.g. ERC20 tokens) require the chain router and cannot be sent
-	// directly to Asgard vaults without a memo.
-	if !asset.IsGasAsset() {
-		return nil, fmt.Errorf("asset %s is not eligible for memoless transactions, only gas assets are supported", asset)
-	}
-
 	amount, err := cosmos.ParseUint(req.Amount)
 	if err != nil {
 		return nil, fmt.Errorf("invalid amount: %w", err)

@@ -38,36 +38,60 @@ func (s *QuerierReferenceMemoSuite) TestPreflightGasAssetEligible(c *C) {
 	c.Assert(resp.CanRegister, Equals, true)
 }
 
-func (s *QuerierReferenceMemoSuite) TestPreflightNonGasAssetIneligible(c *C) {
+func (s *QuerierReferenceMemoSuite) TestPreflightNonGasAssetEligible(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	qs := &queryServer{mgr: mgr}
 
 	// Enable memoless transactions
 	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
 
-	// ERC20 token (non-gas asset) should fail preflight
-	_, err := qs.queryReferenceMemoPreflight(ctx, &types.QueryReferenceMemoPreflightRequest{
-		Asset:  "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
+	// ERC20 token (non-gas asset) should pass preflight when pool exists.
+	asset, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = asset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Decimals = 6
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	resp, err := qs.queryReferenceMemoPreflight(ctx, &types.QueryReferenceMemoPreflightRequest{
+		Asset:  asset.String(),
 		Amount: "100012345",
 	})
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Matches, ".*not eligible for memoless transactions.*")
+	c.Assert(err, IsNil)
+	c.Assert(resp, NotNil)
+	c.Assert(resp.Available, Equals, true)
+	c.Assert(resp.CanRegister, Equals, true)
 }
 
-func (s *QuerierReferenceMemoSuite) TestPreflightSynthAssetIneligible(c *C) {
+func (s *QuerierReferenceMemoSuite) TestPreflightSynthAssetEligible(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	qs := &queryServer{mgr: mgr}
 
 	// Enable memoless transactions
 	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
 
-	// Synth asset should fail preflight
-	_, err := qs.queryReferenceMemoPreflight(ctx, &types.QueryReferenceMemoPreflightRequest{
+	// Synth asset should pass preflight when pool exists.
+	asset, err := common.NewAsset("BTC/BTC")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = asset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Decimals = 8
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	resp, err := qs.queryReferenceMemoPreflight(ctx, &types.QueryReferenceMemoPreflightRequest{
 		Asset:  "BTC/BTC",
 		Amount: "100012345",
 	})
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Matches, ".*not eligible for memoless transactions.*")
+	c.Assert(err, IsNil)
+	c.Assert(resp, NotNil)
+	c.Assert(resp.Available, Equals, true)
+	c.Assert(resp.CanRegister, Equals, true)
 }
 
 func (s *QuerierReferenceMemoSuite) TestPreflightMemolessHalted(c *C) {
