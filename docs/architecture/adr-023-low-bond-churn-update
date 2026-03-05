@@ -1,0 +1,48 @@
+# ADR 023: LOW BOND CHURN UPDATE
+
+## Changelog
+
+- 31/01/2026: initial proposal
+
+## Status
+
+Proposed
+
+## Context
+
+Currently, three nodes are forced to churn out on every churn event: the oldest node, the worst-performing node, and the lowest-bonded node.
+
+Churning out the oldest and worst-performing nodes generally improves the health of the network. The inclusion of the lowest-bonded node is intended to prevent capture of the active set while maximising bonded RUNE.
+
+When the network is at the node cap and a higher-bonded node is waiting to churn in, removing the lowest-bonded node increases the total active bond and aligns with this intent.
+
+However, when the network is below the node cap, removing the lowest-bonded node simply reduces the amount of active bond without improving decentralisation or security.
+
+Since this mechanism was introduced, the network has changed substantially. Nodes are now commonly funded via external bond providers rather than entirely by operators. As a result, newer nodes typically enter with lower bond and are frequently churned out, making it harder for new operators to attract bond and become established.
+
+
+## Decision
+
+TBC
+
+## Detailed Design
+
+The change would be minor.
+Unless the network is at the node cap, then only the oldest and worst performing nodes be churned out.
+If the network reaches the node cap, the lowest bond node is churned out in addition to the oldest and worst.
+
+## Consequences
+
+### Positive
+
+- Prevents unnecessary reduction of active bond when the network is below the node cap.
+- Makes it easier for new operators to attract bond providers and become established.
+- Maintains protection against active-set capture when the network is at capacity.
+
+### Negative
+
+- Established operators could crowd out the network with minimum bonded nodes.
+- This would then return the network to the current behaviour.
+
+### Neutral
+
