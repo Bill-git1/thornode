@@ -121,20 +121,26 @@ func processSolvencyAttestation(
 
 	isInsolvent := insolvencyCheck(ctx, mgr, vault, voter.Coins, voter.Chain)
 
-	// If insolvent and already halted, leave the Mimir key unchanged as a record of since when it's been insolvent.
-	// If insolvent and unhalted, halt the chain.
-	if isInsolvent && haltChain <= 0 {
-		k.SetMimir(ctx, haltChainKey, ctx.BlockHeight())
-		mimirEvent := NewEventSetMimir(strings.ToUpper(haltChainKey), strconv.FormatInt(ctx.BlockHeight(), 10))
-		if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
-			ctx.Logger().Error("fail to emit set_mimir event", "error", err)
+	// If insolvent: halt the chain if unhalted, or refresh the halt height if already halted
+	// from an earlier block. Refreshing the halt height prevents a different solvent vault
+	// from unhalting the chain while this vault remains insolvent.
+	if isInsolvent {
+		if haltChain <= 0 {
+			k.SetMimir(ctx, haltChainKey, ctx.BlockHeight())
+			mimirEvent := NewEventSetMimir(strings.ToUpper(haltChainKey), strconv.FormatInt(ctx.BlockHeight(), 10))
+			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
+				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
+			}
+			ctx.Logger().Info("chain is insolvent, halt until it is resolved", "chain", voter.Chain)
+		} else if haltChain > 1 && haltChain < ctx.BlockHeight() {
+			// Refresh halt height to current block so a solvent vault can't unhalt next block
+			k.SetMimir(ctx, haltChainKey, ctx.BlockHeight())
 		}
-		ctx.Logger().Info("chain is insolvent, halt until it is resolved", "chain", voter.Chain)
 	}
 
 	// If not insolvent and the chain is halted from an earlier block height, unhalt the chain.
-	// Even if a different vault is still insolvent, it can re-halt the chain in this or a later block.
-	// (An alternative approach would be for if an insolvent vault always updated a lower-height Mimir key to the current height.)
+	// A different insolvent vault on the same chain will have refreshed haltChain to the current
+	// block, preventing this unhalt via the guard at line 106 (haltChain >= ctx.BlockHeight()).
 	if !isInsolvent && haltChain > 1 {
 		// if the chain was halted by previous solvency checker, auto unhalt it
 		ctx.Logger().Info("auto un-halt", "chain", voter.Chain, "previous halt height", haltChain, "current block height", ctx.BlockHeight())
@@ -157,6 +163,16 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 		ctx.Logger().Error("fail to exclude pending outbound from vault, assuming insolvent", "error", err)
 		return true
 	}
+	// Build a map of original vault coin amounts so we can detect SafeSub clamping.
+	// When pending outbounds exceed the vault balance, SafeSub clamps to zero and
+	// the adjusted coin is empty. In that case, fall back to the original vault amount
+	// so the solvency check can still detect theft.
+	originalAmounts := make(map[string]cosmos.Uint)
+	for _, c := range vault.Coins {
+		if c.Asset.Chain.Equals(chain) && !c.IsEmpty() {
+			originalAmounts[c.Asset.String()] = c.Amount
+		}
+	}
 	// Get the permitted solvency gap in RUNE (converted from USD)
 	permittedGapInRune := mgr.Keeper().DollarConfigInRune(ctx, constants.PermittedSolvencyGapUSD)
 	// Use the coin in vault as baseline , wallet can have more coins than vault
@@ -164,12 +180,22 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 		if !c.Asset.Chain.Equals(chain) {
 			continue
 		}
+		// If adjusted amount is zero but original was non-zero, pending outbounds
+		// exceeded the vault balance. Use the original amount as a fallback so that
+		// insolvency (e.g. wallet drained to zero) is not silently bypassed.
 		if c.IsEmpty() {
-			continue
+			origAmount, ok := originalAmounts[c.Asset.String()]
+			if !ok || origAmount.IsZero() {
+				continue
+			}
+			ctx.Logger().Info("pending outbounds exceed vault balance, using original for solvency check", "asset", c.Asset.String(), "original", origAmount.String())
+			c.Amount = origAmount
 		}
 		walletCoin := coins.GetCoin(c.Asset)
 
-		// Compute the gap between vault and wallet balances
+		// Compute the gap between vault and wallet balances.
+		// When walletCoin is absent (IsEmpty), the full vault amount is the gap,
+		// which then goes through the same RUNE-value threshold check as partial gaps.
 		gap := cosmos.ZeroUint()
 		if walletCoin.IsEmpty() {
 			gap = c.Amount
@@ -188,11 +214,12 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 			return true
 		}
 		gapInRune := pool.AssetValueInRune(gap)
-		// If pool has no liquidity, we can't value the gap - skip this asset
-		// (this allows solvency checks to continue for chains with empty pools)
-		if gapInRune.IsZero() {
-			ctx.Logger().Info("cannot value gap for solvency check (pool has no liquidity)", "asset", c.Asset.String(), "gap", gap.String())
-			continue
+		// If pool has no liquidity, we can't value the gap in RUNE.
+		// Treat as insolvent to be conservative: a zero-liquidity pool should not
+		// allow a real insolvency to go undetected.
+		if gapInRune.IsZero() && !gap.IsZero() {
+			ctx.Logger().Info("cannot value gap for solvency check (pool has no liquidity), treating as insolvent", "asset", c.Asset.String(), "gap", gap.String())
+			return true
 		}
 		if gapInRune.GT(permittedGapInRune) {
 			ctx.Logger().Info("vault insolvent", "asset", c.Asset.String(), "vault amount", c.Amount.String(), "wallet amount", walletCoin.Amount.String(), "gap", gap.String(), "gap in rune", gapInRune.String(), "permitted gap in rune", permittedGapInRune.String())
@@ -203,9 +230,13 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 }
 
 func excludePendingOutboundFromVault(ctx cosmos.Context, mgr Manager, vault Vault) (Vault, error) {
-	// Deep copy vault coins to avoid mutating the shared backing array
+	// Deep copy vault coins to avoid mutating the caller's slice backing array.
+	// Element-by-element copy ensures the pass-by-value contract is honored,
+	// even if future code modifies Amount in-place rather than via SafeSub.
 	coinsCopy := make(common.Coins, len(vault.Coins))
-	copy(coinsCopy, vault.Coins)
+	for i, c := range vault.Coins {
+		coinsCopy[i] = common.NewCoin(c.Asset, c.Amount)
+	}
 	vault.Coins = coinsCopy
 
 	// go back SigningTransactionPeriod blocks to see whether there are outstanding tx, the vault need to send out

@@ -49,6 +49,9 @@ func (h SwitchHandler) validate(ctx cosmos.Context, msg MsgSwitch) error {
 }
 
 func (h SwitchHandler) handle(ctx cosmos.Context, msg MsgSwitch) error {
+	// Mint the full amount as native tokens. Switch assets are tokens (not gas assets),
+	// so the outbound burn gas is subsidized by the gas asset pool—no outbound fee
+	// deduction from the switch amount is needed.
 	addr, err := h.mgr.SwitchManager().Switch(ctx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
 	if err != nil {
 		ctx.Logger().Error("fail to handle switch", "error", err)

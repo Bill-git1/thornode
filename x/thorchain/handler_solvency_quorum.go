@@ -86,7 +86,10 @@ func (h SolvencyQuorumHandler) handle(ctx cosmos.Context, msg types.MsgSolvencyQ
 		}
 
 		if err := processSolvencyAttestation(ctx, h.mgr, &voter, accAddr, active, s, false); err != nil {
-			ctx.Logger().Error("fail to process solvency attestation", "error", err)
+			// Propagate the error to prevent persisting a voter in inconsistent state.
+			// This matches the non-quorum handler (handler_solvency.go) and network fee
+			// quorum handler behavior, causing state rollback via CacheContext.
+			return nil, fmt.Errorf("fail to process solvency attestation: %w", err)
 		}
 	}
 

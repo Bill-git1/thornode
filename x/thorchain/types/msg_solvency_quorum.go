@@ -30,6 +30,10 @@ func NewMsgSolvencyQuorum(solvency *common.QuorumSolvency, signer cosmos.AccAddr
 	}, nil
 }
 
+// MaxSolvencyQuorumAttestations is the upper bound on attestations per message.
+// This bounds the CPU cost of signature verification during block processing.
+const MaxSolvencyQuorumAttestations = 300
+
 // ValidateBasic implements HasValidateBasic
 // ValidateBasic is now ran in the message service router handler for messages that
 // used to be routed using the external handler and only when HasValidateBasic is implemented.
@@ -37,6 +41,13 @@ func NewMsgSolvencyQuorum(solvency *common.QuorumSolvency, signer cosmos.AccAddr
 func (m *MsgSolvencyQuorum) ValidateBasic() error {
 	if m.QuoSolvency == nil || m.QuoSolvency.Solvency == nil {
 		return cosmos.ErrUnknownRequest("QuoSolvency and Solvency cannot be nil")
+	}
+	attestations := len(m.QuoSolvency.Attestations)
+	if attestations == 0 {
+		return cosmos.ErrUnknownRequest("no attestations found")
+	}
+	if attestations > MaxSolvencyQuorumAttestations {
+		return cosmos.ErrUnknownRequest(fmt.Sprintf("too many attestations: %d, max %d", attestations, MaxSolvencyQuorumAttestations))
 	}
 	s := m.QuoSolvency.Solvency
 	if s.Id.IsEmpty() {
