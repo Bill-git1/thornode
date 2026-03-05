@@ -247,9 +247,9 @@ count: 1
 type: check # Check pooler balance after withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
-  - .result[] | select(.denom == "rune")|.amount|tonumber == (${POOLER_INITIAL_BALANCE}+${POL_VALUE}/2+${PROVIDERS_PNL}/2-${GAS=2000000} | ceil)
+  - ((${PROVIDERS_PNL} * ((${POL_VALUE}/2+${PROVIDERS_PNL}) / (${POL_VALUE}+${PROVIDERS_PNL})) | floor) / 2 | floor) as $aff | .result[] | select(.denom == "rune")|.amount|tonumber == ${POOLER_INITIAL_BALANCE}+${POL_VALUE}/2+${PROVIDERS_PNL}-$aff-${GAS=2000000}
 ---
 type: check # Check affiliate balance after withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[] | select(.denom == "rune")|.amount|tonumber == (${PROVIDERS_PNL}/2 | floor) # 50% of PNL
+  - .result[] | select(.denom == "rune")|.amount|tonumber == ((${PROVIDERS_PNL} * ((${POL_VALUE}/2+${PROVIDERS_PNL}) / (${POL_VALUE}+${PROVIDERS_PNL})) | floor) / 2 | floor) # 50% of proportional yield

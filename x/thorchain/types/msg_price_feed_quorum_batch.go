@@ -35,6 +35,9 @@ func (m *MsgPriceFeedQuorumBatch) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest("no price feeds provided")
 	}
 	for i := range m.QuoPriceFeeds {
+		if m.QuoPriceFeeds[i] == nil || m.QuoPriceFeeds[i].PriceFeed == nil {
+			return cosmos.ErrUnknownRequest("nil price feed")
+		}
 		pf := m.QuoPriceFeeds[i].PriceFeed
 		if pf.Time <= 0 {
 			return cosmos.ErrUnknownRequest("block height is negative or zero")

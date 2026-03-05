@@ -108,12 +108,18 @@ func (h RunePoolWithdrawHandler) handle(ctx cosmos.Context, msg MsgRunePoolWithd
 	if !msg.AffiliateBasisPoints.IsZero() {
 		totalUnits := runePool.TotalUnits()
 		currentValue := common.GetSafeShare(runeProvider.Units, totalUnits, totalRunePoolValue)
-		withdrawShare := common.GetSafeShare(msg.BasisPoints, maxBps, runeProvider.Units)
-		depositRemaining := common.SafeSub(runeProvider.DepositAmount, runeProvider.WithdrawAmount)
-		withdrawPrincipal := common.GetSafeShare(withdrawShare, runeProvider.Units, depositRemaining)
 		withdrawValue := common.GetSafeShare(msg.BasisPoints, maxBps, currentValue)
-		currentYield := common.SafeSub(withdrawValue, withdrawPrincipal)
-		affiliateAmount = common.GetSafeShare(msg.AffiliateBasisPoints, maxBps, currentYield)
+
+		// Compute yield proportionally using lifetime PnL to avoid overcounting.
+		// The previous approach (SafeSub(DepositAmount, WithdrawAmount) as remaining
+		// principal) is incorrect because WithdrawAmount includes yield, causing
+		// depositRemaining to understate remaining principal after profitable
+		// partial withdrawals. Instead, distribute the lifetime PnL proportionally
+		// across total value generated (current value + all past withdrawals).
+		totalValue := currentValue.Add(runeProvider.WithdrawAmount)
+		lifetimePnL := common.SafeSub(totalValue, runeProvider.DepositAmount)
+		withdrawYield := common.GetSafeShare(lifetimePnL, totalValue, withdrawValue)
+		affiliateAmount = common.GetSafeShare(msg.AffiliateBasisPoints, maxBps, withdrawYield)
 	}
 
 	// compute withdraw amount

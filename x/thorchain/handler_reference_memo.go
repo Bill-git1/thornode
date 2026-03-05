@@ -140,8 +140,14 @@ func (h ReferenceMemoHandler) nextReference(ctx cosmos.Context, asset common.Ass
 	// We allow looping to the start once to search all references,
 	// but return empty if we reach the end a second time (no available refs).
 	reachedEnd := false
-	// Cap iterations to end (which equals the total number of references)
+	// Cap iterations to the lesser of end and a hard limit, decoupling the
+	// loop bound from the full governance parameter range to prevent DoS
+	// from excessively large MemolessTxnRefCount values.
+	const maxRefScan int64 = 100_000
 	maxIter := end
+	if maxIter > maxRefScan {
+		maxIter = maxRefScan
+	}
 	for iter := int64(0); iter < maxIter; iter++ {
 		if pos > end {
 			pos = 1
