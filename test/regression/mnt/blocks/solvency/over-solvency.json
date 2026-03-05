@@ -338,7 +338,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "A5B90F592951945E65530ED8B487F15DEE35BBEFF5C8368EE963D3D6BA702008",
+      "data_hash": "CF3C82241E459467A77FD426F259AE3996954A56E747788D6366667E3F5173E2",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -411,7 +411,7 @@
     ],
     "txs": [
       {
-        "hash": "F637504F25B5306F6709FDA05555F2EC7EE697E24D9FB309A0E2C88D02D62648",
+        "hash": "957CEC69D02EBA2A7F063C427892F520525FE1140DB7836031A0B58C01E2081E",
         "tx": {
           "auth_info": {
             "fee": {
@@ -442,7 +442,7 @@
             "messages": [
               {
                 "@type": "/types.MsgMimir",
-                "key": "OverSolvencyToReserveBps",
+                "key": "OverSolvencyToTreasuryBps",
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
                 "value": "0"
               }
@@ -453,7 +453,7 @@
             "unordered": false
           },
           "signatures": [
-            "DmJT2o/+yW5MIok1ssvdeuZQIqrSfRJwYr21NUDP4G83rbR4nEtGqgmY6VpvEKuP50EstRz8jpTfJuDJE6qocw=="
+            "tETrKqWZrG0czZYz1JPLT5BrskXqELqchSBM9vEMMD9T+UaqarTRce5wSwQsi1XnelwT16czGSmiSpZYgd3ufw=="
           ]
         },
         "result": {
@@ -466,7 +466,7 @@
               "type": "tx"
             },
             {
-              "signature": "DmJT2o/+yW5MIok1ssvdeuZQIqrSfRJwYr21NUDP4G83rbR4nEtGqgmY6VpvEKuP50EstRz8jpTfJuDJE6qocw==",
+              "signature": "tETrKqWZrG0czZYz1JPLT5BrskXqELqchSBM9vEMMD9T+UaqarTRce5wSwQsi1XnelwT16czGSmiSpZYgd3ufw==",
               "type": "tx"
             },
             {
@@ -502,7 +502,7 @@
             },
             {
               "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "key": "OVERSOLVENCYTORESERVEBPS",
+              "key": "OVERSOLVENCYTOTREASURYBPS",
               "msg_index": "0",
               "type": "set_node_mimir",
               "value": "0"
@@ -522,7 +522,7 @@
               "type": "bond"
             },
             {
-              "key": "OVERSOLVENCYTORESERVEBPS",
+              "key": "OVERSOLVENCYTOTREASURYBPS",
               "msg_index": "0",
               "type": "set_mimir",
               "value": "0"
@@ -764,7 +764,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "5B24F632C7B7B8B0BCAF4B7BEDF9DCC98F26F256AA724E8563F1F1F03B206503",
+      "data_hash": "CC4A3904B0854D8C6C626CF4BE0E1F8F105ECD96EA01F6A96CCC79FA34958BD2",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -845,7 +845,7 @@
     ],
     "txs": [
       {
-        "hash": "9151C9B2FBF077A1C912B3619E06BEF02127D29233B89632B3D97C19F863EDEF",
+        "hash": "B44AE44F6B4897798752472FD83A93CBD028609E2829E203B9631E51B9C9AB6A",
         "tx": {
           "auth_info": {
             "fee": {
@@ -876,7 +876,7 @@
             "messages": [
               {
                 "@type": "/types.MsgMimir",
-                "key": "OverSolvencyToReserveBps",
+                "key": "OverSolvencyToTreasuryBps",
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
                 "value": "10000"
               }
@@ -887,7 +887,7 @@
             "unordered": false
           },
           "signatures": [
-            "5ut0+5zR7RxMqg4Ee6G3tkxv3/Bg/I6OMyRgEiujSzASjHwNrDr65g4i+tqd15rXSqmYQLm9LHG8vnsTdhhT1g=="
+            "dN9cAugO2zllCIv1JsKyZpw/k/8vD+qrfDFabdKANslPrhzF+4OlJ02rRE9O6J5ezZ37x37RPwmrJLtM9C+8nA=="
           ]
         },
         "result": {
@@ -900,7 +900,7 @@
               "type": "tx"
             },
             {
-              "signature": "5ut0+5zR7RxMqg4Ee6G3tkxv3/Bg/I6OMyRgEiujSzASjHwNrDr65g4i+tqd15rXSqmYQLm9LHG8vnsTdhhT1g==",
+              "signature": "dN9cAugO2zllCIv1JsKyZpw/k/8vD+qrfDFabdKANslPrhzF+4OlJ02rRE9O6J5ezZ37x37RPwmrJLtM9C+8nA==",
               "type": "tx"
             },
             {
@@ -936,7 +936,7 @@
             },
             {
               "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "key": "OVERSOLVENCYTORESERVEBPS",
+              "key": "OVERSOLVENCYTOTREASURYBPS",
               "msg_index": "0",
               "type": "set_node_mimir",
               "value": "10000"
@@ -956,7 +956,7 @@
               "type": "bond"
             },
             {
-              "key": "OVERSOLVENCYTORESERVEBPS",
+              "key": "OVERSOLVENCYTOTREASURYBPS",
               "msg_index": "0",
               "type": "set_mimir",
               "value": "10000"
@@ -1034,7 +1034,7 @@
         "id": "797aa5882fa238fd002519657dba2d49cdb3e3f88c564c49db6419e1d6ed8223",
         "liquidity_fee": "25001359557",
         "liquidity_fee_in_rune": "25001359557",
-        "memo": "SWAP:THOR.RUNE:tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "memo": "SWAP:THOR.RUNE:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "5000",
@@ -1054,13 +1054,13 @@
       {
         "amount": "25001359557rune",
         "mode": "EndBlock",
-        "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "receiver": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "type": "coin_received"
       },
       {
         "amount": "25001359557rune",
         "mode": "EndBlock",
-        "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "recipient": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "transfer"
       },
@@ -1077,23 +1077,23 @@
         "in_tx_id": "797AA5882FA238FD002519657DBA2D49CDB3E3F88C564C49DB6419E1D6ED8223",
         "memo": "OUT:797aa5882fa238fd002519657dba2d49cdb3e3f88c564c49db6419e1d6ed8223",
         "mode": "EndBlock",
-        "to": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "to": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "type": "outbound"
       },
       {
-        "amount": "24752432378rune",
+        "amount": "24752431594rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "24752432378rune",
+        "amount": "24752431594rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "24752432378rune",
+        "amount": "24752431594rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -1105,19 +1105,19 @@
         "type": "message"
       },
       {
-        "amount": "250038607rune",
+        "amount": "250038599rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "250038607rune",
+        "amount": "250038599rune",
         "mode": "EndBlock",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
-        "amount": "250038607rune",
+        "amount": "250038599rune",
         "mode": "EndBlock",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -1129,8 +1129,8 @@
         "type": "message"
       },
       {
-        "BTC.BTC": "24752432378",
-        "bond_reward": "250038607",
+        "BTC.BTC": "24752431594",
+        "bond_reward": "250038599",
         "dev_fund_reward": "0",
         "income_burn": "0",
         "marketing_fund_reward": "0",

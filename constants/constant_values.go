@@ -162,8 +162,9 @@ const (
 	ReserveMaxCap
 	MarketingFundSystemIncomeBps
 	MarketingFundAddress
-	OverSolvencyToReserveBps
+	OverSolvencyToTreasuryBps
 	OverSolvencyCheckInterval
+	OverSolvencyAddress
 	MaxDepositTxIDRetries
 	MaxRetiredVaultRecoveryAttempts
 	ModifyLimitSwapMaxIterations

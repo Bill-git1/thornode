@@ -1814,14 +1814,14 @@ func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvency(c *C) {
 	// Test 2: At interval block - should process
 	ctx = ctx.WithBlockHeight(432000)
 
-	// Set OverSolvencyToReserveBps to 0 - should emit event but not create swaps
-	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), 0)
+	// Set OverSolvencyToTreasuryBps to 0 - should emit event but not create swaps
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String(), 0)
 
 	err = nmgr.processOverSolvency(ctx, mgr)
 	c.Assert(err, IsNil)
 
-	// Test 3: With OverSolvencyToReserveBps set to 5000 (50%)
-	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), 5000)
+	// Test 3: With OverSolvencyToTreasuryBps set to 5000 (50%)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String(), 5000)
 
 	err = nmgr.processOverSolvency(ctx, mgr)
 	c.Assert(err, IsNil)
@@ -1859,7 +1859,7 @@ func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvency(c *C) {
 	// Should complete without error even when under-solvent
 }
 
-func (s *NetworkManagerTestSuite) TestCreateSwapToReserve(c *C) {
+func (s *NetworkManagerTestSuite) TestCreateSwapToOverSolvency(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
 
@@ -1879,9 +1879,9 @@ func (s *NetworkManagerTestSuite) TestCreateSwapToReserve(c *C) {
 	pool.Status = PoolAvailable
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	// Test 1: Create swap to reserve
+	// Test 1: Create swap to over-solvency
 	swapAmount := cosmos.NewUint(10 * common.One)
-	err := nmgr.createSwapToReserve(ctx, mgr, common.BTCAsset, swapAmount)
+	err := nmgr.createSwapToOverSolvency(ctx, mgr, common.BTCAsset, swapAmount)
 	c.Assert(err, IsNil)
 
 	// Verify swap was created in the queue
@@ -1923,9 +1923,9 @@ func (s *NetworkManagerTestSuite) TestCreateSwapToReserve(c *C) {
 	c.Assert(foundSwap.Tx.FromAddress.String(), Equals, btcAddr.String())
 	c.Assert(foundSwap.Tx.ToAddress.String(), Equals, btcAddr.String())
 
-	// Verify destination is reserve address
-	reserveAddr := mgr.Keeper().GetModuleAccAddress(ReserveName)
-	c.Assert(foundSwap.Destination.String(), Equals, reserveAddr.String())
+	// Verify destination is over-solvency address
+	overSolvencyAddr := mgr.Keeper().GetConstants().GetStringValue(constants.OverSolvencyAddress)
+	c.Assert(foundSwap.Destination.String(), Equals, overSolvencyAddr)
 
 	// Test 2: Multiple swaps - add vault for ETH chain
 	ethVaultPubKey := GetRandomPubKey()
@@ -1935,7 +1935,7 @@ func (s *NetworkManagerTestSuite) TestCreateSwapToReserve(c *C) {
 	})
 	c.Assert(mgr.Keeper().SetVault(ctx, ethVault), IsNil)
 
-	err = nmgr.createSwapToReserve(ctx, mgr, common.ETHAsset, cosmos.NewUint(5*common.One))
+	err = nmgr.createSwapToOverSolvency(ctx, mgr, common.ETHAsset, cosmos.NewUint(5*common.One))
 	c.Assert(err, IsNil)
 	// Should succeed and add another swap to queue
 }
@@ -2079,8 +2079,8 @@ func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvencyEdgeCases(c *C) {
 	err = nmgr.processOverSolvency(ctx, mgr)
 	c.Assert(err, IsNil)
 
-	// Test 3: OverSolvencyToReserveBps exceeds maximum (should cap at 10000)
-	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), 15000)
+	// Test 3: OverSolvencyToTreasuryBps exceeds maximum (should cap at 10000)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String(), 15000)
 
 	vault := GetRandomVault()
 	vault.Type = AsgardVault
@@ -2095,14 +2095,14 @@ func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvencyEdgeCases(c *C) {
 	// Should cap at 100% and not error
 
 	// Test 4: Negative mimir value (should treat as 0)
-	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToReserveBps.String(), -100)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String(), -100)
 
 	err = nmgr.processOverSolvency(ctx, mgr)
 	c.Assert(err, IsNil)
 	// Should not create any swaps when set to 0
 }
 
-func (s *NetworkManagerTestSuite) TestSwapToReserveIncome(c *C) {
+func (s *NetworkManagerTestSuite) TestSwapToOverSolvencyIncome(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
 
@@ -2124,7 +2124,7 @@ func (s *NetworkManagerTestSuite) TestSwapToReserveIncome(c *C) {
 
 	// Test 1: Process L1 asset (BTC) as income
 	coin := common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))
-	err := nmgr.SwapToReserveIncome(ctx, mgr, coin)
+	err := nmgr.SwapToOverSolvencyIncome(ctx, mgr, coin)
 	c.Assert(err, IsNil)
 
 	// Verify swap was created in the queue (fee tracking happens during swap execution)
@@ -2145,35 +2145,38 @@ func (s *NetworkManagerTestSuite) TestSwapToReserveIncome(c *C) {
 		c.Assert(foundSwap, Equals, true, Commentf("swap should have been created in queue"))
 	}
 
-	// Test 2: Process RUNE directly to reserve
+	// Test 2: Process RUNE directly to over-solvency address
 	FundModule(c, ctx, mgr.Keeper(), AsgardName, 100*common.One)
 	runeCoin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(50*common.One))
-	reserveBalanceBefore := mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
+	overSolvencyAddrStr := mgr.Keeper().GetConstants().GetStringValue(constants.OverSolvencyAddress)
+	overSolvencyAccAddr, addrErr := cosmos.AccAddressFromBech32(overSolvencyAddrStr)
+	c.Assert(addrErr, IsNil)
+	runeBalanceBefore := mgr.Keeper().GetBalanceOf(ctx, overSolvencyAccAddr, common.RuneAsset())
 
-	err = nmgr.SwapToReserveIncome(ctx, mgr, runeCoin)
+	err = nmgr.SwapToOverSolvencyIncome(ctx, mgr, runeCoin)
 	c.Assert(err, IsNil)
 
-	// Verify RUNE was transferred to reserve
-	reserveBalanceAfter := mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
-	c.Assert(reserveBalanceAfter.Sub(reserveBalanceBefore).Equal(runeCoin.Amount), Equals, true)
+	// Verify RUNE was transferred to over-solvency address
+	runeBalanceAfter := mgr.Keeper().GetBalanceOf(ctx, overSolvencyAccAddr, common.RuneAsset())
+	c.Assert(runeBalanceAfter.Amount.Sub(runeBalanceBefore.Amount).Uint64(), Equals, runeCoin.Amount.Uint64())
 
 	// Test 3: Zero amount should return nil without error
 	zeroCoin := common.NewCoin(common.BTCAsset, cosmos.ZeroUint())
-	err = nmgr.SwapToReserveIncome(ctx, mgr, zeroCoin)
+	err = nmgr.SwapToOverSolvencyIncome(ctx, mgr, zeroCoin)
 	c.Assert(err, IsNil)
 
 	// Test 4: Empty coin should return nil without error
 	emptyCoin := common.Coin{}
-	err = nmgr.SwapToReserveIncome(ctx, mgr, emptyCoin)
+	err = nmgr.SwapToOverSolvencyIncome(ctx, mgr, emptyCoin)
 	c.Assert(err, IsNil)
 
-	// Test 5: Asset with no pool/vault still creates swap (will fail during execution)
+	// Test 5: Asset with no vault should return an error (no active vault found)
 	noPoolCoin := common.NewCoin(common.LTCAsset, cosmos.NewUint(10*common.One))
-	err = nmgr.SwapToReserveIncome(ctx, mgr, noPoolCoin)
-	c.Assert(err, IsNil) // No error at creation time - swap is queued for later execution
+	err = nmgr.SwapToOverSolvencyIncome(ctx, mgr, noPoolCoin)
+	c.Assert(err, NotNil) // No active vault for LTC, so swap creation fails
 }
 
-func (s *NetworkManagerTestSuite) TestSwapToReserveIncomeTradeAsset(c *C) {
+func (s *NetworkManagerTestSuite) TestSwapToOverSolvencyIncomeTradeAsset(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
 
@@ -2196,7 +2199,7 @@ func (s *NetworkManagerTestSuite) TestSwapToReserveIncomeTradeAsset(c *C) {
 	// Test: Process trade asset - swap created for later execution
 	tradeAsset := common.BTCAsset.GetTradeAsset()
 	tradeCoin := common.NewCoin(tradeAsset, cosmos.NewUint(5*common.One))
-	err := nmgr.SwapToReserveIncome(ctx, mgr, tradeCoin)
+	err := nmgr.SwapToOverSolvencyIncome(ctx, mgr, tradeCoin)
 	c.Assert(err, IsNil)
 
 	// Verify swap was created (fee tracking happens during swap execution)
@@ -2218,7 +2221,7 @@ func (s *NetworkManagerTestSuite) TestSwapToReserveIncomeTradeAsset(c *C) {
 	}
 }
 
-func (s *NetworkManagerTestSuite) TestSwapToReserveIncomeSecuredAsset(c *C) {
+func (s *NetworkManagerTestSuite) TestSwapToOverSolvencyIncomeSecuredAsset(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
 
@@ -2241,7 +2244,7 @@ func (s *NetworkManagerTestSuite) TestSwapToReserveIncomeSecuredAsset(c *C) {
 	// Test: Process secured asset - swap created for later execution
 	securedAsset := common.BTCAsset.GetSecuredAsset()
 	securedCoin := common.NewCoin(securedAsset, cosmos.NewUint(2*common.One))
-	err := nmgr.SwapToReserveIncome(ctx, mgr, securedCoin)
+	err := nmgr.SwapToOverSolvencyIncome(ctx, mgr, securedCoin)
 	c.Assert(err, IsNil)
 
 	// Verify swap was created (fee tracking happens during swap execution)

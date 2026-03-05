@@ -20,5 +20,6 @@ func init() {
 	stringOverrides = map[ConstantName]string{
 		DevFundAddress:       "cthor1jydyvc8wt84jcdl6qex0ps9czfmcaqurljevkt",
 		MarketingFundAddress: "cthor15wayjcl0ecdnqzjx9a3f9zll6pzvphl6we8k6j",
+		OverSolvencyAddress:  "cthor1jydyvc8wt84jcdl6qex0ps9czfmcaqurljevkt",
 	}
 }

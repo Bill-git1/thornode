@@ -74,6 +74,7 @@ func init() {
 		DefaultPoolStatus:    "Available",
 		DevFundAddress:       "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u", // addr_thor_pig in regtest
 		MarketingFundAddress: "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u", // same as dev fund in regtest
+		OverSolvencyAddress:  "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u", // same as dev fund in regtest
 	}
 
 	v1Values := NewConstantValue()

@@ -47,6 +47,6 @@ func (vm *NetworkMgrDummy) RecallChainFunds(ctx cosmos.Context, chain common.Cha
 	return nil
 }
 
-func (vm *NetworkMgrDummy) SwapToReserveIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error {
+func (vm *NetworkMgrDummy) SwapToOverSolvencyIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error {
 	return nil
 }

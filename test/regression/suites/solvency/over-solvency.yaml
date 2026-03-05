@@ -8,7 +8,7 @@ count: 1
 ########################################################################################
 # Set over-solvency configuration via mimir
 # - OverSolvencyCheckInterval: Run every 1 block (check immediately)
-# - OverSolvencyToReserveBps: Swap 100% (10000 bps) to reserve
+# - OverSolvencyToTreasuryBps: Swap 100% (10000 bps) to over-solvency address
 ########################################################################################
 type: tx-mimir
 key: OverSolvencyCheckInterval
@@ -19,7 +19,7 @@ type: create-blocks
 count: 1
 ---
 type: tx-mimir
-key: OverSolvencyToReserveBps
+key: OverSolvencyToTreasuryBps
 value: 0
 signer: {{ addr_thor_dog }}
 ---
@@ -83,7 +83,7 @@ asserts:
 # Advance blocks to trigger the over-solvency interval (1 block)
 ########################################################################################
 type: tx-mimir
-key: OverSolvencyToReserveBps
+key: OverSolvencyToTreasuryBps
 value: 10000
 signer: {{ addr_thor_dog }}
 ---
@@ -91,7 +91,7 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# Verify that a swap to reserve was created in the swap queue
+# Verify that an over-solvency swap was created in the swap queue
 # The swap should be for 100% of the over-solvency (10000 bps)
 ########################################################################################
 type: check
@@ -109,10 +109,10 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# Check reserve balance AFTER the swap - should have increased by swap output
-# Before: 34999999560628 + Swap output: ~25001359557 = ~35025000920185
+# Check over-solvency address balance AFTER the swap
+# The swap output goes to the OverSolvencyAddress (addr_thor_pig in mocknet)
 ########################################################################################
 type: check
-endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_module_reserve }}
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 35025000698914
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 25001359557

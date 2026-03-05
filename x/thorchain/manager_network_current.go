@@ -2453,8 +2453,8 @@ func (vm *NetworkMgr) processOverSolvency(ctx cosmos.Context, mgr Manager) error
 		return nil // No over-solvency, nothing to do
 	}
 
-	// Get the mimir setting for how much to swap to reserve
-	overSolvencyBps := vm.k.GetConfigInt64(ctx, constants.OverSolvencyToReserveBps)
+	// Get the mimir setting for how much to swap to over-solvency address
+	overSolvencyBps := vm.k.GetConfigInt64(ctx, constants.OverSolvencyToTreasuryBps)
 	if overSolvencyBps < 0 {
 		overSolvencyBps = 0
 	}
@@ -2468,7 +2468,7 @@ func (vm *NetworkMgr) processOverSolvency(ctx cosmos.Context, mgr Manager) error
 		// Convert signed Int to unsigned Uint for the amount
 		overSolventAmount := math.NewUintFromBigInt(assetAmt.Amount.BigInt())
 
-		// Calculate how much to swap to reserve using safe share
+		// Calculate how much to swap to over-solvency address using safe share
 		swapAmount := common.GetSafeShare(math.NewUint(uint64(overSolvencyBps)), math.NewUint(constants.MaxBasisPts), overSolventAmount)
 
 		assetOverSolvencies = append(assetOverSolvencies, types.AssetOverSolvency{
@@ -2477,10 +2477,10 @@ func (vm *NetworkMgr) processOverSolvency(ctx cosmos.Context, mgr Manager) error
 			SwapToReserveAmount: swapAmount,
 		})
 
-		// If mimir is > 0, process as system income (track fee and create swap to reserve)
+		// If mimir is > 0, process as system income (track fee and create swap to over-solvency address)
 		if overSolvencyBps > 0 && !swapAmount.IsZero() {
 			coin := common.NewCoin(assetAmt.Asset, swapAmount)
-			if err := vm.SwapToReserveIncome(ctx, mgr, coin); err != nil {
+			if err := vm.SwapToOverSolvencyIncome(ctx, mgr, coin); err != nil {
 				ctx.Logger().Error("failed to process over-solvency income", "asset", assetAmt.Asset, "amount", swapAmount, "error", err)
 			}
 		}
@@ -2497,20 +2497,24 @@ func (vm *NetworkMgr) processOverSolvency(ctx cosmos.Context, mgr Manager) error
 	return nil
 }
 
-// createSwapToReserve creates a swap from the over-solvent asset to RUNE and sends to reserve
-func (vm *NetworkMgr) createSwapToReserve(ctx cosmos.Context, mgr Manager, asset common.Asset, amount math.Uint) error {
+// createSwapToOverSolvency creates a swap from the over-solvent asset to RUNE and sends to over-solvency address
+func (vm *NetworkMgr) createSwapToOverSolvency(ctx cosmos.Context, mgr Manager, asset common.Asset, amount math.Uint) error {
 	// Only create over-solvency swaps when advanced swap queue is enabled
 	if !mgr.Keeper().AdvSwapQueueEnabled(ctx) {
 		return nil
 	}
 
-	// Create a synthetic transaction for the swap
-	// Use the reserve module address as the sender/destination
-	reserveAddr := mgr.Keeper().GetModuleAccAddress(ReserveName)
+	// Get the over-solvency destination address
+	overSolvencyAddrStr := mgr.Keeper().GetConstants().GetStringValue(constants.OverSolvencyAddress)
+	overSolvencyAddr, err := cosmos.AccAddressFromBech32(overSolvencyAddrStr)
+	if err != nil {
+		return fmt.Errorf("fail to parse OverSolvencyAddress: %w", err)
+	}
 
 	// Get chain-appropriate address format for FromAddress/ToAddress
-	// This ensures future address parsing won't break for different chain types
-	chain := asset.GetChain()
+	// For trade/secured/synth assets, use the underlying L1 asset for vault lookup
+	l1Asset := asset.GetLayer1Asset()
+	chain := l1Asset.GetChain()
 
 	// Get address from an active vault for the chain
 	// This ensures we use a valid address format for the chain
@@ -2521,7 +2525,7 @@ func (vm *NetworkMgr) createSwapToReserve(ctx cosmos.Context, mgr Manager, asset
 
 	var chainAddr common.Address
 	for _, vault := range activeVaults {
-		if vault.HasAsset(asset) {
+		if vault.HasAsset(l1Asset) {
 			addr, addrErr := vault.PubKey.GetAddress(chain)
 			if addrErr != nil {
 				ctx.Logger().Error("failed to get vault address for chain", "chain", chain, "error", addrErr)
@@ -2532,11 +2536,12 @@ func (vm *NetworkMgr) createSwapToReserve(ctx cosmos.Context, mgr Manager, asset
 		}
 	}
 
-	// Fallback to reserve address if no vault found
-	// Using NoAddress would fail ValidateBasic() since Tx.Valid() requires non-empty FromAddress/ToAddress
 	if chainAddr.IsEmpty() {
-		chainAddr = common.Address(reserveAddr.String())
+		return fmt.Errorf("no active vault with asset %s found for chain %s", asset, chain)
 	}
+
+	// Use the reserve module address as the signer (must be module account for internal transactions)
+	reserveAddr := mgr.Keeper().GetModuleAccAddress(ReserveName)
 
 	// Get max gas coin for the chain, with fallback to 1 unit of gas asset
 	maxGasCoin, _, err := mgr.GasMgr().GetGasDetails(ctx, chain)
@@ -2568,10 +2573,10 @@ func (vm *NetworkMgr) createSwapToReserve(ctx cosmos.Context, mgr Manager, asset
 			Gas: common.Gas{
 				maxGasCoin,
 			},
-			Memo: fmt.Sprintf("SWAP:THOR.RUNE:%s", reserveAddr.String()),
+			Memo: fmt.Sprintf("SWAP:THOR.RUNE:%s", overSolvencyAddr.String()),
 		},
 		TargetAsset:          common.RuneAsset(),
-		Destination:          common.Address(reserveAddr.String()),
+		Destination:          common.Address(overSolvencyAddr.String()),
 		TradeTarget:          cosmos.ZeroUint(),
 		AffiliateAddress:     common.NoAddress,
 		AffiliateBasisPoints: cosmos.ZeroUint(),
@@ -2610,29 +2615,34 @@ func (vm *NetworkMgr) createSwapToReserve(ctx cosmos.Context, mgr Manager, asset
 	return nil
 }
 
-// SwapToReserveIncome processes any coin as system income by:
-// - For RUNE: transferring directly to reserve
-// - For non-RUNE: creating swap to reserve (fee tracked during swap execution)
-func (vm *NetworkMgr) SwapToReserveIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error {
+// SwapToOverSolvencyIncome processes any coin as system income by:
+// - For RUNE: transferring directly to over-solvency address
+// - For non-RUNE: creating swap to over-solvency address (fee tracked during swap execution)
+func (vm *NetworkMgr) SwapToOverSolvencyIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error {
 	if coin.IsEmpty() || coin.Amount.IsZero() {
 		return nil
 	}
 
-	// RUNE: direct transfer to reserve
+	// RUNE: direct transfer to over-solvency address
 	if coin.IsRune() {
-		if err := mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(coin)); err != nil {
-			return fmt.Errorf("fail to send RUNE to reserve: %w", err)
+		overSolvencyAddrStr := mgr.Keeper().GetConstants().GetStringValue(constants.OverSolvencyAddress)
+		overSolvencyAddr, err := cosmos.AccAddressFromBech32(overSolvencyAddrStr)
+		if err != nil {
+			return fmt.Errorf("fail to parse OverSolvencyAddress: %w", err)
 		}
-		ctx.Logger().Info("processed RUNE income to reserve", "amount", coin.Amount)
+		if err := mgr.Keeper().SendFromModuleToAccount(ctx, AsgardName, overSolvencyAddr, common.NewCoins(coin)); err != nil {
+			return fmt.Errorf("fail to send RUNE to over-solvency address: %w", err)
+		}
+		ctx.Logger().Info("processed RUNE income to over-solvency address", "amount", coin.Amount)
 		return nil
 	}
 
-	// Non-RUNE: create swap to reserve (fee tracked during swap execution)
-	if err := vm.createSwapToReserve(ctx, mgr, coin.Asset, coin.Amount); err != nil {
-		return fmt.Errorf("fail to create swap to reserve: %w", err)
+	// Non-RUNE: create swap to over-solvency address (fee tracked during swap execution)
+	if err := vm.createSwapToOverSolvency(ctx, mgr, coin.Asset, coin.Amount); err != nil {
+		return fmt.Errorf("fail to create swap to over-solvency address: %w", err)
 	}
 
-	ctx.Logger().Info("processed asset income to reserve",
+	ctx.Logger().Info("processed asset income to over-solvency address",
 		"asset", coin.Asset,
 		"amount", coin.Amount,
 	)
