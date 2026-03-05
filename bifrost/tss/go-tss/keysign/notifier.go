@@ -114,6 +114,10 @@ func (n *notifier) processSignature(data []*common.SignatureData) error {
 	// when data is nil , which means keysign  failed, there is no signature to be verified in that case
 	// for gg20, it wrap the signature R,S into ECSignature structure
 	if len(data) != 0 {
+		if len(data) != len(n.messages) {
+			return fmt.Errorf("signature count (%d) != message count (%d)", len(data), len(n.messages))
+		}
+
 		sort.SliceStable(n.messages, func(i, j int) bool {
 			a := new(big.Int).SetBytes(n.messages[i])
 			b := new(big.Int).SetBytes(n.messages[j])
