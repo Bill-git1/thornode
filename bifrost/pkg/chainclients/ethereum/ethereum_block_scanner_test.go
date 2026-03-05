@@ -585,6 +585,156 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 	c.Assert(txInItem.Gas[0].Amount.Equal(cosmos.NewUint(38440)), Equals, true)
 }
 
+func (s *BlockScannerTestSuite) TestRouterValidation(c *C) {
+	// This test validates the full swap-in flow through fromTxToTxIn for aggregator
+	// deposits where tx.To() is an aggregator contract (not the router) but the
+	// Deposit event is emitted by the correct router.
+
+	correctRouter := "0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44"
+	wrongRouter := "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	// Vault derived from tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4
+	vaultAddr := "0xd58610F89265a2fB637Ac40EDf59141Ff873b266"
+	vaultAddrLower := strings.ToLower(vaultAddr[2:])
+
+	// Pre-signed aggregator tx: tx.To()=0x81a392... (aggregator), not a vault or router.
+	// sender=0x26355f70..., chainID=1337
+	encodedTx := `{"nonce":"0x4","gasPrice":"0x1","gas":"0x177b8","to":"0x81a392e6a757d58a7eb6781a775a3449da3b9df5","value":"0x0","input":"0x1fece7b400000000000000000000000058e99c9c4a20f5f054c737389fdd51d7ed9c7d2a0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf4830000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000634144443a4554482e544b4e2d3078336237464134646432316336663942413363613337353231374541443743416239443662463438333a7474686f72313678786e30636164727575773661327177707633356176306d6568727976647a7a6a7a3361660000000000000000000000000000000000000000000000000000000000","v":"0xa95","r":"0x8a82b49901d67748c6840d7417d7307a40e6093579f6f73f7222cb52622f92cd","s":"0x21a1097c02306b177a0ca1a6e9f9599a8c4bab9926893493e966253c436977fd","hash":"0x94ac3936bf227f830e21f9f852bec127086024f327d41862455b3d5f101d18c5"}`
+	txHash := "0x94ac3936bf227f830e21f9f852bec127086024f327d41862455b3d5f101d18c5"
+
+	// Build a JSON-RPC receipt response with a Deposit event from the given router.
+	makeReceiptJSON := func(routerAddr string) string {
+		return fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"result":{
+			"status":"0x1",
+			"cumulativeGasUsed":"0xe8c5",
+			"gasUsed":"0xe8c5",
+			"effectiveGasPrice":"0x2540be400",
+			"transactionHash":"%s",
+			"transactionIndex":"0x0",
+			"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000001",
+			"blockNumber":"0x22",
+			"contractAddress":"0x0000000000000000000000000000000000000000",
+			"logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+			"logs":[{
+				"address":"%s",
+				"topics":[
+					"0xef519b7eb82aaf6ac376a6df2d793843ebfd593de5f1a0601d3cc6ab49ebb395",
+					"0x000000000000000000000000%s",
+					"0x0000000000000000000000000000000000000000000000000000000000000000"
+				],
+				"data":"0x0000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000384144443a4554482e4554483a7474686f72313678786e30636164727575773661327177707633356176306d6568727976647a7a6a7a3361660000000000000000",
+				"blockNumber":"0x22",
+				"transactionHash":"%s",
+				"transactionIndex":"0x0",
+				"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000001",
+				"logIndex":"0x0",
+				"removed":false
+			}]
+		}}`, txHash, routerAddr, vaultAddrLower, txHash)
+	}
+
+	// receiptResponse controls which receipt the mock server returns.
+	var receiptResponse string
+
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		switch {
+		case req.RequestURI == thorclient.ChainVersionEndpoint:
+			_, err := rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
+			c.Assert(err, IsNil)
+		case req.RequestURI == "/thorchain/mimir/key/EVMDisableContractWhitelist":
+			_, err := rw.Write([]byte(`1`))
+			c.Assert(err, IsNil)
+		case req.RequestURI == thorclient.PubKeysEndpoint:
+			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/pubKeys.json")
+		case req.RequestURI == thorclient.InboundAddressesEndpoint:
+			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/inbound_addresses/inbound_addresses.json")
+		case req.RequestURI == thorclient.AsgardVault:
+			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/asgard.json")
+		case strings.HasPrefix(req.RequestURI, thorclient.NodeAccountEndpoint):
+			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/nodeaccount/template.json")
+		default:
+			body, err := io.ReadAll(req.Body)
+			c.Assert(err, IsNil)
+			type RPCRequest struct {
+				JSONRPC string          `json:"jsonrpc"`
+				ID      interface{}     `json:"id"`
+				Method  string          `json:"method"`
+				Params  json.RawMessage `json:"params"`
+			}
+			var rpcRequest RPCRequest
+			err = json.Unmarshal(body, &rpcRequest)
+			if err != nil {
+				return
+			}
+			switch rpcRequest.Method {
+			case "eth_chainId":
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
+				c.Assert(err, IsNil)
+			case "eth_gasPrice":
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+				c.Assert(err, IsNil)
+			case "eth_getTransactionReceipt":
+				_, err = rw.Write([]byte(receiptResponse))
+				c.Assert(err, IsNil)
+			}
+		}
+	}))
+	defer server.Close()
+
+	ethClient, err := ethclient.Dial(server.URL)
+	c.Assert(err, IsNil)
+	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
+	c.Assert(err, IsNil)
+	u, err := url.Parse(server.URL)
+	c.Assert(err, IsNil)
+	cfg := config.BifrostClientConfiguration{
+		ChainID:         "thorchain",
+		ChainHost:       u.Host,
+		SignerName:      "bob",
+		SignerPasswd:    "password",
+		ChainHomeFolder: "",
+	}
+	bridge, err := thorclient.NewThorchainBridge(cfg, s.m, s.keys)
+	c.Assert(err, IsNil)
+	pkeyMgr, err := pubkeymanager.NewPubKeyManager(bridge, s.m)
+	c.Assert(pkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pkeyMgr.Stop(), IsNil) }()
+	c.Assert(err, IsNil)
+
+	bs, err := NewETHScanner(getConfigForTest(), storage, big.NewInt(1337), ethClient, bridge, s.m, pkeyMgr, func(height int64) error {
+		return nil
+	}, nil)
+	c.Assert(err, IsNil)
+
+	// Ensure both router addresses pass the log parser's address validator.
+	useWhitelistSmartContract = true
+	whitelistSmartContractAddress = append(whitelistSmartContractAddress,
+		thorcommon.Address(correctRouter),
+		thorcommon.Address(wrongRouter),
+	)
+
+	tx := &etypes.Transaction{}
+	c.Assert(tx.UnmarshalJSON([]byte(encodedTx)), IsNil)
+
+	// Test 1: Aggregator swap-in with correct router — full fromTxToTxIn flow.
+	// tx.To() is the aggregator (not vault, not router), so the disableWhitelist=1
+	// path routes through: IsSmartContractCall → getTxInFromSmartContract → router validation passes.
+	receiptResponse = makeReceiptJSON(correctRouter)
+	txInItem, err := bs.fromTxToTxIn(tx)
+	c.Assert(err, IsNil)
+	c.Assert(txInItem, NotNil, Commentf("aggregator deposit with correct router should be observed"))
+	c.Assert(txInItem.To, Equals, vaultAddr)
+	c.Assert(txInItem.Memo, Equals, "ADD:ETH.ETH:tthor16xxn0cadruuw6a2qwpv35av0mehryvdzzjz3af")
+	c.Assert(txInItem.Coins[0].Asset.String(), Equals, "ETH.ETH")
+	c.Assert(txInItem.Coins[0].Amount.Equal(cosmos.NewUint(500000000)), Equals, true)
+
+	// Test 2: Aggregator swap-in with wrong router — full fromTxToTxIn flow.
+	// The deposit event is emitted by the wrong router, so validation rejects it.
+	receiptResponse = makeReceiptJSON(wrongRouter)
+	txInItem, err = bs.fromTxToTxIn(tx)
+	c.Assert(err, IsNil)
+	c.Assert(txInItem, IsNil, Commentf("deposit from wrong router should be dropped"))
+}
+
 func (s *BlockScannerTestSuite) TestProcessReOrg(c *C) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch {

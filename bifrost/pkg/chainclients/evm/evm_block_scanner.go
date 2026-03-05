@@ -1018,20 +1018,27 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 	// cause bifrost to observe an inbound the vault cannot actually spend.
 	// Skip this check for vault-initiated transactions (e.g. migrations), which
 	// legitimately use the old router to send to a vault on a new router.
-	if txInItem.To != "" && tx.To() != nil {
+	// NOTE: We compare against the log-emitting address (the actual router that
+	// produced the Deposit event), NOT tx.To(), because aggregator contracts
+	// forward deposits to the router internally — tx.To() is the aggregator.
+	if txInItem.To != "" {
 		senderIsVault, _ := e.pubkeyMgr.IsValidPoolAddress(txInItem.Sender, e.cfg.ChainID)
 		if !senderIsVault {
 			ok, cpi := e.pubkeyMgr.IsValidPoolAddress(txInItem.To, e.cfg.ChainID)
 			if ok {
 				expectedRouter := e.pubkeyMgr.GetContract(e.cfg.ChainID, cpi.PubKey)
-				if expectedRouter != common.NoAddress && !strings.EqualFold(expectedRouter.String(), tx.To().String()) {
-					e.logger.Warn().
-						Str("vault", txInItem.To).
-						Str("sender", txInItem.Sender).
-						Str("expected_router", expectedRouter.String()).
-						Str("actual_router", tx.To().String()).
-						Msg("deposit targets vault via wrong router, ignoring")
-					return nil, nil
+				if expectedRouter != common.NoAddress {
+					depositRouter := evm.DepositEventRouter(receipt.Logs)
+					if depositRouter != nil && !strings.EqualFold(expectedRouter.String(), depositRouter.String()) {
+						e.logger.Warn().
+							Str("tx", txInItem.Tx).
+							Str("vault", txInItem.To).
+							Str("sender", txInItem.Sender).
+							Str("expected_router", expectedRouter.String()).
+							Str("deposit_router", depositRouter.String()).
+							Msg("deposit targets vault via wrong router, ignoring")
+						return nil, nil
+					}
 				}
 			}
 		}
