@@ -633,7 +633,7 @@ func handleObservedTxOutQuorum(
 ) error {
 	// check whether the tx has consensus
 	if !isQuorum {
-		if voter.Height == ctx.BlockHeight() {
+		if voter.Height == ctx.BlockHeight() || voter.FinalisedHeight == ctx.BlockHeight() {
 			// we've already process the transaction, but we should still
 			// update the observing addresses
 			mgr.ObMgr().AppendObserver(tx.Tx.Chain, observers)
@@ -681,125 +681,123 @@ func handleObservedTxOutQuorum(
 		return nil
 	}
 
+	// Process the handler if we can get the consensus tx.
+	// Even if the handler fails, vault accounting must still happen because
+	// the outbound transaction is irrevocable (funds already left the vault).
+	vaultSlash := false
 	txOut := voter.GetTx(activeNodeAccounts) // get consensus tx, in case our for loop is incorrect
 	if txOut == nil || txOut.IsEmpty() {
 		ctx.Logger().Error("fail to get consensus tx from voter", "txid", tx.Tx.ID)
-		return fmt.Errorf("fail to get consensus tx from voter: %s", tx.Tx.ID)
-	}
-	txOut.Tx.Memo = tx.Tx.Memo
+		// Continue with vault accounting below - outbound is irrevocable
+	} else {
+		txOut.Tx.Memo = tx.Tx.Memo
 
-	// For memoless outbounds, look up the original memo from the scheduled TxOutItem
-	if txOut.Tx.Memo == "" {
-		if originalMemo := findOriginalMemoForOutbound(ctx, mgr, tx); originalMemo != "" {
-			txOut.Tx.Memo = originalMemo
-			ctx.Logger().Info("resolved memoless outbound", "original_memo", originalMemo, "txid", tx.Tx.ID)
+		// For memoless outbounds, look up the original memo from the scheduled TxOutItem
+		if txOut.Tx.Memo == "" {
+			if originalMemo := findOriginalMemoForOutbound(ctx, mgr, tx); originalMemo != "" {
+				txOut.Tx.Memo = originalMemo
+				ctx.Logger().Info("resolved memoless outbound", "original_memo", originalMemo, "txid", tx.Tx.ID)
+			}
 		}
-	}
 
-	if tx.Tx.Chain.IsEmpty() {
-		ctx.Logger().Error("fail to process txOut: chain is empty", "tx", tx.Tx.String())
-		return nil
-	}
-	m, err := processOneTxIn(ctx, k, *txOut, signer)
-	if err != nil {
-		ctx.Logger().Error("fail to process txOut",
-			"error", err,
-			"tx", tx.Tx.String())
-		return nil
-	}
-
-	// add addresses to observing addresses. This is used to detect
-	// active/inactive observing node accounts
-	mgr.ObMgr().AppendObserver(tx.Tx.Chain, txOut.GetSigners())
-
-	// emit tss keysign metrics
-	if tx.KeysignMs > 0 {
-		var keysignMetric *keeper.TssKeysignMetric
-		keysignMetric, err = k.GetTssKeysignMetric(ctx, tx.Tx.ID)
-		if err != nil {
-			ctx.Logger().Error("fail to get tss keysign metric", "error", err, "hash", tx.Tx.ID)
+		if tx.Tx.Chain.IsEmpty() {
+			ctx.Logger().Error("fail to process txOut: chain is empty", "tx", tx.Tx.String())
+		} else if m, mErr := processOneTxIn(ctx, k, *txOut, signer); mErr != nil {
+			ctx.Logger().Error("fail to process txOut",
+				"error", mErr,
+				"tx", tx.Tx.String())
 		} else {
-			evt := NewEventTssKeysignMetric(keysignMetric.TxID, keysignMetric.GetMedianTime())
-			if err = mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
-				ctx.Logger().Error("fail to emit tss metric event", "error", err)
+			// add addresses to observing addresses. This is used to detect
+			// active/inactive observing node accounts
+			mgr.ObMgr().AppendObserver(tx.Tx.Chain, txOut.GetSigners())
+
+			// emit tss keysign metrics
+			if tx.KeysignMs > 0 {
+				keysignMetric, kmErr := k.GetTssKeysignMetric(ctx, tx.Tx.ID)
+				if kmErr != nil {
+					ctx.Logger().Error("fail to get tss keysign metric", "error", kmErr, "hash", tx.Tx.ID)
+				} else {
+					evt := NewEventTssKeysignMetric(keysignMetric.TxID, keysignMetric.GetMedianTime())
+					if emitErr := mgr.EventMgr().EmitEvent(ctx, evt); emitErr != nil {
+						ctx.Logger().Error("fail to emit tss metric event", "error", emitErr)
+					}
+				}
+			}
+
+			res, hErr := handler(ctx, m)
+			if hErr != nil {
+				ctx.Logger().Error("handler failed:", "error", hErr)
+				// Continue with vault accounting - outbound is irrevocable
+			} else if res != nil && res.Events != nil {
+				for _, ev := range res.Events {
+					if ev.Type == "vault-slash" {
+						vaultSlash = true
+						break
+					}
+				}
 			}
 		}
 	}
-	var res *cosmos.Result
-	res, err = handler(ctx, m)
-	if err != nil {
-		ctx.Logger().Error("handler failed:", "error", err)
-		return nil
-	}
 
-	vaultSlash := false
-	if res != nil && res.Events != nil {
-		for _, ev := range res.Events {
-			if ev.Type == "vault-slash" {
-				vaultSlash = true
-				break
-			}
-		}
-	}
-
-	voter.SetDone()
-	k.SetObservedTxOutVoter(ctx, voter)
+	// Vault accounting - always runs because outbound is irrevocable.
+	// Gas and coin deductions must happen regardless of handler success.
 
 	// only deduct gas fee via the manager if there was not a vault slash that covered it
 	if !vaultSlash {
-		if err = addGasFees(ctx, mgr, tx); err != nil {
+		if err := addGasFees(ctx, mgr, tx); err != nil {
 			ctx.Logger().Error("fail to add gas fee", "error", err)
-			return nil
 		}
 	}
 
-	// process the msg first , and then deduct the fund from vault last
 	// If sending from one of our vaults, decrement coins
 	vault, err := k.GetVault(ctx, tx.ObservedPubKey)
 	if err != nil {
 		ctx.Logger().Error("fail to get vault", "error", err)
-		return fmt.Errorf("fail to get vault for outbound tx: %w", err)
-	}
-
-	// if the vault was slashed we skipped the gas manager above and deduct gas directly
-	if vaultSlash {
-		vault.SubFunds(tx.Tx.Gas.ToCoins())
-	}
-
-	// Don't add to or subtract from vault balances when the sender and recipient are the same
-	// (particularly avoid Consolidate SafeSub zeroing of vault balances).
-	if !tx.Tx.FromAddress.Equals(tx.Tx.ToAddress) {
-		// skip deducting funds for outbound fake gas
-		if !isOutboundFakeGasTx(tx) {
-			vault.SubFunds(tx.Tx.Coins)
+	} else {
+		// if the vault was slashed we skipped the gas manager above and deduct gas directly
+		if vaultSlash {
+			vault.SubFunds(tx.Tx.Gas.ToCoins())
 		}
-		vault.OutboundTxCount++
-	}
 
-	if vault.IsAsgard() && memo.IsType(TxMigrate) {
-		// only remove the block height that had been specified in the memo
-		vault.RemovePendingTxBlockHeights(memo.GetBlockHeight())
-	}
+		// Don't add to or subtract from vault balances when the sender and recipient are the same
+		// (particularly avoid Consolidate SafeSub zeroing of vault balances).
+		if !tx.Tx.FromAddress.Equals(tx.Tx.ToAddress) {
+			// skip deducting funds for outbound fake gas
+			if !isOutboundFakeGasTx(tx) {
+				vault.SubFunds(tx.Tx.Coins)
+			}
+			vault.OutboundTxCount++
+		}
 
-	if !vault.HasFunds() && vault.Status == RetiringVault {
-		// we have successfully removed all funds from a retiring vault,
-		// mark it as inactive
-		vault.UpdateStatus(InactiveVault, ctx.BlockHeight())
-	}
-	// if the vault is frozen, then unfreeze it. Since we saw that a
-	// transaction was signed
-	for _, coin := range tx.Tx.Coins {
-		for i := range vault.Frozen {
-			if strings.EqualFold(coin.Asset.GetChain().String(), vault.Frozen[i]) {
-				vault.Frozen = append(vault.Frozen[:i], vault.Frozen[i+1:]...)
-				break
+		if vault.IsAsgard() && memo.IsType(TxMigrate) {
+			// only remove the block height that had been specified in the memo
+			vault.RemovePendingTxBlockHeights(memo.GetBlockHeight())
+		}
+
+		if !vault.HasFunds() && vault.Status == RetiringVault {
+			// we have successfully removed all funds from a retiring vault,
+			// mark it as inactive
+			vault.UpdateStatus(InactiveVault, ctx.BlockHeight())
+		}
+		// if the vault is frozen, then unfreeze it. Since we saw that a
+		// transaction was signed
+		for _, coin := range tx.Tx.Coins {
+			for i := range vault.Frozen {
+				if strings.EqualFold(coin.Asset.GetChain().String(), vault.Frozen[i]) {
+					vault.Frozen = append(vault.Frozen[:i], vault.Frozen[i+1:]...)
+					break
+				}
 			}
 		}
+		if err := k.SetVault(ctx, vault); err != nil {
+			ctx.Logger().Error("fail to save vault", "error", err)
+		}
 	}
-	if err := k.SetVault(ctx, vault); err != nil {
-		ctx.Logger().Error("fail to save vault", "error", err)
-		return nil
-	}
+
+	// Mark voter as done AFTER all vault operations to prevent
+	// inconsistency if vault ops fail.
+	voter.SetDone()
+	k.SetObservedTxOutVoter(ctx, voter)
 
 	ctx.Logger().Info("tx out processed", "chain", tx.Tx.Chain, "id", tx.Tx.ID, "finalized", tx.IsFinal())
 

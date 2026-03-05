@@ -413,19 +413,21 @@ func (s *HandlerObservedTxOutSuite) TestHandleStolenFundsInvalidMemo(c *C) {
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 
-	// With memoless outbound support, invalid memos are no longer slashed here.
-	// The transaction is processed normally, and the pool/vault balances remain unchanged.
-	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 30000000000)
+	// No slashing occurs, but vault accounting still happens because the
+	// outbound is irrevocable - funds already left the vault on-chain.
+	// Gas is deducted from the vault via addGasFees, and coins are deducted via SubFunds.
+	gasAmount := obTx.Tx.Gas.ToCoins().GetCoin(common.ETHAsset).Amount
+	expectedPoolAfterGas := cosmos.NewUint(300 * common.One).Sub(gasAmount)
 	mgr.GasMgr().EndBlock(ctx, keeper, eventMgr)
-	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 30000000000)
+	c.Check(keeper.pool.BalanceAsset.Equal(expectedPoolAfterGas), Equals, true,
+		Commentf("pool: %d", keeper.pool.BalanceAsset.Uint64()))
 
-	// The vault balance should remain unchanged as no slashing occurs
+	// Vault balance should reflect outbound coins and gas deducted
 	updatedVault, err := keeper.GetVault(ctx, vault.PubKey)
 	c.Assert(err, IsNil)
-	c.Check(updatedVault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(20000000000)), Equals, true, Commentf("%d", updatedVault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
-
-	// The node account should not be modified since no slashing occurs with memoless outbound support
-	// keeper.na remains nil as SetNodeAccount is never called in this code path
+	expectedVault := cosmos.NewUint(200 * common.One).Sub(cosmos.NewUint(100 * common.One)).Sub(gasAmount)
+	c.Check(updatedVault.Coins.GetCoin(common.ETHAsset).Amount.Equal(expectedVault), Equals, true,
+		Commentf("vault: %d", updatedVault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
 }
 
 type HandlerObservedTxOutTestHelper struct {
