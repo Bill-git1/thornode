@@ -901,6 +901,7 @@ func (vm *ValidatorMgr) ragnarokPools(ctx cosmos.Context, nth int64, mgr Manager
 
 		j := int64(-1)
 		iterator := vm.k.GetLiquidityProviderIterator(ctx, pool.Asset)
+		defer iterator.Close()
 		for ; iterator.Valid(); iterator.Next() {
 			j++
 			if j == position.Number {
@@ -955,7 +956,6 @@ func (vm *ValidatorMgr) ragnarokPools(ctx cosmos.Context, nth int64, mgr Manager
 				}
 			}
 		}
-		_ = iterator.Close()
 		if count >= maxWithdrawsPerBlock {
 			break
 		}
