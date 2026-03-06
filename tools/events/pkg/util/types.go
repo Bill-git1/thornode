@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -50,6 +52,10 @@ func (om *OrderedMap) Keys() []string {
 		return []string{}
 	}
 	return om.keys
+}
+
+func (om *OrderedMap) String() string {
+	return fmt.Sprintf("%+v", om.values)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

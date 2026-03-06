@@ -135,6 +135,18 @@ type Config struct {
 		MaxRescheduledAge time.Duration `mapstructure:"max_rescheduled_age"`
 	} `mapstructure:"thresholds"`
 
+	// RateLimits contain alert rate limits.
+	RateLimits struct {
+		// FailedTransactions limits the rate of failed transaction alerts.
+		FailedTransactions struct {
+			// Burst is the maximum number of alerts allowed in a burst.
+			Burst int `mapstructure:"burst"`
+
+			// Interval is the minimum time between alerts (after burst is exhausted).
+			Interval time.Duration `mapstructure:"interval"`
+		} `mapstructure:"failed_transactions"`
+	} `mapstructure:"rate_limits"`
+
 	// Styles contain various styling for alerts.
 	Styles struct {
 		USDPerMoneyBag uint64 `mapstructure:"usd_per_money_bag"`
@@ -216,6 +228,10 @@ func init() {
 	config.Thresholds.SwapSlipBasisPoints = 100
 	config.Thresholds.TORAnchorDriftBasisPoints = 500
 	config.Thresholds.MaxRescheduledAge = 3 * 24 * time.Hour
+
+	// rate limits
+	config.RateLimits.FailedTransactions.Burst = 10
+	config.RateLimits.FailedTransactions.Interval = time.Hour
 
 	// styles
 	config.Styles.USDPerMoneyBag = 100_000

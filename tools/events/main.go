@@ -75,10 +75,10 @@ func main() {
 		log.Info().Int("height", height).Msg("overriding start height")
 	}
 
-	// if in console mode set log level to error
+	// if in console mode set log level to warn
 	if config.Get().Console {
 		log.Info().Msg("console mode enabled")
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
 	}
 
 	for block := range thorscan.Scan(height, config.Get().Scan.Stop) {

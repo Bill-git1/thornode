@@ -10,6 +10,7 @@ import (
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/time/rate"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -1222,6 +1223,12 @@ txs:
 // Failed Transactions
 ////////////////////////////////////////////////////////////////////////////////////////
 
+// failedTxLimiter rate-limits all failed transaction alerts using config values.
+var failedTxLimiter = func() *rate.Limiter {
+	cfg := config.Get().RateLimits.FailedTransactions
+	return rate.NewLimiter(rate.Every(cfg.Interval), cfg.Burst)
+}()
+
 func FailedTransactions(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		// skip successful transactions and failed gas or sequence
@@ -1255,8 +1262,19 @@ func FailedTransactions(block *thorscan.BlockResponse) {
 			fields.Set("Log", fmt.Sprintf("`%s`", *tx.Result.Log))
 		}
 
-		// notify failed transaction
 		title := "Failed Transaction"
+
+		// rate-limit all failed transaction alerts
+		if !failedTxLimiter.Allow() {
+			log.Warn().
+				Str("txid", tx.Hash).
+				Int64("height", block.Header.Height).
+				Stringer("fields", fields).
+				Msg("skipping failed transaction alert due to rate limit")
+			continue
+		}
+
+		// notify failed transaction
 		notify.Notify(config.Get().Notifications.Activity, title, block.Header.Height, nil, notify.Warning, fields)
 	}
 }
