@@ -106,3 +106,92 @@ func (HealthServerTestSuite) TestGetP2pIDHandler(c *C) {
 	s.getP2pIDHandler(res, req)
 	c.Assert(res.Code, Equals, http.StatusOK)
 }
+
+func (HealthServerTestSuite) TestClassifyHost(c *C) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		// empty
+		{"", ""},
+
+		// loopback IPs
+		{"127.0.0.1", "self-hosted"},
+		{"127.0.0.1:8332", "self-hosted"},
+		{"::1", "self-hosted"},
+
+		// private RFC-1918 ranges
+		{"10.0.0.1", "self-hosted"},
+		{"10.1.2.3:8545", "self-hosted"},
+		{"172.16.0.1", "self-hosted"},
+		{"172.31.255.255", "self-hosted"},
+		{"192.168.1.100", "self-hosted"},
+		{"192.168.0.1:9650", "self-hosted"},
+
+		// link-local
+		{"169.254.1.1", "self-hosted"},
+
+		// bare hostnames (no dots)
+		{"localhost", "self-hosted"},
+		{"LOCALHOST", "self-hosted"},
+		{"bitcoin-daemon", "self-hosted"},
+		{"thornode", "self-hosted"},
+
+		// local TLDs
+		{"node.local", "self-hosted"},
+		{"btc.internal", "self-hosted"},
+		{"eth.lan", "self-hosted"},
+		{"host.home", "self-hosted"},
+		{"host.localdomain", "self-hosted"},
+		{"HOST.LOCAL", "self-hosted"},
+
+		// URL forms with local addresses
+		{"http://localhost:8332", "self-hosted"},
+		{"http://127.0.0.1:8332/rpc", "self-hosted"},
+		{"http://bitcoin-daemon:8332", "self-hosted"},
+		{"http://node.internal:8545/", "self-hosted"},
+
+		// public IP (no provider name available)
+		{"203.0.113.5", "external-host"},
+		{"203.0.113.5:8545", "external-host"},
+
+		// external providers – bare host
+		{"mainnet.infura.io", "infura.io"},
+		{"eth-mainnet.alchemyapi.io", "alchemyapi.io"},
+		{"rpc.ankr.com", "ankr.com"},
+		{"api.trongrid.io", "trongrid.io"},
+
+		// external providers – with port
+		{"rpc.ankr.com:443", "ankr.com"},
+
+		// external providers – full URLs
+		{"https://mainnet.infura.io/v3/mykey", "infura.io"},
+		{"https://eth-mainnet.g.alchemy.com/v2/key", "alchemy.com"},
+		{"http://rpc.quicknode.pro:8545/", "quicknode.pro"},
+	}
+
+	for _, tc := range cases {
+		got := classifyHost(tc.input)
+		c.Assert(got, Equals, tc.expected, Commentf("input: %q", tc.input))
+	}
+}
+
+func (HealthServerTestSuite) TestProviderStatusHandler(c *C) {
+	tssServer := &MockTssServer{}
+
+	// handler returns 500 when payload is nil (marshal failure path)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
+	s.providerPayload = nil
+	req := httptest.NewRequest(http.MethodGet, "/status/provider", nil)
+	res := httptest.NewRecorder()
+	s.providerStatus(res, req)
+	c.Assert(res.Code, Equals, http.StatusInternalServerError)
+
+	// handler returns pre-computed payload when set
+	s.providerPayload = []byte(`{"BTC":{"rpc_host":"self-hosted"}}`)
+	req = httptest.NewRequest(http.MethodGet, "/status/provider", nil)
+	res = httptest.NewRecorder()
+	s.providerStatus(res, req)
+	c.Assert(res.Code, Equals, http.StatusOK)
+	c.Assert(res.Body.String(), Equals, `{"BTC":{"rpc_host":"self-hosted"}}`)
+}

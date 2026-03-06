@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,11 +50,21 @@ type P2PStatusResponse struct {
 	Errors         []string        `json:"errors"`
 }
 
+type ProviderEntry struct {
+	RPCHost   string `json:"rpc_host,omitempty"`
+	APIHost   string `json:"api_host,omitempty"`
+	ChainHost string `json:"chain_host,omitempty"`
+	GRPCHost  string `json:"grpc_host,omitempty"`
+}
+
+type ProviderResponse map[string]ProviderEntry
+
 type ScannerResponse struct {
 	Chain              string `json:"chain"`
 	ChainHeight        int64  `json:"chain_height"`
 	BlockScannerHeight int64  `json:"block_scanner_height"`
 	ScannerHeightDiff  int64  `json:"scanner_height_diff"`
+	Healthy            *bool  `json:"healthy,omitempty"`
 }
 
 type signingChain struct {
@@ -75,18 +86,35 @@ type VaultResponse struct {
 
 // HealthServer to provide something for health check and also p2pid
 type HealthServer struct {
-	logger    zerolog.Logger
-	s         *http.Server
-	tssServer tss.Server
-	chains    map[common.Chain]chainclients.ChainClient
+	logger          zerolog.Logger
+	s               *http.Server
+	tssServer       tss.Server
+	chains          map[common.Chain]chainclients.ChainClient
+	providerPayload []byte
 }
 
 // NewHealthServer create a new instance of health server
 func NewHealthServer(addr string, tssServer tss.Server, chains map[common.Chain]chainclients.ChainClient) *HealthServer {
+	res := make(ProviderResponse)
+	for chain, client := range chains {
+		cfg := client.GetConfig()
+		res[chain.String()] = ProviderEntry{
+			RPCHost:   classifyHost(cfg.RPCHost),
+			APIHost:   classifyHost(cfg.APIHost),
+			ChainHost: classifyHost(cfg.ChainHost),
+			GRPCHost:  classifyHost(cfg.CosmosGRPCHost),
+		}
+	}
+	providerPayload, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		log.Error().Err(err).Msg("fail to marshal provider status")
+	}
+
 	hs := &HealthServer{
-		logger:    log.With().Str("module", "http").Logger(),
-		tssServer: tssServer,
-		chains:    chains,
+		logger:          log.With().Str("module", "http").Logger(),
+		tssServer:       tssServer,
+		chains:          chains,
+		providerPayload: providerPayload,
 	}
 	s := &http.Server{
 		Addr:              addr,
@@ -104,6 +132,7 @@ func (s *HealthServer) newHandler() http.Handler {
 	router.Handle("/p2pid", http.HandlerFunc(s.getP2pIDHandler)).Methods(http.MethodGet)
 	router.Handle("/status/p2p", http.HandlerFunc(s.p2pStatus)).Methods(http.MethodGet)
 	router.Handle("/status/scanner", http.HandlerFunc(s.chainScanner)).Methods(http.MethodGet)
+	router.Handle("/status/provider", http.HandlerFunc(s.providerStatus)).Methods(http.MethodGet)
 	router.Handle("/status/signing", http.HandlerFunc(s.currentSigning)).Methods(http.MethodGet)
 	return router
 }
@@ -327,12 +356,14 @@ func (s *HealthServer) chainScanner(w http.ResponseWriter, _ *http.Request) {
 				scannerHeightDiff = height - blockScannerHeight
 			}
 
+			healthy := client.IsBlockScannerHealthy()
 			mu.Lock()
 			res[chain.String()] = ScannerResponse{
 				Chain:              chain.String(),
 				ChainHeight:        height,
 				BlockScannerHeight: blockScannerHeight,
 				ScannerHeightDiff:  scannerHeightDiff,
+				Healthy:            &healthy,
 			}
 			mu.Unlock()
 		}()
@@ -371,6 +402,67 @@ func (s *HealthServer) chainScanner(w http.ResponseWriter, _ *http.Request) {
 			s.logger.Error().Err(err).Msg("fail to write to response")
 		}
 	}
+}
+
+func (s *HealthServer) providerStatus(w http.ResponseWriter, _ *http.Request) {
+	if s.providerPayload == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if _, err := w.Write(s.providerPayload); err != nil {
+		s.logger.Error().Err(err).Msg("fail to write to response")
+	}
+}
+
+// classifyHost returns "self-hosted" when rawURL resolves to a loopback, private,
+// link-local, or bare (no-dot) hostname, and returns the registrable domain
+// (e.g. "infura.io") for external providers. An empty input returns "".
+func classifyHost(rawURL string) string {
+	if rawURL == "" {
+		return ""
+	}
+
+	// Add a scheme so url.Parse can extract the hostname reliably.
+	toParse := rawURL
+	if !strings.Contains(toParse, "://") {
+		toParse = "http://" + toParse
+	}
+	u, err := url.Parse(toParse)
+	if err != nil {
+		return "self-hosted"
+	}
+	host := u.Hostname()
+	if host == "" {
+		return "self-hosted"
+	}
+
+	// IP address – check whether it is in a local/private range.
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
+			return "self-hosted"
+		}
+		return "external-host" // public IP
+	}
+
+	// Bare hostnames (no dots) such as "localhost", "bitcoin-daemon", "thornode".
+	if strings.EqualFold(host, "localhost") || !strings.Contains(host, ".") {
+		return "self-hosted"
+	}
+
+	// Local-network TLDs.
+	lower := strings.ToLower(host)
+	for _, suffix := range []string{".local", ".internal", ".lan", ".home", ".localdomain"} {
+		if strings.HasSuffix(lower, suffix) {
+			return "self-hosted"
+		}
+	}
+
+	// External provider – return the registrable domain (last two labels).
+	parts := strings.Split(host, ".")
+	if len(parts) >= 2 {
+		return strings.Join(parts[len(parts)-2:], ".")
+	}
+	return "unknown"
 }
 
 // Start health server
