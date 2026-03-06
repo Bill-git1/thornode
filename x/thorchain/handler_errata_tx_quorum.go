@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"fmt"
+
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -70,7 +72,7 @@ func (h ErrataTxQuorumHandler) handle(ctx cosmos.Context, msg types.MsgErrataTxQ
 		}
 
 		if err := processErrataTxAttestation(ctx, h.mgr, &voter, accAddr, active, er, false); err != nil {
-			ctx.Logger().Error("fail to process errata tx attestation", "error", err)
+			return nil, fmt.Errorf("fail to process errata tx attestation: %w", err)
 		}
 	}
 
