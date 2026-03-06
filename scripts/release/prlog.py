@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = ["python-gitlab"]
+# ///
 
-# pip3 install --upgrade python-gitlab
 import sys
 
 import gitlab
