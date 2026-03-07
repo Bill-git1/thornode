@@ -311,7 +311,7 @@ func calcReclaim(reclaimable1, reclaimable2, spent cosmos.Uint) (reclaim1, recla
 	// If either clout is less than half the spent amount, allocate all to that clout
 	if reclaimable1.LT(halfSpent) {
 		return reclaimable1, spent.Sub(reclaimable1)
-	} else if reclaimable2.LT(halfSpent) {
+	} else if reclaimable2.LT(spent.Sub(halfSpent)) {
 		return spent.Sub(reclaimable2), reclaimable2
 	}
 

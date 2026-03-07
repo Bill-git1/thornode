@@ -35,6 +35,11 @@ func (s *HandlerManageTHORNameSuite) TestValidator(c *C) {
 	msg := NewMsgManageTHORName("I-am_the_99th_walrus+", common.THORChain, addr, coin, 0, common.ETHAsset, acc, acc)
 	c.Assert(handler.validate(ctx, *msg), IsNil)
 
+	// happy path: RUNE as preferred asset (sentinel for clearing) should pass validation
+	msg.PreferredAsset = common.RuneAsset()
+	c.Assert(handler.validate(ctx, *msg), IsNil)
+	msg.PreferredAsset = common.ETHAsset // restore
+
 	// fail: address is wrong chain
 	msg.Chain = common.ETHChain
 	c.Assert(handler.validate(ctx, *msg), NotNil)
@@ -90,13 +95,14 @@ func (s *HandlerManageTHORNameSuite) TestHandler(c *C) {
 	// add rune to addr for gas
 	FundAccount(c, ctx, mgr.Keeper(), acc, 10*common.One)
 
-	// happy path, register new name
+	// happy path, register new name (RUNE as preferred asset should not set it)
 	msg := NewMsgManageTHORName(tnName, common.THORChain, addr, coin, 0, common.RuneAsset(), acc, acc)
 	_, err := handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 	name, err := mgr.Keeper().GetTHORName(ctx, tnName)
 	c.Assert(err, IsNil)
 	c.Check(name.Owner.Empty(), Equals, false)
+	c.Check(name.PreferredAsset.IsEmpty(), Equals, true) // RUNE sentinel clears preferred asset
 	c.Check(name.ExpireBlockHeight, Equals, ctx.BlockHeight()+blocksPerYear+(int64(coin.Amount.Uint64())-registrationFee)/feePerBlock)
 
 	// happy path, set alt chain address
@@ -125,6 +131,32 @@ func (s *HandlerManageTHORNameSuite) TestHandler(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(name.PreferredAsset, Equals, common.ETHAsset)
 
+	// alias-only update should not clear the preferred asset
+	ethAddr = GetRandomETHAddress()
+	msg = NewMsgManageTHORName(tnName, common.ETHChain, ethAddr, common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()), 0, common.EmptyAsset, acc, acc)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
+	c.Assert(err, IsNil)
+	c.Check(name.GetAlias(common.ETHChain).Equals(ethAddr), Equals, true)
+	c.Check(name.PreferredAsset, Equals, common.ETHAsset)
+
+	// clear preferred asset using RUNE sentinel
+	msg = NewMsgManageTHORName(tnName, common.ETHChain, ethAddr, coin, 0, common.RuneAsset(), acc, acc)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
+	c.Assert(err, IsNil)
+	c.Check(name.PreferredAsset.IsEmpty(), Equals, true) // RUNE sentinel clears preferred asset
+
+	// set preferred asset again for the transfer test
+	msg = NewMsgManageTHORName(tnName, common.ETHChain, ethAddr, coin, 0, common.ETHAsset, acc, acc)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
+	c.Assert(err, IsNil)
+	c.Check(name.PreferredAsset, Equals, common.ETHAsset)
+
 	// transfer thorname to new owner, should reset preferred asset/external aliases
 	addr2 := GetRandomTHORAddress()
 	acc2, _ := addr2.AccAddress()
@@ -133,7 +165,7 @@ func (s *HandlerManageTHORNameSuite) TestHandler(c *C) {
 	c.Assert(err, IsNil)
 	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
 	c.Assert(err, IsNil)
-	c.Check(len(name.GetAliases()), Equals, 0)
+	c.Check(len(name.GetAliases()), Equals, 0) // aliases cleared on ownership transfer
 	c.Check(name.PreferredAsset.IsEmpty(), Equals, true)
 	c.Check(name.GetOwner().Equals(acc2), Equals, true)
 

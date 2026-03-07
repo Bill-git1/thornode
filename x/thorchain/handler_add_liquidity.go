@@ -462,7 +462,14 @@ func calculatePoolUnits(oldPoolUnits, poolRune, poolAsset, addRune, addAsset cos
 }
 
 func calculateVaultUnits(oldPoolUnits, poolAmt, addAmt cosmos.Uint) (cosmos.Uint, cosmos.Uint) {
-	if oldPoolUnits.IsZero() || poolAmt.IsZero() {
+	if oldPoolUnits.IsZero() {
+		return addAmt, addAmt
+	}
+	if poolAmt.IsZero() {
+		// Pool has units but no assets - inconsistent state.
+		// Return addAmt as liquidityUnits to match first-depositor semantics,
+		// but the caller must not add this to existing stale units.
+		// Return addAmt as newPoolUnits to signal a reset.
 		return addAmt, addAmt
 	}
 	if addAmt.IsZero() {
@@ -649,6 +656,9 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	var newPoolUnits, liquidityUnits cosmos.Uint
 	if asset.IsSyntheticAsset() {
 		pendingRuneAmt = cosmos.ZeroUint() // sanity check
+		if balanceAsset.IsZero() && !oldPoolUnits.IsZero() {
+			return fmt.Errorf("cannot add liquidity: pool has non-zero units with zero asset balance")
+		}
 		newPoolUnits, liquidityUnits = calculateVaultUnits(oldPoolUnits, balanceAsset, pendingAssetAmt)
 	} else {
 		newPoolUnits, liquidityUnits, err = calculatePoolUnits(oldPoolUnits, balanceRune, balanceAsset, pendingRuneAmt, pendingAssetAmt)

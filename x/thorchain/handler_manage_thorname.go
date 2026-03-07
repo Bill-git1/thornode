@@ -94,7 +94,8 @@ func (h ManageTHORNameHandler) validate(ctx cosmos.Context, msg MsgManageTHORNam
 	}
 
 	// validate preferred asset pool exists and is active
-	if !msg.PreferredAsset.IsEmpty() {
+	// RUNE is allowed as a sentinel to explicitly clear the preferred asset
+	if !msg.PreferredAsset.IsEmpty() && !msg.PreferredAsset.IsRune() {
 		if !h.mgr.Keeper().PoolExist(ctx, msg.PreferredAsset) {
 			return fmt.Errorf("pool %s does not exist", msg.PreferredAsset)
 		}
@@ -185,8 +186,13 @@ func (h ManageTHORNameHandler) handle(ctx cosmos.Context, msg MsgManageTHORName)
 	}
 
 	// check if we need to update the preferred asset
-	if !tn.PreferredAsset.Equals(msg.PreferredAsset) && !msg.PreferredAsset.IsEmpty() {
-		tn.PreferredAsset = msg.PreferredAsset
+	// RUNE is used as a sentinel to explicitly clear the preferred asset
+	if !msg.PreferredAsset.IsEmpty() {
+		if msg.PreferredAsset.IsRune() {
+			tn.PreferredAsset = common.EmptyAsset
+		} else if !tn.PreferredAsset.Equals(msg.PreferredAsset) {
+			tn.PreferredAsset = msg.PreferredAsset
+		}
 	}
 
 	tn.SetAlias(msg.Chain, msg.Address) // update address

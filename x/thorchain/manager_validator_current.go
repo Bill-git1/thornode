@@ -560,7 +560,7 @@ func (vm *ValidatorMgr) payNodeAccountBondAward(ctx cosmos.Context, lastChurnHei
 	nodeOperatorProvider := bp.Get(nodeOperatorAccAddr)
 	// Sanity check that the node operator is accounted for
 	if nodeOperatorProvider.IsEmpty() {
-		return ErrInternal(nil, fmt.Sprintf("node operator address(%s) not listed in bond providers", na.BondAddress))
+		return ErrInternal(fmt.Errorf("node operator not found"), fmt.Sprintf("node operator address(%s) not listed in bond providers", na.BondAddress))
 	}
 	lastNodeOperatorProviderBond := nodeOperatorProvider.Bond
 
