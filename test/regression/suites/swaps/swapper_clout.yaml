@@ -60,7 +60,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 3 }}"
-  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=40861780}
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=40861781}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}

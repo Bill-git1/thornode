@@ -1470,7 +1470,7 @@
               "basis_points": "5000",
               "chain": "THOR",
               "coin": "10000000000 THOR.RUNE",
-              "emit_asset": "48155887573964",
+              "emit_asset": "48155887573965",
               "emit_rune": "129786830124",
               "from": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "id": "C16AA5DE826DE231B484F70E3A7C87874F813E14CB6EC95FF7BCA4E3D452B93C",
@@ -1482,19 +1482,19 @@
               "type": "withdraw"
             },
             {
-              "amount": "48155887573964x/ruji",
+              "amount": "48155887573965x/ruji",
               "msg_index": "0",
               "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "type": "coin_spent"
             },
             {
-              "amount": "48155887573964x/ruji",
+              "amount": "48155887573965x/ruji",
               "msg_index": "0",
               "receiver": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "coin_received"
             },
             {
-              "amount": "48155887573964x/ruji",
+              "amount": "48155887573965x/ruji",
               "msg_index": "0",
               "recipient": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1507,7 +1507,7 @@
             },
             {
               "chain": "THOR",
-              "coin": "48155887573964 THOR.RUJI",
+              "coin": "48155887573965 THOR.RUJI",
               "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "in_tx_id": "C16AA5DE826DE231B484F70E3A7C87874F813E14CB6EC95FF7BCA4E3D452B93C",

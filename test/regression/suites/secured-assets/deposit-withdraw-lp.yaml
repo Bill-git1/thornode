@@ -422,7 +422,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
 asserts:
   - .balance_asset == "124998782"
-  - .balance_rune == "125007658512"
+  - .balance_rune == "125007658516"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_fox }}

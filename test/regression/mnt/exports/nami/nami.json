@@ -134,7 +134,7 @@
               "denom": "rune"
             },
             {
-              "amount": "48150887573965",
+              "amount": "48150887573964",
               "denom": "thor.nami"
             }
           ]
@@ -156,7 +156,7 @@
               "denom": "rune"
             },
             {
-              "amount": "9951849112426035",
+              "amount": "9951849112426036",
               "denom": "thor.nami"
             }
           ]
@@ -407,7 +407,7 @@
         {
           "LP_units": "125000000000",
           "asset": "THOR.NAMI",
-          "balance_asset": "48150887573965",
+          "balance_asset": "48150887573964",
           "balance_rune": "129800307219",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

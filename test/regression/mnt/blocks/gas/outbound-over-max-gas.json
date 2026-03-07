@@ -1487,7 +1487,7 @@
               "value": "5"
             },
             {
-              "amount": "21996200911",
+              "amount": "21996200912",
               "bond_address": "",
               "bond_type": "bond_cost",
               "chain": "",
@@ -1501,19 +1501,19 @@
               "type": "bond"
             },
             {
-              "amount": "7332066970rune",
+              "amount": "7332066971rune",
               "msg_index": "0",
               "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "coin_spent"
             },
             {
-              "amount": "7332066970rune",
+              "amount": "7332066971rune",
               "msg_index": "0",
               "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "type": "coin_received"
             },
             {
-              "amount": "7332066970rune",
+              "amount": "7332066971rune",
               "msg_index": "0",
               "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",

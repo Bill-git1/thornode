@@ -1,7 +1,7 @@
 package common
 
 import (
-	"fmt"
+	"math/big"
 
 	"github.com/cometbft/cometbft/crypto"
 	tmed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -27,37 +27,38 @@ func GetSafeShare(part, total, allocation cosmos.Uint) cosmos.Uint {
 	return GetUncappedShare(part, total, allocation)
 }
 
-// GetUncappedShare this method will panic if any of the input parameter can't be convert to cosmos.Dec
-// which shouldn't happen.
-// The first two arguments should always have the same units (cancelling out to represent a unitless ratio applied to the allocation).
-func GetUncappedShare(part, total, allocation cosmos.Uint) (share cosmos.Uint) {
-	if part.IsZero() || total.IsZero() {
+// GetUncappedShare calculates the share using only big.Int stack values
+// and a single round-half-up at the final division for positive values.
+// It avoids intermediate cosmos.Uint allocations for better performance.
+func GetUncappedShare(part, total, allocation cosmos.Uint) cosmos.Uint {
+	// Guard against division by zero and early zero results
+	if part.IsZero() || total.IsZero() || allocation.IsZero() {
 		return cosmos.ZeroUint()
 	}
-	defer func() {
-		if err := recover(); err != nil {
-			share = cosmos.ZeroUint()
-		}
-	}()
-	// use string to convert cosmos.Uint to cosmos.Dec is the only way I can find out without being constrain to uint64
-	// cosmos.Uint can hold values way larger than uint64 , because it is using big.Int internally
-	aD, err := cosmos.NewDecFromStr(allocation.String())
-	if err != nil {
-		panic(fmt.Errorf("fail to convert %s to cosmos.Dec: %w", allocation.String(), err))
+
+	// Fast equality: part == total => full allocation
+	if part.Equal(total) {
+		return allocation
 	}
 
-	pD, err := cosmos.NewDecFromStr(part.String())
-	if err != nil {
-		panic(fmt.Errorf("fail to convert %s to cosmos.Dec: %w", part.String(), err))
-	}
-	tD, err := cosmos.NewDecFromStr(total.String())
-	if err != nil {
-		panic(fmt.Errorf("fail to convert%s to cosmos.Dec: %w", total.String(), err))
-	}
-	// A / (Total / part) == A * (part/Total) but safer when part < Totals
-	result := aD.Quo(tD.Quo(pD))
-	share = cosmos.NewUintFromBigInt(result.RoundInt().BigInt())
-	return
+	// Copy inputs into stack big.Ints
+	var a, p, t big.Int
+	a.Set(allocation.BigInt())
+	p.Set(part.BigInt())
+	t.Set(total.BigInt())
+
+	// num = a*p + floor(t/2)  (round-half-up for positives)
+	var num big.Int
+	num.Mul(&a, &p)
+	var half big.Int
+	half.Rsh(&t, 1) // floor(t/2)
+	num.Add(&num, &half)
+
+	// res = num / t
+	var res big.Int
+	res.Quo(&num, &t)
+
+	return cosmos.NewUintFromBigInt(&res)
 }
 
 // SafeSub subtract input2 from input1, given cosmos.Uint can't be negative , otherwise it will panic

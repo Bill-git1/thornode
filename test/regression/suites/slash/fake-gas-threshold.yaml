@@ -64,7 +64,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/outbound_fee/eth.eth
 asserts:
-  - .[0].fee_spent_rune == "20000319634"
+  - .[0].fee_spent_rune == "20000319635"
 ---
 ########################################################################################
 # Verify NO slashing occurred and NO security event was emitted for fake gas tx

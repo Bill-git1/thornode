@@ -81,4 +81,4 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_module_tcy_stake }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 99099064
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 99099065

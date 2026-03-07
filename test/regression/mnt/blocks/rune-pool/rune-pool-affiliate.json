@@ -2189,7 +2189,7 @@
               "rune_amount": "858564301",
               "tx_id": "77BD417DEA7C69D1E743FE1464335C97F30C7CF17D0E14BEF1E65895A7E0D95A",
               "type": "rune_pool_withdraw",
-              "units": "859831842"
+              "units": "859831843"
             }
           ]
         }
@@ -2369,19 +2369,19 @@
         "type": "rewards"
       },
       {
-        "amount": "370869852rune",
+        "amount": "370869850rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "370869852rune",
+        "amount": "370869850rune",
         "mode": "EndBlock",
         "receiver": "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80",
         "type": "coin_received"
       },
       {
-        "amount": "370869852rune",
+        "amount": "370869850rune",
         "mode": "EndBlock",
         "recipient": "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -2766,19 +2766,19 @@
               "type": "message"
             },
             {
-              "amount": "1102958759rune",
+              "amount": "1102958757rune",
               "msg_index": "0",
               "spender": "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80",
               "type": "coin_spent"
             },
             {
-              "amount": "1102958759rune",
+              "amount": "1102958757rune",
               "msg_index": "0",
               "receiver": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "coin_received"
             },
             {
-              "amount": "1102958759rune",
+              "amount": "1102958757rune",
               "msg_index": "0",
               "recipient": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "sender": "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80",
@@ -2796,10 +2796,10 @@
               "basis_points": "10000",
               "msg_index": "0",
               "rune_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-              "rune_amount": "1203674690",
+              "rune_amount": "1203674688",
               "tx_id": "B856B0D5D0B1143D12C633343F8F7818F999C7896AB532402ED14321F1E8F4B1",
               "type": "rune_pool_withdraw",
-              "units": "859831843"
+              "units": "859831842"
             }
           ]
         }

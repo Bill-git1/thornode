@@ -158,19 +158,19 @@
     "begin_block_events": [],
     "end_block_events": [
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -182,19 +182,19 @@
         "type": "message"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -230,8 +230,8 @@
         "type": "message"
       },
       {
-        "BTC.BTC": "546042",
-        "ETH.ETH": "546042",
+        "BTC.BTC": "546043",
+        "ETH.ETH": "546043",
         "bond_reward": "17758",
         "dev_fund_reward": "0",
         "income_burn": "0",
@@ -743,19 +743,19 @@
     "begin_block_events": [],
     "end_block_events": [
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -767,19 +767,19 @@
         "type": "message"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "546042rune",
+        "amount": "546043rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -815,8 +815,8 @@
         "type": "message"
       },
       {
-        "BTC.BTC": "546042",
-        "ETH.ETH": "546042",
+        "BTC.BTC": "546043",
+        "ETH.ETH": "546043",
         "bond_reward": "17758",
         "dev_fund_reward": "0",
         "income_burn": "0",
@@ -4712,7 +4712,7 @@
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
-        "rune_amt": "39101285067",
+        "rune_amt": "39101285068",
         "type": "pool_balance_change"
       },
       {
@@ -4724,7 +4724,7 @@
       {
         "asset": "THOR.ETH",
         "asset_add": "true",
-        "asset_amt": "430000000",
+        "asset_amt": "429999999",
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
@@ -5112,17 +5112,17 @@
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
-        "rune_amt": "213506",
+        "rune_amt": "213505",
         "type": "pool_balance_change"
       },
       {
         "asset": "THOR.ETH",
-        "asset_add": "false",
-        "asset_amt": "1",
+        "asset_add": "true",
+        "asset_amt": "0",
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
-        "rune_amt": "235394",
+        "rune_amt": "235395",
         "type": "pool_balance_change"
       }
     ],

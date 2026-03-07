@@ -402,7 +402,7 @@ asserts:
   - .|[..|select(.type?=="affiliate_fee")][0].asset == "THOR.RUNE" # pig affiliate
   - .|[..|select(.type?=="affiliate_fee")][0].fee_bps == "100"
   - .|[..|select(.type?=="affiliate_fee")][0].fee_amount == "304595165"
-  - .|[..|select(.type?=="affiliate_fee")][0].gross_amount == "${GROSS_AMOUNT=30459516473}"
+  - .|[..|select(.type?=="affiliate_fee")][0].gross_amount == "${GROSS_AMOUNT=30459516474}"
   - .|[..|select(.type?=="affiliate_fee")][0].thorname == "t"
   ##
   - .|[..|select(.type?=="affiliate_fee")][1].rune_address == "{{ addr_thor_fish }}"
