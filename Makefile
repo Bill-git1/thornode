@@ -80,7 +80,7 @@ ifndef CI
 DOCKER_TTY_ARGS=-it
 endif
 
-HTTPS_GIT := gitlab.com/thorchain/thornode.git
+HTTPS_GIT := https://gitlab.com/thorchain/thornode.git
 
 ########################################################################################
 # Targets
@@ -132,10 +132,10 @@ proto-format-check:
 	@find ./ -name "*.proto" -print0 | xargs -0L1 $(protoImage) clang-format --dry-run -Werror
 
 proto-lint:
-	@$(protoImage) buf lint --error-format=json
+	@$(protoImage) sh -c "cd proto/thorchain/v1 && buf lint --error-format=json"
 
 proto-check-breaking:
-	@$(protoImage) buf breaking --against $(HTTPS_GIT)#branch=develop
+	@$(protoImage) sh -c "cd proto/thorchain/v1 && buf breaking --against $(HTTPS_GIT)#branch=develop,subdir=proto/thorchain/v1"
 
 # ------------------------------ Docs ------------------------------
 
