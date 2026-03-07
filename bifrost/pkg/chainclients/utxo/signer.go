@@ -169,7 +169,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	signings := []struct{ idx, amount int64 }{}
 	totalAmount := int64(0)
 	for idx, txIn := range redeemTx.TxIn {
-		key := fmt.Sprintf("%s-%d", txIn.PreviousOutPoint.Hash, txIn.PreviousOutPoint.Index)
+		key := formatTxVoutKey(txIn.PreviousOutPoint.Hash.String(), txIn.PreviousOutPoint.Index)
 		outputAmount := checkpoint.IndividualAmounts[key]
 		totalAmount += outputAmount
 		signings = append(signings, struct{ idx, amount int64 }{int64(idx), outputAmount})

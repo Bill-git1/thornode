@@ -158,6 +158,10 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total btcutil.Amount) ([]b
 	return result, nil
 }
 
+func formatTxVoutKey(txID string, vout uint32) string {
+	return fmt.Sprintf("%s-%d", txID, vout)
+}
+
 // vinsUnspent will return true if all the vins are unspent.
 func (c *Client) vinsUnspent(tx stypes.TxOutItem, vins []*wire.TxIn) (bool, error) {
 	// get all unspent utxos
@@ -171,16 +175,18 @@ func (c *Client) vinsUnspent(tx stypes.TxOutItem, vins []*wire.TxIn) (bool, erro
 	}
 	unspent := make(map[string]bool, len(utxos))
 	for _, utxo := range utxos {
-		unspent[utxo.TxID] = true
+		unspent[formatTxVoutKey(utxo.TxID, utxo.Vout)] = true
 	}
 
 	// return false if any vin is spent
 	allUnspent := true
 	for _, vin := range vins {
-		if !unspent[vin.PreviousOutPoint.Hash.String()] {
+		key := formatTxVoutKey(vin.PreviousOutPoint.Hash.String(), vin.PreviousOutPoint.Index)
+		if !unspent[key] {
 			c.log.Warn().
 				Stringer("in_hash", tx.InHash).
-				Stringer("vin", vin.PreviousOutPoint).
+				Str("txid", vin.PreviousOutPoint.Hash.String()).
+				Uint32("vout", vin.PreviousOutPoint.Index).
 				Msg("vin is spent")
 			allUnspent = false
 		}
@@ -416,7 +422,7 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to parse amount(%f): %w", item.Amount, err)
 		}
-		individualAmounts[fmt.Sprintf("%s-%d", txID, item.Vout)] = int64(amt)
+		individualAmounts[formatTxVoutKey(txID.String(), item.Vout)] = int64(amt)
 		totalAmt += int64(amt)
 	}
 

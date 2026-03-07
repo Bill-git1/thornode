@@ -16,6 +16,8 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
 	btcchaincfg "github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -48,6 +50,8 @@ type BitcoinSignerSuite struct {
 	m      *metrics.Metrics
 	db     *leveldb.DB
 	keys   *thorclient.Keys
+
+	vinsUnspentFixtureAddress string
 }
 
 var _ = Suite(&BitcoinSignerSuite{})
@@ -130,9 +134,12 @@ func (s *BitcoinSignerSuite) SetUpTest(c *C) {
 				c.Assert(err, IsNil)
 			case "listunspent":
 				body := string(buf)
-				if strings.Contains(body, "tb1qleqepvj0d9n7899qj3skd8tw7c7jvh3zlxul70") {
+				switch {
+				case s.vinsUnspentFixtureAddress != "" && strings.Contains(body, s.vinsUnspentFixtureAddress):
+					httpTestHandler(c, rw, "../../../../test/fixtures/btc/listunspent-vins-unspent.json")
+				case strings.Contains(body, "tb1qleqepvj0d9n7899qj3skd8tw7c7jvh3zlxul70"):
 					httpTestHandler(c, rw, "../../../../test/fixtures/btc/listunspent-tss.json")
-				} else {
+				default:
 					httpTestHandler(c, rw, "../../../../test/fixtures/btc/listunspent.json")
 				}
 			}
@@ -211,6 +218,35 @@ func (s *BitcoinSignerSuite) TestSignTx(c *C) {
 	result, _, _, err = s.client.SignTx(txOutItem, 4)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+}
+
+func (s *BitcoinSignerSuite) TestVinsUnspentUsesTxIDAndVout(c *C) {
+	const txID = "1111111111111111111111111111111111111111111111111111111111111111"
+	vaultPubKey := types2.GetRandomPubKey()
+	vaultAddr, err := vaultPubKey.GetAddress(common.BTCChain)
+	c.Assert(err, IsNil)
+	s.vinsUnspentFixtureAddress = vaultAddr.String()
+	defer func() {
+		s.vinsUnspentFixtureAddress = ""
+	}()
+
+	hash, err := chainhash.NewHashFromStr(txID)
+	c.Assert(err, IsNil)
+
+	tx := stypes.TxOutItem{
+		Chain:       common.BTCChain,
+		VaultPubKey: vaultPubKey,
+	}
+
+	matchingVin := wire.NewTxIn(wire.NewOutPoint(hash, 1), nil, nil)
+	unspent, err := s.client.vinsUnspent(tx, []*wire.TxIn{matchingVin})
+	c.Assert(err, IsNil)
+	c.Assert(unspent, Equals, true)
+
+	spentSiblingVin := wire.NewTxIn(wire.NewOutPoint(hash, 0), nil, nil)
+	unspent, err = s.client.vinsUnspent(tx, []*wire.TxIn{spentSiblingVin})
+	c.Assert(err, IsNil)
+	c.Assert(unspent, Equals, false)
 }
 
 func (s *BitcoinSignerSuite) TestSignTxHappyPathWithPrivateKey(c *C) {
