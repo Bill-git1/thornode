@@ -1,3 +1,10 @@
+# NOTE: This regression test covers outbound aggregator behavior only (THORNode queuing
+# a swap-out through an aggregator). Inbound aggregator swap-in observation (bifrost
+# parsing EVM receipts where tx.To() is an aggregator contract) cannot be tested here
+# because regression tests operate at the THORNode protocol level, not the bifrost
+# scanning level. Inbound aggregator path coverage is provided by unit tests in:
+#   - bifrost/pkg/chainclients/ethereum/ethereum_block_scanner_test.go (TestFromTxToTxIn, TestRouterValidation)
+#   - bifrost/pkg/chainclients/evm/evm_block_scanner_test.go (TestRouterValidation)
 {{ template "default-state.yaml" }}
 ---
 {{ template "btc-eth-pool-state.yaml" }}

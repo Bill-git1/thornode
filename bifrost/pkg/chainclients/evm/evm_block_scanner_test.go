@@ -416,11 +416,11 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 			}
 			if rpcRequest.Method == "eth_getTransactionReceipt" {
 				switch string(rpcRequest.Params) {
-				case `["0xc5df10917683a31c361218577d5e13ee9d7e29f8b92415f337a318942bd2c875"]`:
+				case `["0x73247964cf3c18a6afc4470998395ca1c2268a45cdd09dcf2ce4e408a5c95d37"]`:
 					_, err = rw.Write(depositEVMReceipt)
 					c.Assert(err, IsNil)
 					return
-				case `["0x08053d250f3897e1e27b29dc97bb71a7f99809a5dfd052117ea335c2ee0f55e5"]`:
+				case `["0xf36195f1f864911cfa68eb43a92bc168e286d78a2b3a2c31b7a1cb494f08c381"]`:
 					_, err = rw.Write(depositTknReceipt)
 					c.Assert(err, IsNil)
 					return
@@ -531,10 +531,10 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	txInItem, err = bs.getTxInItem(tx)
 	c.Assert(err, IsNil)
 	c.Assert(txInItem, NotNil)
-	c.Assert(txInItem.Sender, Equals, "0x970e8128ab834e8eac17ab8e3812f010678cf791")
-	c.Assert(txInItem.To, Equals, "0x6F2744B3a9eba0C5929AAdc9e81183a48B9221FC")
+	c.Assert(txInItem.Sender, Equals, "0xc96aaa54e2d44c299564da76e1cd3184a2386b8d")
+	c.Assert(txInItem.To, Equals, "0xd58610F89265a2fB637Ac40EDf59141Ff873b266")
 	c.Assert(txInItem.Memo, Equals, "ADD:AVAX.AVAX:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej")
-	c.Assert(txInItem.Tx, Equals, "c5df10917683a31c361218577d5e13ee9d7e29f8b92415f337a318942bd2c875")
+	c.Assert(txInItem.Tx, Equals, "73247964cf3c18a6afc4470998395ca1c2268a45cdd09dcf2ce4e408a5c95d37")
 	c.Assert(txInItem.Coins[0].Asset.String(), Equals, "AVAX.AVAX")
 	c.Assert(txInItem.Coins[0].Amount.Uint64(), Equals, cosmos.NewUint(200000000).Uint64())
 
@@ -551,10 +551,10 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	txInItem, err = bs.getTxInItem(tx)
 	c.Assert(err, IsNil)
 	c.Assert(txInItem, NotNil)
-	c.Assert(txInItem.Sender, Equals, "0x970e8128ab834e8eac17ab8e3812f010678cf791")
-	c.Assert(txInItem.To, Equals, "0x6F2744B3a9eba0C5929AAdc9e81183a48B9221FC")
+	c.Assert(txInItem.Sender, Equals, "0xc96aaa54e2d44c299564da76e1cd3184a2386b8d")
+	c.Assert(txInItem.To, Equals, "0xd58610F89265a2fB637Ac40EDf59141Ff873b266")
 	c.Assert(txInItem.Memo, Equals, "ADD:AVAX.TKN-0X333C3310824B7C685133F2BEDB2CA4B8B4DF633D:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej")
-	c.Assert(txInItem.Tx, Equals, "08053d250f3897e1e27b29dc97bb71a7f99809a5dfd052117ea335c2ee0f55e5")
+	c.Assert(txInItem.Tx, Equals, "f36195f1f864911cfa68eb43a92bc168e286d78a2b3a2c31b7a1cb494f08c381")
 	// c.Assert(txInItem.Coins[0].Asset.String(), Equals, "AVAX.TKN-0X333C3310824B7C685133F2BEDB2CA4B8B4DF633D")
 	c.Assert(txInItem.Coins[0].Amount.Uint64(), Equals, cosmos.NewUint(100000000).Uint64())
 
@@ -586,9 +586,9 @@ func (s *BlockScannerTestSuite) TestRouterValidation(c *C) {
 	vaultAddrLower := strings.ToLower(vaultAddr[2:])
 
 	// Reuse the aggregator tx from the ETH test (chainID=1337).
-	// tx.To()=0x81a392... (aggregator), sender=0x26355f70... (not a vault)
-	encodedTx := `{"nonce":"0x4","gasPrice":"0x1","gas":"0x177b8","to":"0x81a392e6a757d58a7eb6781a775a3449da3b9df5","value":"0x0","input":"0x1fece7b400000000000000000000000058e99c9c4a20f5f054c737389fdd51d7ed9c7d2a0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf4830000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000634144443a4554482e544b4e2d3078336237464134646432316336663942413363613337353231374541443743416239443662463438333a7474686f72313678786e30636164727575773661327177707633356176306d6568727976647a7a6a7a3361660000000000000000000000000000000000000000000000000000000000","v":"0xa95","r":"0x8a82b49901d67748c6840d7417d7307a40e6093579f6f73f7222cb52622f92cd","s":"0x21a1097c02306b177a0ca1a6e9f9599a8c4bab9926893493e966253c436977fd","hash":"0x94ac3936bf227f830e21f9f852bec127086024f327d41862455b3d5f101d18c5"}`
-	txHash := "0x94ac3936bf227f830e21f9f852bec127086024f327d41862455b3d5f101d18c5"
+	// tx.To()=0x81a392... (aggregator), sender=0xc96aaa54... (not a vault)
+	encodedTx := `{"nonce":"0x4","gasPrice":"0x1","gas":"0x177b8","to":"0x81a392e6a757d58a7eb6781a775a3449da3b9df5","value":"0x0","input":"0x1fece7b4000000000000000000000000d58610f89265a2fb637ac40edf59141ff873b2660000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf4830000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000634144443a4554482e544b4e2d3078336237464134646432316336663942413363613337353231374541443743416239443662463438333a7474686f72313678786e30636164727575773661327177707633356176306d6568727976647a7a6a7a3361660000000000000000000000000000000000000000000000000000000000","v":"0xa96","r":"0x7fbfee9939a7e6de1e9dec44f4ac8cd9496de934dff9abe74c9ba2ecc69ac66e","s":"0x606c5d6510558513b6425099892fc2269663abbd11266b7087c6ecb899827b11","hash":"0xbd6e8494e18d627d2331c625203bcea6fb5acb9cdc8a82628f1bc894e90884e2"}`
+	txHash := "0xbd6e8494e18d627d2331c625203bcea6fb5acb9cdc8a82628f1bc894e90884e2"
 
 	makeReceiptJSON := func(routerAddr string) string {
 		return fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"result":{
