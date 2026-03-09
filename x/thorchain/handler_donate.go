@@ -41,8 +41,8 @@ func (h DonateHandler) validate(ctx cosmos.Context, msg MsgDonate) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
-	if msg.Asset.IsSyntheticAsset() {
-		ctx.Logger().Error("asset cannot be synth", "error", errInvalidMessage)
+	if !msg.Asset.IsRune() && msg.Asset.IsNative() {
+		ctx.Logger().Error("asset cannot be a non-RUNE native asset", "error", errInvalidMessage)
 		return errInvalidMessage
 	}
 	return nil

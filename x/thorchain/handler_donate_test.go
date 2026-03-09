@@ -123,6 +123,21 @@ func (HandlerDonateSuite) TestHandleMsgDonateValidation(c *C) {
 			msg:         NewMsgDonate(GetRandomTx(), common.ETHAsset.GetSyntheticAsset(), cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
 			expectedErr: errInvalidMessage,
 		},
+		{
+			name:        "trade asset should fail",
+			msg:         NewMsgDonate(GetRandomTx(), common.ETHAsset.GetTradeAsset(), cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
+			expectedErr: errInvalidMessage,
+		},
+		{
+			name:        "derived asset should fail",
+			msg:         NewMsgDonate(GetRandomTx(), common.ETHAsset.GetDerivedAsset(), cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
+			expectedErr: errInvalidMessage,
+		},
+		{
+			name:        "secured asset should fail",
+			msg:         NewMsgDonate(GetRandomTx(), common.ETHAsset.GetSecuredAsset(), cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
+			expectedErr: errInvalidMessage,
+		},
 	}
 
 	donateHandler := NewDonateHandler(NewDummyMgrWithKeeper(w.keeper))
