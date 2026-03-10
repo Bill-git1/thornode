@@ -1500,3 +1500,41 @@ func (s *HelperSuite) TestApplyMemolessOutboundLogic(c *C) {
 		c.Assert(toi.OriginalMemo, Equals, tt.expectedOriginalMemo, Commentf("Test: %s - OriginalMemo mismatch", tt.name))
 	}
 }
+
+func (s *HelperSuite) TestGetMaxSwapQuantityRapidInterval(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, ethPool), IsNil)
+
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(2000 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(10 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, btcPool), IsNil)
+
+	k.SetMimir(ctx, "L1SlipMinBps", 100)             // 1%
+	k.SetMimir(ctx, "StreamingSwapMaxLength", 14400) // max non-native streaming length
+
+	// interval=0 (rapid) should not force max quantity to zero.
+	quantity, err := getMaxSwapQuantity(ctx, mgr, common.ETHAsset, common.BTCAsset, StreamingSwap{
+		Interval: 0,
+		Deposit:  cosmos.NewUint(1000 * common.One),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(quantity, Equals, uint64(1000), Commentf("rapid interval should preserve non-zero quantity cap"))
+
+	// interval=0 should still be bounded by max length constraints using effective interval=1.
+	quantity, err = getMaxSwapQuantity(ctx, mgr, common.ETHAsset, common.BTCAsset, StreamingSwap{
+		Interval: 0,
+		Deposit:  cosmos.NewUint(50000 * common.One),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(quantity, Equals, uint64(14400), Commentf("rapid interval should respect max length cap"))
+}

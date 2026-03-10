@@ -175,8 +175,11 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 }
 
 func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
-	if swp.Interval == 0 {
-		return 0, nil
+	// Interval 0 is rapid streaming. For quantity limits, treat it as 1 block
+	// so rapid requests can still be bounded by swap size and max length rules.
+	interval := swp.Interval
+	if interval == 0 {
+		interval = 1
 	}
 
 	// collect pools involved in this swap
@@ -229,10 +232,7 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 	} else {
 		maxLength = mgr.Keeper().GetConfigInt64(ctx, constants.StreamingSwapMaxLength)
 	}
-	if swp.Interval == 0 {
-		return 1, nil
-	}
-	maxSwapInMaxLength := uint64(maxLength) / swp.Interval
+	maxSwapInMaxLength := uint64(maxLength) / interval
 	if maxSwapQuantity.GT(cosmos.NewUint(maxSwapInMaxLength)) {
 		return maxSwapInMaxLength, nil
 	}
