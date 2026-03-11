@@ -16,4 +16,7 @@ const (
 var (
 	ScheduleKey    = "schedule"
 	SchedulePrefix = collections.NewPrefix(0)
+
+	SenderIndexKey    = "sender_index"
+	SenderIndexPrefix = collections.NewPrefix(1)
 )

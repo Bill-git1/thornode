@@ -30,6 +30,7 @@ message QuerySchedulesRequest {
     (gogoproto.nullable) = false,
     (gogoproto.moretags) = "yaml:\"pagination\""
   ];
+  string sender = 2 [ (gogoproto.moretags) = "yaml:\"sender\"" ];
 }
 message QuerySchedulesResponse {
   repeated Schedule schedules = 1

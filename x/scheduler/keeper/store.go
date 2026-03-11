@@ -9,7 +9,6 @@ import (
 
 	sdkcodec "github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	query "github.com/cosmos/cosmos-sdk/types/query"
 	"gitlab.com/thorchain/thornode/v3/x/scheduler/types"
 )
 
@@ -19,6 +18,14 @@ func (k Keeper) Store() collections.Map[uint64, types.Schedule] {
 		types.SchedulePrefix, types.ScheduleKey,
 		codec.NewUint64Key[uint64](),
 		sdkcodec.CollValue[types.Schedule](k.cdc),
+	)
+}
+
+func (k Keeper) SenderIndex() collections.KeySet[collections.Pair[string, uint64]] {
+	return collections.NewKeySet(
+		collections.NewSchemaBuilder(k.storeService),
+		types.SenderIndexPrefix, types.SenderIndexKey,
+		collections.PairKeyCodec(collections.StringKey, codec.NewUint64Key[uint64]()),
 	)
 }
 
@@ -41,7 +48,13 @@ func (k Keeper) AddMsg(ctx sdk.Context, msg types.MsgScheduleExecuteContract) er
 		),
 	})
 
-	return k.SetSchedule(ctx, *existing)
+	// directly set schedule, to avoid unnecessary deletes and inserts
+	err = k.Store().Set(ctx, height, *existing)
+	if err != nil {
+		return err
+	}
+
+	return k.SenderIndex().Set(ctx, collections.Join(msg.Sender, height))
 }
 
 func (k Keeper) GetSchedule(ctx sdk.Context, height uint64) (*types.Schedule, error) {
@@ -59,16 +72,49 @@ func (k Keeper) GetSchedule(ctx sdk.Context, height uint64) (*types.Schedule, er
 	return &existing, err
 }
 
+// SetSchedule sets or updates a schedule. On update, it deletes the sender
+// index for all messages of the existing schedule and writes new entries
+// for all messages of the new schedule.
 func (k Keeper) SetSchedule(ctx sdk.Context, schedule types.Schedule) error {
-	return k.Store().Set(ctx, schedule.Height, schedule)
+	// check and remove old schedule and sender index
+	has, err := k.Store().Has(ctx, schedule.Height)
+	if err != nil {
+		return err
+	}
+
+	if has {
+		err = k.RemoveSchedule(ctx, schedule.Height)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = k.Store().Set(ctx, schedule.Height, schedule)
+	if err != nil {
+		return err
+	}
+
+	for _, msg := range schedule.Msgs {
+		err = k.SenderIndex().Set(ctx, collections.Join(msg.Sender, schedule.Height))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (k Keeper) RemoveSchedule(ctx sdk.Context, height uint64) error {
-	return k.Store().Remove(ctx, height)
-}
+	schedule, err := k.GetSchedule(ctx, height)
+	if err != nil {
+		return err
+	}
 
-func (k Keeper) ListSchedules(ctx sdk.Context, pagerequest *query.PageRequest) ([]types.Schedule, *query.PageResponse, error) {
-	return query.CollectionPaginate(ctx, k.Store(), pagerequest, func(key uint64, value types.Schedule) (types.Schedule, error) {
-		return value, nil
-	})
+	for _, msg := range schedule.Msgs {
+		err = k.SenderIndex().Remove(ctx, collections.Join(msg.Sender, height))
+		if err != nil {
+			return err
+		}
+	}
+	return k.Store().Remove(ctx, height)
 }
