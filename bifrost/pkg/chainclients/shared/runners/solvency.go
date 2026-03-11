@@ -62,10 +62,22 @@ func SolvencyCheckRunner(chain common.Chain,
 				continue
 			}
 
-			// when HaltHeight == 1 means admin halt the chain, no need to do solvency check
-			// when Chain is not halted, the normal chain client will report solvency when it need to
-			// But if SolvencyHalt<chain>Chain > 0 this means the chain is halted, and we need to report solvency here
-			if haltHeight <= 1 && solvencyHaltHeight <= 0 {
+			thorHeight, err := bridge.GetBlockHeight()
+			if err != nil {
+				logger.Err(err).Msg("fail to get THORChain block height")
+				continue
+			}
+
+			// Halt<chain>Chain values > 1 are height-based and should not activate until THORChain
+			// reaches that height. A value of 1 is treated as an immediate admin halt and should
+			// not trigger runner-driven solvency checks.
+			chainHalted := haltHeight > 1 && thorHeight >= haltHeight
+			// Solvency halts are also height-based, though in practice they are expected to be set
+			// to the current THORChain height by the solvency handler.
+			solvencyHalted := solvencyHaltHeight > 0 && thorHeight >= solvencyHaltHeight
+			// When the chain is not actively halted, the normal chain client will report solvency
+			// when needed.
+			if !chainHalted && !solvencyHalted {
 				continue
 			}
 

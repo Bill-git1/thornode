@@ -1,6 +1,7 @@
 package runners
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -22,7 +23,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
-	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -70,81 +70,121 @@ func (s *SolvencyTestSuite) SetUpSuite(c *C) {
 }
 
 func (s *SolvencyTestSuite) TestSolvencyCheck(c *C) {
-	mimirMap := map[string]int{
-		"HaltETHChain":         0,
-		"SolvencyHaltETHChain": 0,
+	type testCase struct {
+		name               string
+		thorHeight         int64
+		haltHeight         int64
+		solvencyHaltHeight int64
+		expectCheck        bool
+		expectReport       bool
 	}
 
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c.Logf("================>:%s", r.RequestURI)
-		if strings.HasPrefix(r.RequestURI, thorclient.MimirEndpoint) {
-			parts := strings.Split(r.RequestURI, "/key/")
-			mimirKey := parts[1]
+	testCases := []testCase{
+		{
+			name:               "nothing halted",
+			thorHeight:         9,
+			haltHeight:         0,
+			solvencyHaltHeight: 0,
+			expectCheck:        false,
+			expectReport:       false,
+		},
+		{
+			name:               "admin halted",
+			thorHeight:         9,
+			haltHeight:         1,
+			solvencyHaltHeight: 0,
+			expectCheck:        false,
+			expectReport:       false,
+		},
+		{
+			name:               "future chain halt does not trigger reporting",
+			thorHeight:         9,
+			haltHeight:         10,
+			solvencyHaltHeight: 0,
+			expectCheck:        false,
+			expectReport:       false,
+		},
+		{
+			name:               "active chain halt triggers reporting",
+			thorHeight:         10,
+			haltHeight:         10,
+			solvencyHaltHeight: 0,
+			expectCheck:        true,
+			expectReport:       true,
+		},
+		{
+			name:               "future solvency halt does not trigger reporting",
+			thorHeight:         9,
+			haltHeight:         0,
+			solvencyHaltHeight: 10,
+			expectCheck:        false,
+			expectReport:       false,
+		},
+		{
+			name:               "active solvency halt triggers reporting",
+			thorHeight:         10,
+			haltHeight:         0,
+			solvencyHaltHeight: 10,
+			expectCheck:        true,
+			expectReport:       true,
+		},
+	}
 
-			mimirValue := 0
-			if val, found := mimirMap[mimirKey]; found {
-				mimirValue = val
-			}
+	for _, tc := range testCases {
+		c.Log(tc.name)
 
-			if _, err := w.Write([]byte(strconv.Itoa(mimirValue))); err != nil {
-				c.Error(err)
-			}
+		mimirMap := map[string]int64{
+			"HaltETHChain":         tc.haltHeight,
+			"SolvencyHaltETHChain": tc.solvencyHaltHeight,
 		}
-	})
+		thorHeight := tc.thorHeight
 
-	server := httptest.NewServer(h)
-	defer server.Close()
-	bridge, _ := thorclient.NewThorchainBridge(config.BifrostClientConfiguration{
-		ChainID:         "thorchain",
-		ChainHost:       server.Listener.Addr().String(),
-		ChainRPC:        server.Listener.Addr().String(),
-		SignerName:      "bob",
-		SignerPasswd:    "password",
-		ChainHomeFolder: ".",
-	}, s.m, s.keys)
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c.Logf("================>:%s", r.RequestURI)
+			switch {
+			case strings.HasPrefix(r.RequestURI, thorclient.MimirEndpoint):
+				parts := strings.Split(r.RequestURI, "/key/")
+				mimirKey := parts[1]
+				mimirValue := int64(0)
+				if val, found := mimirMap[mimirKey]; found {
+					mimirValue = val
+				}
+				if _, err := w.Write([]byte(strconv.FormatInt(mimirValue, 10))); err != nil {
+					c.Error(err)
+				}
+			case strings.HasPrefix(r.RequestURI, thorclient.LastBlockEndpoint):
+				if _, err := w.Write([]byte(fmt.Sprintf(`[{"chain":"ETH","last_observed_in":0,"last_signed_out":0,"thorchain":%d}]`, thorHeight))); err != nil {
+					c.Error(err)
+				}
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		})
 
-	stopchan := make(chan struct{})
-	wg := &sync.WaitGroup{}
+		server := httptest.NewServer(h)
+		bridge, err := thorclient.NewThorchainBridge(config.BifrostClientConfiguration{
+			ChainID:         "thorchain",
+			ChainHost:       server.Listener.Addr().String(),
+			ChainRPC:        server.Listener.Addr().String(),
+			SignerName:      "bob",
+			SignerPasswd:    "password",
+			ChainHomeFolder: ".",
+		}, s.m, s.keys)
+		c.Assert(err, IsNil)
 
-	// Happy path, shouldn't check solvency if nothing halted (chain clients will report solvency)
-	s.sp.ResetChecks()
-	wg.Add(1)
-	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
-	time.Sleep(time.Second * 6)
+		s.sp.ResetChecks()
+		stopchan := make(chan struct{})
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, 10*time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
+		close(stopchan)
+		wg.Wait()
+		server.Close()
 
-	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, false)
-	c.Assert(s.sp.ReportSolvencyRun, Equals, false)
-
-	// Admin halted, still don't check solvency
-	mimirMap["HaltETHChain"] = 1
-	s.sp.ResetChecks()
-	wg.Add(1)
-	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
-	time.Sleep(time.Second * 6)
-
-	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, false)
-	c.Assert(s.sp.ReportSolvencyRun, Equals, false)
-
-	// Double-spend check halted chain client, check solvency here
-	mimirMap["HaltETHChain"] = 10
-	s.sp.ResetChecks()
-	wg.Add(1)
-	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
-	time.Sleep(time.Second * 6)
-
-	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, true)
-	c.Assert(s.sp.ReportSolvencyRun, Equals, true)
-	mimirMap["HaltETHChain"] = 0
-
-	// Solvency halted chain, need to report solvency here as chain client is paused
-	mimirMap["SolvencyHaltETHChain"] = 1
-	s.sp.ResetChecks()
-	wg.Add(1)
-	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
-	time.Sleep(time.Second * 6)
-
-	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, true)
-	c.Assert(s.sp.ReportSolvencyRun, Equals, true)
+		c.Assert(s.sp.ShouldReportSolvencyRan, Equals, tc.expectCheck)
+		c.Assert(s.sp.ReportSolvencyRun, Equals, tc.expectReport)
+	}
 }
 
 // Mock SolvencyCheckProvider
