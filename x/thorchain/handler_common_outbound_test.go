@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 )
@@ -308,4 +309,30 @@ func (s *HandlerCommonOutboundSuite) TestSlashingExemptionsForOperationalTxs(c *
 	}
 	c.Assert(isOutboundFakeGasTx(theftTx), check.Equals, false, check.Commentf("theft tx should not be exempted"))
 	c.Assert(isCancelOrApprovalTx(theftTx), check.Equals, false, check.Commentf("theft tx should not be exempted as cancel"))
+}
+
+func (s *HandlerCommonOutboundSuite) TestMaxEVMGasForChain(c *check.C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Verify all EVM chains have a defined max gas cap.
+	for _, chain := range common.AllChains {
+		if !chain.IsEVM() {
+			continue
+		}
+		maxGas, known := maxEVMGasForChain(ctx, mgr.Keeper(), chain)
+		c.Assert(known, check.Equals, true, check.Commentf("EVM chain %s missing explicit max gas cap", chain))
+		c.Assert(maxGas.GT(cosmos.ZeroUint()), check.Equals, true, check.Commentf("EVM chain %s has zero max gas cap", chain))
+	}
+
+	// Non-EVM chain should return the default cap, not be known.
+	maxGas, known := maxEVMGasForChain(ctx, mgr.Keeper(), common.BTCChain)
+	c.Assert(known, check.Equals, false)
+	c.Assert(maxGas.Equal(cosmos.NewUint(constants.DefaultMaxEVMGas)), check.Equals, true)
+
+	// Mimir override should take precedence over hardcoded constant.
+	mimirOverride := int64(99_000_000)
+	mgr.Keeper().SetMimir(ctx, "MaxGas-ETH", mimirOverride)
+	maxGas, known = maxEVMGasForChain(ctx, mgr.Keeper(), common.ETHChain)
+	c.Assert(known, check.Equals, true)
+	c.Assert(maxGas.Equal(cosmos.NewUint(uint64(mimirOverride))), check.Equals, true)
 }

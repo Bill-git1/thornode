@@ -38,8 +38,17 @@ const VolumeBucketSeconds = int64(900)
 // used to preserve precision when determining the dollar price of rune.
 const DollarMulti = 1e9
 
-// MaxETHGas define the maximum gas for a single transaction on ETH
-const MaxETHGas = 50000000
+// Per-chain maximum gas for a single transaction on EVM chains.
+const (
+	MaxETHGas  = 50000000
+	MaxAVAXGas = 100e8
+	MaxBSCGas  = 50000000
+	MaxBASEGas = 50000000
+	MaxPOLGas  = 50000000
+
+	// DefaultMaxEVMGas is a conservative default for EVM chains not explicitly listed above.
+	DefaultMaxEVMGas = 50000000
+)
 
 // max amount of data that can be provided with OP_RETURN (bytes)
 const MaxOpReturnDataSize = 80

@@ -13,6 +13,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
 // CommonOutboundTxHandler is the place where those common logic can be shared
@@ -188,12 +189,20 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 						}
 					}
 				}
-				if txOutItem.Chain.Equals(common.ETHChain) {
-					maxGasAmount := txOutItem.MaxGas.ToCoins().GetCoin(common.ETHAsset).Amount
-					gasAmount := tx.Tx.Gas.ToCoins().GetCoin(common.ETHAsset).Amount
-					// If thornode instruct bifrost to spend more than MaxETHGas , then it should not be slashed.
-					if gasAmount.GTE(cosmos.NewUint(constants.MaxETHGas)) && maxGasAmount.LT(cosmos.NewUint(constants.MaxETHGas)) {
-						ctx.Logger().Info("ETH chain transaction spend more than MaxETHGas should be slashed", "gas", gasAmount.String(), "max gas", constants.MaxETHGas)
+				if txOutItem.Chain.IsEVM() {
+					gasAsset := txOutItem.Chain.GetGasAsset()
+					maxGasAmount := txOutItem.MaxGas.ToCoins().GetCoin(gasAsset).Amount
+					gasAmount := tx.Tx.Gas.ToCoins().GetCoin(gasAsset).Amount
+					maxGasCap, known := maxEVMGasForChain(ctx, h.mgr.Keeper(), txOutItem.Chain)
+					if !known {
+						ctx.Logger().Info(
+							"using default max gas cap for unlisted EVM chain",
+							"chain", txOutItem.Chain,
+							"max_gas_cap", maxGasCap.String(),
+						)
+					}
+					if gasAmount.GTE(maxGasCap) && maxGasAmount.LT(maxGasCap) {
+						ctx.Logger().Info("EVM chain transaction spent more than max gas cap, should be slashed", "chain", txOutItem.Chain, "gas", gasAmount.String(), "max gas cap", maxGasCap)
 						matchCoin = false
 					}
 				}
@@ -317,4 +326,31 @@ func calcReclaim(reclaimable1, reclaimable2, spent cosmos.Uint) (reclaim1, recla
 
 	// Otherwise, split the spent clout equally
 	return halfSpent, spent.Sub(halfSpent)
+}
+
+// maxEVMGasForChain returns the absolute max gas cap for the given EVM chain.
+// It first checks for a mimir override (key: MaxGas-<CHAIN>), then falls back
+// to hardcoded per-chain constants. If the chain is not explicitly listed, it
+// returns DefaultMaxEVMGas and false to indicate a conservative default is used.
+func maxEVMGasForChain(ctx cosmos.Context, k keeper.Keeper, chain common.Chain) (cosmos.Uint, bool) {
+	// Check mimir override first.
+	mimirVal, err := k.GetMimirWithRef(ctx, constants.MimirTemplateMaxGas, chain.String())
+	if err == nil && mimirVal > 0 {
+		return cosmos.NewUint(uint64(mimirVal)), true
+	}
+
+	switch chain {
+	case common.ETHChain:
+		return cosmos.NewUint(constants.MaxETHGas), true
+	case common.AVAXChain:
+		return cosmos.NewUint(constants.MaxAVAXGas), true
+	case common.BSCChain:
+		return cosmos.NewUint(constants.MaxBSCGas), true
+	case common.BASEChain:
+		return cosmos.NewUint(constants.MaxBASEGas), true
+	case common.POLChain:
+		return cosmos.NewUint(constants.MaxPOLGas), true
+	default:
+		return cosmos.NewUint(constants.DefaultMaxEVMGas), false
+	}
 }
