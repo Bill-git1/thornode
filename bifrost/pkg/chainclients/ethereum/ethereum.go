@@ -63,8 +63,7 @@ type Client struct {
 	vaultABI                *abi.ABI
 	pubkeyMgr               pubkeymanager.PubKeyValidator
 	poolMgr                 thorclient.PoolManager
-	asgardAddresses         []common.Address
-	lastAsgard              time.Time
+	asgardCache             atomic.Pointer[utxo.AsgardCache]
 	tssKeySigner            *tss.KeySign
 	wg                      *sync.WaitGroup
 	stopchan                chan struct{}
@@ -1268,7 +1267,6 @@ func (c *Client) getBlockRequiredConfirmation(txIn stypes.TxIn, height int64) (i
 	asgards, err := c.getAsgardAddress()
 	if err != nil {
 		c.logger.Err(err).Msg("fail to get asgard addresses")
-		asgards = c.asgardAddresses
 	}
 	c.logger.Debug().Msgf("asgards: %+v", asgards)
 	totalTxValue := c.getTotalTransactionValue(txIn, asgards)
@@ -1321,18 +1319,7 @@ func (c *Client) GetConfirmationCount(txIn stypes.TxIn) int64 {
 }
 
 func (c *Client) getAsgardAddress() ([]common.Address, error) {
-	if time.Since(c.lastAsgard) < constants.ThorchainBlockTime && c.asgardAddresses != nil {
-		return c.asgardAddresses, nil
-	}
-	newAddresses, err := utxo.GetAsgardAddress(common.ETHChain, c.bridge)
-	if err != nil {
-		return nil, fmt.Errorf("fail to get asgards : %w", err)
-	}
-	if len(newAddresses) > 0 { // ensure we don't overwrite with empty list
-		c.asgardAddresses = newAddresses
-	}
-	c.lastAsgard = time.Now()
-	return c.asgardAddresses, nil
+	return utxo.GetAsgardAddressCached(&c.asgardCache, common.ETHChain, c.bridge, constants.ThorchainBlockTime)
 }
 
 // OnObservedTxIn gets called from observer when we have a valid observation

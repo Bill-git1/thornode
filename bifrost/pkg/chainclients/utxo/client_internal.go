@@ -30,25 +30,16 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (c *Client) getAsgardAddress() ([]common.Address, error) {
-	if time.Since(c.lastAsgard) < constants.ThorchainBlockTime && c.asgardAddresses != nil {
-		return c.asgardAddresses, nil
-	}
-	newAddresses, err := utxo.GetAsgardAddress(c.cfg.ChainID, c.bridge)
-	if err != nil {
-		return nil, fmt.Errorf("fail to get asgards: %w", err)
-	}
-	if len(newAddresses) > 0 { // ensure we don't overwrite with empty list
-		c.asgardAddresses = newAddresses
-	}
-	c.lastAsgard = time.Now()
-	return c.asgardAddresses, nil
+	return utxo.GetAsgardAddressCached(&c.asgardCache, c.cfg.ChainID, c.bridge, constants.ThorchainBlockTime)
 }
 
 func (c *Client) isAsgardAddress(addressToCheck string) bool {
 	asgards, err := c.getAsgardAddress()
 	if err != nil {
 		c.log.Err(err).Msg("fail to get asgard addresses")
-		return false
+		if len(asgards) == 0 {
+			return false
+		}
 	}
 	for _, addr := range asgards {
 		if strings.EqualFold(addr.String(), addressToCheck) {
@@ -233,7 +224,7 @@ func (c *Client) updateNetworkInfo() {
 		c.log.Err(err).Msg("fail to get minimum relay fee")
 		return
 	}
-	c.minRelayFeeSats = uint64(amt.ToUnit(btcutil.AmountSatoshi))
+	c.minRelayFeeSats.Store(uint64(amt.ToUnit(btcutil.AmountSatoshi)))
 }
 
 func (c *Client) sendNetworkFee(height int64) error {
@@ -275,9 +266,13 @@ func (c *Client) sendNetworkFee(height int64) error {
 		return nil
 	}
 
-	if c.cfg.UTXO.EstimatedAverageTxSize*feeRate < c.minRelayFeeSats {
-		feeRate = c.minRelayFeeSats / c.cfg.UTXO.EstimatedAverageTxSize
-		if feeRate*c.cfg.UTXO.EstimatedAverageTxSize < c.minRelayFeeSats {
+	c.networkFeeLock.Lock()
+	defer c.networkFeeLock.Unlock()
+
+	minRelayFeeSats := c.minRelayFeeSats.Load()
+	if c.cfg.UTXO.EstimatedAverageTxSize*feeRate < minRelayFeeSats {
+		feeRate = minRelayFeeSats / c.cfg.UTXO.EstimatedAverageTxSize
+		if feeRate*c.cfg.UTXO.EstimatedAverageTxSize < minRelayFeeSats {
 			feeRate++
 		}
 	}
@@ -302,11 +297,12 @@ func (c *Client) sendNetworkFee(height int64) error {
 	c.m.GetGauge(metrics.GasPrice(c.cfg.ChainID)).Set(float64(feeRate))
 
 	// skip update if fee has not changed
-	if c.lastFeeRate == feeRate {
+	lastFeeRate := c.lastFeeRate.Load()
+	if lastFeeRate == feeRate {
 		return nil
 	}
 
-	c.lastFeeRate = feeRate
+	c.lastFeeRate.Store(feeRate)
 	c.m.GetCounter(metrics.GasPriceChange(c.cfg.ChainID)).Inc()
 
 	c.globalNetworkFeeQueue <- common.NetworkFee{
@@ -355,16 +351,20 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 	resolution := uint64(c.cfg.BlockScanner.GasPriceResolution)
 	feeRateSats = ((feeRateSats / resolution) + 1) * resolution
 
+	c.networkFeeLock.Lock()
+	defer c.networkFeeLock.Unlock()
+
 	// skip fee if less than 1 resolution away from the last
-	feeDelta := new(big.Int).Sub(big.NewInt(int64(feeRateSats)), big.NewInt(int64(c.lastFeeRate)))
+	lastFeeRate := c.lastFeeRate.Load()
+	feeDelta := new(big.Int).Sub(big.NewInt(int64(feeRateSats)), big.NewInt(int64(lastFeeRate)))
 	feeDelta.Abs(feeDelta)
-	if c.lastFeeRate != 0 && feeDelta.Cmp(big.NewInt(c.cfg.BlockScanner.GasPriceResolution)) != 1 {
+	if lastFeeRate != 0 && feeDelta.Cmp(big.NewInt(c.cfg.BlockScanner.GasPriceResolution)) != 1 {
 		return nil
 	}
 
 	c.log.Info().
 		Int64("height", height).
-		Uint64("lastFeeRate", c.lastFeeRate).
+		Uint64("lastFeeRate", lastFeeRate).
 		Uint64("feeRateSats", feeRateSats).
 		Msg("sendNetworkFee")
 
@@ -375,7 +375,7 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 		TransactionRate: feeRateSats,
 	}
 
-	c.lastFeeRate = feeRateSats
+	c.lastFeeRate.Store(feeRateSats)
 
 	return nil
 }
@@ -1075,7 +1075,11 @@ func (c *Client) getCoinbaseValue(blockHeight int64) (int64, error) {
 
 // getBlockRequiredConfirmation find out how many confirmation the given txIn need to have before it can be send to THORChain
 func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (int64, error) {
-	totalTxValue := txIn.GetTotalTransactionValue(c.cfg.ChainID.GetGasAsset(), c.asgardAddresses)
+	asgardAddresses, err := c.getAsgardAddress()
+	if err != nil {
+		c.log.Err(err).Msg("fail to get asgard addresses")
+	}
+	totalTxValue := txIn.GetTotalTransactionValue(c.cfg.ChainID.GetGasAsset(), asgardAddresses)
 	totalFeeAndSubsidy, err := c.getCoinbaseValue(height)
 	if err != nil {
 		c.log.Err(err).Msgf("fail to get coinbase value")

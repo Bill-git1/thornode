@@ -542,10 +542,10 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		diffSats := gasAmtSats - uint64(maxFeeSats) // in sats
 		c.log.Info().Msgf("gas amount: %d is larger than maximum fee: %d, diff: %d", gasAmtSats, uint64(maxFeeSats), diffSats)
 		gasAmtSats = uint64(maxFeeSats)
-	} else if gasAmtSats < c.minRelayFeeSats {
-		diffStats := c.minRelayFeeSats - gasAmtSats
-		c.log.Info().Msgf("gas amount: %d is less than min relay fee: %d, diff remove from customer: %d", gasAmtSats, c.minRelayFeeSats, diffStats)
-		gasAmtSats = c.minRelayFeeSats
+	} else if minRelayFeeSats := c.minRelayFeeSats.Load(); gasAmtSats < minRelayFeeSats {
+		diffStats := minRelayFeeSats - gasAmtSats
+		c.log.Info().Msgf("gas amount: %d is less than min relay fee: %d, diff remove from customer: %d", gasAmtSats, minRelayFeeSats, diffStats)
+		gasAmtSats = minRelayFeeSats
 	}
 
 	// if the total gas spend is more than max gas , then we have to take away some from the amount pay to customer
@@ -727,7 +727,7 @@ func (c *Client) consolidateUTXOs() {
 			continue
 		}
 		// THORChain usually pay 1.5 of the last observed fee rate
-		feeRate := math.Ceil(float64(c.lastFeeRate) * 3 / 2)
+		feeRate := math.Ceil(float64(c.lastFeeRate.Load()) * 3 / 2)
 		var amt btcutil.Amount
 		amt, err = btcutil.NewAmount(total)
 		if err != nil {
