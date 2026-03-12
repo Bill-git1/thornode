@@ -22,4 +22,5 @@ message MsgManageTHORName {
                         "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
   bytes signer = 8 [ (gogoproto.casttype) =
                          "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
+  int64 preferred_asset_outbound_fee_multiplier = 9;
 }

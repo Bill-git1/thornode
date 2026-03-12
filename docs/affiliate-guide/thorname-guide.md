@@ -29,16 +29,19 @@ The expiration of the THORName will automatically be set to the number of blocks
 
 **Memo Format:**
 
-Memo template is: `~:name:chain:address:?owner:?preferredAsset:?expiry`
+Memo template is: `~:name:chain:address:?owner:?preferredAsset:?expiry:?preferredAssetOutboundFeeMultiplier`
 
 - **name**: Your THORName. Must be unique, between 1-30 characters, hexadecimal and `-_+` special characters.
 - **chain:** The chain of the alias to set.
 - **address**: The alias address. Must be an address of chain.
 - **owner**: THORChain address of owner (optional).
 - **preferredAsset:** Asset to receive fees in. Must be supported be an active pool on THORChain. Value should be `asset` property from the [Pools endpoint](https://thornode.ninerealms.com/thorchain/pools).
+- **preferredAssetOutboundFeeMultiplier:** Optional parameter. Custom multiplier for the outbound fee threshold for affiliate fee payouts. This enables affiliate fees to get paid out at a custom threshold. If not specified, uses the global default of 100. Must be between 0 and 10000 (0 resets to global default). This determines how much RUNE must accumulate before triggering a payout in your preferred asset.
+  - Example: Assuming default of 100, if your preferred asset is ETH.USDC and the ETH.USDC outbound fee is $1, the RUNE gets swapped to ETH.USDC and sent to your address when it hits $100 (100 \* $1).
 
 ```admonish info
 Example: `~:ODIN:BTC:bc1Address:thorAddress:BTC.BTC`
+Example with custom multiplier: `~:ODIN:BTC:bc1Address:thorAddress:BTC.BTC::500`
 ```
 
 This will register a new THORName called `ODIN` with a Bitcoin alias of `bc1Address` owner of `thorAddress` and preferred asset of BTC.BTC.
@@ -92,6 +95,10 @@ For example, if you wanted to be paid out in USDC you would:
    The full memo would look like:
 
    > `~:ac-test:ETH:0x6621d872f17109d6601c49edba526ebcfd332d5d:thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`
+
+   To set a custom payout threshold (e.g., 50x the outbound fee instead of the default), add the multiplier:
+
+   > `~:ac-test:ETH:0x6621d872f17109d6601c49edba526ebcfd332d5d:thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48::50`
 
 ```admonish info
 You can use [Asgardex](https://github.com/asgardex/asgardex-desktop) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.

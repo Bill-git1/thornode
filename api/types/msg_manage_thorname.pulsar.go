@@ -15,15 +15,16 @@ import (
 )
 
 var (
-	md_MsgManageTHORName                     protoreflect.MessageDescriptor
-	fd_MsgManageTHORName_name                protoreflect.FieldDescriptor
-	fd_MsgManageTHORName_chain               protoreflect.FieldDescriptor
-	fd_MsgManageTHORName_address             protoreflect.FieldDescriptor
-	fd_MsgManageTHORName_coin                protoreflect.FieldDescriptor
-	fd_MsgManageTHORName_expire_block_height protoreflect.FieldDescriptor
-	fd_MsgManageTHORName_preferred_asset     protoreflect.FieldDescriptor
-	fd_MsgManageTHORName_owner               protoreflect.FieldDescriptor
-	fd_MsgManageTHORName_signer              protoreflect.FieldDescriptor
+	md_MsgManageTHORName                                         protoreflect.MessageDescriptor
+	fd_MsgManageTHORName_name                                    protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_chain                                   protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_address                                 protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_coin                                    protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_expire_block_height                     protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_preferred_asset                         protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_owner                                   protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_signer                                  protoreflect.FieldDescriptor
+	fd_MsgManageTHORName_preferred_asset_outbound_fee_multiplier protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -37,6 +38,7 @@ func init() {
 	fd_MsgManageTHORName_preferred_asset = md_MsgManageTHORName.Fields().ByName("preferred_asset")
 	fd_MsgManageTHORName_owner = md_MsgManageTHORName.Fields().ByName("owner")
 	fd_MsgManageTHORName_signer = md_MsgManageTHORName.Fields().ByName("signer")
+	fd_MsgManageTHORName_preferred_asset_outbound_fee_multiplier = md_MsgManageTHORName.Fields().ByName("preferred_asset_outbound_fee_multiplier")
 }
 
 var _ protoreflect.Message = (*fastReflection_MsgManageTHORName)(nil)
@@ -152,6 +154,12 @@ func (x *fastReflection_MsgManageTHORName) Range(f func(protoreflect.FieldDescri
 			return
 		}
 	}
+	if x.PreferredAssetOutboundFeeMultiplier != int64(0) {
+		value := protoreflect.ValueOfInt64(x.PreferredAssetOutboundFeeMultiplier)
+		if !f(fd_MsgManageTHORName_preferred_asset_outbound_fee_multiplier, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -183,6 +191,8 @@ func (x *fastReflection_MsgManageTHORName) Has(fd protoreflect.FieldDescriptor) 
 		return len(x.Owner) != 0
 	case "types.MsgManageTHORName.signer":
 		return len(x.Signer) != 0
+	case "types.MsgManageTHORName.preferred_asset_outbound_fee_multiplier":
+		return x.PreferredAssetOutboundFeeMultiplier != int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgManageTHORName"))
@@ -215,6 +225,8 @@ func (x *fastReflection_MsgManageTHORName) Clear(fd protoreflect.FieldDescriptor
 		x.Owner = nil
 	case "types.MsgManageTHORName.signer":
 		x.Signer = nil
+	case "types.MsgManageTHORName.preferred_asset_outbound_fee_multiplier":
+		x.PreferredAssetOutboundFeeMultiplier = int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgManageTHORName"))
@@ -255,6 +267,9 @@ func (x *fastReflection_MsgManageTHORName) Get(descriptor protoreflect.FieldDesc
 	case "types.MsgManageTHORName.signer":
 		value := x.Signer
 		return protoreflect.ValueOfBytes(value)
+	case "types.MsgManageTHORName.preferred_asset_outbound_fee_multiplier":
+		value := x.PreferredAssetOutboundFeeMultiplier
+		return protoreflect.ValueOfInt64(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgManageTHORName"))
@@ -291,6 +306,8 @@ func (x *fastReflection_MsgManageTHORName) Set(fd protoreflect.FieldDescriptor, 
 		x.Owner = value.Bytes()
 	case "types.MsgManageTHORName.signer":
 		x.Signer = value.Bytes()
+	case "types.MsgManageTHORName.preferred_asset_outbound_fee_multiplier":
+		x.PreferredAssetOutboundFeeMultiplier = value.Int()
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgManageTHORName"))
@@ -333,6 +350,8 @@ func (x *fastReflection_MsgManageTHORName) Mutable(fd protoreflect.FieldDescript
 		panic(fmt.Errorf("field owner of message types.MsgManageTHORName is not mutable"))
 	case "types.MsgManageTHORName.signer":
 		panic(fmt.Errorf("field signer of message types.MsgManageTHORName is not mutable"))
+	case "types.MsgManageTHORName.preferred_asset_outbound_fee_multiplier":
+		panic(fmt.Errorf("field preferred_asset_outbound_fee_multiplier of message types.MsgManageTHORName is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgManageTHORName"))
@@ -364,6 +383,8 @@ func (x *fastReflection_MsgManageTHORName) NewField(fd protoreflect.FieldDescrip
 		return protoreflect.ValueOfBytes(nil)
 	case "types.MsgManageTHORName.signer":
 		return protoreflect.ValueOfBytes(nil)
+	case "types.MsgManageTHORName.preferred_asset_outbound_fee_multiplier":
+		return protoreflect.ValueOfInt64(int64(0))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgManageTHORName"))
@@ -464,6 +485,9 @@ func (x *fastReflection_MsgManageTHORName) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
+		if x.PreferredAssetOutboundFeeMultiplier != 0 {
+			n += 1 + runtime.Sov(uint64(x.PreferredAssetOutboundFeeMultiplier))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -492,6 +516,11 @@ func (x *fastReflection_MsgManageTHORName) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if x.PreferredAssetOutboundFeeMultiplier != 0 {
+			i = runtime.EncodeVarint(dAtA, i, uint64(x.PreferredAssetOutboundFeeMultiplier))
+			i--
+			dAtA[i] = 0x48
 		}
 		if len(x.Signer) > 0 {
 			i -= len(x.Signer)
@@ -865,6 +894,25 @@ func (x *fastReflection_MsgManageTHORName) ProtoMethods() *protoiface.Methods {
 					x.Signer = []byte{}
 				}
 				iNdEx = postIndex
+			case 9:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PreferredAssetOutboundFeeMultiplier", wireType)
+				}
+				x.PreferredAssetOutboundFeeMultiplier = 0
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					x.PreferredAssetOutboundFeeMultiplier |= int64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -918,14 +966,15 @@ type MsgManageTHORName struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name              string        `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Chain             string        `protobuf:"bytes,2,opt,name=chain,proto3" json:"chain,omitempty"`
-	Address           string        `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
-	Coin              *common.Coin  `protobuf:"bytes,4,opt,name=coin,proto3" json:"coin,omitempty"`
-	ExpireBlockHeight int64         `protobuf:"varint,5,opt,name=expire_block_height,json=expireBlockHeight,proto3" json:"expire_block_height,omitempty"`
-	PreferredAsset    *common.Asset `protobuf:"bytes,6,opt,name=preferred_asset,json=preferredAsset,proto3" json:"preferred_asset,omitempty"`
-	Owner             []byte        `protobuf:"bytes,7,opt,name=owner,proto3" json:"owner,omitempty"`
-	Signer            []byte        `protobuf:"bytes,8,opt,name=signer,proto3" json:"signer,omitempty"`
+	Name                                string        `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Chain                               string        `protobuf:"bytes,2,opt,name=chain,proto3" json:"chain,omitempty"`
+	Address                             string        `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	Coin                                *common.Coin  `protobuf:"bytes,4,opt,name=coin,proto3" json:"coin,omitempty"`
+	ExpireBlockHeight                   int64         `protobuf:"varint,5,opt,name=expire_block_height,json=expireBlockHeight,proto3" json:"expire_block_height,omitempty"`
+	PreferredAsset                      *common.Asset `protobuf:"bytes,6,opt,name=preferred_asset,json=preferredAsset,proto3" json:"preferred_asset,omitempty"`
+	Owner                               []byte        `protobuf:"bytes,7,opt,name=owner,proto3" json:"owner,omitempty"`
+	Signer                              []byte        `protobuf:"bytes,8,opt,name=signer,proto3" json:"signer,omitempty"`
+	PreferredAssetOutboundFeeMultiplier int64         `protobuf:"varint,9,opt,name=preferred_asset_outbound_fee_multiplier,json=preferredAssetOutboundFeeMultiplier,proto3" json:"preferred_asset_outbound_fee_multiplier,omitempty"`
 }
 
 func (x *MsgManageTHORName) Reset() {
@@ -1004,6 +1053,13 @@ func (x *MsgManageTHORName) GetSigner() []byte {
 	return nil
 }
 
+func (x *MsgManageTHORName) GetPreferredAssetOutboundFeeMultiplier() int64 {
+	if x != nil {
+		return x.PreferredAssetOutboundFeeMultiplier
+	}
+	return 0
+}
+
 var File_types_msg_manage_thorname_proto protoreflect.FileDescriptor
 
 var file_types_msg_manage_thorname_proto_rawDesc = []byte{
@@ -1012,7 +1068,7 @@ var file_types_msg_manage_thorname_proto_rawDesc = []byte{
 	0x6f, 0x12, 0x05, 0x74, 0x79, 0x70, 0x65, 0x73, 0x1a, 0x13, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e,
 	0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x14, 0x67,
 	0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x67, 0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x22, 0x9a, 0x04, 0x0a, 0x11, 0x4d, 0x73, 0x67, 0x4d, 0x61, 0x6e, 0x61, 0x67,
+	0x6f, 0x74, 0x6f, 0x22, 0xf0, 0x04, 0x0a, 0x11, 0x4d, 0x73, 0x67, 0x4d, 0x61, 0x6e, 0x61, 0x67,
 	0x65, 0x54, 0x48, 0x4f, 0x52, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d,
 	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x47, 0x0a,
 	0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x31, 0xfa, 0xde,
@@ -1046,15 +1102,21 @@ var file_types_msg_manage_thorname_proto_rawDesc = []byte{
 	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73,
 	0x6d, 0x6f, 0x73, 0x2d, 0x73, 0x64, 0x6b, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x41, 0x63,
 	0x63, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x52, 0x06, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72,
-	0x42, 0x83, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x16,
-	0x4d, 0x73, 0x67, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x54, 0x68, 0x6f, 0x72, 0x6e, 0x61, 0x6d,
-	0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62,
-	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74,
-	0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74,
-	0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70,
-	0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70,
-	0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02,
-	0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x12, 0x54, 0x0a, 0x27, 0x70, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x5f, 0x61, 0x73,
+	0x73, 0x65, 0x74, 0x5f, 0x6f, 0x75, 0x74, 0x62, 0x6f, 0x75, 0x6e, 0x64, 0x5f, 0x66, 0x65, 0x65,
+	0x5f, 0x6d, 0x75, 0x6c, 0x74, 0x69, 0x70, 0x6c, 0x69, 0x65, 0x72, 0x18, 0x09, 0x20, 0x01, 0x28,
+	0x03, 0x52, 0x23, 0x70, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x41, 0x73, 0x73, 0x65,
+	0x74, 0x4f, 0x75, 0x74, 0x62, 0x6f, 0x75, 0x6e, 0x64, 0x46, 0x65, 0x65, 0x4d, 0x75, 0x6c, 0x74,
+	0x69, 0x70, 0x6c, 0x69, 0x65, 0x72, 0x42, 0x83, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74,
+	0x79, 0x70, 0x65, 0x73, 0x42, 0x16, 0x4d, 0x73, 0x67, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x54,
+	0x68, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a,
+	0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63,
+	0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33,
+	0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58,
+	0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61,
+	0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

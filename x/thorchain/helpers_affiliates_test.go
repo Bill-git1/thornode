@@ -200,3 +200,46 @@ func (HelperAffiliateSuite) TestEnsureAffiliateFromAddressNoOpForRegularAssets(c
 	c.Assert(tx.FromAddress.String(), Equals, originalAddr)
 	c.Assert(tx.FromAddress.String(), Equals, externalAddr.String())
 }
+
+func (HelperAffiliateSuite) TestGetEffectiveMultiplier(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Global default is 100 (from constants_mocknet.go)
+	tn := types.THORName{Name: "test"}
+
+	// THORName multiplier 0 (unset) → use global default (100)
+	tn.PreferredAssetOutboundFeeMultiplier = 0
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(100))
+
+	// THORName multiplier >= 1 → use custom
+	tn.PreferredAssetOutboundFeeMultiplier = 500
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(500))
+
+	// THORName multiplier exactly 1 → use custom (boundary)
+	tn.PreferredAssetOutboundFeeMultiplier = 1
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(1))
+
+	// THORName multiplier 10000 → use custom (upper boundary)
+	tn.PreferredAssetOutboundFeeMultiplier = 10000
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(10000))
+
+	// Negative mimir falls back to constant default (100) via GetConfigInt64
+	mgr.Keeper().SetMimir(ctx, "PreferredAssetOutboundFeeMultiplier", -5)
+	tn.PreferredAssetOutboundFeeMultiplier = 0 // fall through to global
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(100))
+
+	// Zero mimir → GetConfigInt64 returns 0 → clamp to 1
+	mgr.Keeper().SetMimir(ctx, "PreferredAssetOutboundFeeMultiplier", 0)
+	tn.PreferredAssetOutboundFeeMultiplier = 0
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(1))
+
+	// Custom multiplier overrides even when global config is zero
+	mgr.Keeper().SetMimir(ctx, "PreferredAssetOutboundFeeMultiplier", 0)
+	tn.PreferredAssetOutboundFeeMultiplier = 200
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(200))
+
+	// Mimir override with positive value
+	mgr.Keeper().SetMimir(ctx, "PreferredAssetOutboundFeeMultiplier", 50)
+	tn.PreferredAssetOutboundFeeMultiplier = 0
+	c.Check(getEffectiveMultiplier(ctx, mgr, tn), Equals, int64(50))
+}

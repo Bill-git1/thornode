@@ -94,9 +94,9 @@ func (s *AnteTestSuite) TestRejectDuplicateTHORNameMsgs(c *C) {
 	acc, _ := addr.AccAddress()
 	coin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
 
-	msg1 := types.NewMsgManageTHORName("test-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc)
-	msg2 := types.NewMsgManageTHORName("other-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc)
-	msg3 := types.NewMsgManageTHORName("test-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc)
+	msg1 := types.NewMsgManageTHORName("test-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc, 0)
+	msg2 := types.NewMsgManageTHORName("other-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc, 0)
+	msg3 := types.NewMsgManageTHORName("test-name", common.THORChain, addr, coin, 0, common.EmptyAsset, acc, acc, 0)
 
 	// no THORName msgs is ok
 	err := ad.rejectDuplicateTHORNameMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}})

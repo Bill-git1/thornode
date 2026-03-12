@@ -678,6 +678,46 @@ func (s *MemoSuite) TestParse(c *C) {
 	c.Assert(err, NotNil)
 }
 
+func (s *MemoSuite) TestParseTHORNameMemo(c *C) {
+	ctx := s.ctx
+	k := s.k
+
+	addr := types.GetRandomTHORAddress()
+
+	// happy path: full memo with multiplier (positions: ~:name:chain:addr:owner:asset:expiry:multiplier)
+	memo, err := ParseMemoWithTHORNames(ctx, k, "~:test:THOR:"+addr.String()+"::::500")
+	c.Assert(err, IsNil)
+	c.Check(memo.IsType(TxTHORName), Equals, true)
+	tMemo, ok := memo.(ManageTHORNameMemo)
+	c.Assert(ok, Equals, true)
+	c.Check(tMemo.GetName(), Equals, "test")
+	c.Check(tMemo.GetChain(), Equals, common.THORChain)
+	c.Check(tMemo.GetAddress(), Equals, addr)
+	c.Check(tMemo.PreferredAssetOutboundFeeMultiplier, Equals, int64(500))
+
+	// omitted multiplier defaults to -1 (sentinel for "not provided")
+	memo, err = ParseMemoWithTHORNames(ctx, k, "~:test2:THOR:"+addr.String())
+	c.Assert(err, IsNil)
+	tMemo, ok = memo.(ManageTHORNameMemo)
+	c.Assert(ok, Equals, true)
+	c.Check(tMemo.PreferredAssetOutboundFeeMultiplier, Equals, int64(-1))
+
+	// explicit 0 parses as 0 (reset to global default)
+	memo, err = ParseMemoWithTHORNames(ctx, k, "~:test3:THOR:"+addr.String()+"::::0")
+	c.Assert(err, IsNil)
+	tMemo, ok = memo.(ManageTHORNameMemo)
+	c.Assert(ok, Equals, true)
+	c.Check(tMemo.PreferredAssetOutboundFeeMultiplier, Equals, int64(0))
+
+	// preferred asset with multiplier (skip owner and expiry)
+	memo, err = ParseMemoWithTHORNames(ctx, k, "~:test4:THOR:"+addr.String()+"::BTC.BTC::400")
+	c.Assert(err, IsNil)
+	tMemo, ok = memo.(ManageTHORNameMemo)
+	c.Assert(ok, Equals, true)
+	c.Check(tMemo.PreferredAsset, Equals, common.BTCAsset)
+	c.Check(tMemo.PreferredAssetOutboundFeeMultiplier, Equals, int64(400))
+}
+
 func (s *MemoSuite) TestGetUintWithScientificNotation(c *C) {
 	// Create a parser instance for testing
 	p := parser{

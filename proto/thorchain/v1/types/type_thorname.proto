@@ -23,4 +23,5 @@ message THORName {
     (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"
   ];
   repeated THORNameAlias aliases = 5 [ (gogoproto.nullable) = false ];
+  int64 preferred_asset_outbound_fee_multiplier = 6;
 }

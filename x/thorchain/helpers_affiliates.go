@@ -11,6 +11,20 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
+// getEffectiveMultiplier returns the preferred asset outbound fee multiplier for a THORName.
+// It uses the per-THORName custom value if set (>= 1), otherwise falls back to the global
+// default from mimir/constants. Guards against negative or zero values to prevent uint64 overflow.
+func getEffectiveMultiplier(ctx cosmos.Context, mgr Manager, tn THORName) int64 {
+	multiplier := mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
+	if tn.PreferredAssetOutboundFeeMultiplier >= 1 {
+		multiplier = tn.PreferredAssetOutboundFeeMultiplier
+	}
+	if multiplier < 1 {
+		multiplier = 1
+	}
+	return multiplier
+}
+
 func triggerPreferredAssetSwap(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
 	// Check that the THORName has an address alias for the PreferredAsset, if not skip
 	// the swap
@@ -360,7 +374,8 @@ func affiliateSwapToRune(ctx cosmos.Context, mgr Manager, mainTx common.Tx, sign
 		if err != nil {
 			ctx.Logger().Error("failed to get outbound fee for preferred asset, skipping preferred asset swap", "name", tn.Name, "asset", tn.PreferredAsset, "error", err)
 		}
-		multiplier := mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
+
+		multiplier := getEffectiveMultiplier(ctx, mgr, *tn)
 		threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
 
 		ctx.Logger().Info("check preferred asset threshold", "threshold", threshold.String(), "accrued", affCol.RuneAmount.String())
@@ -427,7 +442,7 @@ func addRuneToAffiliateCollector(ctx cosmos.Context, mgr Manager, coin common.Co
 		return nil
 	}
 
-	multiplier := mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
+	multiplier := getEffectiveMultiplier(ctx, mgr, *thorname)
 	threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
 	if affcol.RuneAmount.GT(threshold) {
 		*swapIndex++
