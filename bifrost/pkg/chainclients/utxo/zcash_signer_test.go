@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -45,6 +46,17 @@ type ZcashSignerSuite struct {
 }
 
 var _ = Suite(&ZcashSignerSuite{})
+
+func zecFixtureVaultPubKey(c *C) common.PubKey {
+	raw := "thorpub1addwnpepqt7qug8vk9r3saw8n4r803ydj2g3dqwx0mvq5akhnze86fc536xcy2cr8a2"
+	if common.CurrentChainNetwork == common.MockNet {
+		raw = "tthorpub1zcjduepqrcthx0ke3r2z39rp42xrr777af7qfcs6wcxtxck6tj9j0ap8cl0q0msnrn"
+	}
+
+	pubKey, err := common.NewPubKey(raw)
+	c.Assert(err, IsNil)
+	return pubKey
+}
 
 func (s *ZcashSignerSuite) SetUpSuite(c *C) {
 	types2.SetupConfigForTest()
@@ -228,6 +240,28 @@ func (s *ZcashSignerSuite) TestSignTxInsufficientUTXOs(c *C) {
 	buf, _, _, err := s.client.SignTx(txOutItem, 1)
 	c.Assert(err, NotNil, Commentf("Expected error due to insufficient UTXOs"))
 	c.Assert(buf, IsNil)
+}
+
+func (s *ZcashSignerSuite) TestVinsUnspentRejectsSpentCachedZECInput(c *C) {
+	const txID = "500468e8f504eaeee3c53f826dac132dbff2abf824b5361d10d712a199917d65"
+	hash, err := chainhash.NewHashFromStr(txID)
+	c.Assert(err, IsNil)
+
+	tx := stypes.TxOutItem{
+		Chain:       common.ZECChain,
+		VaultPubKey: zecFixtureVaultPubKey(c),
+	}
+	vin := wire.NewTxIn(wire.NewOutPoint(hash, 0), nil, nil)
+
+	unspent, err := s.client.vinsUnspent(tx, []*wire.TxIn{vin})
+	c.Assert(err, IsNil)
+	c.Assert(unspent, Equals, true)
+
+	c.Assert(s.client.temporalStorage.SetSpentUtxos([]string{formatUtxoKey(txID, 0)}, 123), IsNil)
+
+	unspent, err = s.client.vinsUnspent(tx, []*wire.TxIn{vin})
+	c.Assert(err, IsNil)
+	c.Assert(unspent, Equals, false)
 }
 
 // TestBroadcastTx tests transaction broadcasting behavior.

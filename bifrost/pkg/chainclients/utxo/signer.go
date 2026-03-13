@@ -169,7 +169,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	signings := []struct{ idx, amount int64 }{}
 	totalAmount := int64(0)
 	for idx, txIn := range redeemTx.TxIn {
-		key := formatTxVoutKey(txIn.PreviousOutPoint.Hash.String(), txIn.PreviousOutPoint.Index)
+		key := formatUtxoKey(txIn.PreviousOutPoint.Hash.String(), txIn.PreviousOutPoint.Index)
 		outputAmount := checkpoint.IndividualAmounts[key]
 		totalAmount += outputAmount
 		signings = append(signings, struct{ idx, amount int64 }{int64(idx), outputAmount})
@@ -322,7 +322,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	if c.cfg.ChainID == common.ZECChain {
 		var ids []string
 		for _, vin := range redeemTx.TxIn {
-			id := fmt.Sprintf("%s:%d", vin.PreviousOutPoint.Hash.String(), vin.PreviousOutPoint.Index)
+			id := formatUtxoKey(vin.PreviousOutPoint.Hash.String(), vin.PreviousOutPoint.Index)
 			ids = append(ids, id)
 		}
 		err = c.temporalStorage.SetSpentUtxos(ids, chainHeight)

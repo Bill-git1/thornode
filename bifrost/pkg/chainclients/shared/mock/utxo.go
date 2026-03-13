@@ -83,7 +83,7 @@ func handleUtxo(chain common.Chain, r *http.Request) []byte {
 			}
 			address = address[:8]
 			switch address {
-			case "t1RMxNfN":
+			case "t1RMxNfN", "tmAbHS91":
 			// pass
 			default:
 				return []byte(`{"id":"","result":[],"error":null}`)

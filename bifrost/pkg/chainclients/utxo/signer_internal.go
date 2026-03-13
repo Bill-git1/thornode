@@ -119,7 +119,7 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total btcutil.Amount) ([]b
 		}
 
 		if c.cfg.ChainID == common.ZECChain {
-			id := fmt.Sprintf("%s:%d", item.TxID, item.Vout)
+			id := formatUtxoKey(item.TxID, item.Vout)
 
 			var found bool
 			found, err = c.temporalStorage.HasSpentUtxo(id)
@@ -158,7 +158,7 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total btcutil.Amount) ([]b
 	return result, nil
 }
 
-func formatTxVoutKey(txID string, vout uint32) string {
+func formatUtxoKey(txID string, vout uint32) string {
 	return fmt.Sprintf("%s-%d", txID, vout)
 }
 
@@ -175,13 +175,31 @@ func (c *Client) vinsUnspent(tx stypes.TxOutItem, vins []*wire.TxIn) (bool, erro
 	}
 	unspent := make(map[string]bool, len(utxos))
 	for _, utxo := range utxos {
-		unspent[formatTxVoutKey(utxo.TxID, utxo.Vout)] = true
+		unspent[formatUtxoKey(utxo.TxID, utxo.Vout)] = true
 	}
 
 	// return false if any vin is spent
 	allUnspent := true
 	for _, vin := range vins {
-		key := formatTxVoutKey(vin.PreviousOutPoint.Hash.String(), vin.PreviousOutPoint.Index)
+		key := formatUtxoKey(vin.PreviousOutPoint.Hash.String(), vin.PreviousOutPoint.Index)
+		if c.cfg.ChainID == common.ZECChain {
+			var found bool
+			found, err = c.temporalStorage.HasSpentUtxo(key)
+			if err != nil {
+				return false, fmt.Errorf("fail to check spent utxo(%s): %w", key, err)
+			}
+
+			if found {
+				c.log.Warn().
+					Stringer("in_hash", tx.InHash).
+					Str("txid", vin.PreviousOutPoint.Hash.String()).
+					Uint32("vout", vin.PreviousOutPoint.Index).
+					Msg("vin is marked spent in local cache")
+				allUnspent = false
+				continue
+			}
+		}
+
 		if !unspent[key] {
 			c.log.Warn().
 				Stringer("in_hash", tx.InHash).
@@ -422,7 +440,7 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to parse amount(%f): %w", item.Amount, err)
 		}
-		individualAmounts[formatTxVoutKey(txID.String(), item.Vout)] = int64(amt)
+		individualAmounts[formatUtxoKey(txID.String(), item.Vout)] = int64(amt)
 		totalAmt += int64(amt)
 	}
 

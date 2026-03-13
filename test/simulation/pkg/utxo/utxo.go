@@ -418,7 +418,7 @@ func (c *Client) getUtxoToSpend(total float64) ([]btcjson.ListUnspentResult, err
 
 	for _, item := range utxos {
 		if c.chain.Equals(common.ZECChain) {
-			key := fmt.Sprintf("%s:%d", item.TxID, item.Vout)
+			key := fmt.Sprintf("%s-%d", item.TxID, item.Vout)
 
 			_, found := c.spentUtxos[key]
 			if found {
