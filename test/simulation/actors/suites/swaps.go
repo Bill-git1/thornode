@@ -67,6 +67,44 @@ func Swaps(rng *rand.Rand) *Actor {
 		}
 	}
 
+	// aggregator swap-out: various source assets → EVM gas asset via aggregator
+	type aggConfig struct {
+		chain  common.Chain
+		suffix string // aggregator contract address suffix
+		target string // aggregator target ERC20 address (arbitrary for testing)
+		limit  string // aggregator target limit (minimum output from the DEX leg)
+	}
+	aggConfigs := []aggConfig{
+		{common.ETHChain, "6f3848", "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25", "1000000"},
+		{common.AVAXChain, "cFA0F20f", "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25", "1000000"},
+	}
+	for _, cfg := range aggConfigs {
+		gasAsset := cfg.chain.GetGasAsset()
+
+		// non-EVM, non-UTXO source → EVM gas asset via aggregator.
+		// UTXO chains (BTC, DOGE, LTC) cannot be used here because the aggregator
+		// memo fields exceed the 80-byte OP_RETURN limit.
+		a.Children[core.NewAggregatorSwapActor(common.ATOMAsset, gasAsset, cfg.suffix, cfg.target, cfg.limit, rng)] = true
+		a.Children[core.NewAggregatorSwapActor(common.SOLAsset, gasAsset, cfg.suffix, cfg.target, cfg.limit, rng)] = true
+
+		// EVM token → same-chain gas asset via aggregator (e.g. ETH.TKN → ETH.ETH via aggregator)
+		for asset := range evm.Tokens(cfg.chain) {
+			if asset.IsGasAsset() {
+				continue
+			}
+			a.Children[core.NewAggregatorSwapActor(asset, gasAsset, cfg.suffix, cfg.target, cfg.limit, rng)] = true
+		}
+
+		// cross-chain EVM → different EVM gas asset via aggregator
+		for _, otherChain := range acommon.SimChains {
+			if !otherChain.IsEVM() || otherChain.Equals(cfg.chain) {
+				continue
+			}
+			a.Children[core.NewAggregatorSwapActor(otherChain.GetGasAsset(), gasAsset, cfg.suffix, cfg.target, cfg.limit, rng)] = true
+			break // one cross-chain pair per aggregator is sufficient
+		}
+	}
+
 	// swap from each pool to one random one
 	for i, pool := range swapPools {
 		// always swap SOL <> BTC
