@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 
@@ -85,7 +86,14 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		}
 	}
 
-	hash := tmtypes.Tx(ctx.TxBytes()).Hash()
+	txIDSource := ctx.TxBytes()
+	if len(txIDSource) == 0 {
+		txIDSource, _ = msg.Marshal()
+		height := make([]byte, 8)
+		binary.BigEndian.PutUint64(height, uint64(ctx.BlockHeight()))
+		txIDSource = append(txIDSource, height...)
+	}
+	hash := tmtypes.Tx(txIDSource).Hash()
 	txID, err := common.NewTxID(fmt.Sprintf("%X", hash))
 	if idx > 0 {
 		ctx.Logger().Info("auto-increment txid", "idx", idx, "hash", fmt.Sprintf("%X", hash))

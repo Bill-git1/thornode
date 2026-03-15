@@ -2101,6 +2101,7 @@
                   }
                 ],
                 "memo": "trade-:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

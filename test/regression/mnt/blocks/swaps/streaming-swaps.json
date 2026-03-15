@@ -10669,6 +10669,7 @@
                   }
                 ],
                 "memo": "=:ETH/ETH:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0/1/10",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -12678,6 +12679,7 @@
                   }
                 ],
                 "memo": "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0/1/10",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

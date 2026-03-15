@@ -982,6 +982,7 @@
                   }
                 ],
                 "memo": "=\u003c:ETH-GUSD-0X056FD409E1D7A124BD7017459DFEA2F387B6D5CD:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:10121602129/3600/0",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

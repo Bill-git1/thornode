@@ -433,6 +433,7 @@
                   }
                 ],
                 "memo": "=:ETH.ETH:0x0000000000000000000000000000000000000000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

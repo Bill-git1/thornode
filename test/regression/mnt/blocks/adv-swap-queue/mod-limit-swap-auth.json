@@ -525,6 +525,7 @@
                   }
                 ],
                 "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:8998438",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -774,6 +775,7 @@
                   }
                 ],
                 "memo": "m=\u003c:10000000000THOR.RUNE:8998438BTC.BTC:6666666",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -986,6 +988,7 @@
                   }
                 ],
                 "memo": "m=\u003c:10000000000THOR.RUNE:8998438BTC.BTC:9500000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1468,6 +1471,7 @@
                   }
                 ],
                 "memo": "m=\u003c:1000000BTC.BTC:500000000000000000ETH.ETH:100000000000000000",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -1680,6 +1684,7 @@
                   }
                 ],
                 "memo": "m=\u003c:1000000BTC.BTC:500000000000000000ETH.ETH:300000000000000000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

@@ -1331,6 +1331,7 @@
                   }
                 ],
                 "memo": "=\u003c:ETH~ETH:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:50000000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1651,6 +1652,7 @@
                   }
                 ],
                 "memo": "m=\u003c:10000000BTC~BTC:50000000ETH~ETH:40000000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -7086,6 +7088,7 @@
                   }
                 ],
                 "memo": "=\u003c:BTC~BTC:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej:25000000",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -7311,6 +7314,7 @@
                   }
                 ],
                 "memo": "m=\u003c:50000000ETH~ETH:25000000BTC~BTC:0",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],

@@ -1167,6 +1167,7 @@
                   }
                 ],
                 "memo": "=:ETH-ETH:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0/0/1",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1572,6 +1573,7 @@
                   }
                 ],
                 "memo": "=:BTC-BTC:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0/0/1",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1921,6 +1923,7 @@
                   }
                 ],
                 "memo": "=:BTC-BTC:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0/1/0",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -5021,6 +5024,7 @@
                   }
                 ],
                 "memo": "=:THOR-BTC:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0/0/1",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -5370,6 +5374,7 @@
                   }
                 ],
                 "memo": "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0/0/1",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -5673,6 +5678,7 @@
                   }
                 ],
                 "memo": "=:BTC-BTC:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -6451,6 +6457,7 @@
                   }
                 ],
                 "memo": "=:THOR.RUNE:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav:0/2/2",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -6778,6 +6785,7 @@
                   }
                 ],
                 "memo": "=:THOR.RUNE:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav:0/0/1",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

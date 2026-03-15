@@ -1520,6 +1520,7 @@
                   }
                 ],
                 "memo": "=:BTC/BTC",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1639,6 +1640,7 @@
                   }
                 ],
                 "memo": "=:BTC/BTC",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -1807,6 +1809,7 @@
                   }
                 ],
                 "memo": "pool+",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2172,6 +2175,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -2340,6 +2344,7 @@
                   }
                 ],
                 "memo": "pool-:10000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2598,6 +2603,7 @@
                   }
                 ],
                 "memo": "pool-:10000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

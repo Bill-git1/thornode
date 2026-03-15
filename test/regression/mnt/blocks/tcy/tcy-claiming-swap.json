@@ -152,6 +152,7 @@
                   }
                 ],
                 "memo": "ADD:THOR.TCY:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
               }
             ],
@@ -320,6 +321,7 @@
                   }
                 ],
                 "memo": "ADD:THOR.TCY:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
               }
             ],
@@ -899,6 +901,7 @@
                   }
                 ],
                 "memo": "SWAP:THOR.TCY:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],
@@ -1136,6 +1139,7 @@
                   }
                 ],
                 "memo": "SWAP:THOR.RUNE:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],
@@ -1385,6 +1389,7 @@
                   }
                 ],
                 "memo": "SWAP:THOR.TCY:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav::tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:100",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],
@@ -1809,6 +1814,7 @@
                   }
                 ],
                 "memo": "SWAP:THOR.RUNE:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav::tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:100",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],

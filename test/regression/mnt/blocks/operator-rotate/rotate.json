@@ -114,6 +114,7 @@
                   }
                 ],
                 "memo": "BOND:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -448,6 +449,7 @@
                   }
                 ],
                 "memo": "BOND:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -625,6 +627,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -753,6 +756,7 @@
                   }
                 ],
                 "memo": "OPERATOR",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -881,6 +885,7 @@
                   }
                 ],
                 "memo": "OPERATOR:",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1009,6 +1014,7 @@
                   }
                 ],
                 "memo": "OPERATOR:cosmos13wrmhnh2qe98rjse30pl7u6jxszjjwl4t2v05e",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1296,6 +1302,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1742,6 +1749,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2029,6 +2037,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+                "salt": null,
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
               }
             ],
@@ -2157,6 +2166,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2285,6 +2295,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2426,6 +2437,7 @@
                   }
                 ],
                 "memo": "BOND:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2554,6 +2566,7 @@
                   }
                 ],
                 "memo": "BOND:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -2726,6 +2739,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -2867,6 +2881,7 @@
                   }
                 ],
                 "memo": "OPERATOR:tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],

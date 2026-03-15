@@ -232,6 +232,7 @@
                   }
                 ],
                 "memo": ":foobar",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -419,6 +420,7 @@
                   }
                 ],
                 "memo": "foobar",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -606,6 +608,7 @@
                   }
                 ],
                 "memo": ":",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -793,6 +796,7 @@
                   }
                 ],
                 "memo": "",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2996,6 +3000,7 @@
                   }
                 ],
                 "memo": "~:",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -3183,6 +3188,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:030755a8fc0b7a7f61256518cf3ab786b28a10ef48c0ac966b3059ce8f8362c624",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

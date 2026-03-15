@@ -1066,6 +1066,7 @@
                   }
                 ],
                 "memo": "~:test:THOR:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:ETH.USDX-0X9999999999999999999999999999999999999999",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -1394,6 +1395,7 @@
                   }
                 ],
                 "memo": "~:test:ETH:0xdd99304abf262d653e2eb6722d874c2b86efdcea",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -1726,6 +1728,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal:0/0/1:test:500",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],

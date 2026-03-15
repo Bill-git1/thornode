@@ -523,6 +523,7 @@
                   }
                 ],
                 "memo": "~:test:THOR:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:ETH.BTC",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -735,6 +736,7 @@
                   }
                 ],
                 "memo": "~:test:THOR:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:BTC.BTC",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -988,6 +990,7 @@
                   }
                 ],
                 "memo": "~:test:BTC:bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -1634,6 +1637,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal::test:500",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -2398,6 +2402,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal::test:500",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -4514,6 +4519,7 @@
                   }
                 ],
                 "memo": "=:ETH.ETH:0x1b03d088612a00df0049634e9cc8684d622cada2::test:1000",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -5513,6 +5519,7 @@
                   }
                 ],
                 "memo": "~:test:THOR:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u::::400",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],

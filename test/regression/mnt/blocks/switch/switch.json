@@ -593,6 +593,7 @@
                   }
                 ],
                 "memo": "+:GAIA.ATOM:cosmos13wrmhnh2qe98rjse30pl7u6jxszjjwl4t2v05e",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

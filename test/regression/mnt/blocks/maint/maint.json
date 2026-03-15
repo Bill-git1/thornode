@@ -114,6 +114,7 @@
                   }
                 ],
                 "memo": "BOND:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -291,6 +292,7 @@
                   }
                 ],
                 "memo": "maint:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
               }
             ],
@@ -431,6 +433,7 @@
                   }
                 ],
                 "memo": "maint:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -559,6 +562,7 @@
                   }
                 ],
                 "memo": "maint:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -699,6 +703,7 @@
                   }
                 ],
                 "memo": "maint:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "salt": null,
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
               }
             ],
@@ -839,6 +844,7 @@
                   }
                 ],
                 "memo": "maint:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],

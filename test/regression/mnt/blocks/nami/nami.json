@@ -593,6 +593,7 @@
                   }
                 ],
                 "memo": "+:GAIA.ATOM:cosmos13wrmhnh2qe98rjse30pl7u6jxszjjwl4t2v05e",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1091,6 +1092,7 @@
                   }
                 ],
                 "memo": "ADD:THOR.NAMI:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1318,6 +1320,7 @@
                   }
                 ],
                 "memo": "ADD:THOR.NAMI:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1605,6 +1608,7 @@
                   }
                 ],
                 "memo": "SWAP:THOR.NAMI:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1822,6 +1826,7 @@
                   }
                 ],
                 "memo": "SWAP:THOR.NAMI:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2009,6 +2014,7 @@
                   }
                 ],
                 "memo": "WITHDRAW:THOR.NAMI:5000",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

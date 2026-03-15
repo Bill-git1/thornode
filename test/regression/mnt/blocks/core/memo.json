@@ -1857,6 +1857,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -3406,6 +3407,7 @@
                   }
                 ],
                 "memo": "reference:BTC.BTC:=:ETH.ETH:0x1b03d088612a00df0049634e9cc8684d622cada2",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -3649,6 +3651,7 @@
                   }
                 ],
                 "memo": "reference:GAIA.ATOM:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -5466,6 +5469,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -7705,6 +7709,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -7948,6 +7953,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -8191,6 +8197,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -8434,6 +8441,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -8971,6 +8979,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:b:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -10671,6 +10680,7 @@
                   }
                 ],
                 "memo": "reference:ETH.ETH:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -12171,6 +12181,7 @@
                   }
                 ],
                 "memo": "reference:RUNE:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -12456,6 +12467,7 @@
                   }
                 ],
                 "memo": "r:00001",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -13016,6 +13028,7 @@
                   }
                 ],
                 "memo": "reference:RUNE:=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -13301,6 +13314,7 @@
                   }
                 ],
                 "memo": "",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

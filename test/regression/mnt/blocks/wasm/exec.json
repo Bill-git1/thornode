@@ -2156,6 +2156,7 @@
                   }
                 ],
                 "memo": "x:tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f:eyJpbmNyZW1lbnQiOnt9fQ==",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

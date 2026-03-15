@@ -332,6 +332,7 @@
                   }
                 ],
                 "memo": "-:ETH.nonsense:10000",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -569,6 +570,7 @@
                   }
                 ],
                 "memo": "-:ETH.USDC:5000:ETH.USDC",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],

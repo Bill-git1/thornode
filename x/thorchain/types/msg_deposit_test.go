@@ -2,12 +2,14 @@ package types
 
 import (
 	"errors"
+	"strings"
 
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	. "gopkg.in/check.v1"
 
 	common "gitlab.com/thorchain/thornode/v3/common"
 	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 type MsgDepositSuite struct{}
@@ -23,9 +25,11 @@ func (MsgDepositSuite) TestMsgDepositSuite(c *C) {
 	}
 	memo := "hello"
 	msg := NewMsgDeposit(coins, memo, acc1)
+	msg.Salt = []byte("salt")
 	c.Assert(msg.ValidateBasic(), IsNil)
 	c.Assert(msg.GetSigners(), NotNil)
 	c.Assert(msg.GetSigners()[0].String(), Equals, acc1.String())
+	c.Assert(msg.GetSalt(), DeepEquals, []byte("salt"))
 
 	// ensure non-native assets are blocked
 	coins = common.Coins{
@@ -52,4 +56,12 @@ func (MsgDepositSuite) TestMsgDepositSuite(c *C) {
 	err3 := msg3.ValidateBasic()
 	c.Assert(err3, NotNil)
 	c.Assert(errors.Is(err3, se.ErrUnknownRequest), Equals, true)
+
+	msg4 := NewMsgDeposit(common.Coins{
+		common.NewCoin(common.RuneNative, cosmos.NewUint(12*common.One)),
+	}, "memo", acc1)
+	msg4.Salt = []byte(strings.Repeat("s", constants.MaxDepositSaltSize+1))
+	err4 := msg4.ValidateBasic()
+	c.Assert(err4, NotNil)
+	c.Assert(errors.Is(err4, se.ErrUnknownRequest), Equals, true)
 }

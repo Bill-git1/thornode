@@ -46,6 +46,10 @@ func (m *MsgDeposit) ValidateBasic() error {
 		err := fmt.Errorf("memo must not exceed %d bytes: %d", constants.MaxMemoSize, len([]byte(m.Memo)))
 		return cosmos.ErrUnknownRequest(err.Error())
 	}
+	if len(m.Salt) > constants.MaxDepositSaltSize {
+		err := fmt.Errorf("salt must not exceed %d bytes: %d", constants.MaxDepositSaltSize, len(m.Salt))
+		return cosmos.ErrUnknownRequest(err.Error())
+	}
 
 	// deposit only allowed with one coin
 	if len(m.Coins) != 1 {

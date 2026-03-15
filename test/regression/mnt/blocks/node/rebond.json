@@ -114,6 +114,7 @@
                   }
                 ],
                 "memo": "rebond:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav:100000000000",
+                "salt": null,
                 "signer": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7"
               }
             ],
@@ -242,6 +243,7 @@
                   }
                 ],
                 "memo": "rebond:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43:100000000000",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],
@@ -549,6 +551,7 @@
                   }
                 ],
                 "memo": "rebond:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],
@@ -836,6 +839,7 @@
                   }
                 ],
                 "memo": "rebond:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],
@@ -984,6 +988,7 @@
                   }
                 ],
                 "memo": "rebond:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],

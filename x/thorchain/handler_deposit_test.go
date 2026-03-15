@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strconv"
@@ -84,6 +85,36 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(voter2.Tx.IsEmpty(), Equals, false)
 	c.Assert(voter2.Tx.Status, Equals, common.Status_done)
+
+	// when tx bytes are empty and salt is provided, generate tx id with msg bytes + block height
+	FundAccount(c, ctx, k, addr, 300*common.One)
+	ctxNoTxBytes := ctx.WithTxBytes(nil)
+	saltedMsg := NewMsgDeposit(coins, "ADD:DOGE.DOGE", addr)
+	saltedMsg.Salt = []byte("deposit-salt")
+	_, err = handler.handle(ctxNoTxBytes, *saltedMsg, 0)
+	c.Assert(err, IsNil)
+	hashBytes, _ := saltedMsg.Marshal()
+	h := make([]byte, 8)
+	binary.BigEndian.PutUint64(h, uint64(ctx.BlockHeight()))
+	hashBytes = append(hashBytes, h...)
+	saltHash := tmtypes.Tx(hashBytes).Hash()
+	saltTxID, err := common.NewTxID(fmt.Sprintf("%X", saltHash))
+	c.Assert(err, IsNil)
+	saltedVoter, err := k.GetObservedTxInVoter(ctx, saltTxID)
+	c.Assert(err, IsNil)
+	c.Assert(saltedVoter.Tx.IsEmpty(), Equals, false)
+	c.Assert(saltedVoter.Tx.Status, Equals, common.Status_done)
+
+	// reusing the same salt should trigger suffix counter collision handling
+	FundAccount(c, ctx, k, addr, 300*common.One)
+	_, err = handler.handle(ctxNoTxBytes, *saltedMsg, 0)
+	c.Assert(err, IsNil)
+	saltTxIDIncremented, err := common.NewTxID(fmt.Sprintf("%X-1", saltHash))
+	c.Assert(err, IsNil)
+	saltedVoter2, err := k.GetObservedTxInVoter(ctx, saltTxIDIncremented)
+	c.Assert(err, IsNil)
+	c.Assert(saltedVoter2.Tx.IsEmpty(), Equals, false)
+	c.Assert(saltedVoter2.Tx.Status, Equals, common.Status_done)
 }
 
 type HandlerDepositTestHelper struct {

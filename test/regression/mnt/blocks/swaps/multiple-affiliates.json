@@ -525,6 +525,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw::tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u/tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej/tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav:500",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -840,6 +841,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw::tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u/tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej/tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav:100",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -1784,6 +1786,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw::tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u/tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej/tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav:500/100/200",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],
@@ -2625,6 +2628,7 @@
                   }
                 ],
                 "memo": "~:t:THOR:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+                "salt": null,
                 "signer": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
               }
             ],
@@ -2878,6 +2882,7 @@
                   }
                 ],
                 "memo": "~:a:ETH:0x1b03d088612a00df0049634e9cc8684d622cada2:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej:ETH.ETH",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -3234,6 +3239,7 @@
                   }
                 ],
                 "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw::t/a/tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav:100",
+                "salt": null,
                 "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
               }
             ],

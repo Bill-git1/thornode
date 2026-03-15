@@ -2378,6 +2378,7 @@
                   }
                 ],
                 "memo": "TCY:tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav",
+                "salt": null,
                 "signer": "tthor1anq4fk6l89w3sfuxehwyprxqjdj3kuzpfwlrav"
               }
             ],
@@ -2751,6 +2752,7 @@
                   }
                 ],
                 "memo": "tcy+",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -3098,6 +3100,7 @@
                   }
                 ],
                 "memo": "tcy-:5000",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
@@ -3445,6 +3448,7 @@
                   }
                 ],
                 "memo": "tcy-:10000",
+                "salt": null,
                 "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"
               }
             ],
