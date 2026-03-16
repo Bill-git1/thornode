@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
 	tcommon "gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	. "gopkg.in/check.v1"
 )
 
@@ -174,6 +176,25 @@ func (HealthServerTestSuite) TestClassifyHost(c *C) {
 		got := classifyHost(tc.input)
 		c.Assert(got, Equals, tc.expected, Commentf("input: %q", tc.input))
 	}
+}
+
+func (HealthServerTestSuite) TestVersionHandler(c *C) {
+	tssServer := &MockTssServer{}
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
+	c.Assert(s, NotNil)
+	req := httptest.NewRequest(http.MethodGet, "/version", nil)
+	res := httptest.NewRecorder()
+	s.versionHandler(res, req)
+	c.Assert(res.Code, Equals, http.StatusOK)
+	c.Assert(res.Header().Get("Content-Type"), Equals, "application/json")
+
+	var body struct {
+		Version   string `json:"version"`
+		GitCommit string `json:"git_commit"`
+	}
+	c.Assert(json.NewDecoder(res.Body).Decode(&body), IsNil)
+	c.Assert(body.Version, Equals, constants.Version)
+	c.Assert(body.GitCommit, Equals, constants.GitCommit)
 }
 
 func (HealthServerTestSuite) TestProviderStatusHandler(c *C) {

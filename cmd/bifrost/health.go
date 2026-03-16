@@ -22,6 +22,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -134,11 +135,26 @@ func (s *HealthServer) newHandler() http.Handler {
 	router.Handle("/status/scanner", http.HandlerFunc(s.chainScanner)).Methods(http.MethodGet)
 	router.Handle("/status/provider", http.HandlerFunc(s.providerStatus)).Methods(http.MethodGet)
 	router.Handle("/status/signing", http.HandlerFunc(s.currentSigning)).Methods(http.MethodGet)
+	router.Handle("/version", http.HandlerFunc(s.versionHandler)).Methods(http.MethodGet)
 	return router
 }
 
 func (s *HealthServer) pingHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *HealthServer) versionHandler(w http.ResponseWriter, _ *http.Request) {
+	resp := struct {
+		Version   string `json:"version"`
+		GitCommit string `json:"git_commit"`
+	}{
+		Version:   constants.Version,
+		GitCommit: constants.GitCommit,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		s.logger.Error().Err(err).Msg("fail to write version response")
+	}
 }
 
 func (s *HealthServer) getP2pIDHandler(w http.ResponseWriter, _ *http.Request) {
