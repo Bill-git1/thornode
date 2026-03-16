@@ -1008,16 +1008,6 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 				continue
 			}
 
-			// skip finalized inbounds
-			stages := openapi.TxStagesResponse{}
-			err = util.ThornodeCachedRetryGet(fmt.Sprintf("thorchain/tx/stages/%s", tx.Tx.ID), block.Header.Height, &stages)
-			if err != nil {
-				log.Panic().Err(err).Msg("failed to get tx stages")
-			}
-			if stages.InboundFinalised != nil && stages.InboundFinalised.Completed {
-				continue
-			}
-
 			// mark this inbound as seen
 			err = util.Store(seenKey, true)
 			if err != nil {
