@@ -1,8 +1,6 @@
 package thorchain
 
 import (
-	"fmt"
-
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -39,15 +37,7 @@ func (h ObservedTxQuorumHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.
 }
 
 func (h ObservedTxQuorumHandler) validate(ctx cosmos.Context, msg types.MsgObservedTxQuorum) error {
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
-	if !isSignedByActiveNodeAccounts(ctx, h.mgr.Keeper(), msg.GetSigners()) {
-		return cosmos.ErrUnauthorized(fmt.Sprintf("%+v are not authorized", msg.GetSigners()))
-	}
-
-	return nil
+	return msg.ValidateBasic()
 }
 
 func (h ObservedTxQuorumHandler) handle(ctx cosmos.Context, msg types.MsgObservedTxQuorum) (*cosmos.Result, error) {
