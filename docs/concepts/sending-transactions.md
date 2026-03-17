@@ -17,7 +17,7 @@ For UTXO-based chains (e.g., BTC, BCH, LTC, DOGE), transactions must follow a sp
 
 #### Checklist for UTXO Transactions
 
-- [ ] **Verify supported address type**: Ensure the address type (e.g., P2PKH, P2SH) is supported by THORChain. Check supported formats in [Querying THORChain](./querying-thorchain.md#supported-address-formats).
+- [ ] **Verify supported address type**: Ensure the address type (e.g., P2PKH, P2SH) is supported by THORChain. Check supported formats in [Querying THORChain](./querying-thorchain.md#supported-address-formats). Note: LTC MWEB addresses (ltcmweb1) and peg-in transactions are not supported.
 - [ ] **Set Asgard vault as VOUT0**: Send the transaction amount to the current Asgard vault address as the first output (VOUT0), obtainable from the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint.
 - [ ] **Return change to VIN0**: Direct all change back to the input address (VIN0) in a subsequent output, e.g., VOUT1, as THORChain identifies the user by VIN0 for refunds.
 - [ ] **Include memo in OP_RETURN**: Add the transaction memo as an OP_RETURN output, typically in VOUT2, to specify the user’s intent (e.g., swap, add liquidity). Refer to [Memos](./memos.md) for format details.

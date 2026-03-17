@@ -475,7 +475,9 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 
 func (c Chain) InboundNotes() string {
 	switch c {
-	case BTCChain, LTCChain, BCHChain, DOGEChain, ZECChain:
+	case LTCChain:
+		return "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats. MWEB addresses are not supported; do not use ltcmweb1 addresses or peg-in transactions."
+	case BTCChain, BCHChain, DOGEChain, ZECChain:
 		return "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats."
 	case ETHChain, AVAXChain, BSCChain, BASEChain, POLChain:
 		return "Base Asset: Send the inbound_address the asset with the memo encoded in hex in the data field. Tokens: First approve router to spend tokens from user: asset.approve(router, amount). Then call router.depositWithExpiry(inbound_address, asset, amount, memo, expiry). Asset is the token contract address. Amount should be in native asset decimals (eg 1e18 for most tokens). Do not swap to smart contract addresses."
@@ -494,6 +496,8 @@ func (c Chain) OutboundNotes() string {
 	switch c {
 	case XRPChain:
 		return "Ensure XRP destination address does not have special flags like lsfRequireDestTag, lsfRequireAuth, lsfDisallowIncomingPayChan, etcetera."
+	case LTCChain:
+		return "Do not use MWEB (ltcmweb1) addresses as the destination; they are not supported."
 	default:
 		return ""
 	}
