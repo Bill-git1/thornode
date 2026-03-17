@@ -172,6 +172,9 @@ func (c *CosmosBlockScanner) GetHeight() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	if resultBlock == nil || resultBlock.Block == nil {
+		return 0, fmt.Errorf("nil block response from RPC")
+	}
 
 	return resultBlock.Block.Header.Height - 1, nil
 }
@@ -330,16 +333,19 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 	if err != nil {
 		return nil, fmt.Errorf("unable to get BlockResults: %w", err)
 	}
+	if blockResults == nil {
+		return nil, fmt.Errorf("nil BlockResults response from RPC for height %d", height)
+	}
 
 	var txIn []*types.TxInItem
 	for i, rawTx := range rawTxs {
 		hash := hex.EncodeToString(tmhash.Sum(rawTx))
 
-		if blockResults.TxsResults[i].Code != 0 {
+		if i >= len(blockResults.TxsResults) || blockResults.TxsResults[i] == nil || blockResults.TxsResults[i].Code != 0 {
 			c.logger.Warn().
 				Str("txhash", hash).
 				Int64("height", height).
-				Msg("inbound tx has non-zero response code, ignoring...")
+				Msg("inbound tx result missing or failed, ignoring...")
 			continue
 		}
 
