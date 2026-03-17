@@ -22,7 +22,8 @@ The advanced queue supports three distinct swap types:
 - **Conditional Execution**: Only execute when price conditions are met
 - **Queue Persistence**: Remain in queue until executed or expired
 - **Price Waiting**: Will wait for favorable conditions rather than immediate refund
-- **Example**: `=<:ETH.ETH:0xaddress:2000000000/0/0`
+- **Trade Target Required**: The trade target (minimum output) must be non-zero for a swap to be treated as a limit swap. If the target is zero, it is treated as a market swap regardless of the prefix.
+- **Example**: `=<:ETH.ETH:0xaddress:2000000000` (wait until at least 20 ETH output is achievable)
 
 #### 3. Rapid Swaps
 
@@ -142,22 +143,27 @@ The advanced queue introduces important changes to how streaming intervals work:
 
 ### Time-to-Live (TTL) Management
 
-**Default TTL**: 43,200 blocks (~3 days)
+**Default TTL**: Controlled by the [`StreamingLimitSwapMaxAge`](../mimir.md) mimir (default 43,200 blocks, ~3 days)
 
 ```bash
-=<:BTC.BTC:bc1qaddress:50000000  # Uses default 43,200 block TTL
+=<:BTC.BTC:bc1qaddress:50000000  # Uses default TTL from StreamingLimitSwapMaxAge
 ```
 
-**Custom TTL**: Specify via interval parameter (max 43,200 blocks)
+**Custom TTL**: For limit swaps, the second `/` value in the memo is treated as a custom TTL in blocks (not a streaming interval). It is capped to `StreamingLimitSwapMaxAge`.
 
 ```bash
-=<:BTC.BTC:bc1qaddress:50000000/21600/0  # Custom 21,600 block TTL (1.5 days)
+=<:BTC.BTC:bc1qaddress:50000000/21600/0  # Custom 21,600 block TTL (~1.5 days)
+```
+
+```admonish info
+While the memo format looks the same for both swap types (`tradeTarget/interval/quantity`), the second parameter behaves differently. For market swaps (`=`) it controls the streaming interval between sub-swaps. For limit swaps (`=<`) it sets a custom TTL in blocks.
 ```
 
 **Expiration Behavior**:
 
-- Expired limit swaps are automatically cleaned up
-- Remaining funds are refunded to the original sender
+- Expired limit swaps are automatically cleaned up during `EndBlock` processing
+- Any amount already swapped (partial fills) is sent to the destination address
+- The unswapped remainder is refunded to the original sender
 - No manual intervention required
 
 ### Processing Constraints
@@ -180,15 +186,27 @@ The advanced queue introduces important changes to how streaming intervals work:
 - Configurable via `AdvSwapQueueRapidSwapMax` mimir
 - Prevents excessive processing overhead
 
+### Partial Fills and Settlement
+
+Limit swaps are broken into multiple sub-swaps and can be partially filled when they expire or are cancelled. Settlement follows the same process as [streaming swaps](./streaming-swaps.md) — any amount already swapped is sent to the destination address, and the unswapped remainder is refunded to the sender.
+
+### Rapid Swap Direction Protection
+
+When rapid swap iterations are enabled (`AdvSwapQueueRapidSwapMax` > 1), the advanced queue tracks the swap direction per pool during each block. Market swaps going in the same direction on the same pool as the previous swap are skipped on subsequent iterations. This prevents compounding slip from multiple sub-swaps pushing the pool in the same direction within a single block, and allows arbs to restore the pool ratio between blocks.
+
+Limit swaps are not subject to direction protection — they are already validated against the current pool ratio before execution (see [Price Discovery](#price-discovery)).
+
 ## Advanced Features
 
 ### Swap Modification
 
-Limit swaps can be modified or cancelled using the modify memo:
+Limit swaps can be modified or cancelled using the modify memo (see [Transaction Memos](../concepts/memos.md#limit-swap-modification)):
 
 ```bash
-m=<:SOURCE:TARGET:NEWAMOUNT
+m=<:SOURCE:TARGET:MODIFIEDTARGETAMOUNT
 ```
+
+The handler searches for a matching limit swap by the sender's address and the source/target asset pair. It iterates through matching swaps up to a configurable maximum ([`ModifyLimitSwapMaxIterations`](../mimir.md)) to prevent DoS.
 
 **Examples**:
 

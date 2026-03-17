@@ -47,6 +47,10 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `CloutReset`: The number of blocks before clout spent gets reset
 - `CloutLimit`\*: Max clout allowed to spend
 - `MultipleAffiliatesMaxCount`: Maximum number of nested affiliates
+- `EnableAdvSwapQueue`: Enable advanced swap queue (0 = disabled, 1 = enabled, 2 = market swaps only, limit swaps skipped)
+- `AdvSwapQueueRapidSwapMax`: Maximum number of rapid swap iterations per block
+- `StreamingLimitSwapMaxAge`: Maximum number of blocks a limit swap can exist before expiring
+- `ModifyLimitSwapMaxIterations`: Maximum iterations when searching for a user's swap to modify or cancel
 - `L1SlipMinBps`: Minimum L1 asset swap fee in basis points
 - `TradeAccountsSlipMinBps`: Minimum trade asset swap fee in basis points
 - `SecuredAssetSlipMinBps`: Minimum secured asset swap fee in basis points

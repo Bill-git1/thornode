@@ -4,6 +4,76 @@
 
 The price oracle is a component running in Bifrost and responsible for providing crypto asset prices to Thornode, so they can be consumed by applications on the app layer. Each node runs an instance of the oracle and reporting observed prices independently.
 
+## Supported Assets
+
+The oracle provides USD prices for a fixed set of assets defined by the `RequiredPriceFeeds` constant:
+
+| Symbol | Asset        |
+| ------ | ------------ |
+| ATOM   | Cosmos       |
+| AVAX   | Avalanche    |
+| BCH    | Bitcoin Cash |
+| BNB    | BNB Chain    |
+| BTC    | Bitcoin      |
+| DOGE   | Dogecoin     |
+| ETH    | Ethereum     |
+| LTC    | Litecoin     |
+| RUNE   | THORChain    |
+| SOL    | Solana       |
+| TRX    | TRON         |
+| USDC   | USD Coin     |
+| USDT   | Tether       |
+| XRP    | XRP          |
+| ZEC    | Zcash        |
+
+```admonish warning
+Only assets listed on the majority of configured CEX providers can have oracle prices. Assets like RUJI, TCY, or chain-specific stablecoin variants are **not** supported by the oracle. The `USDC` and `USDT` symbols represent a single chain-agnostic price sourced from CEXs — there is no differentiation between the same stablecoin on different chains.
+```
+
+```admonish info
+Oracle prices are **not** the same as pool-derived or TOR prices. Oracle prices come from external CEX feeds and only cover the assets listed above. For USD prices of assets not covered by the oracle (e.g. RUJI, TCY, chain-specific stablecoins), use the `asset_tor_price` field from `/thorchain/pools` instead. See the [TOR documentation](https://docs.thorchain.org/technical-documentation/thorchain-finance/tor) for details on how TOR pricing works.
+```
+
+## API Endpoints
+
+### Get All Oracle Prices
+
+Returns the current oracle price for every supported symbol.
+
+```bash
+curl https://thornode.ninerealms.com/thorchain/oracle/prices
+```
+
+Example response:
+
+```json
+[
+  { "symbol": "BTC", "price": "100152.5" },
+  { "symbol": "ETH", "price": "3245.12" },
+  { "symbol": "RUNE", "price": "2.15" }
+]
+```
+
+### Get Single Oracle Price
+
+Returns the oracle price for a specific symbol.
+
+```bash
+curl https://thornode.ninerealms.com/thorchain/oracle/price/BTC
+```
+
+Example response:
+
+```json
+{ "symbol": "BTC", "price": "100152.5" }
+```
+
+```admonish info
+Oracle prices are cleared at the start of every block and recalculated from fresh price feeds. If queried between blocks before the price feed transaction is processed, the endpoint may return empty results.
+```
+
+For the full API specification, see the [OpenAPI docs](https://thornode.ninerealms.com/thorchain/doc).
+
 ## Concept
 
 ### Oracle (Bifrost)
@@ -13,6 +83,8 @@ The price oracle is a component running in Bifrost and responsible for providing
 The Oracle component is running in Bifrost and consists of a multitude of different price providers for different centralized exchanges. These providers either subscribe to websocket feeds or poll API endpoints in a specified interval.
 
 Every second, the oracle collects all rates of all configured trading pairs from all enabled providers. It then calculates the USD value of each base asset and filters them for outliers.
+
+The full list of 19 CEX providers and their configuration can be found in [`default.yaml`](../../config/default.yaml).
 
 #### Calculating USD value
 
@@ -64,9 +136,9 @@ To calculate the final on-chain prices, Thornode first checks the signature and 
 
 Price feeds that are older than the timestamp of the last block are discarded as well. This is to prevent a malicious node from storing old prices with valid signatures and use them for price manipulation.
 
-##### Simple majority
+##### Super majority
 
-If a simple majority of nodes have provided a valid price for an asset, this price is persisted to the KVStore and can be consumed inside the current block.
+A valid price is only persisted to the KVStore if a **super majority (≥ 2/3)** of active validators have provided a valid price for that asset. If fewer nodes report, the price for that asset is not set for the current block.
 
 ##### Multiple nodes
 
@@ -120,8 +192,9 @@ coinbase:
 
 Disabling all providers, also disables the oracle (technically it just doesn't run)
 
-> [!important]
-> Note: Certain providers will not be available from specific jurisdictions
+```admonish warning
+Certain providers will not be available from specific jurisdictions.
+```
 
 ```golang
 type BifrostOracleProviderConfiguration struct {
@@ -155,6 +228,7 @@ The price oracle provides metrics to the collected ticker prices and calculation
 | ---------------------------- | ------------------------------------------------------------ |
 | thornode_oracle_price_bounds | Upper- and lower bounds for outlier detection (not used yet) |
 | thornode_oracle_price        | Final on chain price for any asset                           |
+| thornode_price_feed_latency  | Latency from feed timestamp to processing time               |
 
 ### Detailed Price Metrics
 
