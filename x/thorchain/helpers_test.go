@@ -958,6 +958,44 @@ func (k *SettleSwapTestKeeper) GetTHORName(ctx cosmos.Context, _ string) (THORNa
 	return THORName{}, fmt.Errorf("thorname not found")
 }
 
+type SettleSwapRetryVaultErrorKeeper struct {
+	keeper.Keeper
+}
+
+func (k *SettleSwapRetryVaultErrorKeeper) GetVault(_ cosmos.Context, _ common.PubKey) (Vault, error) {
+	return Vault{}, fmt.Errorf("vault not found")
+}
+
+func seedSettleSwapRetryState(c *C, ctx cosmos.Context, k keeper.Keeper, tx common.Tx, observedPubKey common.PubKey) {
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, btcPool), IsNil)
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	ethPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, ethPool), IsNil)
+
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain, common.ETHChain}.Strings(), nil)
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	voter := NewObservedTxVoter(tx.ID, nil)
+	voter.Tx = ObservedTx{
+		Tx:             tx,
+		ObservedPubKey: observedPubKey,
+	}
+	k.SetObservedTxInVoter(ctx, voter)
+}
+
 func (HelperSuite) TestSettleSwap(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	// Test 1: Successful swap settlement with outbound
@@ -1119,6 +1157,45 @@ func (HelperSuite) TestSettleSwap(c *C) {
 	err = settleSwap(ctx, mgr, msg, "test with removal failure")
 	c.Assert(err, IsNil) // Should not fail, just log errors
 	keeper.failRemove = false
+}
+
+func (HelperSuite) TestSettleSwapDoesNotDuplicateOutboundOnRetry(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	txID := GetRandomTxHash()
+	tx := common.NewTx(
+		txID,
+		GetRandomBTCAddress(),
+		GetRandomBTCAddress(),
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))},
+		"SWAP:ETH.ETH",
+	)
+
+	baseKeeper := mgr.Keeper()
+	observedPubKey := GetRandomPubKey()
+	seedSettleSwapRetryState(c, ctx, baseKeeper, tx, observedPubKey)
+	mgr.K = &SettleSwapRetryVaultErrorKeeper{Keeper: baseKeeper}
+
+	msg := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.ETHAsset,
+		Destination: GetRandomETHAddress(),
+		TradeTarget: cosmos.NewUint(1),
+		SwapType:    types.SwapType_limit,
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1000),
+			In:      cosmos.NewUint(600),
+			Out:     cosmos.NewUint(550),
+		},
+	}
+
+	c.Assert(settleSwap(ctx, mgr, msg, "expired limit order"), NotNil)
+	c.Assert(settleSwap(ctx, mgr, msg, "expired limit order"), NotNil)
+
+	outItems, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(len(outItems), Equals, 0, Commentf("failed settlement must not leave a partial outbound behind"))
 }
 
 func (HelperSuite) TestSettleSwapRefundFromInactiveVault(c *C) {

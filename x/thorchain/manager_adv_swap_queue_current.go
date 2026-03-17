@@ -952,11 +952,13 @@ func (vm *SwapQueueAdv) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager
 			continue
 		}
 
-		// Process each expired swap for this height
+		// Process each expired swap for this height, tracking failures for retry
+		var failedTxHashes []common.TxID
 		for _, txHash := range expiredTxHashes {
 			// Try to find the swap in the advanced queue
 			// Iterate until HasAdvSwapQueueItem returns false to handle all indices
 			found := false
+			settleFailed := false
 			for index := 0; vm.k.HasAdvSwapQueueItem(ctx, txHash, index); index++ {
 				swap, err := vm.k.GetAdvSwapQueueItem(ctx, txHash, index)
 				if err != nil {
@@ -966,12 +968,16 @@ func (vm *SwapQueueAdv) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager
 
 				// Verify this is actually a limit swap that should expire
 				if swap.IsLimitSwap() {
-					// Settle the expired swap
 					if err := settleSwap(ctx, mgr, swap, "limit swap expired"); err != nil {
 						ctx.Logger().Error("fail to settle expired limit swap", "error", err, "txID", txHash.String(), "index", index)
+						settleFailed = true
 					}
 					found = true
 				}
+			}
+
+			if settleFailed {
+				failedTxHashes = append(failedTxHashes, txHash)
 			}
 
 			if !found {
@@ -979,8 +985,16 @@ func (vm *SwapQueueAdv) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager
 			}
 		}
 
-		// Remove the TTL entry (tombstone) since we've processed all expired swaps for this height
+		// Remove the TTL entry since we've processed all expired swaps for this height
 		vm.k.RemoveLimitSwapTTL(ctx, height)
+
+		// Re-add failed txHashes at a future height for retry so they are not permanently orphaned
+		for _, txHash := range failedTxHashes {
+			retryHeight := currentHeight + 1
+			if err := vm.k.AddToLimitSwapTTL(ctx, retryHeight, txHash); err != nil {
+				ctx.Logger().Error("fail to re-add failed limit swap TTL for retry", "error", err, "txID", txHash.String(), "retryHeight", retryHeight)
+			}
+		}
 	}
 
 	return nil
