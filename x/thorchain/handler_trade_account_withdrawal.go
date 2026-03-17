@@ -1,8 +1,6 @@
 package thorchain
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/hashicorp/go-multierror"
@@ -65,15 +63,9 @@ func (h TradeAccountWithdrawalHandler) handle(ctx cosmos.Context, msg MsgTradeAc
 	var ok bool
 	layer1Asset := msg.Asset.GetLayer1Asset()
 
-	rawHash := sha256.Sum256(ctx.TxBytes())
-	hash := hex.EncodeToString(rawHash[:])
-	txID, err := common.NewTxID(hash)
-	if err != nil {
-		return err
-	}
 	toi := TxOutItem{
 		Chain:     layer1Asset.GetChain(),
-		InHash:    txID,
+		InHash:    msg.Tx.ID,
 		ToAddress: msg.AssetAddress,
 		Coin:      common.NewCoin(layer1Asset, withdraw),
 	}

@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"strings"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	. "gopkg.in/check.v1"
@@ -76,13 +78,15 @@ func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawal(c *C) {
 	asset := common.BTCAsset
 	addr := GetRandomBech32Addr()
 	bc1Addr := GetRandomBTCAddress()
-	dummyTx := common.Tx{ID: "test"}
+	txID, err := common.NewTxID("A" + strings.Repeat("0", 63))
+	c.Assert(err, IsNil)
+	dummyTx := common.Tx{ID: txID}
 
 	{
 		msg := NewMsgTradeAccountDeposit(asset, cosmos.NewUint(500), addr, addr, dummyTx)
 
 		h := NewTradeAccountDepositHandler(mgr)
-		_, err := h.Run(ctx, msg)
+		_, err = h.Run(ctx, msg)
 		c.Assert(err, IsNil)
 
 		bal := mgr.TradeAccountManager().BalanceOf(ctx, asset, addr)
@@ -103,7 +107,7 @@ func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawal(c *C) {
 	msg := NewMsgTradeAccountWithdrawal(asset.GetTradeAsset(), cosmos.NewUint(350), bc1Addr, addr, dummyTx)
 
 	h := NewTradeAccountWithdrawalHandler(mgr)
-	_, err := h.Run(ctx, msg)
+	_, err = h.Run(ctx, msg)
 	c.Assert(err, IsNil)
 
 	bal := mgr.TradeAccountManager().BalanceOf(ctx, asset, addr)
@@ -114,4 +118,9 @@ func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawal(c *C) {
 	c.Assert(items, HasLen, 1)
 	c.Check(items[0].Coin.String(), Equals, "350 BTC.BTC")
 	c.Check(items[0].ToAddress.String(), Equals, bc1Addr.String())
+	// InHash must equal the originating tx ID so that handler_common_outbound
+	// can match the observed outbound back to this TxOutItem. Using
+	// sha256(ctx.TxBytes()) here would produce a wrong/unrelated hash in any
+	// context where ctx.TxBytes() != the cosmos tx whose hash is msg.Tx.ID.
+	c.Check(items[0].InHash.Equals(txID), Equals, true)
 }
