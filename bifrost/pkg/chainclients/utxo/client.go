@@ -120,7 +120,15 @@ func NewClient(
 	logger := log.Logger.With().Stringer("chain", cfg.ChainID).Logger()
 
 	// create rpc client
-	rpcClient, err := rpc.NewClient(cfg.RPCHost, cfg.UserName, cfg.Password, cfg.MaxRPCRetries, logger, cfg.ChainID)
+	rpcClient, err := rpc.NewClient(
+		cfg.RPCHost,
+		cfg.UserName,
+		cfg.Password,
+		cfg.MaxRPCRetries,
+		cfg.BlockScanner.HTTPRequestTimeout,
+		cfg.ChainID,
+		logger,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create rpc client: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,20 +20,24 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	crypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/rpc"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
 	txscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/txscript"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -97,6 +102,8 @@ func (s *BitcoinSignerSuite) SetUpTest(c *C) {
 			c.Assert(err, IsNil)
 		} else if strings.HasPrefix(req.RequestURI, "/thorchain/vaults") && strings.HasSuffix(req.RequestURI, "/signers") {
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/tss/keysign_party.json")
+		} else if req.RequestURI == thorclient.LastBlockEndpoint {
+			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/lastblock/btc.json")
 		} else if req.RequestURI == thorclient.ChainVersionEndpoint {
 			_, err := rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
 			c.Assert(err, IsNil)
@@ -167,6 +174,41 @@ func (s *BitcoinSignerSuite) SetUpTest(c *C) {
 func (s *BitcoinSignerSuite) TearDownTest(c *C) {
 	s.server.Close()
 	c.Assert(s.db.Close(), IsNil)
+}
+
+func (s *BitcoinSignerSuite) setNodeSignerForTest(c *C) {
+	priKeyBuf, err := hex.DecodeString("b404c5ec58116b5f0fe13464a92e46626fc5db130e418cbce98df86ffe9317c5")
+	c.Assert(err, IsNil)
+	pkey, _ := btcec.PrivKeyFromBytes(btcec.S256(), priKeyBuf)
+	c.Assert(pkey, NotNil)
+	s.client.nodePrivKey = pkey
+	s.client.nodePubKey, err = bech32AccountPubKey(pkey)
+	c.Assert(err, IsNil)
+}
+
+func newBTCConsolidateRPCServer(c *C, sendRawTxBody string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		c.Assert(err, IsNil)
+		c.Assert(req.Body.Close(), IsNil)
+
+		var rpcReq struct {
+			Method string `json:"method"`
+		}
+		c.Assert(json.Unmarshal(body, &rpcReq), IsNil)
+
+		switch rpcReq.Method {
+		case "listunspent":
+			httpTestHandler(c, rw, "../../../../test/fixtures/btc/listunspent.json")
+		case "getblockcount":
+			httpTestHandler(c, rw, "../../../../test/fixtures/btc/blockcount.json")
+		case "sendrawtransaction":
+			_, err = rw.Write([]byte(sendRawTxBody))
+			c.Assert(err, IsNil)
+		default:
+			c.Fatalf("unexpected RPC method: %s", rpcReq.Method)
+		}
+	}))
 }
 
 func (s *BitcoinSignerSuite) TestGetBTCPrivateKey(c *C) {
@@ -353,6 +395,112 @@ func (s *BitcoinSignerSuite) TestBroadcastTx(c *C) {
 	c.Assert(err, IsNil)
 	_, err = s.client.BroadcastTx(txOutItem, input1)
 	c.Assert(err, IsNil)
+}
+
+// TestBuildConsolidateTxOutItemSumsUtxosInSats verifies consolidation sums each UTXO
+// in sats so the resulting amount is not affected by float accumulation drift.
+func (s *BitcoinSignerSuite) TestBuildConsolidateTxOutItemSumsUtxosInSats(c *C) {
+	s.client.lastFeeRate.Store(10)
+	vault := types2.Vault{PubKey: types2.GetRandomPubKey()}
+
+	txOutItem, err := s.client.buildConsolidateTxOutItem(vault, []btcjson.ListUnspentResult{
+		{Amount: 0.1},
+		{Amount: 0.2},
+		{Amount: 0.3},
+	})
+	c.Assert(err, IsNil)
+	c.Assert(txOutItem.Memo, Equals, "consolidate")
+	c.Assert(txOutItem.GasRate, Equals, int64(15))
+	c.Assert(txOutItem.Coins.GetCoin(common.BTCAsset).Amount.Uint64(), Equals, uint64(60000000))
+}
+
+// TestConsolidateVaultUTXOsSkipsBelowThreshold verifies consolidation exits early
+// when the number of available UTXOs is below the configured trigger threshold.
+func (s *BitcoinSignerSuite) TestConsolidateVaultUTXOsSkipsBelowThreshold(c *C) {
+	s.client.cfg.UTXO.MaxUTXOsToSpend = 10
+	vault := types2.Vault{PubKey: s.client.nodePubKey}
+	cacheKey := stypes.BroadcastCacheKey(vault.PubKey.String(), s.client.GetChain().String())
+
+	err := s.client.consolidateVaultUTXOs(vault, 3)
+	c.Assert(err, IsNil)
+
+	latestTx, err := s.client.signerCacheManager.GetLatestRecordedTx(cacheKey)
+	c.Assert(latestTx, Equals, "")
+	c.Assert(errors.Is(err, leveldb.ErrNotFound), Equals, true)
+}
+
+type errorThorchainKeyManager struct{}
+
+func (m *errorThorchainKeyManager) GetPrivKey() crypto.PrivKey {
+	return nil
+}
+
+func (m *errorThorchainKeyManager) GetAddr() sdktypes.AccAddress {
+	return nil
+}
+
+func (m *errorThorchainKeyManager) ExportAsMnemonic() (string, error) {
+	return "", nil
+}
+
+func (m *errorThorchainKeyManager) ExportAsPrivateKey() (string, error) {
+	return "", nil
+}
+
+func (m *errorThorchainKeyManager) ExportAsKeyStore(password string) (*tss.EncryptedKeyJSON, error) {
+	return nil, nil
+}
+
+func (m *errorThorchainKeyManager) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string) ([]byte, []byte, error) {
+	return nil, nil, errors.New("mock remote sign failure")
+}
+
+func (m *errorThorchainKeyManager) Start() {}
+func (m *errorThorchainKeyManager) Stop()  {}
+
+// TestConsolidateVaultUTXOsReturnsSignError verifies consolidate wraps and returns
+// signing failures before any broadcast attempt is made.
+func (s *BitcoinSignerSuite) TestConsolidateVaultUTXOsReturnsSignError(c *C) {
+	s.client.cfg.UTXO.MaxUTXOsToSpend = 10
+	s.client.tssKeySigner = &errorThorchainKeyManager{}
+	vault := types2.Vault{PubKey: types2.GetRandomPubKey()}
+
+	err := s.client.consolidateVaultUTXOs(vault, 2)
+	c.Assert(err, ErrorMatches, "(?s)sign consolidate txout item: .*mock remote sign failure.*")
+}
+
+// TestConsolidateVaultUTXOsReturnsBroadcastError verifies consolidate wraps and returns
+// broadcast failures after a successful sign.
+func (s *BitcoinSignerSuite) TestConsolidateVaultUTXOsReturnsBroadcastError(c *C) {
+	s.client.cfg.UTXO.MaxUTXOsToSpend = 10
+	s.setNodeSignerForTest(c)
+	vault := types2.Vault{PubKey: s.client.nodePubKey}
+
+	rpcServer := newBTCConsolidateRPCServer(
+		c,
+		`{"result":null,"error":{"code":-25,"message":"broadcast failed"},"id":1}`,
+	)
+	defer rpcServer.Close()
+
+	testRPC, err := rpc.NewClient(
+		rpcServer.Listener.Addr().String(),
+		s.cfg.UserName,
+		s.cfg.Password,
+		0,
+		time.Second,
+		common.BTCChain,
+		s.client.log,
+	)
+	c.Assert(err, IsNil)
+
+	originalRPC := s.client.rpc
+	s.client.rpc = testRPC
+	defer func() {
+		s.client.rpc = originalRPC
+	}()
+
+	err = s.client.consolidateVaultUTXOs(vault, 2)
+	c.Assert(err, ErrorMatches, "broadcast consolidate tx: fail to broadcast transaction to chain: .*broadcast failed.*")
 }
 
 func (s *BitcoinSignerSuite) TestIsSelfTransaction(c *C) {

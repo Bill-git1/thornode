@@ -31,6 +31,13 @@ type SerializableTx interface {
 	Serialize(io.Writer) error
 }
 
+type rpcClient interface {
+	Call(result any, method string, args ...any) error
+	BatchCall(batch []rpc.BatchElem) error
+	CallContext(ctx context.Context, result any, method string, args ...any) error
+	BatchCallContext(ctx context.Context, batch []rpc.BatchElem) error
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Client
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -38,15 +45,15 @@ type SerializableTx interface {
 // Client represents a client connection to a UTXO daemon. Internally this uses the
 // Ethereum JSON-RPC 2.0 implementation, which allows batching and connection reuse.
 type Client struct {
-	c          *rpc.Client
-	z          *zec.Client
+	client     rpcClient
 	log        zerolog.Logger
 	chain      common.Chain
 	maxRetries int
+	timeout    time.Duration
 }
 
 // NewClient returns a client connection to a UTXO daemon.
-func NewClient(host, user, password string, maxRetries int, log zerolog.Logger, chain common.Chain) (
+func NewClient(host, user, password string, maxRetries int, timeout time.Duration, chain common.Chain, log zerolog.Logger) (
 	*Client, error,
 ) {
 	authFn := func(h http.Header) error {
@@ -64,6 +71,7 @@ func NewClient(host, user, password string, maxRetries int, log zerolog.Logger, 
 		log:        log,
 		chain:      chain,
 		maxRetries: maxRetries,
+		timeout:    timeout,
 	}
 
 	var err error
@@ -75,9 +83,9 @@ func NewClient(host, user, password string, maxRetries int, log zerolog.Logger, 
 		if err != nil {
 			return nil, err
 		}
-		client.z = zec.NewClient(host, ZecClientTimeout, header)
+		client.client = zec.NewClient(host, ZecClientTimeout, header)
 	default:
-		client.c, err = rpc.DialOptions(context.Background(), host, rpc.WithHTTPAuth(authFn))
+		client.client, err = rpc.DialOptions(context.Background(), host, rpc.WithHTTPAuth(authFn))
 	}
 
 	if err != nil {
@@ -161,17 +169,9 @@ func (c *Client) BatchGetMempoolEntry(txids []string) ([]*btcjson.GetMempoolEntr
 	}
 
 	// call batch request
-	var err error
-
-	switch c.chain {
-	case common.ZECChain:
-		err = c.z.BatchCall(batch)
-	default:
-		err = c.c.BatchCall(batch)
-	}
-
+	err := c.BatchCall(batch)
 	if err != nil {
-		return nil, nil, extractBTCError(err)
+		return nil, nil, err
 	}
 
 	// collect results
@@ -224,17 +224,9 @@ func (c *Client) BatchGetRawTransactionVerbose(txids []string) ([]*btcjson.TxRaw
 	}
 
 	// call batch request
-	var err error
-
-	switch c.chain {
-	case common.ZECChain:
-		err = c.z.BatchCall(batch)
-	default:
-		err = c.c.BatchCall(batch)
-	}
-
+	err := c.BatchCall(batch)
 	if err != nil {
-		return nil, nil, extractBTCError(err)
+		return nil, nil, err
 	}
 
 	// collect results
@@ -328,21 +320,33 @@ func (c *Client) GetNetworkInfo() (*btcjson.GetNetworkInfoResult, error) {
 }
 
 func (c *Client) Call(result any, method string, args ...interface{}) error {
-	var fn func() error
-
-	switch c.chain {
-	case common.ZECChain:
-		fn = func() error {
-			return c.z.Call(result, method, args...)
+	fn := func() error {
+		if c.timeout <= 0 {
+			return c.client.Call(result, method, args...)
 		}
-	default:
-		fn = func() error {
-			return c.c.Call(result, method, args...)
-		}
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+		return c.client.CallContext(ctx, result, method, args...)
 	}
 
 	err := c.retry(fn)
 	return extractBTCError(err)
+}
+
+func (c *Client) BatchCall(batch []rpc.BatchElem) error {
+	err := c.retry(func() error {
+		return c.batchCall(batch)
+	})
+	return extractBTCError(err)
+}
+
+func (c *Client) batchCall(batch []rpc.BatchElem) error {
+	if c.timeout <= 0 {
+		return c.client.BatchCall(batch)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.client.BatchCallContext(ctx, batch)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

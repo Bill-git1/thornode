@@ -1,7 +1,10 @@
 package utxo
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -20,6 +23,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/mock"
+	utxorpcc "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/rpc"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
@@ -293,6 +297,85 @@ func (s *ZcashSignerSuite) TestBroadcastTx(c *C) {
 	txid, err := s.client.BroadcastTx(txOutItem, somePayload)
 	c.Assert(err, IsNil, Commentf("Non-empty payload should be forwarded to RPC"))
 	c.Assert(txid, Not(Equals), "", Commentf("Should return txid from RPC"))
+}
+
+// zecPayloadTxID mirrors the ZEC fallback txid derivation used by BroadcastTx when
+// RPC returns "already in block chain" without a txid in the response.
+func zecPayloadTxID(payload []byte) string {
+	hash1 := sha256.Sum256(payload)
+	hash2 := sha256.Sum256(hash1[:])
+	final := hash2[:]
+	for i, j := 0, len(final)-1; i < j; i, j = i+1, j-1 {
+		final[i], final[j] = final[j], final[i]
+	}
+	return hex.EncodeToString(final)
+}
+
+// TestBroadcastTxAlreadyInBlockChainMarksSignerCache verifies that the
+// "already in block chain" path is treated as success and recorded in signer cache.
+func (s *ZcashSignerSuite) TestBroadcastTxAlreadyInBlockChainMarksSignerCache(c *C) {
+	txOutItem := stypes.TxOutItem{
+		Chain:       common.ZECChain,
+		ToAddress:   "t1RMxNfN8Q7iwZw7UJB4CqzatxsBmGeYMe2",
+		VaultPubKey: types2.GetRandomPubKey(),
+		Coins: common.Coins{
+			common.NewCoin(common.ZECAsset, cosmos.NewUint(10)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.ZECAsset, cosmos.NewUint(1)),
+		},
+		InHash: thorchain.GetRandomTxHash(),
+		Memo:   "OUT:" + thorchain.GetRandomTxHash().String(),
+	}
+	payload := []byte("already broadcast by another node")
+
+	rpcServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		c.Assert(err, IsNil)
+		c.Assert(req.Body.Close(), IsNil)
+
+		var resp string
+		switch {
+		case strings.Contains(string(body), `"method":"getblockcount"`):
+			resp = `{"result":12345,"error":null,"id":1}`
+		case strings.Contains(string(body), `"method":"sendrawtransaction"`):
+			resp = `{"result":null,"error":{"code":-27,"message":"already in block chain"},"id":1}`
+		default:
+			c.Fatalf("unexpected RPC request body: %s", body)
+		}
+
+		_, err = rw.Write([]byte(resp))
+		c.Assert(err, IsNil)
+	}))
+	defer rpcServer.Close()
+
+	testRPC, err := utxorpcc.NewClient(
+		rpcServer.Listener.Addr().String(),
+		s.cfg.UserName,
+		s.cfg.Password,
+		0,
+		time.Second,
+		common.ZECChain,
+		s.client.log,
+	)
+	c.Assert(err, IsNil)
+
+	originalRPC := s.client.rpc
+	s.client.rpc = testRPC
+	defer func() {
+		s.client.rpc = originalRPC
+	}()
+
+	c.Assert(s.client.signerCacheManager.HasSigned(txOutItem.CacheHash()), Equals, false)
+
+	txid, err := s.client.BroadcastTx(txOutItem, payload)
+	c.Assert(err, IsNil)
+	c.Assert(txid, Equals, zecPayloadTxID(payload))
+	c.Assert(s.client.signerCacheManager.HasSigned(txOutItem.CacheHash()), Equals, true)
+
+	latestTx, err := s.client.signerCacheManager.GetLatestRecordedTx(txOutItem.CacheVault(common.ZECChain))
+	c.Assert(err, IsNil)
+	c.Assert(latestTx, Equals, txid)
 }
 
 // TestIsSelfTransaction tests detection of transactions originated by this node.

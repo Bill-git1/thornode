@@ -40,7 +40,11 @@ func NewClient(url string, timeout time.Duration, header http.Header) *Client {
 }
 
 func (c *Client) Call(result interface{}, method string, args ...interface{}) error {
-	data, err := c.post(method, args...)
+	return c.CallContext(context.Background(), result, method, args...)
+}
+
+func (c *Client) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
+	data, err := c.postWithContext(ctx, method, args...)
 	if err != nil {
 		return err
 	}
@@ -78,8 +82,15 @@ func (c *Client) Call(result interface{}, method string, args ...interface{}) er
 }
 
 func (c *Client) BatchCall(batch []rpc.BatchElem) error {
+	return c.BatchCallContext(context.Background(), batch)
+}
+
+func (c *Client) BatchCallContext(ctx context.Context, batch []rpc.BatchElem) error {
+	// Handle batch calls by sending one RPC request per item.
+	// This keeps the shared rpcClient interface, but ZEC batch calls are not a single
+	// network request. They still use the caller's timeout and cancellation context.
 	for _, elem := range batch {
-		err := c.Call(elem.Result, elem.Method, elem.Args...)
+		err := c.CallContext(ctx, elem.Result, elem.Method, elem.Args...)
 		if err != nil {
 			return err
 		}
@@ -88,15 +99,19 @@ func (c *Client) BatchCall(batch []rpc.BatchElem) error {
 	return nil
 }
 
-func (c *Client) getContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), c.timeout)
+func (c *Client) getContextFrom(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return context.WithCancel(ctx)
+	}
+	return context.WithTimeout(ctx, c.timeout)
 }
 
-func (c *Client) post(
+func (c *Client) postWithContext(
+	ctx context.Context,
 	method string,
 	params ...any,
 ) ([]byte, error) {
-	ctx, cancel := c.getContext()
+	ctx, cancel := c.getContextFrom(ctx)
 	defer cancel()
 
 	msg := map[string]any{

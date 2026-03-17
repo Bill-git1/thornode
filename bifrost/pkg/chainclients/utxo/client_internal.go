@@ -297,8 +297,7 @@ func (c *Client) sendNetworkFee(height int64) error {
 	c.m.GetGauge(metrics.GasPrice(c.cfg.ChainID)).Set(float64(feeRate))
 
 	// skip update if fee has not changed
-	lastFeeRate := c.lastFeeRate.Load()
-	if lastFeeRate == feeRate {
+	if c.lastFeeRate.Load() == feeRate {
 		return nil
 	}
 

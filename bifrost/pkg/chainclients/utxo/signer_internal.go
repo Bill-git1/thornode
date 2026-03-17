@@ -576,10 +576,13 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		diffSats := gasAmtSats - uint64(maxFeeSats) // in sats
 		c.log.Info().Msgf("gas amount: %d is larger than maximum fee: %d, diff: %d", gasAmtSats, uint64(maxFeeSats), diffSats)
 		gasAmtSats = uint64(maxFeeSats)
-	} else if minRelayFeeSats := c.minRelayFeeSats.Load(); gasAmtSats < minRelayFeeSats {
-		diffStats := minRelayFeeSats - gasAmtSats
-		c.log.Info().Msgf("gas amount: %d is less than min relay fee: %d, diff remove from customer: %d", gasAmtSats, minRelayFeeSats, diffStats)
-		gasAmtSats = minRelayFeeSats
+	} else {
+		minRelayFeeSats := c.minRelayFeeSats.Load()
+		if gasAmtSats < minRelayFeeSats {
+			diffStats := minRelayFeeSats - gasAmtSats
+			c.log.Info().Msgf("gas amount: %d is less than min relay fee: %d, diff remove from customer: %d", gasAmtSats, minRelayFeeSats, diffStats)
+			gasAmtSats = minRelayFeeSats
+		}
 	}
 
 	// if the total gas spend is more than max gas , then we have to take away some from the amount pay to customer
@@ -712,6 +715,85 @@ func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToWit
 // UTXO Consolidation
 ////////////////////////////////////////////////////////////////////////////////////////
 
+func (c *Client) consolidateVaultUTXOs(vault types.Vault, utxosToSpend int64) error {
+	lock := c.GetVaultLock(vault.PubKey.String())
+
+	// Hold the vault lock through broadcast to avoid local double-spend on failure/timeout.
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Probe UTXO availability for consolidation.
+	// The amount used here doesn't matter , just to see whether there are more than 15 UTXO available or not
+	utxos, err := c.getUtxoToSpend(vault.PubKey, 0, false)
+	if err != nil {
+		return fmt.Errorf("get utxos to spend: %w", err)
+	}
+
+	// Doesn't have enough UTXOs, no consolidation needed.
+	if int64(len(utxos)) < utxosToSpend {
+		return nil
+	}
+
+	txOutItem, err := c.buildConsolidateTxOutItem(vault, utxos)
+	if err != nil {
+		return err
+	}
+
+	height, err := c.bridge.GetBlockHeight()
+	if err != nil {
+		return fmt.Errorf("get THORChain block height: %w", err)
+	}
+
+	rawTx, _, _, err := c.SignTx(txOutItem, height)
+	if err != nil {
+		return fmt.Errorf("sign consolidate txout item: %w", err)
+	}
+	if len(rawTx) == 0 {
+		c.log.Warn().Str("vault_pubkey", vault.PubKey.String()).Msg("signed consolidate transaction is empty, skipping broadcast")
+		return nil
+	}
+
+	txID, err := c.BroadcastTx(txOutItem, rawTx)
+	if err != nil {
+		return fmt.Errorf("broadcast consolidate tx: %w", err)
+	}
+	c.log.Info().Str("vault_pubkey", vault.PubKey.String()).Msgf("broadcast consolidate tx successfully, hash:%s", txID)
+	return nil
+}
+
+func (c *Client) buildConsolidateTxOutItem(vault types.Vault, utxos []btcjson.ListUnspentResult) (stypes.TxOutItem, error) {
+	// Convert each UTXO amount to sats before summing to avoid float accumulation drift.
+	total := btcutil.Amount(0)
+	for _, item := range utxos {
+		amt, err := btcutil.NewAmount(item.Amount)
+		if err != nil {
+			return stypes.TxOutItem{}, fmt.Errorf("convert utxo amount %f: %w", item.Amount, err)
+		}
+		total += amt
+	}
+
+	addr, err := vault.PubKey.GetAddress(c.cfg.ChainID)
+	if err != nil {
+		return stypes.TxOutItem{}, fmt.Errorf("get address for pubkey %s: %w", vault.PubKey, err)
+	}
+
+	// THORChain usually pays 1.5 of the last observed fee rate.
+	feeRate := math.Ceil(float64(c.lastFeeRate.Load()) * 3 / 2)
+
+	return stypes.TxOutItem{
+		Chain:            c.cfg.ChainID,
+		ToAddress:        addr,
+		VaultPubKey:      vault.PubKey,
+		VaultPubKeyEddsa: vault.PubKeyEddsa,
+		Coins: common.Coins{
+			common.NewCoin(c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(uint64(total))),
+		},
+		Memo:    mem.NewConsolidateMemo().String(),
+		MaxGas:  nil,
+		GasRate: int64(feeRate),
+	}, nil
+}
+
 // consolidateUTXOs only required when there is a new block
 func (c *Client) consolidateUTXOs() {
 	defer func() {
@@ -739,79 +821,8 @@ func (c *Client) consolidateUTXOs() {
 			// Not part of this vault , don't need to consolidate UTXOs for this Vault
 			continue
 		}
-		// the amount used here doesn't matter , just to see whether there are more than 15 UTXO available or not
-		var utxos []btcjson.ListUnspentResult
-		utxos, err = c.getUtxoToSpend(vault.PubKey, 100000, false)
-		if err != nil {
-			c.log.Err(err).Msg("fail to get utxos to spend")
-			continue
+		if err = c.consolidateVaultUTXOs(vault, utxosToSpend); err != nil {
+			c.log.Err(err).Str("vault_pubkey", vault.PubKey.String()).Msg("fail to consolidate utxos for vault")
 		}
-		// doesn't have enough UTXOs , don't need to consolidate
-		if int64(len(utxos)) < utxosToSpend {
-			continue
-		}
-		total := 0.0
-		for _, item := range utxos {
-			total += item.Amount
-		}
-		var addr common.Address
-		addr, err = vault.PubKey.GetAddress(c.cfg.ChainID)
-		if err != nil {
-			c.log.Err(err).Msgf("fail to get address for pubkey: %s", vault.PubKey)
-			continue
-		}
-		// THORChain usually pay 1.5 of the last observed fee rate
-		feeRate := math.Ceil(float64(c.lastFeeRate.Load()) * 3 / 2)
-		var amt btcutil.Amount
-		amt, err = btcutil.NewAmount(total)
-		if err != nil {
-			c.log.Err(err).Msgf("fail to convert to amount: %f", total)
-			continue
-		}
-
-		txOutItem := stypes.TxOutItem{
-			Chain:            c.cfg.ChainID,
-			ToAddress:        addr,
-			VaultPubKey:      vault.PubKey,
-			VaultPubKeyEddsa: vault.PubKeyEddsa,
-			Coins: common.Coins{
-				common.NewCoin(c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(uint64(amt))),
-			},
-			Memo:    mem.NewConsolidateMemo().String(),
-			MaxGas:  nil,
-			GasRate: int64(feeRate),
-		}
-		var height int64
-		height, err = c.bridge.GetBlockHeight()
-		if err != nil {
-			c.log.Err(err).Msg("fail to get THORChain block height")
-			continue
-		}
-		var rawTx []byte
-
-		signAndBroadcast := func() {
-			lock := c.GetVaultLock(vault.PubKey.String())
-			lock.Lock()
-			defer lock.Unlock()
-
-			rawTx, _, _, err = c.SignTx(txOutItem, height)
-			if err != nil {
-				c.log.Err(err).Msg("fail to sign consolidate txout item")
-				return
-			}
-			if len(rawTx) == 0 {
-				c.log.Warn().Msg("signed consolidate transaction is empty, skipping broadcast")
-				return
-			}
-			var txID string
-			txID, err = c.BroadcastTx(txOutItem, rawTx)
-			if err != nil {
-				c.log.Err(err).Str("signed", string(rawTx)).Msg("fail to broadcast consolidate tx")
-			} else {
-				c.log.Info().Msgf("broadcast consolidate tx successfully, hash:%s", txID)
-			}
-		}
-
-		signAndBroadcast()
 	}
 }

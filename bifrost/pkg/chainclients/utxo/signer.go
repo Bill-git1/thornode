@@ -428,6 +428,9 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 
 		if strings.Contains(err.Error(), "already in block chain") {
 			c.log.Info().Str("hash", txid).Msg("broadcasted by another node")
+			if cacheErr := c.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(c.GetChain()), txid); cacheErr != nil {
+				c.log.Err(cacheErr).Msgf("fail to mark tx out item (%+v) as signed", txOut)
+			}
 			return txid, nil
 		}
 
