@@ -379,6 +379,9 @@ func (vm *SwapQueueImpl) scoreMsgs(ctx cosmos.Context, items swapItems, synthVir
 		nonRuneAsset = targetAsset
 		pool = pools[nonRuneAsset]
 		if pool.IsEmpty() || !pool.IsAvailable() || pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() {
+			// Reset first-leg scoring to prevent inflated priority from partial scoring
+			items[i].fee = cosmos.ZeroUint()
+			items[i].slip = cosmos.ZeroUint()
 			continue
 		}
 		virtualDepthMult = int64(10_000)
