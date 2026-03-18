@@ -276,6 +276,21 @@ func (s *EVMSuite) TearDownTest(c *C) {
 	}
 }
 
+func (s *EVMSuite) TestSolvencyRunnerBackoff(c *C) {
+	client := &EVMClient{
+		cfg: config.BifrostChainConfiguration{
+			ChainID: common.AVAXChain,
+		},
+	}
+
+	c.Assert(client.solvencyRunnerBackoff(), Equals, time.Duration(common.AVAXChain.ApproximateBlockMilliseconds())*time.Millisecond)
+
+	// ETH is above THORChain block time in both mocknet and non-mocknet builds,
+	// so this consistently exercises the fallback path.
+	client.cfg.ChainID = common.ETHChain
+	c.Assert(client.solvencyRunnerBackoff(), Equals, constants.ThorchainBlockTime)
+}
+
 func (s *EVMSuite) TestNewClient(c *C) {
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)

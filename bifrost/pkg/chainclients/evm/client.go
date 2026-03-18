@@ -491,9 +491,19 @@ func (c *EVMClient) Start(
 	c.wg.Add(1)
 	go c.unstuck()
 	c.wg.Add(1)
-	go runners.SolvencyCheckRunner(c.GetChain(), c, c.bridge, c.stopchan, c.wg, constants.ThorchainBlockTime)
+	go runners.SolvencyCheckRunner(c.GetChain(), c, c.bridge, c.stopchan, c.wg, c.solvencyRunnerBackoff())
 	c.wg.Add(1)
 	go c.reconstructLiabilities()
+}
+
+func (c *EVMClient) solvencyRunnerBackoff() time.Duration {
+	// Use the chain block time for fast chains so the periodic runner does not skip
+	// modulo-based solvency report heights. Fall back to THORChain block time.
+	dur := time.Duration(c.cfg.ChainID.ApproximateBlockMilliseconds()) * time.Millisecond
+	if dur <= 0 || dur > constants.ThorchainBlockTime {
+		return constants.ThorchainBlockTime
+	}
+	return dur
 }
 
 // Stop stops the chain client.

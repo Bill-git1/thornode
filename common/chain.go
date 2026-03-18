@@ -443,7 +443,7 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 	case ETHChain:
 		return 12_000
 	case AVAXChain:
-		return 3_000
+		return 1_000 // ~1s
 	case BSCChain:
 		return 450
 	case GAIAChain:
