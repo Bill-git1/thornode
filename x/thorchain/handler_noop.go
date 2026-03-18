@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -41,27 +39,7 @@ func (h NoOpHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 }
 
 func (h NoOpHandler) validate(ctx cosmos.Context, msg MsgNoOp) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h NoOpHandler) validateV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
-	// Verify that the signer is an active node account with observation privileges.
-	// This is critical for the "novault" action which modifies vault balances.
-	if !isSignedByActiveNodeAccounts(ctx, h.mgr.Keeper(), msg.GetSigners()) {
-		return cosmos.ErrUnauthorized(fmt.Sprintf("%+v are not authorized", msg.GetSigners()))
-	}
-
-	return nil
+	return msg.ValidateBasic()
 }
 
 // handle process MsgNoOp
