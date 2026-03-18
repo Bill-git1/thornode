@@ -43,9 +43,9 @@ func (m *TssKeysignFailVoter) Sign(signer cosmos.AccAddress) bool {
 	return true
 }
 
-// HasConsensus determine if this tss pool has enough signers
-func (m *TssKeysignFailVoter) HasConsensus(nas NodeAccounts) bool {
-	var count int
+// MemberSignerCount returns the number of signers that are members of the given node accounts
+func (m *TssKeysignFailVoter) MemberSignerCount(nas NodeAccounts) int {
+	count := 0
 	for _, signer := range m.GetSigners() {
 		for _, item := range nas {
 			if signer.Equals(item.NodeAddress) {
@@ -54,7 +54,12 @@ func (m *TssKeysignFailVoter) HasConsensus(nas NodeAccounts) bool {
 			}
 		}
 	}
-	return HasSimpleMajority(count, len(nas))
+	return count
+}
+
+// HasConsensus determine if this tss pool has enough signers
+func (m *TssKeysignFailVoter) HasConsensus(nas NodeAccounts) bool {
+	return HasSimpleMajority(m.MemberSignerCount(nas), len(nas))
 }
 
 // Empty to check whether this Voter is empty or not
