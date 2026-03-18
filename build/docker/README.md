@@ -22,7 +22,7 @@ docker run \
   registry.gitlab.com/thorchain/thornode:mainnet
 ```
 
-The above commands only work when the current release can sync from the present fork height - which is not the case since the move the x/upgrade release pattern. Nine Realms provides snapshots taken from a statesync recovery which can be downloaded without need for a high memory machine to recover the statesync snapshot. Ensure `aria2c` is installed (you can `wget` or `curl` instead, but they are slower), then pull the latest statesync snapshot via:
+The above commands only work when the current release can sync from the present fork height - which is not the case since the move to the x/upgrade release pattern. Snapshots taken from a statesync recovery can be downloaded without need for a high memory machine to recover the statesync snapshot. Ensure `aria2c` is installed (you can `wget` or `curl` instead, but they are slower), then pull the latest statesync snapshot via:
 
 ```bash
 mkdir -p thornode-data/data

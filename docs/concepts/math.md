@@ -10,7 +10,7 @@ A minimum swap fee in basis points (bps) applies for different asset types, gove
 
 All the examples below use the following snapshotted BTC and BUSD Pool data
 
-​[https://thornode.ninerealms.com/thorchain/pool/BTC.BTC](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC)​ ​[https://thornode.ninerealms.com/thorchain/pool/BNB.BUSD-BD1](https://thornode.ninerealms.com/thorchain/pool/BNB.BUSD-BD1)​
+​[https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC](https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC)​ ​[https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BNB.BUSD-BD1](https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BNB.BUSD-BD1)​
 
 ```json
 {
@@ -51,9 +51,9 @@ Prices of all assets on THORChain are in ratios of each other, based on the dept
 
 Let's take the BTC and BUSD Pool data
 
-[https://thornode.ninerealms.com/thorchain/pool/BTC.BTC](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC](https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC)
 
-[https://thornode.ninerealms.com/thorchain/pool/BSC.BNB](https://thornode.ninerealms.com/thorchain/pool/BSC.BNB)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BSC.BNB](https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BSC.BNB)
 
 The $BTC Price of RUNE is `BTC/RUNE = 81439552768/863897777396922 = 0.000094 BTC`
 

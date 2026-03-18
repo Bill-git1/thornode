@@ -117,7 +117,7 @@ RUNE tokens can be transferred via:
 
 - **Balance Changes**: Can occur via store migrations.
 - **Transaction Queries**:
-  - For deposits: Use `https://thornode.ninerealms.com/thorchain/block` and Midgard API.
+  - For deposits: Use `https://gateway.liquify.com/chain/thorchain_api/thorchain/block` and Midgard API.
   - For transaction status: Use standard endpoints or examples provided.
 
 ### Storage and Throughput
@@ -186,8 +186,8 @@ Votes are conducted by transactions signed on-chain by validators.
 
 Nodes can vote to change specific parameters, as enumerated here:
 
-- [Constants](https://thornode.ninerealms.com/thorchain/constants)
-- [Mimir](https://thornode.ninerealms.com/thorchain/mimir)
+- [Constants](https://gateway.liquify.com/chain/thorchain_api/thorchain/constants)
+- [Mimir](https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir)
 
 See the [Constants and Mimir](./mimir.md) page for details. At any given time, multiple votes are underway, and node operators often change their votes for a given constant as a response to changes in market conditions and desired performance. For example, at this time, a faction of nodes is campaigning to increase minimum L1 swap fees from 5bps to 15bps. The current vote is at 54.17% in favor of 15bps, and the swap fee will remain 5bps until the 15bps vote reaches 67%+.
 
@@ -207,4 +207,4 @@ There is generally an announcement in Discord, often linked to an [ADR (Architec
 
 **Is the vesting on-chain / off (paper)-chain? Please describe.**
 
-There are no formal staking agreements in place between the network and any of its participants. RUNE is fully distributed. Teams or holders of RUNE may have their own staking agreements with their own third parties. 5bps of system income will soon be paid to a developer fund to incentivize THORChain’s ongoing development. This fund is currently controlled by Nine Realms, a U.S.-based technology services firm, which maintains the THORChain software development life cycle on behalf of nodes. Nodes have the final say of anything that happens on the network. Nodes may campaign to change the beneficiary of the developer fund at any time if they feel their needs are not being met.
+There are no formal staking agreements in place between the network and any of its participants. RUNE is fully distributed. Teams or holders of RUNE may have their own staking agreements with their own third parties. 5bps of system income will soon be paid to a developer fund to incentivize THORChain’s ongoing development. This fund is currently controlled by the developer-fund beneficiary, which maintains the THORChain software development life cycle on behalf of nodes. Nodes have the final say of anything that happens on the network. Nodes may campaign to change the beneficiary of the developer fund at any time if they feel their needs are not being met.

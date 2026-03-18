@@ -6,7 +6,7 @@ Similar to savers, looking up the liquidity position with a given address is pos
 
 ### **Liquidity Provider Position using Thornode**
 
-**Request**: _Get liquidity provider information in the BTC pool for the address_ bc1q00nrswtpp3zddgc0uvppuszhnr8k8zfcdps9gn [https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/liquidity_provider/bc1q00nrswtpp3zddgc0uvppuszhnr8k8zfcdps9gn](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/liquidity_provider/bc1q00nrswtpp3zddgc0uvppuszhnr8k8zfcdps9gn)
+**Request**: _Get liquidity provider information in the BTC pool for the address_ bc1q00nrswtpp3zddgc0uvppuszhnr8k8zfcdps9gn [https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC/liquidity_provider/bc1q00nrswtpp3zddgc0uvppuszhnr8k8zfcdps9gn](https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC/liquidity_provider/bc1q00nrswtpp3zddgc0uvppuszhnr8k8zfcdps9gn)
 
 **Response:**
 
@@ -34,7 +34,7 @@ Several endpoints exist however the member's endpoint is the most comprehensive
 
 **Request**: Get _liquidity provider information for the address_ bc1q0kmdagyqhkzw4sgs7f0vycxw7jhexw0rl9x9as
 
-[https://midgard.ninerealms.com/v2/member/thor169lfsnv2myg8yrudx4353xakq44756w9830crc](https://midgard.ninerealms.com/v2/member/thor169lfsnv2myg8yrudx4353xakq44756w9830crc)
+[https://gateway.liquify.com/chain/thorchain_midgard/v2/member/thor169lfsnv2myg8yrudx4353xakq44756w9830crc](https://gateway.liquify.com/chain/thorchain_midgard/v2/member/thor169lfsnv2myg8yrudx4353xakq44756w9830crc)
 
 **Response:**
 
@@ -62,7 +62,7 @@ Several endpoints exist however the member's endpoint is the most comprehensive
 
 Any address can be used with this endpoint, e.g. bc1q0kmdagyqhkzw4sgs7f0vycxw7jhexw0rl9x9as with `?showSavers=true` to show any savers position also.
 
-[https://midgard.ninerealms.com/v2/member/bc1q0kmdagyqhkzw4sgs7f0vycxw7jhexw0rl9x9as?showSavers=true](https://midgard.ninerealms.com/v2/member/bc1q0kmdagyqhkzw4sgs7f0vycxw7jhexw0rl9x9as?showSavers=true)
+[https://gateway.liquify.com/chain/thorchain_midgard/v2/member/bc1q0kmdagyqhkzw4sgs7f0vycxw7jhexw0rl9x9as?showSavers=true](https://gateway.liquify.com/chain/thorchain_midgard/v2/member/bc1q0kmdagyqhkzw4sgs7f0vycxw7jhexw0rl9x9as?showSavers=true)
 
 ### **User Transaction History**
 
@@ -70,7 +70,7 @@ Actions within THORChain can be obtained from Midgard which will list the action
 
 **Request**: _List actions by the address bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46_
 
-[https://midgard.ninerealms.com/v2/actions?address=bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46](https://midgard.ninerealms.com/v2/actions?address=bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46)
+[https://gateway.liquify.com/chain/thorchain_midgard/v2/actions?address=bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46](https://gateway.liquify.com/chain/thorchain_midgard/v2/actions?address=bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46)
 
 **Response:**
 
@@ -120,13 +120,13 @@ Actions within THORChain can be obtained from Midgard which will list the action
 }
 ```
 
-Will also include savers' actions. The Action endpoint is very flexible, see the [docs](https://midgard.ninerealms.com/v2/doc#operation/GetActions).
+Will also include savers' actions. The Action endpoint is very flexible, see the [docs](https://gateway.liquify.com/chain/thorchain_midgard/v2/doc#operation/GetActions).
 
 ### Check the status of a Transaction
 
 Transactions can [take time to fully process](../concepts/delays.md) once sent to THORChain.
 
-**Request**: Get the status for BTC tx A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A sent to the Savers vault. [https://thornode.ninerealms.com/thorchain/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A](https://thornode.ninerealms.com/thorchain/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A)
+**Request**: Get the status for BTC tx A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A sent to the Savers vault. [https://gateway.liquify.com/chain/thorchain_api/thorchain/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A](https://gateway.liquify.com/chain/thorchain_api/thorchain/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A)
 
 **Response**:
 

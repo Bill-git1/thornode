@@ -86,7 +86,7 @@ func main() {
 Override the following default config values with the Golang or Python packages via the corresponding environment variables:
 
 ```text
-API_ENDPOINT = https://thornode-v1.ninerealms.com
-RPC_ENDPOINT = https://rpc-v1.ninerealms.com
+API_ENDPOINT = https://gateway.liquify.com/chain/thorchain_api
+RPC_ENDPOINT = https://gateway.liquify.com/chain/thorchain_rpc
 PARALLELISM  = 4
 ```

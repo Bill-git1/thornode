@@ -85,7 +85,7 @@ See [Constants and Mimirs](../mimir.md#economics) for current network settings.
 1. **Native Transaction Fee**: A 0.02 RUNE fee applies to transactions made on the THORChain blockchain (RUNE, Synthetic Assets, Secure Assets). This is separate from outbound fees, which only apply to external-chain transactions.
 2. **Outbound Fees**: Fees collected from all outbound transactions, varying by asset type:
    - **Native Outbound Transaction Fee**: Fixed 0.02 RUNE on RUNE and native asset transactions.
-   - **Layer 1 Outbound Fee**: For external-chain assets (e.g., BTC, ETH), this bundles the external gas cost, gas pool swap fee, and THORChain network fee into a single charge. Fee levels are determined by the chain's gas rate and [`dynamic_multiplier_basis_points`](https://thornode.ninerealms.com/thorchain/outbound_fees).
+   - **Layer 1 Outbound Fee**: For external-chain assets (e.g., BTC, ETH), this bundles the external gas cost, gas pool swap fee, and THORChain network fee into a single charge. Fee levels are determined by the chain's gas rate and [`dynamic_multiplier_basis_points`](https://gateway.liquify.com/chain/thorchain_api/thorchain/outbound_fees).
 3. **Withdrawal of Reserve POL**: Occurs when RUNEPool additions replace Reserve-backed POL or when POL requirements are reduced.
 4. **Slashing Income**: From node bond slashes, particularly for keygen failures or other operational breaches.
 5. **Staged Pool Costs**: Deductions from the staged pool to cover churn-related costs. Controlled by the Mimir variable [`StagedPoolCost`](../mimir.md#economics).
@@ -108,9 +108,9 @@ See [Constants and Mimirs](../mimir.md#economics) for current network settings.
 
 You can monitor THORChain's economic state through:
 
-- **Reserve Balance**: [Midgard Network Endpoint](https://midgard.ninerealms.com/v2/network)
-- **Current Constants**: [Constants Endpoint](https://thornode.ninerealms.com/thorchain/constants)
-- **Active Mimirs**: [Mimir Endpoint](https://thornode.ninerealms.com/thorchain/mimir)
+- **Reserve Balance**: [Midgard Network Endpoint](https://gateway.liquify.com/chain/thorchain_midgard/v2/network)
+- **Current Constants**: [Constants Endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/constants)
+- **Active Mimirs**: [Mimir Endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir)
 - **Incentive Pendulum**: [RUNETools Pendulum](https://rune.tools/pendulum)
 
 ## Related Documentation

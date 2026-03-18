@@ -10,10 +10,10 @@ Users pay two kinds of fees when entering or exiting Savings Vaults:
 The following are required to determine approximate deposit / withdrawal fees:
 
 ```json
-outboundFee = curl -SL https://thornode.ninerealms.com/thorchain/inbound_addresses | jq '.[] | select(.chain == "BTC") | .outbound_fee'
+outboundFee = curl -SL https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses | jq '.[] | select(.chain == "BTC") | .outbound_fee'
 => 30000
 
-poolDepth = curl -SL https://thornode.ninerealms.com/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .balance_asset'
+poolDepth = curl -SL https://gateway.liquify.com/chain/thorchain_api/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .balance_asset'
 => 68352710830 => 683.5 BTC
 ```
 

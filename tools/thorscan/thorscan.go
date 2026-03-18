@@ -123,7 +123,7 @@ func getBlock(height int64) (*BlockResponse, error) {
 
 var (
 	Parallelism = 4
-	APIEndpoint = "https://thornode-archive.ninerealms.com"
+	APIEndpoint = "https://gateway.liquify.com/chain/thorchain_api"
 
 	encodingConfig params.EncodingConfig
 )

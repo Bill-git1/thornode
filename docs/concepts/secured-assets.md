@@ -106,7 +106,7 @@ Balances can be verified using the owner's THORChain Address via the `cosmos/ban
 
 **Example:**
 
-<https://thornode.ninerealms.com/cosmos/bank/v1beta1/balances/thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz>:
+<https://gateway.liquify.com/chain/thorchain_api/cosmos/bank/v1beta1/balances/thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz>:
 
 ```json
 {

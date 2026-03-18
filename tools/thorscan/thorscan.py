@@ -19,8 +19,12 @@ import retry
 
 BLOCK_SECONDS = 6
 
-API_ENDPOINT = os.getenv("API_ENDPOINT", "https://thornode-v2.ninerealms.com")
-RPC_ENDPOINT = os.getenv("RPC_ENDPOINT", "https://rpc-v2.ninerealms.com")
+API_ENDPOINT = os.getenv(
+    "API_ENDPOINT", "https://gateway.liquify.com/chain/thorchain_api"
+)
+RPC_ENDPOINT = os.getenv(
+    "RPC_ENDPOINT", "https://gateway.liquify.com/chain/thorchain_rpc"
+)
 PARALLELISM = int(os.getenv("PARALLELISM", 4))
 
 logging.basicConfig(

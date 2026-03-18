@@ -342,37 +342,37 @@ The advanced queue provides comprehensive metrics:
 Query all limit swaps:
 
 ```bash
-curl "https://thornode.ninerealms.com/thorchain/queue/limit_swaps"
+curl "https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/limit_swaps"
 ```
 
 Query limit swaps by source asset:
 
 ```bash
-curl "https://thornode.ninerealms.com/thorchain/queue/limit_swaps?source_asset=BTC.BTC&limit=50"
+curl "https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/limit_swaps?source_asset=BTC.BTC&limit=50"
 ```
 
 Query limit swaps by target asset:
 
 ```bash
-curl "https://thornode.ninerealms.com/thorchain/queue/limit_swaps?target_asset=ETH.ETH"
+curl "https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/limit_swaps?target_asset=ETH.ETH"
 ```
 
 Query limit swaps by sender:
 
 ```bash
-curl "https://thornode.ninerealms.com/thorchain/queue/limit_swaps?sender=thor1abc123"
+curl "https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/limit_swaps?sender=thor1abc123"
 ```
 
 Get limit swap summary:
 
 ```bash
-curl "https://thornode.ninerealms.com/thorchain/queue/limit_swaps/summary"
+curl "https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/limit_swaps/summary"
 ```
 
 Check specific swap details:
 
 ```bash
-curl "https://thornode.ninerealms.com/thorchain/queue/swap/details/{tx_id}"
+curl "https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/swap/details/{tx_id}"
 ```
 
 For detailed API documentation, see the [OpenAPI specification](../../openapi/openapi.yaml).

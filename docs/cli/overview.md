@@ -144,7 +144,7 @@ thornode keys list
 # Sender: thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3
 # Receiver: thor1gutjhrw4xlu3n3p3k3r0vexl2xknq3nv8ux9fy
 # Amount: 1 RUNE (in 1e8 notation)
-thornode tx bank send thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3 thor1gutjhrw4xlu3n3p3k3r0vexl2xknq3nv8ux9fy 100000000rune --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 --gas 3000000 --generate-only > tx_raw.json
+thornode tx bank send thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3 thor1gutjhrw4xlu3n3p3k3r0vexl2xknq3nv8ux9fy 100000000rune --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc --gas 3000000 --generate-only > tx_raw.json
 ```
 
 This will output a file called `tx_raw.json`. Edit this file and change the `@type` field from `/cosmos.bank.v1beta1.MsgSend` to `/types.MsgSend`.
@@ -178,7 +178,7 @@ The `tx_raw.json` transaction should look like this:
 ### Sign Transaction
 
 ```text
-thornode tx sign tx_raw.json --from {accountName} --sign-mode amino-json --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 > tx.json
+thornode tx sign tx_raw.json --from {accountName} --sign-mode amino-json --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc > tx.json
 ```
 
 This will output a file called `tx.json`.
@@ -186,5 +186,5 @@ This will output a file called `tx.json`.
 ### Broadcast Transaction
 
 ```text
-thornode tx broadcast tx.json --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 --gas auto
+thornode tx broadcast tx.json --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc --gas auto
 ```

@@ -16,7 +16,7 @@ Interfaces should provide more feedback to the user what specifically is paused.
 
 There are levels of granularity the network has to control itself and chains in the event of issues. Interfaces need to monitor these settings and apply appropriate controls in their interfaces, inform users and prevent unsupported actions.
 
-All activity is controlled within [Mimir](https://thornode.ninerealms.com/thorchain/mimir) and needs to be observed by interfaces and acted upon. Also, see a description of [Constants and Mimir](../mimir.md).
+All activity is controlled within [Mimir](https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir) and needs to be observed by interfaces and acted upon. Also, see a description of [Constants and Mimir](../mimir.md).
 
 Halt flags are Boolean. For clarity `0` = false, no issues and `> 0` = true (usually 1), halt in effect.
 
@@ -44,7 +44,7 @@ A chain halt (`HALT<CHAIN>CHAIN`) blocks ALL swap activity involving that chain 
 
 ### Chain-Specific Halts (Detailed)
 
-1. **Signing Halt** - Allows inbound transactions but stops the signing of outbound transactions. Outbound transactions are [queued](https://thornode.ninerealms.com/thorchain/queue). This is the least impactful halt.
+1. **Signing Halt** - Allows inbound transactions but stops the signing of outbound transactions. Outbound transactions are [queued](https://gateway.liquify.com/chain/thorchain_api/thorchain/queue). This is the least impactful halt.
    - Mimir setting: `HALTSIGNING<CHAIN>`, e.g., `HALTSIGNINGETH`
 2. **Liquidity Provider Pause** - Addition and withdrawal of liquidity are suspended but swaps and other transactions are processed.
    - Mimir setting: `PAUSELP<CHAIN>`, e.g., `PAUSELPBCH` for BCH

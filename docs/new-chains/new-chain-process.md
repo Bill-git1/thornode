@@ -92,7 +92,7 @@ Minimum usage targets:
 
 ## Phase III: Mainnet Release
 
-Steps performed by the core team and Nine Realms:
+Steps performed by the dev team:
 
 1. **Admin Mimir**: Halt the chain and disable trading
 2. **Daemon Install**: Node operators sync the new chain daemon (`make install`)
@@ -107,7 +107,7 @@ Steps performed by the core team and Nine Realms:
 - Add mocknet service in `build/docker/docker-compose.yml`
 - ≥70% unit test coverage
 - Respect `<chain>_DISABLED` env var in `bifrost.sh`
-- Host a live walkthrough with Nine Realms + core team
+- Host a live walkthrough with dev team
 - Answer key safety questions:
 
   - Can value be spoofed?

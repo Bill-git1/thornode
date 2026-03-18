@@ -17,7 +17,7 @@ func (s MigrationDataSuite) TestVerifyTotal4to5(c *C) {
 	for _, refund := range mainnetSlashRefunds4to5 {
 		sum += refund.amount
 	}
-	// $ https thornode-v2.ninerealms.com/thorchain/block height==20518466 | \
+	// $ https gateway.liquify.com/chain/thorchain_api/thorchain/block height==20518466 | \
 	//   jq '[.txs[1].result.events[]|select(.bond_type=="bond_cost")|.amount|tonumber]|add'
 	// 9674032456636
 	c.Assert(sum, Equals, uint64(9674032456636))
@@ -97,7 +97,7 @@ func (s MigrationDataSuite) TestVerifyTotal12to13(c *C) {
 	for _, refund := range mainnetSlashRefunds12to13 {
 		sum += refund.amount
 	}
-	// $ https thornode-v2.ninerealms.com/thorchain/block height==24809168 | \
+	// $ https gateway.liquify.com/chain/thorchain_api/thorchain/block height==24809168 | \
 	//   jq '[.txs[7].result.events[]|select(.bond_type=="bond_cost")|.amount|tonumber]|add'
 	// 53389901389659
 	totalBondSlash := 53389901389659

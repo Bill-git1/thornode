@@ -11,8 +11,8 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 
 ### Values
 
-- Constant Values:[https://midgard.ninerealms.com/v2/thorchain/constants](https://thornode.ninerealms.com/thorchain/constants)
-- Mimir Values: [https://thornode.ninerealms.com/thorchain/mimir](https://thornode.ninerealms.com/thorchain/mimir)
+- Constant Values:[https://gateway.liquify.com/chain/thorchain_midgard/v2/thorchain/constants](https://gateway.liquify.com/chain/thorchain_api/thorchain/constants)
+- Mimir Values: [https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir](https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir)
 
 ### Key
 

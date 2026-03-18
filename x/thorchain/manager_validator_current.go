@@ -747,9 +747,9 @@ func (vm *ValidatorMgr) distributeBondReward(ctx cosmos.Context, mgr Manager) er
 	// this estimate treats lastChurnHeight as the active_block_height of the youngest active node,
 	// rather than the block_height of the first (oldest) Asgard vault.
 	// As an example, note from the below URLs that these 5293733 and 5293728 respectively in block 5336942.
-	// https://thornode.ninerealms.com/thorchain/nodes?height=5336942
+	// https://gateway.liquify.com/chain/thorchain_api/thorchain/nodes?height=5336942
 	// (Nodes .cxmy and .uy3a .)
-	// https://thornode.ninerealms.com/thorchain/vaults/asgard?height=5336942
+	// https://gateway.liquify.com/chain/thorchain_api/thorchain/vaults/asgard?height=5336942
 	lastChurnHeight := int64(0)
 	for _, node := range active {
 		if node.ActiveBlockHeight > lastChurnHeight {

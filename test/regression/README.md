@@ -181,7 +181,7 @@ asserts:
 This assertion will always fail and print the endpoint response to the console for inspecting the current state of a given endpoint after the test run up that point. Remember that the Cosmos and Thorchain APIs are available on port `1317` and the Tendermint APIs are available on port `26657`:
 
 - https://v1.cosmos.network/rpc/v0.45.1
-- https://thornode.ninerealms.com/thorchain/doc/#/
+- https://gateway.liquify.com/chain/thorchain_api/thorchain/doc/#/
 - https://docs.tendermint.com/master/rpc/#/
 
 Pass the `RUN` environment variable the name of your test to avoid running all suites (it will also match a regex):

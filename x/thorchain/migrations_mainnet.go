@@ -307,12 +307,12 @@ func (m Migrator) Migrate11to12(ctx sdk.Context) error {
 
 	// records to be removed
 	removeLPs := []LiquidityProvider{
-		// https://thornode-v2.ninerealms.com/cosmos/tx/v1beta1/txs/5BF8911A9DD947EC1EE7E990085ECB21DD7E395F152B5137F7CD73B76E46870A
+		// https://gateway.liquify.com/chain/thorchain_api/cosmos/tx/v1beta1/txs/5BF8911A9DD947EC1EE7E990085ECB21DD7E395F152B5137F7CD73B76E46870A
 		{
 			RuneAddress:  "thor1pe0pspu4ep85gxr5h9l6k49g024vemtr80hg4c",
 			AssetAddress: "0x03c42ab083bd46202ee430AfC4D3dd8eD8c76c07",
 		},
-		// https://thornode-v2.ninerealms.com/cosmos/tx/v1beta1/txs/248CE4B07E6A63E8CA3E111754849DD560FA9F4BF83BF2FD0B0B40947633B1B9
+		// https://gateway.liquify.com/chain/thorchain_api/cosmos/tx/v1beta1/txs/248CE4B07E6A63E8CA3E111754849DD560FA9F4BF83BF2FD0B0B40947633B1B9
 		{
 			RuneAddress:  "",
 			AssetAddress: "0x467a0ec2d2f23f0bb165eb7e44a9b16b12f5a7b4",

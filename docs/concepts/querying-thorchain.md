@@ -24,7 +24,7 @@ All inbound_address support this format.
 
 Vaults are fetched from the `/inbound_addresses` endpoint:
 
-[https://thornode.ninerealms.com/thorchain/inbound_addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses)
 
 You need to select the address of the Chain the inbound transaction. See [supported address formats](./querying-thorchain.md#supported-address-formats).
 
@@ -94,7 +94,7 @@ If you connect to a public Midgard, you must be conscious of the fact that you c
 
 ### Displaying available pairs
 
-Use the `/pools` [endpoint](https://midgard.ninerealms.com/v2/pools) of Midgard to retrieve all swappable assets on THORChain. The response will be an array of objects like this:
+Use the `/pools` [endpoint](https://gateway.liquify.com/chain/thorchain_midgard/v2/pools) of Midgard to retrieve all swappable assets on THORChain. The response will be an array of objects like this:
 
 ```json
 {
@@ -148,5 +148,5 @@ See code examples using the THORChain xchain package here [https://github.com/xc
 
 There are two ways to see if a Chain is halted.
 
-1. Looking at the `/inbound_addresses` [endpoint](https://thornode.ninerealms.com/thorchain/inbound_addresses) and inspecting the halted flag.
+1. Looking at the `/inbound_addresses` [endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses) and inspecting the halted flag.
 2. Looking at Mimir and inspecting the HALT\[Chain]TRADING setting. See [network-halts.md](network-halts.md#halt-pause-management) for more details.

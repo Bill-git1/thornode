@@ -559,7 +559,7 @@ Reference memos progress through distinct states from creation to expiration:
 
 - **Purpose**: Emergency brake for security issues or bugs
 - **Effect**: ALL memoless transactions rejected instantly
-- **Monitoring**: Check [mimir endpoint](https://thornode.ninerealms.com/thorchain/mimir)
+- **Monitoring**: Check [mimir endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir)
 - **Procedures**: See [Emergency Procedures](https://docs.thorchain.org/thornodes/emergency-procedures) for network halt operations
 
 **Pre-Flight Checking:**

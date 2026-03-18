@@ -16,7 +16,7 @@ THORNames have the following properties:
 
 THORNames are created by posting a `MsgDeposit` to the THORChain network with the appropriate [memo](../concepts/memos.md) and enough $RUNE to cover the registration fee and to pay for the amount of blocks the THORName should be registered for.
 
-- **Registration fee**: `tns_register_fee_rune` on the [Network endpoint](https://thornode.ninerealms.com/thorchain/network). This value is in 1e8, so `100000000 = 1 $RUNE`
+- **Registration fee**: `tns_register_fee_rune` on the [Network endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/network). This value is in 1e8, so `100000000 = 1 $RUNE`
 - **Per block fee**: `tns_fee_per_block_rune` on the same endpoint, also in 1e8.
 
 For example, for a new THORName to be registered for 10 years the amount paid would be:
@@ -35,7 +35,7 @@ Memo template is: `~:name:chain:address:?owner:?preferredAsset:?expiry:?preferre
 - **chain:** The chain of the alias to set.
 - **address**: The alias address. Must be an address of chain.
 - **owner**: THORChain address of owner (optional).
-- **preferredAsset:** Asset to receive fees in. Must be supported be an active pool on THORChain. Value should be `asset` property from the [Pools endpoint](https://thornode.ninerealms.com/thorchain/pools).
+- **preferredAsset:** Asset to receive fees in. Must be supported by an active pool on THORChain. Value should be `asset` property from the [Pools endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/pools).
 - **preferredAssetOutboundFeeMultiplier:** Optional parameter. Custom multiplier for the outbound fee threshold for affiliate fee payouts. This enables affiliate fees to get paid out at a custom threshold. If not specified, uses the global default of 100. Must be between 0 and 10000 (0 resets to global default). This determines how much RUNE must accumulate before triggering a payout in your preferred asset.
   - Example: Assuming default of 100, if your preferred asset is ETH.USDC and the ETH.USDC outbound fee is $1, the RUNE gets swapped to ETH.USDC and sent to your address when it hits $100 (100 \* $1).
 
@@ -53,7 +53,7 @@ You can use [Asgardex](https://github.com/asgardex/asgardex-desktop) to post a M
 ```admonish info
 View your THORName's configuration at the THORName endpoint:
 
-e.g. [https://thornode.ninerealms.com/thorchain/thorname/](https://thornode.ninerealms.com/thorchain/thorname/ac-test){name}
+e.g. [https://gateway.liquify.com/chain/thorchain_api/thorchain/thorname/](https://gateway.liquify.com/chain/thorchain_api/thorchain/thorname/ac-test){name}
 ```
 
 ## Renewing your THORName
@@ -85,7 +85,7 @@ Affiliates can collect their fees in the asset of their choice (choosing from th
 
 For example, if you wanted to be paid out in USDC you would:
 
-1. Grab the full USDC name from the [Pools](https://thornode.ninerealms.com/thorchain/pools) endpoint: `ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`
+1. Grab the full USDC name from the [Pools](https://gateway.liquify.com/chain/thorchain_api/thorchain/pools) endpoint: `ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`
 2. Post a `MsgDeposit` to the THORChain network with the appropriate memo to register your THORName, set your preferred asset as USDC, and set your Ethereum network address alias. Assuming the following info:
 
    1. THORChain address: `thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd`
@@ -109,7 +109,7 @@ You will also need a THOR alias set to collect affiliate fees. Use another MsgDe
 ```
 
 Once you successfully post your MsgDeposit you can verify that your THORName is configured properly. View your THORName info from THORNode at the following endpoint:\
-[https://thornode.ninerealms.com/thorchain/thorname/ac-test](https://thornode.ninerealms.com/thorchain/thorname/ac-test)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/thorname/ac-test](https://gateway.liquify.com/chain/thorchain_api/thorchain/thorname/ac-test)
 
 The response should look like:
 

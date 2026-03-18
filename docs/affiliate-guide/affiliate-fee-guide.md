@@ -30,7 +30,7 @@ Affiliate fees provide a way for interfaces to generate revenue through THORChai
 The affiliate fee system operates automatically, following these steps:
 
 1. **Transaction Execution**: When a transaction includes an affiliate fee, the specified amount (in basis points) is deducted from the inbound or outbound transaction amount as described above.
-1. **Fee Collection**: The deducted fee is collected in the [AffiliateCollector module](https://thornode.ninerealms.com/thorchain/balance/module/affiliate_collector), where it is held in $RUNE by default.
+1. **Fee Collection**: The deducted fee is collected in the [AffiliateCollector module](https://gateway.liquify.com/chain/thorchain_api/thorchain/balance/module/affiliate_collector), where it is held in $RUNE by default.
 1. **Threshold Check**: The network continuously monitors the accumulated $RUNE for each affiliate. Once the balance exceeds [`PreferredAssetOutboundFeeMultiplier`](../mimir.md#fee-management) multiplied by the chain's outbound fee, the system initiates a swap to the preferred asset.
    - Example: If the outbound fee for BTC is 0.00005 BTC and the multiplier is 200, the swap will occur when the collected $RUNE is worth 0.01 BTC.
 1. **Preferred Asset Swap**: If the affiliate's THORName specifies a preferred asset (e.g., BTC, USDC), the network swaps $RUNE to that asset before distribution. If no preferred asset is set, $RUNE is distributed directly.

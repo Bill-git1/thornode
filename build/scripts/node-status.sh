@@ -103,7 +103,7 @@ if [ "$VALIDATOR" = "true" ]; then
   DOGE_PROGRESS=$(calc_progress "$DOGE_SYNC_HEIGHT" "$DOGE_HEIGHT" "$DOGE_PROGRESS")
 
   # calculate Gaia chain sync progress
-  GAIA_HEIGHT=$(curl -sL --fail -m 10 https://gaia.ninerealms.com/status | jq -r ".result.sync_info.latest_block_height")
+  GAIA_HEIGHT=$(curl -sL --fail -m 10 https://cosmos-rpc.polkachu.com/status | jq -r ".result.sync_info.latest_block_height")
   GAIA_SYNC_HEIGHT=$(curl -sL --fail -m 10 "$GAIA_ENDPOINT/status" | jq -r ".result.sync_info.latest_block_height")
   GAIA_PROGRESS=$(calc_progress "$GAIA_SYNC_HEIGHT" "$GAIA_HEIGHT")
 
@@ -177,7 +177,7 @@ elif [ "$SEEDS" != "" ]; then
   done
   IFS=$OLD_IFS
 elif [ "$NET" = "mainnet" ]; then
-  THOR_HEIGHT=$(curl -sL --fail -m 10 https://rpc.ninerealms.com/status | jq -r ".result.sync_info.latest_block_height")
+  THOR_HEIGHT=$(curl -sL --fail -m 10 https://gateway.liquify.com/chain/thorchain_rpc/status | jq -r ".result.sync_info.latest_block_height")
 elif [ "$NET" = "stagenet" ]; then
   THOR_HEIGHT=$(curl -sL --fail -m 10 https://stagenet-rpc.ninerealms.com/status | jq -r ".result.sync_info.latest_block_height")
 elif [ "$NET" = "chainnet" ]; then

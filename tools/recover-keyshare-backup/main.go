@@ -98,7 +98,7 @@ func main() {
 
 	// prompt for thornode endpoint
 	reader := bufio.NewReader(os.Stdin)
-	defaultEndpoint := "https://thornode-archive.ninerealms.com"
+	defaultEndpoint := "https://gateway.liquify.com/chain/thorchain_api"
 	fmt.Printf("Thornode (must contain vault block heights) [%s]: ", defaultEndpoint)
 	thornode, err := reader.ReadString('\n')
 	check(err, "Failed to read endpoint")

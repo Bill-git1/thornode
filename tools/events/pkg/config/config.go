@@ -86,7 +86,7 @@ type Config struct {
 
 	// Links contain URLs to services linked in alerts.
 	Links struct {
-		// Track is the Nine Realms Tracker service.
+		// Track is the THORChain Tracker service (https://gitlab.com/thorchain/track).
 		Track string `mapstructure:"track"`
 
 		// Explorer is the native Thorchain explorer, should support:
@@ -195,8 +195,8 @@ func init() {
 
 	// endpoints
 	config.Endpoints.CacheSize = 100
-	config.Endpoints.Thornode = "https://thornode.ninerealms.com"
-	config.Endpoints.Midgard = "https://midgard.ninerealms.com"
+	config.Endpoints.Thornode = "https://gateway.liquify.com/chain/thorchain_api"
+	config.Endpoints.Midgard = "https://gateway.liquify.com/chain/thorchain_midgard"
 
 	// notifications
 	config.Notifications.Activity.Category = "Activity"
@@ -213,9 +213,9 @@ func init() {
 	config.Network = "mainnet"
 
 	// links
-	config.Links.Track = "https://track.ninerealms.com"
+	config.Links.Track = "https://track.thorchain.org"
 	config.Links.Explorer = "https://runescan.io"
-	config.Links.Thornode = "https://thornode.ninerealms.com"
+	config.Links.Thornode = "https://gateway.liquify.com/chain/thorchain_api"
 
 	config.TORAnchorCheckBlocks = 300 // 30 minutes
 

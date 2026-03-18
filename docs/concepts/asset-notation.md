@@ -36,7 +36,7 @@ For a complete list of usable Layer 1 (L1) asset names and their shortcuts, refe
 
 - Layer 1 (L1) chains are always denoted as `CHAIN.ASSET`, e.g. BTC.BTC.
 - As two tokens can live on different blockchains, the chain can be used to distinguish them. Example: USDC is on the Ethereum Chain and Avalanche Chain and is denoted as `ETH.USDC` and `AVAX.USDC` respectively; note the contract address (ticker) was removed for simplicity.
-- Tickers are added to denote assets and are required in the full name. For EVM based Chains, the ticker is the ERC20 Contract address, e.g. `ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`. This ensures the asset is specific to the contract address. The [pools list](https://midgard.ninerealms.com/v2/pools)shows assets using the full notation.
+- Tickers are added to denote assets and are required in the full name. For EVM based Chains, the ticker is the ERC20 Contract address, e.g. `ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`. This ensures the asset is specific to the contract address. The [pools list](https://gateway.liquify.com/chain/thorchain_midgard/v2/pools)shows assets using the full notation.
 
 ```admonish danger
 THOR.RUNE is the only RUNE asset in use. All other RUNE assets on other chains are no longer in use and have no value within THORChain.

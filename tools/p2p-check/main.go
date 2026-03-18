@@ -95,7 +95,7 @@ func main() {
 
 	nodesByPeerID := make(map[string]string)
 	nodes := make([]openapi.Node, 0)
-	url := fmt.Sprintf("%s/thorchain/nodes", getEnvOrDefault("THORNODE", "https://thornode.ninerealms.com"))
+	url := fmt.Sprintf("%s/thorchain/nodes", getEnvOrDefault("THORNODE", "https://gateway.liquify.com/chain/thorchain_api"))
 	// nolint
 	resp, err := http.Get(url)
 	if err != nil {
@@ -153,7 +153,7 @@ func main() {
 	fmt.Println("\nTesting p2p health...")
 
 	// ping and http get /p2pid on all peers
-	height, err := fetchBlockHeight(getEnvOrDefault("RPC", "https://rpc.ninerealms.com"))
+	height, err := fetchBlockHeight(getEnvOrDefault("RPC", "https://gateway.liquify.com/chain/thorchain_rpc"))
 	if err != nil {
 		panic(err)
 	}

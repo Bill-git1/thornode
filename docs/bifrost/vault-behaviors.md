@@ -168,7 +168,7 @@ Dust attacks can freeze vaults or require external intervention (e.g., viabtc ac
 
 - **Thresholds Apply Per Chain**: Each supported chain has a defined minimum transaction amount in **base units** (e.g., sats, wei, uatom, drops).
 - **Transactions Must Exceed Threshold**: Inbound transactions below or equal to the threshold will not be observed or executed.
-- **Check Before Sending**: Dust thresholds are published via the [Inbound Addresses endpoint](https://thornode.ninerealms.com/thorchain/inbound_addresses).
+- **Check Before Sending**: Dust thresholds are published via the [Inbound Addresses endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses).
 - **Not Gas-Rate Related**: Dust thresholds are different from `gas_rate_units` (e.g., gwei or sats/byte) which are used for gas pricing.
 
 ### Unit Conversion Note

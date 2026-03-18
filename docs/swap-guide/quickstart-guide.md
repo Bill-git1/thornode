@@ -11,12 +11,12 @@ For chains with limited memo space (like Bitcoin's 80-byte OP_RETURN), see the [
 ```
 
 ```admonish info
-The following examples use a free, hosted API provided by [Nine Realms](https://twitter.com/ninerealms_cap). If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md).
+The following examples use a free, hosted API provided by Liquify. If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md).
 ```
 
 ### 1. Determine the correct asset name
 
-THORChain uses a specific [asset notation](../concepts/asset-notation.md#layer-1-assets). Available assets are at: [Pools Endpoint.](https://thornode.ninerealms.com/thorchain/pools)
+THORChain uses a specific [asset notation](../concepts/asset-notation.md#layer-1-assets). Available assets are at: [Pools Endpoint.](https://gateway.liquify.com/chain/thorchain_api/thorchain/pools)
 
 BTC => `BTC.BTC`\
 ETH => `ETH.ETH`
@@ -33,7 +33,7 @@ All amounts are 1e8. Multiply native asset amounts by 100000000 when dealing wit
 
 **Request**: _Swap 1 BTC to ETH and send the ETH to_ `0x86d526d6624AbC0178cF7296cD538Ecc080A95F1` using [Streaming Swaps](./streaming-swaps.md), swapping every block (`streaming_interval=1`) and allowing THORNode to work out the optimal amount of blocks (`streaming_quantity=0`).
 
-[https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0)
 
 **Response**:
 
@@ -77,7 +77,7 @@ _For security reasons, your inbound transaction will be delayed by 600 seconds (
 The swap will be conduced over 7 blocks taking 42 seconds for the streaming swap to complete.
 
 ```admonish info
-Full quote swap endpoint specification can be found here: [https://thornode.ninerealms.com/thorchain/doc/](https://thornode.ninerealms.com/thorchain/doc/).
+Full quote swap endpoint specification can be found here: [https://gateway.liquify.com/chain/thorchain_api/thorchain/doc/](https://gateway.liquify.com/chain/thorchain_api/thorchain/doc/).
 ```
 
 If you'd prefer to calculate the swap yourself, see the [Fees](fees-and-wait-times.md) section to understand what fees need to be accounted for in the output amount. Also, review the [Transaction Memos](../concepts/memos.md#swap) section to understand how to create the swap memos.
@@ -116,9 +116,9 @@ For best results, request a new quote right before the user submits a transactio
 
 Specify _liquidity_tolerance_bps_ to give users control over the maximum slip they are willing to experience before canceling the trade. If not specified, users can pay an unbounded amount of slip. The limit is calculated based on the value of _expected_amount_out_.
 
-[https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&liquidity_tolerance_bps=500](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&liquidity_tolerance_bps=500)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&liquidity_tolerance_bps=500](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&liquidity_tolerance_bps=500)
 
-`https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&liquidity_tolerance_bps=500`
+`https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&liquidity_tolerance_bps=500`
 
 Notice how a minimum amount (1342846539 / \~13.42 ETH) has been appended to the end of the memo. This tells THORChain to revert the transaction if the transacted amount is more than 500 basis points less than what the _expected_amount_out_ returns.
 
@@ -138,7 +138,7 @@ Memo format:
 
 Quote example:
 
-[https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&affiliate=dx\&affiliate_bps=10](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&affiliate=dx&affiliate_bps=10)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&affiliate=dx\&affiliate_bps=10](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&affiliate=dx&affiliate_bps=10)
 
 ```json
 {
@@ -215,7 +215,7 @@ Memo format:
 
 Quote example:
 
-[_https://stagenet-thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&streaming_interval=10_](https://stagenet-thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&streaming_interval=10)
+[_https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&streaming_interval=10_](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&streaming_interval=10)
 
 ```json
 {
@@ -263,7 +263,7 @@ Memo format:
 `=:BTC.BTC:<destination>/<refund_address>`
 
 Quote example:
-[https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=ETH.ETH&to_asset=BTC.BTC&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&refund_address=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=ETH.ETH&to_asset=BTC.BTC&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&refund_address=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000&from_asset=ETH.ETH&to_asset=BTC.BTC&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&refund_address=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000&from_asset=ETH.ETH&to_asset=BTC.BTC&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&refund_address=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430)
 
 ```json
 {
@@ -279,12 +279,12 @@ The quote swap endpoint simulates all of the logic of an actual swap transaction
 
 #### Price Tolerance Error
 
-Description: This error means the swap cannot be completed given your price tolerance. This error can usually be avoided by using the preferred slippage parameter _liquidity_tolerance_bps_. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0&tolerance_bps=1).
+Description: This error means the swap cannot be completed given your price tolerance. This error can usually be avoided by using the preferred slippage parameter _liquidity_tolerance_bps_. [Click here to view request URL](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0&tolerance_bps=1).
 
 Request URL:
 
 ```json
-https://thornode.ninerealms.com/thorchain/quote/swap \
+https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap \
 from_asset=BTC.BTC \
 to_asset=ETH.ETH \
 amount=100000000 \
@@ -299,12 +299,12 @@ Response:
 
 #### Destination Address Error
 
-Description: This error ensures the destination address is for the chain specified by `to_asset`. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&streaming_interval=1).
+Description: This error ensures the destination address is for the chain specified by `to_asset`. [Click here to view request URL](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&streaming_interval=1).
 
 Request URL:
 
 ```json
-https://thornode.ninerealms.com/thorchain/quote/swap \
+https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap \
 from_asset=BTC.BTC \
 to_asset=ETH.ETH \
 amount=100000000 \
@@ -317,12 +317,12 @@ Response:
 
 #### Affiliate Address Length Error
 
-Description: This error is due to the fact the affiliate address is too long given the source chain's memo length requirements. Try registering a [THORName](../affiliate-guide/thorname-guide.md) to shorten the memo. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&liquidity_tolerance_bps=100&affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp&affiliate_bps=10).
+Description: This error is due to the fact the affiliate address is too long given the source chain's memo length requirements. Try registering a [THORName](../affiliate-guide/thorname-guide.md) to shorten the memo. [Click here to view request URL](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&liquidity_tolerance_bps=100&affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp&affiliate_bps=10).
 
 Request URL:
 
 ```json
-https://thornode.ninerealms.com/thorchain/quote/swap \
+https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap \
 from_asset=BTC.BTC \
 to_asset=ETH.ETH \
 amount=100000000 \
@@ -338,12 +338,12 @@ Response:
 
 #### Asset Not Found Error
 
-This error means the requested asset does not exist. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=<20bf>&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&liquidity_tolerance_bps=100&affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp&affiliate_bps=10).
+This error means the requested asset does not exist. [Click here to view request URL](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=<20bf>&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&liquidity_tolerance_bps=100&affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp&affiliate_bps=10).
 
 Request URL:
 
 ```json
-https://thornode.ninerealms.com/thorchain/quote/swap \
+https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap \
 from_asset=BTC.BTC \
 to_asset=<20bf> \
 amount=100000000 \
@@ -359,12 +359,12 @@ Response:
 
 #### Bound Checks Error
 
-Bound checks are made on both `affiliate_bps` and `liquidity_tolerance_bps`. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&liquidity_tolerance_bps=10015&affiliate=dx&affiliate_bps=1).
+Bound checks are made on both `affiliate_bps` and `liquidity_tolerance_bps`. [Click here to view request URL](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&liquidity_tolerance_bps=10015&affiliate=dx&affiliate_bps=1).
 
 Request URL:
 
 ```json
-https://thornode.ninerealms.com/thorchain/quote/swap \
+https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap \
 from_asset=BTC.BTC \
 to_asset=ETH.ETH \
 amount=100000000 \
@@ -380,12 +380,12 @@ Response:
 
 #### Minimum Swap Amount Error
 
-Description: This error occurs when the swap amount is less than the minimum required amount to cover fees. The error message now includes the recommended minimum amount. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=ETH.ETH&to_asset=BTC.BTC&amount=1000&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&streaming_interval=1).
+Description: This error occurs when the swap amount is less than the minimum required amount to cover fees. The error message now includes the recommended minimum amount. [Click here to view request URL](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=ETH.ETH&to_asset=BTC.BTC&amount=1000&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&streaming_interval=1).
 
 Request URL:
 
 ```json
-https://thornode.ninerealms.com/thornode/quote/swap \
+https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap \
 from_asset=ETH.ETH \
 to_asset=BTC.BTC \
 amount=1000 \
@@ -398,12 +398,12 @@ Response:
 
 #### Below Dust Threshold Error
 
-Description: This error occurs when the swap amount is less than the dust threshold of the inbound chain. THORChain will not observe inbound transactions less than the dust threshold. Refer to the [dust threshold section](../bifrost/vault-behaviors.md#dust-thresholds) for more information. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1)
+Description: This error occurs when the swap amount is less than the dust threshold of the inbound chain. THORChain will not observe inbound transactions less than the dust threshold. Refer to the [dust threshold section](../bifrost/vault-behaviors.md#dust-thresholds) for more information. [Click here to view request URL](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1)
 
 Request URL:
 
 ```json
-https://thornode.ninerealms.com/thornode/quote/swap \
+https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap \
 from_asset=BTC.BTC \
 to_asset=ETH.ETH \
 amount=100 \

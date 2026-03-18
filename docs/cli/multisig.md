@@ -28,7 +28,7 @@ Any of the parties can create the raw transaction:
 # Sender: thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3
 # Receiver: thor1gutjhrw4xlu3n3p3k3r0vexl2xknq3nv8ux9fy
 # Amount: 1 RUNE (in 1e8 notation)
-thornode tx bank send thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3 thor1gutjhrw4xlu3n3p3k3r0vexl2xknq3nv8ux9fy 100000000rune --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 --gas 3000000 --generate-only > tx_raw.json
+thornode tx bank send thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3 thor1gutjhrw4xlu3n3p3k3r0vexl2xknq3nv8ux9fy 100000000rune --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc --gas 3000000 --generate-only > tx_raw.json
 ```
 
 This will output a file called `tx_raw.json`. Edit this file and change the `@type` field from `/cosmos.bank.v1beta1.MsgSend` to `/types.MsgSend`.
@@ -66,7 +66,7 @@ The transaction needs to be signed by 2 of the 3 parties (as configured above, w
 #### From Person 1
 
 ```text
-thornode tx sign --from person1 --multisig multisig tx_raw.json --sign-mode amino-json --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 > tx_signed_1.json
+thornode tx sign --from person1 --multisig multisig tx_raw.json --sign-mode amino-json --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc > tx_signed_1.json
 ```
 
 This will output a file called `tx_signed_1.json`.
@@ -74,7 +74,7 @@ This will output a file called `tx_signed_1.json`.
 #### From Person 2
 
 ```text
-thornode tx sign --from person2 --multisig multisig tx_raw.json --sign-mode amino-json --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 > tx_signed_2.json
+thornode tx sign --from person2 --multisig multisig tx_raw.json --sign-mode amino-json --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc > tx_signed_2.json
 ```
 
 This will output a file called `tx_signed_2.json`.
@@ -90,7 +90,7 @@ The party, who wants to broadcast the transaction, needs to gather all json sign
 First, get the sequence and account number for the multisig address:
 
 ```text
-curl https://thornode.ninerealms.com/cosmos/auth/v1beta1/accounts/thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3
+curl https://gateway.liquify.com/chain/thorchain_api/cosmos/auth/v1beta1/accounts/thor1505gp5h48zd24uexrfgka70fg8ccedafsnj0e3
 ```
 
 Then combine the signatures into a single one (make sure to update the account number `-a` and the sequence number `-s`):
@@ -98,7 +98,7 @@ Then combine the signatures into a single one (make sure to update the account n
 ```text
 # Account number: 33401 (see curl output)
 # Sequence number: 0 (see curl output)
-thornode tx multisign tx_raw.json multisig tx_signed_1.json tx_signed_2.json -a 33401 -s 0 --from multisig --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 > tx.json
+thornode tx multisign tx_raw.json multisig tx_signed_1.json tx_signed_2.json -a 33401 -s 0 --from multisig --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc > tx.json
 ```
 
 This will output a final file called `tx.json`.
@@ -106,7 +106,7 @@ This will output a final file called `tx.json`.
 ### Broadcast Transaction
 
 ```text
-thornode tx broadcast tx.json --chain-id thorchain-1 --node https://rpc.ninerealms.com:443 --gas auto
+thornode tx broadcast tx.json --chain-id thorchain-1 --node https://gateway.liquify.com/chain/thorchain_rpc --gas auto
 ```
 
 ## THORSafe

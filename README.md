@@ -17,7 +17,7 @@ https://docs.thorchain.org/thornodes/overview
 
 THORChain offers various features that wallets, exchanges, services and individuals can interact with.
 There is no frontend to THORChain; THORChain responds only to layer-1 transactions posted to the following addresses, which churn regularly:
-https://thornode.ninerealms.com/thorchain/inbound_addresses
+https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses
 
 ## Integrations
 

@@ -46,7 +46,7 @@ inboundFee = txSize * gasRate
 $$
 
 ```admonish info
-THORChain publishes current gas rates at [`/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
+THORChain publishes current gas rates at [`/thorchain/inbound_addresses`](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses)
 ```
 
 - `gasRate` is derived from the **max of the last 10 blocks**, then scaled via OFM
@@ -115,7 +115,7 @@ outboundFee = txSize × gasRate × Outbound Fee Multiplier (OFM)
 ```
 
 - The `gasRate` and `txSize` come from live on-chain data
-- The **OFM** ranges from **1.0x to 3.0x** and is dynamically calculated using the following [Mimir values](https://thornode.ninerealms.com/thorchain/mimir):
+- The **OFM** ranges from **1.0x to 3.0x** and is dynamically calculated using the following [Mimir values](https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir):
 
 | Mimir Key                             | Description                        | Default        |
 | ------------------------------------- | ---------------------------------- | -------------- |
@@ -124,7 +124,7 @@ outboundFee = txSize × gasRate × Outbound Fee Multiplier (OFM)
 | `MINOUTBOUNDFEEMULTIPLIERBASISPOINTS` | Min fee multiplier in basis points | `100` = 0.01x  |
 
 ```admonish info
-Values can change. Current OFM values are published at [`/thorchain/network`](https://thornode.ninerealms.com/thorchain/network)
+Values can change. Current OFM values are published at [`/thorchain/network`](https://gateway.liquify.com/chain/thorchain_api/thorchain/network)
 ```
 
 ### How the OFM works
@@ -149,8 +149,8 @@ It is recalculated every block, per asset.
 
 - Final fee is returned by:
 
-  - [`/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses) → `outbound_fee`
-  - [`/thorchain/network`](https://thornode.ninerealms.com/thorchain/network) → `outbound_fee_multiplier`
+  - [`/thorchain/inbound_addresses`](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses) → `outbound_fee`
+  - [`/thorchain/network`](https://gateway.liquify.com/chain/thorchain_api/thorchain/network) → `outbound_fee_multiplier`
 
 ### Refunds and Minimum Swappable Amount
 
@@ -160,7 +160,7 @@ If a transaction fails, it is refunded, thus it will pay the `outboundFee` for t
 2. The Source Chain outbound_fee
 3. $1.00 (the minimum)
 
-The outbound_fee for each chain is returned on the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint, priced in the gas asset.
+The outbound_fee for each chain is returned on the [Inbound Addresses](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses) endpoint, priced in the gas asset.
 
 It is strongly recommended to use the `recommended_min_amount_in` value that is included on the [Swap Quote](../swap-guide/quickstart-guide.md#2-query-for-a-swap-quote) endpoint, which is the calculation described above. This value is priced in the inbound asset of the quote request (in 1e8). This should be the minimum-allowed swap amount for the requested quote. The swap quote endpoint will return a helpful error message including this value if the swap amount is insufficient.
 
@@ -196,7 +196,7 @@ The `gas_rate_units` explain what the rate is for chain, as a prompt to the deve
 
 The `outbound_tx_size` is what THORChain internally budgets as a typical transaction size for each chain.
 
-The `outbound_fee` is `gas_rate * outbound_tx_size * OFM` and developers can use this to budget for the fee to be charged to the user. The current Outbound Fee Multiplier (OFM) can be found on the [Network Endpoint](https://thornode.ninerealms.com/thorchain/network).
+The `outbound_fee` is `gas_rate * outbound_tx_size * OFM` and developers can use this to budget for the fee to be charged to the user. The current Outbound Fee Multiplier (OFM) can be found on the [Network Endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/network).
 
 Keep in mind the `outbound_fee` is priced in the gas asset of each chain. For chains with tokens, be sure to convert the `outbound_fee` to the outbound token to determine how much will be taken from the outbound amount. To do this, use the `getValueOfAsset1InAsset2` formula described in the [`Math`](./math.md#example) section.
 
@@ -204,7 +204,7 @@ Keep in mind the `outbound_fee` is priced in the gas asset of each chain. For ch
 
 ### **THORChain (Native Rune)**
 
-The THORChain blockchain has a set 0.02 RUNE fee. This is set within the THORChain [Constants](https://thornode.ninerealms.com/thorchain/constants) by `NativeTransactionFee`. As THORChain is 1e8, `2000000 TOR = 0.02 RUNE`
+The THORChain blockchain has a set 0.02 RUNE fee. This is set within the THORChain [Constants](https://gateway.liquify.com/chain/thorchain_api/thorchain/constants) by `NativeTransactionFee`. As THORChain is 1e8, `2000000 TOR = 0.02 RUNE`
 
 ### UTXO Chains like Bitcoin
 
@@ -221,5 +221,5 @@ An Ether Tx fee is: `gasRate * 10^9 (GWEI) * 21000 (units).`
 An ERC20 Tx is larger: `gasRate * 10^9 (GWEI) * 70000 (units)`
 
 ```admonish success
-THORChain calculates and posts gas fee rates at [`https://thornode.ninerealms.com/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
+THORChain calculates and posts gas fee rates at [`https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses`](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses)
 ```

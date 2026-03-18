@@ -32,7 +32,7 @@ Once a transaction is confirmed on its host chain, THORNodes must _observe_ it. 
 
 You can inspect this process using the `/thorchain/tx` endpoint. For example:
 
-[View example Tx](https://thornode.ninerealms.com/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b)
+[View example Tx](https://gateway.liquify.com/chain/thorchain_api/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b)
 
 ```json
 "external_observed_height": 874437,
@@ -49,7 +49,7 @@ See [Inbound Transactions](../bifrost/how-bifrost-works.md#inbound-transactions)
 
 To protect against reorgs, THORChain requires some chains (like Bitcoin and Ethereum) to wait for _economic finality_ — enough confirmations to make a reorg economically infeasible. It tracks both, then computes the number of blocks to wait. It then populates this on the `/tx` endpoint.
 
-Example: [https://thornode.ninerealms.com/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b](https://thornode.ninerealms.com/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b)
+Example: [https://gateway.liquify.com/chain/thorchain_api/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b](https://gateway.liquify.com/chain/thorchain_api/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b)
 
 - BFT chains like Cosmos **do not require** additional confirmation counting.
 - UTXO and EVM chains **do**.
@@ -117,9 +117,9 @@ delay = delayCalc(outboundValue - (cloutScore - cloutUsed))
 
 ### Monitoring the Outbound Queue
 
-- [All Queued TxOuts](https://thornode.ninerealms.com/thorchain/queue)
-- [Scheduled (Delayed) Outbounds](https://thornode.ninerealms.com/thorchain/queue/scheduled)
-- [Ready-to-Send Outbounds](https://thornode.ninerealms.com/thorchain/queue/outbound)
+- [All Queued TxOuts](https://gateway.liquify.com/chain/thorchain_api/thorchain/queue)
+- [Scheduled (Delayed) Outbounds](https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/scheduled)
+- [Ready-to-Send Outbounds](https://gateway.liquify.com/chain/thorchain_api/thorchain/queue/outbound)
 
 ## 5. Outbound Confirmation
 

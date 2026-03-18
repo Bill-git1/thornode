@@ -20,7 +20,7 @@ Savers Quote endpoints have been created to simplify the implementation process.
 
 **Request:** _Add 1_ _BTC to Savers_
 
-[https://thornode.ninerealms.com/thorchain/quote/saver/deposit?asset=BTC.BTC\&amount=100000000](https://thornode.ninerealms.com/thorchain/quote/saver/deposit?asset=BTC.BTC&amount=100000000)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/saver/deposit?asset=BTC.BTC\&amount=100000000](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/saver/deposit?asset=BTC.BTC&amount=100000000)
 
 **Response:**
 
@@ -63,7 +63,7 @@ Inbound transactions should not be delayed for any reason else there is risk fun
 ```
 
 ```admonish info
-Full quote saving endpoint specification can be found here: [https://thornode.ninerealms.com/thorchain/doc/](https://thornode.ninerealms.com/thorchain/doc/).
+Full quote saving endpoint specification can be found here: [https://gateway.liquify.com/chain/thorchain_api/thorchain/doc/](https://gateway.liquify.com/chain/thorchain_api/thorchain/doc/).
 
 See an example implementation [here](https://replit.com/@thorchain/quoteSavers#index.js).
 ```
@@ -72,7 +72,7 @@ See an example implementation [here](https://replit.com/@thorchain/quoteSavers#i
 
 **Request:** _Withdraw 100% of BTC Savers for_ `bc1qy9rjlz5w3tqn7m3reh3y48n8del4y8z42sswx5`
 
-[https://thornode.ninerealms.com/thorchain/quote/saver/withdraw?asset=BTC.BTC\&address=bc1qy9rjlz5w3tqn7m3reh3y48n8del4y8z42sswx5\&withdraw_bps=10000](https://thornode.ninerealms.com/thorchain/quote/saver/withdraw?asset=BTC.BTC&address=bc1qy9rjlz5w3tqn7m3reh3y48n8del4y8z42sswx5&withdraw_bps=10000)
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/saver/withdraw?asset=BTC.BTC\&address=bc1qy9rjlz5w3tqn7m3reh3y48n8del4y8z42sswx5\&withdraw_bps=10000](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/saver/withdraw?asset=BTC.BTC&address=bc1qy9rjlz5w3tqn7m3reh3y48n8del4y8z42sswx5&withdraw_bps=10000)
 
 **Response:**
 
@@ -111,10 +111,10 @@ Users can add assets to a vault by sending assets directly to the chain’s vaul
 
 #### 1. Find the L1 vault address
 
-[`https://thornode.ninerealms.com/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
+[`https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses`](https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses)
 
 ```text
-curl -SL https://thornode.ninerealms.com/thorchain/inbound_addresses | jq '.[] | select(.chain == "BTC") | .address'
+curl -SL https://gateway.liquify.com/chain/thorchain_api/thorchain/inbound_addresses | jq '.[] | select(.chain == "BTC") | .address'
 => “bc1q556ljv5y4rkdt4p46usx86esljs3xqjxyntlyd”
 ```
 
@@ -123,7 +123,7 @@ curl -SL https://thornode.ninerealms.com/thorchain/inbound_addresses | jq '.[] |
 There is a cap on how many synths can be minted as a function of liquidity depth. To do this, find `synth_mint_paused = false` on the `/pool` endpoint
 
 ```text
-curl -SL https://thornode.ninerealms.com/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .synth_mint_paused'
+curl -SL https://gateway.liquify.com/chain/thorchain_api/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .synth_mint_paused'
 ```
 
 #### 3. Send memoless savers transactions
@@ -175,9 +175,9 @@ The latter can be derived from the former.
 
 ```text
 saver’s address: bc1qcxssye4j6730h7ehgega3gyykkuwgdgmmpu62n
-myUnits => curl -SL https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers | jq '.[] | select(.asset_address == "bc1qcxssye4j6730h7ehgega3gyykkuwgdgmmpu62n") | .units'
-saverUnits => curl -SL https://thornode.ninerealms.com/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .savers_units'
-saverDepth => curl -SL https://thornode.ninerealms.com/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .savers_depth'
+myUnits => curl -SL https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC/savers | jq '.[] | select(.asset_address == "bc1qcxssye4j6730h7ehgega3gyykkuwgdgmmpu62n") | .units'
+saverUnits => curl -SL https://gateway.liquify.com/chain/thorchain_api/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .savers_units'
+saverDepth => curl -SL https://gateway.liquify.com/chain/thorchain_api/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .savers_depth'
 ```
 
 See Asset APYs at [THORChain.net](https://thorchain.net/thorfi/savers)
@@ -187,7 +187,7 @@ See Asset APYs at [THORChain.net](https://thorchain.net/thorfi/savers)
 The easy way to determine lifetime performance of the savers vault is to look back 7 days, find the saver value, then compare it with the current saver value.
 
 ```admonish info
-[https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers) will show all BTC Savers
+[https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC/savers](https://gateway.liquify.com/chain/thorchain_api/thorchain/pool/BTC.BTC/savers) will show all BTC Savers
 ```
 
 ### Support

@@ -28,7 +28,7 @@ The RUNEPool is utilised by creating transactions with specific memos. MsgDeposi
 
 ### PoL-Enabled Pools
 
-POL-Enabled via [mimir](../mimir.md) key `POL-{Asset}`. Currently all (eight) native assets and five USD stable coins are enabled for POL. Exact list is within the mimir [endpoint](https://thornode.ninerealms.com/thorchain/mimir).
+POL-Enabled via [mimir](../mimir.md) key `POL-{Asset}`. Currently all (eight) native assets and five USD stable coins are enabled for POL. Exact list is within the mimir [endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/mimir).
 
 ### RUNEPool Units (RPU)
 
