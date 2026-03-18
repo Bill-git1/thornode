@@ -1003,7 +1003,9 @@ func (s *EVMSuite) TestSignTxWithAllowanceFlow(c *C) {
 		"EVMAllowanceCheck-AVAX": "1",
 	}
 
-	// Test SignTx with token asset and enabled mimir (triggers approval + sign flow)
+	// Test SignTx with token asset and enabled mimir (triggers approval + sign flow).
+	// After broadcasting the approval, SignTx waits for it to be mined then proceeds
+	// to build and sign the outbound.
 	result, checkpoint, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.AVAXChain,
 		ToAddress:   addr,
