@@ -84,7 +84,7 @@ func (k KVStoreDummy) RemoveExpiredUpgradeProposals(_ cosmos.Context) error {
 	return nil
 }
 
-func (k KVStoreDummy) ClearUpgradePlan(ctx cosmos.Context) {}
+func (k KVStoreDummy) ClearUpgradePlan(ctx cosmos.Context) error { return nil }
 
 func (k KVStoreDummy) GetKey(prefix kvTypes.DbPrefix, key string, other ...string) []byte {
 	s := fmt.Sprintf("%s/1/%s", prefix, key)

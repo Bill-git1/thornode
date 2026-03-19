@@ -158,7 +158,7 @@ type: tx-approve-upgrade
 signer: {{ addr_thor_fox }}
 name: 1.2.3-expedited
 ---
-# Should fail because 1.2.3 is already approved and scheduled
+# Vote persists even though 1.2.3 is already scheduled (not rolled back)
 type: tx-approve-upgrade
 signer: {{ addr_thor_frog }}
 name: 1.2.3-expedited
@@ -169,13 +169,22 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3-expedited
 asserts:
-  - .approved == false
-  - .approved_percent == "60.00"
-  - .validators_to_quorum == 1
+  - .approved == true
+  - .approved_percent == "80.00"
+  - .validators_to_quorum == 0
   - .approvers[0] == "{{ addr_thor_pig }}"
-  - .approvers[1] == "{{ addr_thor_fox }}"
-  - .approvers[2] == "{{ addr_thor_cat }}"
-  - .approvers|length == 3
+  - .approvers[1] == "{{ addr_thor_frog }}"
+  - .approvers[2] == "{{ addr_thor_fox }}"
+  - .approvers[3] == "{{ addr_thor_cat }}"
+  - .approvers|length == 4
+---
+# 1.2.3-expedited is approved but not scheduled yet because 1.2.3 is still scheduled
+type: check
+endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
+asserts:
+  - .plan.name == "1.2.3"
+  - .plan.info == "upgrade to version 1.2.3"
+  - .plan.height == "100"
 ---
 # will bring 1.2.3 below quorum, clearing the upgrade
 type: tx-reject-upgrade
@@ -203,26 +212,7 @@ asserts:
   - .rejecters[1] == "{{ addr_thor_frog }}"
   - .rejecters|length == 2
 ---
-# Should succeed now because another upgrade is not scheduled
-type: tx-approve-upgrade
-signer: {{ addr_thor_frog }}
-name: 1.2.3-expedited
----
-type: create-blocks
-count: 1
----
-type: check
-endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3-expedited
-asserts:
-  - .approved == true
-  - .approved_percent == "80.00"
-  - .validators_to_quorum == 0
-  - .approvers[0] == "{{ addr_thor_pig }}"
-  - .approvers[1] == "{{ addr_thor_frog }}"
-  - .approvers[2] == "{{ addr_thor_fox }}"
-  - .approvers[3] == "{{ addr_thor_cat }}"
-  - .approvers|length == 4
----
+# 1.2.3-expedited should be auto-scheduled now that the blocking plan was cleared
 type: check
 endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
 asserts:

@@ -1,8 +1,10 @@
 package thorchain
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
@@ -307,6 +309,10 @@ func scheduleUpgradeIfNecessary(ctx cosmos.Context, k keeper.Keeper, name string
 		// already scheduled
 		return nil
 	}
+	// Only ErrNoUpgradePlanFound is expected; any other error is a real store/read failure.
+	if upgradePlanErr != nil && !errors.Is(upgradePlanErr, upgradetypes.ErrNoUpgradePlanFound) {
+		return fmt.Errorf("failed to get upgrade plan: %w", upgradePlanErr)
+	}
 
 	u, err := k.GetProposedUpgrade(ctx, name)
 	if err != nil {
@@ -324,7 +330,11 @@ func scheduleUpgradeIfNecessary(ctx cosmos.Context, k keeper.Keeper, name string
 
 	if uq.Approved {
 		if upgradePlanErr == nil {
-			return fmt.Errorf("a different upgrade is already scheduled: %s", upgradePlan.Name)
+			// A different upgrade is already scheduled; allow the approval vote to
+			// persist without scheduling. The upgrade can be scheduled later when
+			// the blocking upgrade completes or is cleared.
+			ctx.Logger().Info("upgrade approved by majority but a different upgrade is already scheduled", "name", name, "scheduled", upgradePlan.Name)
+			return nil
 		}
 
 		// upgrade approval is now over the majority threshold
@@ -340,9 +350,12 @@ func scheduleUpgradeIfNecessary(ctx cosmos.Context, k keeper.Keeper, name string
 
 func clearUpgradeIfNecessary(ctx cosmos.Context, k keeper.Keeper, name string) error {
 	upgradePlan, err := k.GetUpgradePlan(ctx)
-	if err != nil || upgradePlan.Name != name {
+	if errors.Is(err, upgradetypes.ErrNoUpgradePlanFound) || (err == nil && upgradePlan.Name != name) {
 		// upgrade by this name not scheduled
 		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get upgrade plan: %w", err)
 	}
 
 	uq, err := keeperv1.UpgradeApprovedByMajority(ctx, k, name)
@@ -352,7 +365,51 @@ func clearUpgradeIfNecessary(ctx cosmos.Context, k keeper.Keeper, name string) e
 
 	if !uq.Approved {
 		// upgrade approval dropped below the majority threshold. upgrade plan was on chain, so cancel it.
-		k.ClearUpgradePlan(ctx)
+		if err := k.ClearUpgradePlan(ctx); err != nil {
+			return fmt.Errorf("failed to clear upgrade plan: %w", err)
+		}
+
+		// Now that the plan is cleared, check if another proposal already has
+		// majority approval and schedule it.
+		return scheduleAnyApprovedUpgrade(ctx, k)
+	}
+
+	return nil
+}
+
+// scheduleAnyApprovedUpgrade iterates all proposals and schedules the first one
+// that has majority approval and no plan already on chain. This covers the case
+// where a proposal reached quorum while a different plan was active.
+func scheduleAnyApprovedUpgrade(ctx cosmos.Context, k keeper.Keeper) error {
+	iter := k.GetUpgradeProposalIterator(ctx)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		key, value := iter.Key(), iter.Value()
+
+		nameSplit := strings.Split(string(key), "/")
+		name := nameSplit[len(nameSplit)-1]
+
+		var proposal types.UpgradeProposal
+		if err := k.Cdc().Unmarshal(value, &proposal); err != nil {
+			return fmt.Errorf("failed to unmarshal proposed upgrade: %w", err)
+		}
+
+		uq, err := keeperv1.UpgradeApprovedByMajority(ctx, k, name)
+		if err != nil {
+			return fmt.Errorf("failed to check upgrade quorum for %s: %w", name, err)
+		}
+
+		if !uq.Approved {
+			continue
+		}
+
+		ctx.Logger().Info("scheduling previously approved upgrade after blocking plan cleared", "name", name)
+		return k.ScheduleUpgrade(ctx, upgradetypes.Plan{
+			Name:   name,
+			Height: proposal.Height,
+			Info:   proposal.Info,
+		})
 	}
 
 	return nil

@@ -25,7 +25,7 @@ type TestUpgradeKeeper struct {
 	proposedUpgrades map[string]*types.UpgradeProposal
 	votes            map[string]map[string]bool
 
-	scheduled bool
+	scheduledPlan *upgradetypes.Plan
 }
 
 func (k *TestUpgradeKeeper) GetNodeAccount(_ cosmos.Context, addr cosmos.AccAddress) (NodeAccount, error) {
@@ -58,11 +58,13 @@ func (k *TestUpgradeKeeper) GetProposedUpgrade(_ cosmos.Context, name string) (*
 }
 
 func (k *TestUpgradeKeeper) GetUpgradeProposalIterator(_ cosmos.Context) cosmos.Iterator {
+	names := make([]string, 0, len(k.proposedUpgrades))
 	proposals := make([]types.UpgradeProposal, 0, len(k.proposedUpgrades))
-	for _, p := range k.proposedUpgrades {
+	for name, p := range k.proposedUpgrades {
+		names = append(names, name)
 		proposals = append(proposals, *p)
 	}
-	return newMockUpgradeProposalIterator(k.Cdc(), proposals)
+	return newMockUpgradeProposalIterator(k.Cdc(), names, proposals)
 }
 
 func (k *TestUpgradeKeeper) ApproveUpgrade(_ cosmos.Context, addr cosmos.AccAddress, name string) {
@@ -120,17 +122,18 @@ func (k *TestUpgradeKeeper) GetUpgradeVoteIterator(_ cosmos.Context, name string
 }
 
 func (k *TestUpgradeKeeper) ScheduleUpgrade(_ cosmos.Context, plan upgradetypes.Plan) error {
-	k.scheduled = true
+	k.scheduledPlan = &plan
 	return nil
 }
 
-func (k *TestUpgradeKeeper) ClearUpgradePlan(_ cosmos.Context) {
-	k.scheduled = false
+func (k *TestUpgradeKeeper) ClearUpgradePlan(_ cosmos.Context) error {
+	k.scheduledPlan = nil
+	return nil
 }
 
 func (k *TestUpgradeKeeper) GetUpgradePlan(_ cosmos.Context) (upgradetypes.Plan, error) {
-	if k.scheduled {
-		return upgradetypes.Plan{Name: "1.2.3"}, nil
+	if k.scheduledPlan != nil {
+		return *k.scheduledPlan, nil
 	}
 	return upgradetypes.Plan{}, upgradetypes.ErrNoUpgradePlanFound
 }
@@ -201,7 +204,7 @@ func (s *HandlerUpgradeSuite) TestUpgrade(c *C) {
 	result, err = handler.Run(ctx, msg4)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	c.Assert(keeper.scheduled, Equals, false)
+	c.Assert(keeper.scheduledPlan, IsNil)
 
 	// proposed upgrade with same name should fail
 	msg5 := NewMsgProposeUpgrade(upgradeName, upgradeHeight, upgradeInfo, keeper.activeAccounts[1].NodeAddress)
@@ -215,14 +218,14 @@ func (s *HandlerUpgradeSuite) TestUpgrade(c *C) {
 	result, err = handler.Run(ctx, msg6)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	c.Assert(keeper.scheduled, Equals, false)
+	c.Assert(keeper.scheduledPlan, IsNil)
 
 	// third proposal with different name by same proposer should work
 	msg7 := NewMsgProposeUpgrade("1.2.5", upgradeHeight, upgradeInfo, keeper.activeAccounts[0].NodeAddress)
 	result, err = handler.Run(ctx, msg7)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	c.Assert(keeper.scheduled, Equals, false)
+	c.Assert(keeper.scheduledPlan, IsNil)
 
 	// fourth proposal with different name by same proposer should fail
 	msg8 := NewMsgProposeUpgrade("1.2.6", upgradeHeight, upgradeInfo, keeper.activeAccounts[0].NodeAddress)
@@ -264,7 +267,7 @@ func (s *HandlerUpgradeSuite) TestUpgrade(c *C) {
 	}
 
 	// upgrade should still not be scheduled
-	c.Assert(keeper.scheduled, Equals, false)
+	c.Assert(keeper.scheduledPlan, IsNil)
 
 	// vote for upgrade by one more active account
 	msg11 := NewMsgApproveUpgrade(upgradeName, keeper.activeAccounts[8].NodeAddress)
@@ -273,7 +276,7 @@ func (s *HandlerUpgradeSuite) TestUpgrade(c *C) {
 	c.Assert(result, NotNil)
 
 	// upgrade should now be scheduled
-	c.Assert(keeper.scheduled, Equals, true)
+	c.Assert(keeper.scheduledPlan, NotNil)
 
 	rejectHandler := NewRejectUpgradeHandler(mgr)
 
@@ -291,7 +294,71 @@ func (s *HandlerUpgradeSuite) TestUpgrade(c *C) {
 	c.Assert(errors.Is(err, se.ErrUnknownRequest), Equals, true)
 
 	// upgrade should now be cleared
-	c.Assert(keeper.scheduled, Equals, false)
+	c.Assert(keeper.scheduledPlan, IsNil)
+}
+
+func (s *HandlerUpgradeSuite) TestApprovedUpgradeScheduledAfterBlockingPlanCleared(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+
+	const (
+		upgradeA = "1.2.3"
+		upgradeB = "1.2.4"
+	)
+
+	upgradeHeight := ctx.BlockHeight() + 100
+
+	keeper := &TestUpgradeKeeper{
+		failNodeAccount:  GetRandomValidatorNode(NodeActive),
+		emptyNodeAccount: GetRandomValidatorNode(NodeStandby),
+		vaultNodeAccount: GetRandomVaultNode(NodeActive),
+		votes:            make(map[string]map[string]bool),
+		proposedUpgrades: make(map[string]*types.UpgradeProposal),
+	}
+
+	for i := 0; i < 10; i++ {
+		keeper.activeAccounts = append(keeper.activeAccounts, GetRandomValidatorNode(NodeActive))
+	}
+
+	mgr := NewDummyMgrWithKeeper(keeper)
+	proposeHandler := NewProposeUpgradeHandler(mgr)
+	approveHandler := NewApproveUpgradeHandler(mgr)
+	rejectHandler := NewRejectUpgradeHandler(mgr)
+
+	// Propose upgrade A and get it approved + scheduled
+	msg := NewMsgProposeUpgrade(upgradeA, upgradeHeight, "upgrade A", keeper.activeAccounts[0].NodeAddress)
+	_, err := proposeHandler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+
+	for i := 1; i <= 6; i++ {
+		_, err = approveHandler.Run(ctx, NewMsgApproveUpgrade(upgradeA, keeper.activeAccounts[i].NodeAddress))
+		c.Assert(err, IsNil)
+	}
+	c.Assert(keeper.scheduledPlan, NotNil)
+	c.Assert(keeper.scheduledPlan.Name, Equals, upgradeA)
+
+	// Propose upgrade B and get it approved (but it can't schedule because A is blocking)
+	msg = NewMsgProposeUpgrade(upgradeB, upgradeHeight+10, "upgrade B", keeper.activeAccounts[0].NodeAddress)
+	_, err = proposeHandler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+
+	for i := 1; i <= 6; i++ {
+		_, err = approveHandler.Run(ctx, NewMsgApproveUpgrade(upgradeB, keeper.activeAccounts[i].NodeAddress))
+		c.Assert(err, IsNil)
+	}
+
+	// A should still be scheduled (B is approved but blocked)
+	c.Assert(keeper.scheduledPlan, NotNil)
+	c.Assert(keeper.scheduledPlan.Name, Equals, upgradeA)
+
+	// Now reject upgrade A enough to drop it below majority and clear its plan
+	for i := 0; i <= 4; i++ {
+		_, err = rejectHandler.Run(ctx, NewMsgRejectUpgrade(upgradeA, keeper.activeAccounts[i].NodeAddress))
+		c.Assert(err, IsNil)
+	}
+
+	// Upgrade B should now be auto-scheduled after A was cleared
+	c.Assert(keeper.scheduledPlan, NotNil)
+	c.Assert(keeper.scheduledPlan.Name, Equals, upgradeB)
 }
 
 type mockNodeAccountIterator struct {
@@ -351,18 +418,22 @@ func (it *mockUpgradeVoteIterator) Close() error { return nil }
 
 type mockUpgradeProposalIterator struct {
 	cdc       codec.BinaryCodec
+	names     []string
 	proposals []types.UpgradeProposal
 	i         int
 }
 
-func newMockUpgradeProposalIterator(cdc codec.BinaryCodec, proposals []types.UpgradeProposal) *mockUpgradeProposalIterator {
-	return &mockUpgradeProposalIterator{cdc: cdc, proposals: proposals}
+func newMockUpgradeProposalIterator(cdc codec.BinaryCodec, names []string, proposals []types.UpgradeProposal) *mockUpgradeProposalIterator {
+	return &mockUpgradeProposalIterator{cdc: cdc, names: names, proposals: proposals}
 }
 
 func (it *mockUpgradeProposalIterator) Domain() (start, end []byte) { return nil, nil }
 func (it *mockUpgradeProposalIterator) Valid() bool                 { return it.i < len(it.proposals) }
 func (it *mockUpgradeProposalIterator) Next()                       { it.i++ }
-func (it *mockUpgradeProposalIterator) Key() (key []byte)           { return nil }
+func (it *mockUpgradeProposalIterator) Key() (key []byte) {
+	return []byte("upgr_props/" + it.names[it.i])
+}
+
 func (it *mockUpgradeProposalIterator) Value() (value []byte) {
 	bz, err := it.cdc.Marshal(&it.proposals[it.i])
 	if err != nil {

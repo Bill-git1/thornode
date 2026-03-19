@@ -3,8 +3,6 @@ package keeperv1
 import (
 	"bytes"
 	"fmt"
-	"math"
-	"math/big"
 	"strings"
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
@@ -26,10 +24,8 @@ func (k KVStore) ScheduleUpgrade(ctx cosmos.Context, plan upgradetypes.Plan) err
 }
 
 // ClearUpgradePlan proxies through to the upgrade keeper
-func (k KVStore) ClearUpgradePlan(ctx cosmos.Context) {
-	if err := k.upgradeKeeper.ClearUpgradePlan(ctx); err != nil {
-		ctx.Logger().Error("failed to clear upgrade plan", "error", err)
-	}
+func (k KVStore) ClearUpgradePlan(ctx cosmos.Context) error {
+	return k.upgradeKeeper.ClearUpgradePlan(ctx)
 }
 
 // ProposeUpgrade proposes an upgrade by name
@@ -185,12 +181,9 @@ func UpgradeApprovedByMajority(ctx cosmos.Context, k keeper.Keeper, name string)
 		approvingVals++
 	}
 
-	valThreshold := big.NewRat(int64(totalActive)*2, 3)
-
-	t, _ := valThreshold.Float64()
-
-	// analyze-ignore(float-comparison)
-	if float64(approvingVals) >= t {
+	// Use integer arithmetic for deterministic consensus: approvingVals >= totalActive*2/3
+	// is equivalent to approvingVals*3 >= totalActive*2 (avoiding float comparison).
+	if approvingVals*3 >= totalActive*2 {
 		return &UpgradeQuorum{
 			Approved:        true,
 			ApprovingVals:   approvingVals,
@@ -199,15 +192,14 @@ func UpgradeApprovedByMajority(ctx cosmos.Context, k keeper.Keeper, name string)
 		}, nil
 	}
 
-	neededForQuorum := new(big.Rat).Sub(valThreshold, big.NewRat(int64(approvingVals), 1))
-	nfq, _ := neededForQuorum.Float64()
-	valsToQuorum := math.Ceil(nfq)
+	// Ceiling division: needed = ceil(totalActive*2/3) - approvingVals
+	neededForQuorum := (totalActive*2+2)/3 - approvingVals
 
 	return &UpgradeQuorum{
 		Approved:        false,
 		ApprovingVals:   approvingVals,
 		TotalActive:     totalActive,
-		NeededForQuorum: int(valsToQuorum),
+		NeededForQuorum: neededForQuorum,
 	}, nil
 }
 

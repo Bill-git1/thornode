@@ -189,7 +189,7 @@ type KeeperUpgrade interface {
 	// x/upgrade module methods
 	GetUpgradePlan(ctx cosmos.Context) (upgradetypes.Plan, error)
 	ScheduleUpgrade(ctx cosmos.Context, plan upgradetypes.Plan) error
-	ClearUpgradePlan(ctx cosmos.Context)
+	ClearUpgradePlan(ctx cosmos.Context) error
 }
 
 type KeeperObserver interface {
