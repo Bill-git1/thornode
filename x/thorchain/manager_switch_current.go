@@ -16,6 +16,7 @@ var switchMap = map[string]common.Address{
 	"GAIA.AUTO":  common.GaiaZeroAddress,
 	"GAIA.LQDY":  common.GaiaZeroAddress,
 	"GAIA.NSTK":  common.GaiaZeroAddress,
+	"GAIA.XUSK":  common.GaiaZeroAddress,
 }
 
 // SwitchMgr is current implementation of SwitchManager

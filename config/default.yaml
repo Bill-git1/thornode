@@ -400,7 +400,9 @@ bifrost:
           - symbol: LQDY
             decimals: 6
             denom: ibc/CF52BFC8A11248F05151BFEC0FB033C3531E40C7BAFC72E277F49346EF76E981
-
+          - symbol: XUSK
+            decimals: 6
+            denom: ibc/7BF586544BFE3DB82CE490878249CC22BAD63D85F88E1DAF7EC8857133337180
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

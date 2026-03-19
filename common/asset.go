@@ -58,6 +58,7 @@ var (
 	NAMI = Asset{Chain: THORChain, Symbol: "NAMI", Ticker: "NAMI", Synth: false}
 	LQDY = Asset{Chain: THORChain, Symbol: "LQDY", Ticker: "LQDY", Synth: false}
 	AUTO = Asset{Chain: THORChain, Symbol: "AUTO", Ticker: "AUTO", Synth: false}
+	XUSK = Asset{Chain: THORChain, Symbol: "XUSK", Ticker: "XUSK", Synth: false}
 )
 
 var _ sdk.CustomProtobufType = (*Asset)(nil)
@@ -280,6 +281,8 @@ func (a Asset) Native() string {
 		return "thor.nami"
 	case a.Equals(LQDY):
 		return "thor.lqdy"
+	case a.Equals(XUSK):
+		return "thor.xusk"
 	case a.Equals(AUTO):
 		return "thor.auto"
 	}
@@ -375,6 +378,7 @@ func (a Asset) IsWhitelisted() bool {
 		RUJI: true,
 		NAMI: true,
 		LQDY: true,
+		XUSK: true,
 		AUTO: true,
 	}
 	return whitelist[a]
