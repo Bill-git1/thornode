@@ -491,7 +491,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-26.0.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-27.0.0
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -627,7 +627,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ${DOCKER_MIRROR:-}xrpllabsofficial/xrpld:3.0.0
+    image: ${DOCKER_MIRROR:-}xrpllabsofficial/xrpld:3.1.2
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
