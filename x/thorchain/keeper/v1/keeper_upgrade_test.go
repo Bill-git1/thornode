@@ -113,7 +113,8 @@ func (s *KeeperUpgradeSuite) TestUpgrade(c *C) {
 
 	k.RejectUpgrade(ctx, na1.NodeAddress, upgradeName)
 
-	k.ClearUpgradePlan(ctx)
+	err = k.ClearUpgradePlan(ctx)
+	c.Assert(err, IsNil)
 	_, err = k.GetUpgradePlan(ctx)
 	c.Assert(err, Equals, upgradetypes.ErrNoUpgradePlanFound)
 
