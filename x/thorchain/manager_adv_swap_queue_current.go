@@ -204,7 +204,7 @@ func (vm *SwapQueueAdv) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, pair
 			continue
 		}
 
-		for i, rec := range value.Value {
+		for _, rec := range value.Value {
 			// Parse format "txID-index" using last hyphen to handle Cosmos indexed TxIDs
 			lastHyphenIndex := strings.LastIndex(rec, "-")
 			if lastHyphenIndex == -1 {
@@ -254,7 +254,7 @@ func (vm *SwapQueueAdv) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, pair
 
 			items = append(items, swapItem{
 				msg:   msg,
-				index: i,
+				index: index,
 				fee:   cosmos.ZeroUint(),
 				slip:  cosmos.ZeroUint(),
 			})

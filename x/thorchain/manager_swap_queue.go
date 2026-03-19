@@ -32,14 +32,19 @@ func (items swapItems) HasItem(hash common.TxID) bool {
 }
 
 func (items swapItems) Sort() swapItems {
-	// sort by liquidity fee , descending
-	byFee := items
+	// Create independent copies so each sort operates on its own slice.
+	byFee := make(swapItems, len(items))
+	copy(byFee, items)
+
+	bySlip := make(swapItems, len(items))
+	copy(bySlip, items)
+
+	// sort by liquidity fee, descending
 	sort.SliceStable(byFee, func(i, j int) bool {
 		return byFee[i].fee.GT(byFee[j].fee)
 	})
 
-	// sort by slip fee , descending
-	bySlip := items
+	// sort by slip fee, descending
 	sort.SliceStable(bySlip, func(i, j int) bool {
 		return bySlip[i].slip.GT(bySlip[j].slip)
 	})
@@ -50,23 +55,30 @@ func (items swapItems) Sort() swapItems {
 		index int
 	}
 
+	// Build a map from (TxID, index) -> scores index for O(1) lookups.
+	type itemKey struct {
+		txID  common.TxID
+		index int
+	}
+	scoreIdx := make(map[itemKey]int, len(items))
+
 	// add liquidity fee score
-	scores := make([]score, len(items))
+	scores := make([]score, len(byFee))
 	for i, item := range byFee {
+		key := itemKey{txID: item.msg.Tx.ID, index: item.index}
 		scores[i] = score{
 			msg:   item.msg,
 			score: i,
 			index: item.index,
 		}
+		scoreIdx[key] = i
 	}
 
 	// add slip score
 	for i, item := range bySlip {
-		for j, score := range scores {
-			if score.msg.Tx.ID.Equals(item.msg.Tx.ID) && score.index == item.index {
-				scores[j].score += i
-				break
-			}
+		key := itemKey{txID: item.msg.Tx.ID, index: item.index}
+		if j, ok := scoreIdx[key]; ok {
+			scores[j].score += i
 		}
 	}
 
@@ -84,15 +96,18 @@ func (items swapItems) Sort() swapItems {
 		return scores[i].score < scores[j].score
 	})
 
+	// Build a map from (TxID, index) -> item for O(1) lookups.
+	itemMap := make(map[itemKey]swapItem, len(items))
+	for _, item := range items {
+		key := itemKey{txID: item.msg.Tx.ID, index: item.index}
+		itemMap[key] = item
+	}
+
 	// sort our items by score
 	sorted := make(swapItems, len(items))
 	for i, score := range scores {
-		for _, item := range items {
-			if item.msg.Tx.ID.Equals(score.msg.Tx.ID) && score.index == item.index {
-				sorted[i] = item
-				break
-			}
-		}
+		key := itemKey{txID: score.msg.Tx.ID, index: score.index}
+		sorted[i] = itemMap[key]
 	}
 
 	return sorted

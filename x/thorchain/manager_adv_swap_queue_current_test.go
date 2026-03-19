@@ -231,11 +231,13 @@ func (s AdvSwapQueueSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[1].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
-	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[2].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+	// With independent fee+slip ranking, BTC swaps (higher fee due to deeper pool)
+	// are prioritized over ETH swaps at the same slip level.
+	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(swaps[2].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
-	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[3].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(swaps[3].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 
 	c.Check(swaps[4].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[4].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[4].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
@@ -2930,6 +2932,21 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 
 	// Test 5: Rapid swaps with streaming swap interval limits
 	// Test that streaming swaps respect their interval constraints even with rapid swaps
+
+	// Reset pools and advance block height to ensure clean state after previous tests
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+	// Drain any remaining swaps from previous tests
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 
 	// Create streaming swap with interval = 2 (executes every 2 blocks)
 	tx1 := GetRandomTx()

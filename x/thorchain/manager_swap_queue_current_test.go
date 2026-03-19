@@ -101,7 +101,7 @@ func (s SwapQueueSuite) TestScoreMsgs(c *C) {
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("1100000000000000000000000000000000000000000000000000000000000001"),
 			Coins: common.Coins{common.NewCoin(common.ATOMAsset, cosmos.NewUint(150*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
@@ -109,7 +109,7 @@ func (s SwapQueueSuite) TestScoreMsgs(c *C) {
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("1100000000000000000000000000000000000000000000000000000000000002"),
 			Coins: common.Coins{common.NewCoin(common.ATOMAsset, cosmos.NewUint(151*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
@@ -118,7 +118,7 @@ func (s SwapQueueSuite) TestScoreMsgs(c *C) {
 
 		// synthetics can be redeemed on unavailable pools, should score
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("1100000000000000000000000000000000000000000000000000000000000003"),
 			Coins: common.Coins{common.NewCoin(common.ETHAsset.GetSyntheticAsset(), cosmos.NewUint(3*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
@@ -142,79 +142,82 @@ func (s SwapQueueSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(150*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
 	// 50 ATOM is worth more than 100 RUNE
 	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
+	// With independent fee+slip ranking, 100 RUNE and 3 synth ETH have tied scores (7),
+	// so they're ordered by TxID: "1100..." (ETH) < "5EE9..." (RUNE)
 	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(3*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[4].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[4].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[5].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[5].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[6].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(2*common.One)), Equals, true, Commentf("%d", swaps[6].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[7].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(1*common.One)), Equals, true, Commentf("%d", swaps[7].msg.Tx.Coins[0].Amount.Uint64()))
 
-	// check that slip is taken into account
+	// check that slip is taken into account with cross-pool swaps
+	// Use fixed TxIDs for deterministic tie-breaking in Sort
 	msgs = []*MsgSwap{
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("AA00000000000000000000000000000000000000000000000000000000000001"),
 			Coins: common.Coins{common.NewCoin(common.ATOMAsset, cosmos.NewUint(2*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("AA00000000000000000000000000000000000000000000000000000000000002"),
 			Coins: common.Coins{common.NewCoin(common.ATOMAsset, cosmos.NewUint(50*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("AA00000000000000000000000000000000000000000000000000000000000003"),
 			Coins: common.Coins{common.NewCoin(common.ATOMAsset, cosmos.NewUint(1*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("AA00000000000000000000000000000000000000000000000000000000000004"),
 			Coins: common.Coins{common.NewCoin(common.ATOMAsset, cosmos.NewUint(100*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("AA00000000000000000000000000000000000000000000000000000000000005"),
 			Coins: common.Coins{common.NewCoin(common.ATOMAsset, cosmos.NewUint(10*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("BB00000000000000000000000000000000000000000000000000000000000001"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(2*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("BB00000000000000000000000000000000000000000000000000000000000002"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(50*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("BB00000000000000000000000000000000000000000000000000000000000003"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("BB00000000000000000000000000000000000000000000000000000000000004"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("BB00000000000000000000000000000000000000000000000000000000000005"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
@@ -222,7 +225,7 @@ func (s SwapQueueSuite) TestScoreMsgs(c *C) {
 			0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
 
 		NewMsgSwap(common.Tx{
-			ID:    GetRandomTxHash(),
+			ID:    common.TxID("0A00000000000000000000000000000000000000000000000000000000000001"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))},
 		}, common.ATOMAsset, GetRandomGAIAAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
@@ -243,12 +246,16 @@ func (s SwapQueueSuite) TestScoreMsgs(c *C) {
 	swaps = swaps.Sort()
 	c.Assert(swaps, HasLen, 11)
 
+	// With independent fee+slip ranking, cross-pool BTC->ATOM (score=2) and
+	// 100 BTC (score=2) are tied; TxID "0A..." < "BB..." puts cross-pool first.
 	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[0].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[0].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
 	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[1].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
+	// 100 ATOM (score=5) and 50 BTC (score=5) are tied; TxID "AA..." < "BB..."
+	// puts 100 ATOM first.
 	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[2].msg.Tx.Coins[0].Asset.Equals(common.ATOMAsset), Equals, true)
 
