@@ -201,6 +201,9 @@ func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	var resultErr error
 	maxOutboundAttempts := mgr.Keeper().GetConfigInt64(ctx, constants.MaxOutboundAttempts)
 	signingTransPeriod := mgr.Keeper().GetConfigInt64(ctx, constants.SigningTransactionPeriod)
+	if signingTransPeriod == 0 {
+		return fmt.Errorf("invalid signing transaction period: %d", signingTransPeriod)
+	}
 	enableMemolessOutbound := mgr.Keeper().GetConfigInt64(ctx, constants.EnableMemolessOutbound)
 
 	if ctx.BlockHeight() < signingTransPeriod {

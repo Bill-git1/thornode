@@ -480,7 +480,7 @@ func (vm *NetworkMgr) EndBlock(ctx cosmos.Context, mgr Manager) error {
 
 	blocksPerYear := vm.k.GetConfigInt64(ctx, constants.BlocksPerYear)
 	blocksPerDay := blocksPerYear / 365
-	if IsPeriodLastBlock(ctx, blocksPerDay) {
+	if blocksPerDay > 0 && IsPeriodLastBlock(ctx, blocksPerDay) {
 		vm.distributeTCYStake(ctx, mgr)
 	}
 	return nil
@@ -488,6 +488,9 @@ func (vm *NetworkMgr) EndBlock(ctx cosmos.Context, mgr Manager) error {
 
 func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 	migrateInterval := vm.k.GetConfigInt64(ctx, constants.FundMigrationInterval)
+	if migrateInterval <= 0 {
+		return nil
+	}
 
 	retiring, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
 	if err != nil {
@@ -1915,7 +1918,7 @@ func (vm *NetworkMgr) getPoolShare(
 func (vm *NetworkMgr) checkPoolRagnarok(ctx cosmos.Context, mgr Manager) error {
 	// check whether pool need to be ragnarok per constants.FundMigrationInterval
 	migrateInterval := vm.k.GetConfigInt64(ctx, constants.FundMigrationInterval)
-	if ctx.BlockHeight()%migrateInterval > 0 {
+	if migrateInterval <= 0 || ctx.BlockHeight()%migrateInterval > 0 {
 		return nil
 	}
 	pools, err := vm.k.GetPools(ctx)

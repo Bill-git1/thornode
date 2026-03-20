@@ -22,7 +22,6 @@ func (vts *ValidatorMgrTestSuite) SetUpSuite(_ *C) {
 
 func (vts *ValidatorMgrTestSuite) TestChurnWithChainHalt(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	ctx = ctx.WithBlockHeight(60) // churn height
 	mgr := NewDummyMgr()
 	mgr.K = k
 	networkMgr := newValidatorMgr(k, mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
@@ -32,10 +31,13 @@ func (vts *ValidatorMgrTestSuite) TestChurnWithChainHalt(c *C) {
 	standbyNode := GetRandomValidatorNode(NodeStandby)
 	c.Assert(k.SetNodeAccount(ctx, standbyNode), IsNil)
 
-	// 1 vault with btc
-	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	// 1 vault with btc, created at block 1 (so lastChurnHeight=1)
+	vault := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
 	vault.Membership = append(vault.Membership, standbyNode.PubKeySet.Secp256k1.String())
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Set block height to churn interval after vault creation (1 + 60 = 61)
+	ctx = ctx.WithBlockHeight(61)
 
 	// set mimir to halt btc chain
 	mgr.Keeper().SetMimir(ctx, "HaltBTCChain", 1)

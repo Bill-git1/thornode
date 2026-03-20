@@ -19,13 +19,11 @@ func newPoolMgr() *PoolMgr {
 
 // EndBlock cycle pools if required and if ragnarok is not in progress
 func (pm *PoolMgr) EndBlock(ctx cosmos.Context, mgr Manager) error {
-	poolCycle, err := mgr.Keeper().GetMimir(ctx, constants.PoolCycle.String())
-	if poolCycle < 0 || err != nil {
-		poolCycle = mgr.GetConstants().GetInt64Value(constants.PoolCycle)
-	}
+	poolCycle := mgr.Keeper().GetConfigInt64(ctx, constants.PoolCycle)
 	// Enable a pool every poolCycle
-	if ctx.BlockHeight()%poolCycle == 0 && !mgr.Keeper().RagnarokInProgress(ctx) {
+	if poolCycle > 0 && ctx.BlockHeight()%poolCycle == 0 && !mgr.Keeper().RagnarokInProgress(ctx) {
 		var maxAvailablePools, minRunePoolDepth, stagedPoolCost int64
+		var err error
 		maxAvailablePools, err = mgr.Keeper().GetMimir(ctx, constants.MaxAvailablePools.String())
 		if maxAvailablePools < 0 || err != nil {
 			maxAvailablePools = mgr.GetConstants().GetInt64Value(constants.MaxAvailablePools)
@@ -43,7 +41,7 @@ func (pm *PoolMgr) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		}
 	}
 	pm.cleanupPendingLiquidity(ctx, mgr)
-	if err = pm.checkSaversUtilization(ctx, mgr); err != nil {
+	if err := pm.checkSaversUtilization(ctx, mgr); err != nil {
 		ctx.Logger().Error("Unable to force withdraw saver position", "error", err)
 	}
 

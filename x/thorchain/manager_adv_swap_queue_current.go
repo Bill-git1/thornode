@@ -99,7 +99,7 @@ func (vm *SwapQueueAdv) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradeP
 	// mechanism to index/encode the selected pools/trading pairs that need to
 	// be checked.
 	poolCycle := mgr.Keeper().GetConfigInt64(ctx, constants.PoolCycle)
-	if ctx.BlockHeight()%poolCycle == 0 {
+	if poolCycle > 0 && ctx.BlockHeight()%poolCycle == 0 {
 		return nil, nil
 	}
 
