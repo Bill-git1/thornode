@@ -942,30 +942,36 @@ func (vm *NetworkMgr) POLCycle(ctx cosmos.Context, mgr Manager) error {
 	for idx, pool := range pools {
 		val := mimirVals[idx]
 
-		// if pool isn't available or mimir has it configured, force withdraw from the pool
-		if val == 2 || pool.Status != PoolAvailable {
-			targetSynthPerPoolDepth = cosmos.NewUint(10_000)
-		}
+		// use a local copy so forced-withdraw mutation doesn't leak to subsequent iterations
+		loopTarget := targetSynthPerPoolDepth
 
 		synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
 		pool.CalcUnits(synthSupply)
 		synthPerPoolDepth := common.GetUncappedShare(pool.SynthUnits, pool.GetPoolUnits(), cosmos.NewUint(10_000))
 
+		// forced withdraw: val == 2 or pool not available — bypass buffer check
+		if val == 2 || pool.Status != PoolAvailable {
+			if err := vm.removePOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, cosmos.NewUint(10_000), mgr); err != nil {
+				ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
+			}
+			continue
+		}
+
 		// detect if we need to deposit rune
-		if common.SafeSub(synthPerPoolDepth, buffer).GT(targetSynthPerPoolDepth) {
+		if common.SafeSub(synthPerPoolDepth, buffer).GT(loopTarget) {
 			if maxDeposit <= pol.CurrentDeposit().Int64() {
 				ctx.Logger().Info("maximum rune deployed from POL")
 				continue
 			}
-			if err := vm.addPOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, targetSynthPerPoolDepth, mgr); err != nil {
+			if err := vm.addPOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, loopTarget, mgr); err != nil {
 				ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
 			}
 			continue
 		}
 
 		// detect if we need to withdraw rune
-		if synthPerPoolDepth.Add(buffer).LT(targetSynthPerPoolDepth) {
-			if err := vm.removePOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, targetSynthPerPoolDepth, mgr); err != nil {
+		if synthPerPoolDepth.Add(buffer).LT(loopTarget) {
+			if err := vm.removePOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, loopTarget, mgr); err != nil {
 				ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
 			}
 		}
@@ -1018,8 +1024,11 @@ func (mv *NetworkMgr) fetchPOLPools(ctx cosmos.Context, mgr Manager) (Pools, []i
 			continue // unset default behaviour:  pause POL movements
 		case 0:
 			continue // off behaviour:  pause POL movements
-		case 1:
-			// on behaviour:  POL is enabled
+		case 1, 2:
+			// 1: on behaviour - POL is enabled
+			// 2: forced withdraw - handled in POLCycle
+		default:
+			continue // unknown value: fail-closed, skip pool
 		}
 
 		pools = append(pools, pool)
@@ -1083,11 +1092,12 @@ func (vm *NetworkMgr) addPOLLiquidity(
 	msg := NewMsgAddLiquidity(tx, pool.Asset, runeAmt, cosmos.ZeroUint(), polAddress, common.NoAddress, common.NoAddress, cosmos.ZeroUint(), signer)
 	_, err = handler(ctx, msg)
 	if err != nil {
+		handlerErr := err
 		// revert the rune back to the reserve
 		if err = mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, coins); err != nil {
 			return err
 		}
-		return err
+		return handlerErr
 	}
 
 	// deposit was successful, update the rune pool units accordingly
