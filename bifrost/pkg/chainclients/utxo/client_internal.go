@@ -681,9 +681,6 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 		}
 		if !added {
 			c.log.Info().Msgf("tx: %s had been report before, ignore", txInItem.Tx)
-			if err = c.temporalStorage.UntrackObservedTx(txInItem.Tx); err != nil {
-				c.log.Err(err).Msgf("fail to remove observed tx from cache: %s", txInItem.Tx)
-			}
 			continue
 		}
 		txItems = append(txItems, &txInItem)

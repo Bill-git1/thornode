@@ -246,6 +246,24 @@ func (s *BitcoinSuite) TestFetchTxs(c *C) {
 	c.Assert(len(txs.TxArray), Equals, 1)
 }
 
+func (s *BitcoinSuite) TestExtractTxsDoesNotToggleObservedTxCache(c *C) {
+	block, err := s.client.getBlock(0)
+	c.Assert(err, IsNil)
+
+	firstScan, err := s.client.extractTxs(block)
+	c.Assert(err, IsNil)
+	c.Assert(firstScan.TxArray, HasLen, 1)
+	c.Assert(firstScan.TxArray[0].Tx, Equals, "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2")
+
+	secondScan, err := s.client.extractTxs(block)
+	c.Assert(err, IsNil)
+	c.Assert(secondScan.TxArray, HasLen, 0)
+
+	thirdScan, err := s.client.extractTxs(block)
+	c.Assert(err, IsNil)
+	c.Assert(thirdScan.TxArray, HasLen, 0)
+}
+
 func (s *BitcoinSuite) TestGetSender(c *C) {
 	tx := btcjson.TxRawResult{
 		Vin: []btcjson.Vin{
