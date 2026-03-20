@@ -523,7 +523,7 @@ func (addr Address) ToTexAddress() (Address, error) {
 	case MockNet:
 		network = "testnet3"
 		prefix = "textest"
-	case MainNet, StageNet:
+	case MainNet, StageNet, ChainNet:
 		network = "mainnet"
 		prefix = "tex"
 	}
