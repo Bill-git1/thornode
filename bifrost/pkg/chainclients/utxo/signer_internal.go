@@ -276,7 +276,7 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 		return bchtxscript.PayToAddrScript(addr)
 	case common.LTCChain:
 		var addr ltcutil.Address
-		addr, err = ltcutil.DecodeAddress(sourceAddr.String(), c.getChainCfgLTC())
+		addr, err = ltctxscript.DecodeAddress(sourceAddr.String(), c.getChainCfgLTC())
 		if err != nil {
 			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
 		}
@@ -493,7 +493,7 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		}
 	case common.LTCChain:
 		var outputAddr ltcutil.Address
-		outputAddr, err = ltcutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgLTC())
+		outputAddr, err = ltctxscript.DecodeAddress(tx.ToAddress.String(), c.getChainCfgLTC())
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}

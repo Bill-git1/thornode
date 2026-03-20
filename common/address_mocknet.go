@@ -15,6 +15,8 @@ import (
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/ltcsuite/ltcutil"
 	"github.com/mr-tron/base58"
+
+	ltctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/ltcd-txscript"
 )
 
 // newAddress in this file with build tags checks Mocknet(/Testnet)-specific addresses.
@@ -32,8 +34,8 @@ func newAddress(address string) (Address, error) {
 		}
 	}
 
-	// Check LTC address formats with testnet
-	outputAddr, err = ltcutil.DecodeAddress(address, &ltcchaincfg.TestNet4Params)
+	// Check LTC address formats with testnet (including taproot)
+	outputAddr, err = ltctxscript.DecodeAddress(address, &ltcchaincfg.TestNet4Params)
 	switch outputAddr.(type) {
 	case *ltcutil.AddressPubKey:
 		// AddressPubKey format is not supported by THORChain.

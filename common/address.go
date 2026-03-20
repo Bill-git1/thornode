@@ -262,7 +262,8 @@ func (addr Address) IsChain(chain Chain) bool {
 		}
 		return false
 	case LTCChain:
-		prefix, _, err := bech32.Decode(addr.String())
+		// Check bech32 (segwit v0) and bech32m (taproot) addresses
+		prefix, _, _, err := bech32.DecodeGeneric(addr.String())
 		if err == nil && (prefix == "ltc" || prefix == "tltc" || prefix == "rltc") {
 			return true
 		}
@@ -384,7 +385,8 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 			}
 		}
 	case LTCChain:
-		prefix, _, _ := bech32.Decode(addr.String())
+		// DecodeGeneric handles both bech32 (segwit v0) and bech32m (taproot)
+		prefix, _, _, _ := bech32.DecodeGeneric(addr.String())
 		switch prefix {
 		case "ltc":
 			return mainNetPredicate()
