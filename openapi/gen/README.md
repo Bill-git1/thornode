@@ -136,6 +136,8 @@ Class | Method | HTTP request | Description
 *SecuredAssetsApi* | [**SecuredAssets**](docs/SecuredAssetsApi.md#securedassets) | **Get** /thorchain/securedassets | 
 *StreamingSwapApi* | [**StreamSwap**](docs/StreamingSwapApi.md#streamswap) | **Get** /thorchain/swap/streaming/{hash} | 
 *StreamingSwapApi* | [**StreamSwaps**](docs/StreamingSwapApi.md#streamswaps) | **Get** /thorchain/swaps/streaming | 
+*SupplyApi* | [**Supply**](docs/SupplyApi.md#supply) | **Get** /thorchain/supply | 
+*SupplyApi* | [**SupplyCmc**](docs/SupplyApi.md#supplycmc) | **Get** /thorchain/supply/cmc | 
 *SwapApi* | [**SwapDetails**](docs/SwapApi.md#swapdetails) | **Get** /thorchain/queue/swap/details/{tx_id} | 
 *TCYClaimersApi* | [**TcyClaimer**](docs/TCYClaimersApi.md#tcyclaimer) | **Get** /thorchain/tcy_claimer/{address} | 
 *TCYClaimersApi* | [**TcyClaimers**](docs/TCYClaimersApi.md#tcyclaimers) | **Get** /thorchain/tcy_claimers | 
@@ -205,6 +207,7 @@ Class | Method | HTTP request | Description
  - [LimitSwapsSummaryResponse](docs/LimitSwapsSummaryResponse.md)
  - [LiquidityProvider](docs/LiquidityProvider.md)
  - [LiquidityProviderSummary](docs/LiquidityProviderSummary.md)
+ - [LockedSupply](docs/LockedSupply.md)
  - [MetricsResponse](docs/MetricsResponse.md)
  - [MimirNodesResponse](docs/MimirNodesResponse.md)
  - [MimirVote](docs/MimirVote.md)
@@ -246,6 +249,7 @@ Class | Method | HTTP request | Description
  - [SecuredAssetResponse](docs/SecuredAssetResponse.md)
  - [StreamingStatus](docs/StreamingStatus.md)
  - [StreamingSwap](docs/StreamingSwap.md)
+ - [SupplyResponse](docs/SupplyResponse.md)
  - [SwapDetailsResponse](docs/SwapDetailsResponse.md)
  - [SwapFinalisedStage](docs/SwapFinalisedStage.md)
  - [SwapState](docs/SwapState.md)

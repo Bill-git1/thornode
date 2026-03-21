@@ -709,3 +709,11 @@ func (s *queryServer) ReferenceMemoPreflight(c context.Context, req *types.Query
 	ctx := s.unwrapSdkContext(c)
 	return s.queryReferenceMemoPreflight(ctx, req)
 }
+
+func (s *queryServer) Supply(c context.Context, req *types.QuerySupplyRequest) (*types.QuerySupplyResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.querySupply(ctx, req)
+}

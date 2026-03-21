@@ -3717,3 +3717,26 @@ func (qs queryServer) queryEip712TypedData(_ cosmos.Context, req *types.QueryEip
 	}
 	return &types.QueryEip712TypedDataResponse{TypedData: string(data)}, nil
 }
+
+// querySupply returns the RUNE supply breakdown.
+func (qs queryServer) querySupply(ctx cosmos.Context, req *types.QuerySupplyRequest) (*types.QuerySupplyResponse, error) {
+	keeper := qs.mgr.Keeper()
+
+	// total RUNE supply from bank module
+	runeSupply := keeper.GetTotalSupply(ctx, common.RuneAsset())
+
+	// reserve module balance (locked/non-circulating)
+	reserveBal := keeper.GetRuneBalanceOfModule(ctx, ReserveName)
+
+	// circulating = total - reserves
+	circulating := common.SafeSub(runeSupply, reserveBal)
+
+	const e8 = 1e8
+	return &types.QuerySupplyResponse{
+		Circulating: int64(circulating.Uint64() / e8),
+		Locked: &types.LockedSupply{
+			Reserve: int64(reserveBal.Uint64() / e8),
+		},
+		Total: int64(runeSupply.Uint64() / e8),
+	}, nil
+}

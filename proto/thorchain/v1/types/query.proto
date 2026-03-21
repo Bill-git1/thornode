@@ -55,6 +55,7 @@ import "types/query_codes.proto";
 import "types/query_oracle_price.proto";
 import "types/query_eip712.proto";
 import "types/query_reference_memo.proto";
+import "types/query_supply.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -441,5 +442,9 @@ service Query {
   rpc ReferenceMemoPreflight(QueryReferenceMemoPreflightRequest)
       returns (QueryReferenceMemoPreflightResponse) {
     option (google.api.http).get = "/thorchain/memo/check/{asset}/{amount}";
+  }
+
+  rpc Supply(QuerySupplyRequest) returns (QuerySupplyResponse) {
+    option (google.api.http).get = "/thorchain/supply";
   }
 }

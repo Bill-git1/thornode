@@ -20,12 +20,14 @@ import (
 	sdkgrpc "github.com/cosmos/cosmos-sdk/types/grpc"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	gateway "github.com/cosmos/gogogateway"
+	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc/metadata"
 
 	"gitlab.com/thorchain/thornode/v3/app/params"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/tcysmartcontract"
 	"gitlab.com/thorchain/thornode/v3/constants"
 
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/client/cli"
@@ -33,6 +35,7 @@ import (
 
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 // type check to ensure the interface is properly implemented
@@ -340,4 +343,108 @@ func CustomGRPCGatewayRouter(apiSvr *api.Server) {
 			return md
 		}),
 	)
+}
+
+// RegisterSupplyCMCRoute registers the /thorchain/supply/cmc plain-text HTTP handler.
+func RegisterSupplyCMCRoute(router *mux.Router, clientCtx client.Context) {
+	router.HandleFunc("/thorchain/supply/cmc", func(w http.ResponseWriter, r *http.Request) {
+		queryClient := types.NewQueryClient(clientCtx)
+
+		asset := strings.ToLower(r.URL.Query().Get("asset"))
+		typ := strings.ToLower(r.URL.Query().Get("type"))
+
+		var value int64
+		switch asset {
+		case "tcy":
+			bankClient := banktypes.NewQueryClient(clientCtx)
+			supplyResp, err := bankClient.SupplyOf(r.Context(), &banktypes.QuerySupplyOfRequest{Denom: "tcy"})
+			if err != nil {
+				http.Error(w, "failed to query tcy supply", http.StatusInternalServerError)
+				return
+			}
+			total := supplyResp.Amount.Amount.Int64() / 1e8
+
+			// sum staked TCY across the module account and wasm staking contracts
+			var staked int64
+			balResp, err := queryClient.BalanceModule(r.Context(), &types.QueryBalanceModuleRequest{Name: TCYStakeName})
+			if err != nil {
+				http.Error(w, "failed to query tcy stake module", http.StatusInternalServerError)
+				return
+			}
+			for _, coin := range balResp.Coins {
+				if coin.Denom == "tcy" {
+					staked += coin.Amount.Int64()
+				}
+			}
+			var addrBalResp *types.QueryBalancesResponse
+			for _, addr := range tcysmartcontract.TCYSmartContractAddresses {
+				addrBalResp, err = queryClient.Balances(r.Context(), &types.QueryBalancesRequest{Address: addr})
+				if err != nil {
+					continue // skip contracts that don't exist on this network
+				}
+				for _, bal := range addrBalResp.Balances {
+					if bal.Denom == "tcy" {
+						var amt int64
+						amt, err = strconv.ParseInt(bal.Amount, 10, 64)
+						if err == nil {
+							staked += amt
+						}
+					}
+				}
+			}
+			staked /= 1e8
+
+			// unclaimed TCY in the claiming module
+			var locked int64
+			claimResp, err := queryClient.BalanceModule(r.Context(), &types.QueryBalanceModuleRequest{Name: TCYClaimingName})
+			if err != nil {
+				http.Error(w, "failed to query tcy claim module", http.StatusInternalServerError)
+				return
+			}
+			for _, coin := range claimResp.Coins {
+				if coin.Denom == "tcy" {
+					locked = coin.Amount.Int64() / 1e8
+				}
+			}
+
+			switch typ {
+			case "total":
+				value = total
+			case "staked":
+				value = staked
+			case "locked":
+				value = locked
+			case "circulating":
+				value = total - locked
+			default:
+				http.Error(w, "type must be total, staked, locked, or circulating", http.StatusBadRequest)
+				return
+			}
+		case "rune", "":
+			resp, err := queryClient.Supply(r.Context(), &types.QuerySupplyRequest{})
+			if err != nil {
+				http.Error(w, "failed to query rune supply", http.StatusInternalServerError)
+				return
+			}
+			switch typ {
+			case "circulating":
+				value = resp.Circulating
+			case "total":
+				value = resp.Total
+			case "locked":
+				if resp.Locked != nil {
+					value = resp.Locked.Reserve
+				}
+			default:
+				http.Error(w, "type must be circulating, total, or locked", http.StatusBadRequest)
+				return
+			}
+		default:
+			http.Error(w, "asset must be rune or tcy", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, "%d", value)
+	}).Methods("GET")
 }

@@ -31,7 +31,7 @@ if [ ! -d "${NET_DIR}/data" ]; then
   mkdir -p "${NET_DIR}/data"
   LATEST_SNAPSHOT_KEY=$(
     docker run --rm --entrypoint sh minio/minio:latest -c "
-    mc config host add minio ${SNAPSHOTS_URL} '' '' >/dev/null;
+    mc alias set minio ${SNAPSHOTS_URL} '' '' >/dev/null;
     mc ls minio/snapshots/thornode --json" | tail -n1 | jq -r .key
   )
   aria2c --split=16 --max-concurrent-downloads=16 --max-connection-per-server=16 \

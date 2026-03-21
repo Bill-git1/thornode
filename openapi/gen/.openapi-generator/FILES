@@ -26,6 +26,7 @@ api_savers.go
 api_secured_asset.go
 api_secured_assets.go
 api_streaming_swap.go
+api_supply.go
 api_swap.go
 api_tcy_claimers.go
 api_tcy_stakers.go
@@ -89,6 +90,7 @@ docs/LimitSwapsSummaryResponse.md
 docs/LiquidityProvider.md
 docs/LiquidityProviderSummary.md
 docs/LiquidityProvidersApi.md
+docs/LockedSupply.md
 docs/MetricsResponse.md
 docs/MimirApi.md
 docs/MimirNodesResponse.md
@@ -144,6 +146,8 @@ docs/SecuredAssetsApi.md
 docs/StreamingStatus.md
 docs/StreamingSwap.md
 docs/StreamingSwapApi.md
+docs/SupplyApi.md
+docs/SupplyResponse.md
 docs/SwapApi.md
 docs/SwapDetailsResponse.md
 docs/SwapFinalisedStage.md
@@ -231,6 +235,7 @@ model_limit_swaps_response.go
 model_limit_swaps_summary_response.go
 model_liquidity_provider.go
 model_liquidity_provider_summary.go
+model_locked_supply.go
 model_metrics_response.go
 model_mimir_nodes_response.go
 model_mimir_vote.go
@@ -272,6 +277,7 @@ model_saver.go
 model_secured_asset_response.go
 model_streaming_status.go
 model_streaming_swap.go
+model_supply_response.go
 model_swap_details_response.go
 model_swap_finalised_stage.go
 model_swap_state.go

@@ -72,6 +72,8 @@ var (
 	_ jsonpb.JSONPBMarshaler = &QueryVaultResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryVersionResponse{}
 
+	_ jsonpb.JSONPBMarshaler = &QuerySupplyResponse{}
+
 	// Query responses that do not require a json marshaler override
 	// _ jsonpb.JSONPBMarshaler = &QueryInvariantResponse{}
 	// _ jsonpb.JSONPBMarshaler = &QueryInvariantsResponse{}
@@ -314,6 +316,11 @@ func (m *QuerySaversResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error)
 }
 
 // QueryStreamingSwapResponse
+// QuerySupplyResponse
+func (m *QuerySupplyResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
+	return jsonify(m)
+}
+
 func (m *QueryStreamingSwapResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
 	return jsonify(m)
 }

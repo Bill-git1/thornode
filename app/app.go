@@ -849,6 +849,9 @@ func (app *THORChainApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.
 	// Register grpc-gateway routes for all modules.
 	app.BasicModuleManager.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
+	// Register plain-text supply/cmc route (must be before catch-all gRPC gateway).
+	thorchain.RegisterSupplyCMCRoute(apiSvr.Router, clientCtx)
+
 	// register thorchain-specific swagger API from root so that other applications can override easily
 	if err := RegisterSwaggerAPI(apiSvr.Router, apiConfig.Swagger); err != nil {
 		panic(err)

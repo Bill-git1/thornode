@@ -1669,6 +1669,61 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExportResponse"
+
+  # ------------------------------ supply ------------------------------
+
+  /thorchain/supply:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns the RUNE supply breakdown.
+      operationId: supply
+      tags:
+        - Supply
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplyResponse"
+
+  /thorchain/supply/cmc:
+    parameters:
+      - name: asset
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+            - rune
+            - tcy
+        description: The asset to query supply for (default rune).
+      - name: type
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+            - circulating
+            - total
+            - locked
+            - staked
+        description: The type of supply value to return.
+    get:
+      description: Returns a single supply value as plain text for CoinMarketCap integration.
+      operationId: supply_cmc
+      tags:
+        - Supply
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: integer
+                example: 30000000000
+
 ########################################################################################
 # Components
 ########################################################################################
@@ -4837,3 +4892,31 @@ components:
           type: string
           description: the maximum number of times this reference can be used (0 = unlimited)
           example: "0"
+
+    LockedSupply:
+      type: object
+      properties:
+        reserve:
+          type: integer
+          format: int64
+          description: RUNE locked in the reserve module
+          example: 10000000000
+
+    SupplyResponse:
+      type: object
+      required:
+        - circulating
+        - total
+      properties:
+        circulating:
+          type: integer
+          format: int64
+          description: circulating RUNE supply
+          example: 30000000000
+        locked:
+          $ref: "#/components/schemas/LockedSupply"
+        total:
+          type: integer
+          format: int64
+          description: total RUNE supply
+          example: 50000000000
