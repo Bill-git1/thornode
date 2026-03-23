@@ -2125,10 +2125,9 @@ func (s *NetworkManagerTestSuite) TestSwapToOverSolvencyIncome(c *C) {
 	// Test 1: Process L1 asset (BTC) as income
 	coin := common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))
 	err := nmgr.SwapToOverSolvencyIncome(ctx, mgr, coin)
-	c.Assert(err, IsNil)
-
-	// Verify swap was created in the queue (fee tracking happens during swap execution)
 	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		c.Assert(err, IsNil)
+		// Verify swap was created in the queue (fee tracking happens during swap execution)
 		iter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
 		defer iter.Close()
 		var foundSwap bool
@@ -2143,6 +2142,8 @@ func (s *NetworkManagerTestSuite) TestSwapToOverSolvencyIncome(c *C) {
 			}
 		}
 		c.Assert(foundSwap, Equals, true, Commentf("swap should have been created in queue"))
+	} else {
+		c.Assert(err, NotNil, Commentf("should return error when AdvSwapQueue is disabled"))
 	}
 
 	// Test 2: Process RUNE directly to over-solvency address
