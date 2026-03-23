@@ -65,3 +65,42 @@ func (s *MessageTestSuite) TestSerialize(c *C) {
 
 	c.Assert(len(serialized), Equals, 197)
 }
+
+func (s *MessageTestSuite) TestSerializeInvalidBlockHash(c *C) {
+	header := MessageHeader{
+		NumRequireSignatures:        1,
+		NumReadonlySignedAccounts:   0,
+		NumReadonlyUnsignedAccounts: 0,
+	}
+	m := NewMessage(header, nil, "not-valid-base58!!!", nil)
+	_, err := m.Serialize()
+	c.Assert(err, NotNil)
+}
+
+func (s *MessageTestSuite) TestUintToVarLenBytesZero(c *C) {
+	result := UintToVarLenBytes(0)
+	c.Assert(result, DeepEquals, []byte{0x0})
+}
+
+func (s *MessageTestSuite) TestUintToVarLenBytesNonZero(c *C) {
+	result := UintToVarLenBytes(1)
+	c.Assert(len(result) > 0, Equals, true)
+	c.Assert(result[0], Equals, byte(1))
+
+	result = UintToVarLenBytes(300)
+	c.Assert(len(result) > 1, Equals, true) // 300 needs more than 1 byte in varint
+}
+
+func (s *MessageTestSuite) TestNewMessage(c *C) {
+	header := MessageHeader{
+		NumRequireSignatures:        2,
+		NumReadonlySignedAccounts:   1,
+		NumReadonlyUnsignedAccounts: 3,
+	}
+	accounts := []PublicKey{MustPublicKeyFromString("11111111111111111111111111111111")}
+	m := NewMessage(header, accounts, "hash", []CompiledInstruction{{ProgramIDIndex: 0}})
+	c.Assert(m.Header, DeepEquals, header)
+	c.Assert(len(m.Accounts), Equals, 1)
+	c.Assert(m.RecentBlockHash, Equals, "hash")
+	c.Assert(len(m.Instructions), Equals, 1)
+}
