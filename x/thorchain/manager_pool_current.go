@@ -109,6 +109,9 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 			if validPool(pool) &&
 				pm.poolMeetTradingVolumeCriteria(ctx, mgr, pool, cosmos.NewUint(uint64(minPoolLiquidityFee))) {
 				availblePoolCount += 1
+				if pool.BalanceRune.LT(choppingBlock.BalanceRune) || choppingBlock.IsEmpty() {
+					choppingBlock = pool
+				}
 			} else {
 				pool.Status = PoolStaged
 				if err := setPool(pool); err != nil {
@@ -117,12 +120,6 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 			}
 			// reset the pool rolling liquidity fee to zero
 			mgr.Keeper().ResetRollingPoolLiquidityFee(ctx, pool.Asset)
-			if pool.BalanceRune.LT(choppingBlock.BalanceRune) || choppingBlock.IsEmpty() {
-				// omit pools that are gas assets from being on the chopping
-				// block, removing these pool requires a chain ragnarok, and
-				// cannot be handled individually
-				choppingBlock = pool
-			}
 		case PoolStaged:
 			// deduct staged pool rune fee
 			fee := cosmos.NewUint(uint64(stagedPoolCost))
@@ -161,7 +158,8 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 				// Transfer any pending RUNE to the Reserve so it isn't left in the Pool Module after pool deletion
 				if !pool.PendingInboundRune.IsZero() {
 					if err := mgr.Keeper().AddPoolFeeToReserve(ctx, pool.PendingInboundRune); err != nil {
-						ctx.Logger().Error("fail to transfer pending inbound rune to reserve during pool burning", "from pool", pool.Asset, "err", err)
+						ctx.Logger().Error("fail to transfer pending inbound rune to reserve during pool burning, skipping pool burn", "from pool", pool.Asset, "err", err)
+						continue
 					}
 				}
 
@@ -450,7 +448,7 @@ func (pm *PoolMgr) checkSaversUtilization(ctx cosmos.Context, mgr Manager) error
 
 		maxSynth := common.GetUncappedShare(cosmos.NewUint(uint64(synthCap)), cosmos.NewUint(constants.MaxBasisPts), l1Pool.BalanceAsset.MulUint64(2))
 		if synthSupply.GT(maxSynth) {
-			utilizationRatio := common.GetUncappedShare(maxSynth, synthSupply, sdkmath.NewUint(constants.MaxBasisPts))
+			utilizationRatio := common.GetUncappedShare(synthSupply, maxSynth, sdkmath.NewUint(constants.MaxBasisPts))
 			if synthPool.IsEmpty() || utilizationRatio.GT(maxUtilizationRatio) {
 				synthPool = pool
 				maxUtilizationRatio = utilizationRatio
@@ -595,7 +593,7 @@ func (pm *PoolMgr) commitPendingLiquidity(ctx cosmos.Context, pool Pool, mgr Man
 
 		count += 1
 		cleanedRune = cleanedRune.Add(lp.PendingRune)
-		cleanedAsset = cleanedRune.Add(lp.PendingAsset)
+		cleanedAsset = cleanedAsset.Add(lp.PendingAsset)
 	}
 	ctx.Logger().Info("cleaned pending liquidity", "pool", pool.Asset, "count", count, "cleared rune", cleanedRune.String(), "cleared asset", cleanedAsset.String())
 
