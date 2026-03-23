@@ -79,6 +79,49 @@ func (NotifierTestSuite) TestNotifierHappyPath(c *C) {
 	c.Assert(signature.String() == result[0].String(), Equals, true)
 }
 
+func (NotifierTestSuite) TestProcessSignatureEmptyData(c *C) {
+	n, err := newNotifier("messageID", [][]byte{[]byte("hello")}, "poolpub", nil)
+	c.Assert(err, IsNil)
+	// processSignature with empty data should return nil and NOT set processed
+	err = n.processSignature(nil)
+	c.Assert(err, IsNil)
+	c.Assert(n.processed, Equals, false)
+
+	err = n.processSignature([]*tsslibcommon.SignatureData{})
+	c.Assert(err, IsNil)
+	c.Assert(n.processed, Equals, false)
+}
+
+func (NotifierTestSuite) TestProcessSignatureNilSignature(c *C) {
+	messageToSign := "yhEwrxWuNBGnPT/L7PNnVWg7gFWNzCYTV+GuX3tKRH8="
+	buf, err := base64.StdEncoding.DecodeString(messageToSign)
+	c.Assert(err, IsNil)
+	messageID, err := common.MsgToHashString(buf)
+	c.Assert(err, IsNil)
+	poolPubKey := `thorpub1addwnpepq0ul3xt882a6nm6m7uhxj4tk2n82zyu647dyevcs5yumuadn4uamqx7neak`
+	n, err := newNotifier(messageID, [][]byte{buf}, poolPubKey, nil)
+	c.Assert(err, IsNil)
+
+	// SignatureData with nil Signature field should return error
+	sigData := &tsslibcommon.SignatureData{}
+	err = n.processSignature([]*tsslibcommon.SignatureData{sigData})
+	c.Assert(err, NotNil)
+	c.Assert(n.processed, Equals, false)
+}
+
+func (NotifierTestSuite) TestVerifySignatureInvalidPubKey(c *C) {
+	n, err := newNotifier("messageID", [][]byte{[]byte("hello")}, "invalidpubkey", nil)
+	c.Assert(err, IsNil)
+	sigData := &tsslibcommon.SignatureData{
+		Signature: &tsslibcommon.ECSignature{
+			R: []byte{1, 2, 3},
+			S: []byte{4, 5, 6},
+		},
+	}
+	err = n.verifySignature(sigData, []byte("hello"))
+	c.Assert(err, NotNil)
+}
+
 func (NotifierTestSuite) TestNotifierUpdateUnset(c *C) {
 	n, err := newNotifier("messageID", nil, "", nil)
 	c.Assert(err, IsNil)

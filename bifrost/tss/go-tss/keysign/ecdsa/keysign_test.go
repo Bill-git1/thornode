@@ -428,6 +428,66 @@ func (s *TssECDSAKeysignTestSuite) TearDownTest(c *C) {
 	}
 }
 
+func (s *TssECDSAKeysignTestSuite) TestNewTssKeySign(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+	c.Assert(ks, NotNil)
+	c.Assert(ks.GetTssCommonStruct(), NotNil)
+	ch := ks.GetTssKeySignChannels()
+	c.Assert(ch, NotNil)
+}
+
+func (s *TssECDSAKeysignTestSuite) TestSignMessageNotInParty(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	// Use a local state where our key is not in the parties list
+	localState := storage.KeygenLocalState{
+		LocalPartyKey:   "not-in-parties-key",
+		ParticipantKeys: []string{"thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69"},
+	}
+	parties := []string{"thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69"}
+
+	// SignMessage returns error when local party key is not in the parties list
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, parties)
+	c.Assert(err, NotNil)
+	c.Assert(sig, IsNil)
+}
+
+func (s *TssECDSAKeysignTestSuite) TestSignMessageInvalidLocalData(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	// LocalData with invalid JSON should return error
+	localState := storage.KeygenLocalState{
+		LocalPartyKey:   testPubKeys[0],
+		ParticipantKeys: testPubKeys,
+		LocalData:       []byte("not-valid-json"),
+	}
+
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, testPubKeys)
+	c.Assert(err, NotNil)
+	c.Assert(sig, IsNil)
+}
+
+func (s *TssECDSAKeysignTestSuite) TestSignMessageInvalidParties(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	localState := storage.KeygenLocalState{
+		LocalPartyKey: testPubKeys[0],
+	}
+
+	// Empty parties should cause GetParties to fail
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, []string{})
+	c.Assert(err, NotNil)
+	c.Assert(sig, IsNil)
+}
+
 func (s *TssECDSAKeysignTestSuite) TestCloseKeySignnotifyChannel(c *C) {
 	conf := common.TssConfig{}
 	keySignInstance := NewTssKeySign("", conf, nil, nil, "test", s.nodePrivKeys[0], s.comms[0], s.stateMgrs[0], 1)

@@ -142,3 +142,191 @@ func (p *policyTestSuite) TestTssMissingShareBlame(c *C) {
 	sort.Strings(results)
 	c.Assert(results, DeepEquals, localTestPubKeys[2:])
 }
+
+func (p *policyTestSuite) TestManagerGetters(c *C) {
+	mgr := NewBlameManager()
+	c.Assert(mgr.GetBlame(), NotNil)
+	c.Assert(mgr.GetShareMgr(), NotNil)
+	c.Assert(mgr.GetRoundMgr(), NotNil)
+}
+
+func (p *policyTestSuite) TestUpdateAcceptShareAndCheckDuplication(c *C) {
+	mgr := NewBlameManager()
+	round := RoundInfo{0, "round1", "msg1"}
+
+	// Initially no duplication
+	c.Assert(mgr.CheckMsgDuplication(round, "party1"), Equals, false)
+
+	// Add a share
+	mgr.UpdateAcceptShare(round, "party1")
+
+	// Now it's a duplicate
+	c.Assert(mgr.CheckMsgDuplication(round, "party1"), Equals, true)
+
+	// Different party is not a duplicate
+	c.Assert(mgr.CheckMsgDuplication(round, "party2"), Equals, false)
+
+	// Add to existing round
+	mgr.UpdateAcceptShare(round, "party2")
+	c.Assert(mgr.CheckMsgDuplication(round, "party2"), Equals, true)
+}
+
+func (p *policyTestSuite) TestSetAndGetLastMsg(c *C) {
+	mgr := NewBlameManager()
+	c.Assert(mgr.GetLastMsg(), IsNil)
+
+	mgr.SetLastMsg(nil)
+	c.Assert(mgr.GetLastMsg(), IsNil)
+}
+
+func (p *policyTestSuite) TestSetLastUnicastPeer(c *C) {
+	mgr := NewBlameManager()
+	p1, err := peer.Decode(testPeers[0])
+	c.Assert(err, IsNil)
+	p2, err := peer.Decode(testPeers[1])
+	c.Assert(err, IsNil)
+
+	// Add to a new round
+	mgr.SetLastUnicastPeer(p1, "round1")
+	// Add to existing round
+	mgr.SetLastUnicastPeer(p2, "round1")
+
+	mgr.lastMsgLocker.RLock()
+	peers := mgr.lastUnicastPeer["round1"]
+	mgr.lastMsgLocker.RUnlock()
+	c.Assert(peers, HasLen, 2)
+}
+
+func (p *policyTestSuite) TestNodeSyncBlame(c *C) {
+	conversion.SetupBech32Prefix()
+
+	p1, err := peer.Decode(testPeers[0])
+	c.Assert(err, IsNil)
+	p2, err := peer.Decode(testPeers[1])
+	c.Assert(err, IsNil)
+	p3, err := peer.Decode(testPeers[2])
+	c.Assert(err, IsNil)
+	p4, err := peer.Decode(testPeers[3])
+	c.Assert(err, IsNil)
+
+	// Test with all peers online - no blame
+	onlinePeers := []peer.ID{p1, p2, p3, p4}
+	keys := testPubKeys[:]
+	blame, err := p.blameMgr.NodeSyncBlame(keys, onlinePeers)
+	c.Assert(err, IsNil)
+	c.Assert(blame.FailReason, Equals, TssSyncFail)
+	c.Assert(blame.BlameNodes, HasLen, 0)
+
+	// Test with one peer missing
+	onlinePeers = []peer.ID{p1, p2, p3}
+	blame, err = p.blameMgr.NodeSyncBlame(keys, onlinePeers)
+	c.Assert(err, IsNil)
+	c.Assert(blame.BlameNodes, HasLen, 1)
+
+	// Test with invalid pubkey
+	badKeys := []string{"invalid-key"}
+	_, err = p.blameMgr.NodeSyncBlame(badKeys, onlinePeers)
+	c.Assert(err, NotNil)
+}
+
+func (p *policyTestSuite) TestGetUnicastBlameEmptyPeers(c *C) {
+	mgr := NewBlameManager()
+	// No unicast peers set - should return nil, nil
+	nodes, err := mgr.GetUnicastBlame("anyType")
+	c.Assert(err, IsNil)
+	c.Assert(nodes, IsNil)
+}
+
+func (p *policyTestSuite) TestTssWrongShareBlameUnknownParty(c *C) {
+	pi := p.blameMgr.partyInfo
+	// Use a valid partyID but one that's not in the partyIDMap
+	// We need to manipulate partyIDMap to simulate "not found"
+	// Use a partyID with an ID not in the map
+	knownPartyID := pi.PartyIDMap["1"]
+	r1 := btss.MessageRouting{
+		From: knownPartyID,
+	}
+	msg := messages.WireMessage{
+		Routing:   &r1,
+		RoundInfo: "key3",
+	}
+
+	// Remove the partyID from the map temporarily to cause error
+	savedMap := p.blameMgr.partyInfo.PartyIDMap
+	p.blameMgr.partyInfo.PartyIDMap = make(map[string]*btss.PartyID)
+	_, err := p.blameMgr.TssWrongShareBlame(&msg)
+	c.Assert(err, NotNil)
+	p.blameMgr.partyInfo.PartyIDMap = savedMap
+}
+
+func (p *policyTestSuite) TestTssMissingShareBlameECDSAKeysign(c *C) {
+	blameMgr := p.blameMgr
+	blameMgr.acceptShareLocker.Lock()
+	blameMgr.acceptedShares = make(map[RoundInfo][]string)
+	blameMgr.acceptedShares[RoundInfo{0, "testRound", "msg:0"}] = []string{"1", "2"}
+	blameMgr.acceptedShares[RoundInfo{1, "testRound", "msg:0"}] = []string{"1"}
+	blameMgr.acceptShareLocker.Unlock()
+	_, isUnicast, err := blameMgr.TssMissingShareBlame(2, messages.ECDSAKEYSIGN)
+	c.Assert(err, IsNil)
+	// For ECDSAKEYSIGN, index < 5 means unicast
+	c.Assert(isUnicast, Equals, true)
+}
+
+func (p *policyTestSuite) TestTssMissingShareBlameEDDSAKeygen(c *C) {
+	blameMgr := p.blameMgr
+	blameMgr.acceptShareLocker.Lock()
+	blameMgr.acceptedShares = make(map[RoundInfo][]string)
+	// index 2 is the unicast round for EDDSAKEYGEN, but it also needs to be missing shares
+	// Put full shares in rounds 0,1 and missing share at index 2
+	blameMgr.acceptedShares[RoundInfo{0, "testRound", "msg:0"}] = []string{"1", "2", "3"}
+	blameMgr.acceptedShares[RoundInfo{1, "testRound", "msg:0"}] = []string{"1", "2", "3"}
+	blameMgr.acceptedShares[RoundInfo{2, "testRound", "msg:0"}] = []string{"1"}
+	blameMgr.acceptShareLocker.Unlock()
+	_, isUnicast, err := blameMgr.TssMissingShareBlame(3, messages.EDDSAKEYGEN)
+	c.Assert(err, IsNil)
+	// For EDDSAKEYGEN, index == 2 means unicast
+	c.Assert(isUnicast, Equals, true)
+}
+
+func (p *policyTestSuite) TestTssMissingShareBlameEDDSAKeysign(c *C) {
+	blameMgr := p.blameMgr
+	blameMgr.acceptShareLocker.Lock()
+	blameMgr.acceptedShares = make(map[RoundInfo][]string)
+	blameMgr.acceptedShares[RoundInfo{0, "testRound", "msg:0"}] = []string{"1"}
+	blameMgr.acceptShareLocker.Unlock()
+	_, isUnicast, err := blameMgr.TssMissingShareBlame(1, messages.EDDSAKEYSIGN)
+	c.Assert(err, IsNil)
+	// For EDDSAKEYSIGN, unicast is always false
+	c.Assert(isUnicast, Equals, false)
+}
+
+func (p *policyTestSuite) TestTssMissingShareBlameEmptyShares(c *C) {
+	blameMgr := p.blameMgr
+	blameMgr.acceptShareLocker.Lock()
+	blameMgr.acceptedShares = make(map[RoundInfo][]string)
+	blameMgr.acceptShareLocker.Unlock()
+	nodes, isUnicast, err := blameMgr.TssMissingShareBlame(2, messages.ECDSAKEYGEN)
+	c.Assert(err, IsNil)
+	c.Assert(nodes, IsNil)
+	c.Assert(isUnicast, Equals, false)
+}
+
+func (p *policyTestSuite) TestGetBroadcastBlameNoStandbyNodes(c *C) {
+	blames, err := p.blameMgr.GetBroadcastBlame("nonexistent_round")
+	c.Assert(err, IsNil)
+	c.Assert(blames, IsNil)
+}
+
+func (p *policyTestSuite) TestGetBlamePubKeysLists(c *C) {
+	inList, notInList, err := p.blameMgr.GetBlamePubKeysLists([]string{testPeers[0], testPeers[1]})
+	c.Assert(err, IsNil)
+	c.Assert(len(inList)+len(notInList) > 0, Equals, true)
+}
+
+func (p *policyTestSuite) TestGetBlamePubKeysListsEmpty(c *C) {
+	inList, notInList, err := p.blameMgr.GetBlamePubKeysLists(nil)
+	c.Assert(err, IsNil)
+	c.Assert(inList, HasLen, 0)
+	// notInList should have all non-local parties
+	c.Assert(len(notInList) > 0, Equals, true)
+}

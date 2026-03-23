@@ -13,13 +13,12 @@ import (
 	"testing"
 	"time"
 
-	btss "github.com/binance-chain/tss-lib/tss"
-	"github.com/libp2p/go-libp2p-peerstore/addr"
-
 	tsslibcommon "github.com/binance-chain/tss-lib/common"
+	btss "github.com/binance-chain/tss-lib/tss"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-peerstore/addr"
 	maddr "github.com/multiformats/go-multiaddr"
 	. "gopkg.in/check.v1"
 
@@ -27,6 +26,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
 	tcommon "gitlab.com/thorchain/thornode/v3/common"
@@ -247,6 +247,148 @@ func (s *EddsaKeysignTestSuite) TearDownTest(c *C) {
 	for _, item := range s.comms {
 		c.Assert(item.Stop(), IsNil)
 	}
+}
+
+func (s *EddsaKeysignTestSuite) TestNewTssKeySign(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+	c.Assert(ks, NotNil)
+	c.Assert(ks.GetTssCommonStruct(), NotNil)
+	ch := ks.GetTssKeySignChannels()
+	c.Assert(ch, NotNil)
+}
+
+func (s *EddsaKeysignTestSuite) TestSignMessageNotInParty(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	// Use a local state where our key is not in the parties list
+	// GetParties returns error when localPartyKey is not found in keys
+	localState := storage.KeygenLocalState{
+		LocalPartyKey:   "not-in-parties-key",
+		ParticipantKeys: []string{"thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69"},
+	}
+	parties := []string{"thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69"}
+
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, parties)
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, "fail to form key sign party:.*")
+	c.Assert(sig, IsNil)
+}
+
+func (s *EddsaKeysignTestSuite) TestSignMessageInvalidParties(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	localState := storage.KeygenLocalState{
+		LocalPartyKey: testPubKeys[0],
+	}
+
+	// Empty parties should cause GetParties to fail
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, []string{})
+	c.Assert(err, NotNil)
+	c.Assert(sig, IsNil)
+}
+
+func (s *EddsaKeysignTestSuite) TestSignMessageInvalidLocalData(c *C) {
+	conf := common.TssConfig{}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	// LocalData with invalid JSON should return error
+	localState := storage.KeygenLocalState{
+		LocalPartyKey:   testPubKeys[0],
+		ParticipantKeys: testPubKeys,
+		LocalData:       []byte("not-valid-json"),
+	}
+
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, testPubKeys)
+	c.Assert(err, NotNil)
+	c.Assert(sig, IsNil)
+}
+
+func (s *EddsaKeysignTestSuite) TestProcessKeySignErrChan(c *C) {
+	conf := common.TssConfig{
+		KeySignTimeout: 30 * time.Second,
+	}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	errCh := make(chan struct{})
+	outCh := make(chan btss.Message, 10)
+	endCh := make(chan tsslibcommon.SignatureData, 10)
+
+	// Close errCh to simulate error during party start
+	close(errCh)
+
+	result, err := ks.processKeySign(1, errCh, outCh, endCh)
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, "error channel closed fail to start local party")
+	c.Assert(result, IsNil)
+}
+
+func (s *EddsaKeysignTestSuite) TestProcessKeySignStopChan(c *C) {
+	conf := common.TssConfig{
+		KeySignTimeout: 30 * time.Second,
+	}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	errCh := make(chan struct{})
+	outCh := make(chan btss.Message, 10)
+	endCh := make(chan tsslibcommon.SignatureData, 10)
+
+	// Close stopChan to simulate exit signal
+	close(stopChan)
+
+	result, err := ks.processKeySign(1, errCh, outCh, endCh)
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, "received exit signal")
+	c.Assert(result, IsNil)
+}
+
+func (s *EddsaKeysignTestSuite) TestProcessKeySignTimeout(c *C) {
+	conf := common.TssConfig{
+		KeySignTimeout: 1 * time.Millisecond,
+	}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], nil, nil, 1)
+
+	errCh := make(chan struct{})
+	outCh := make(chan btss.Message, 10)
+	endCh := make(chan tsslibcommon.SignatureData, 10)
+
+	// With no lastMsg, should return ErrTssTimeOut directly
+	result, err := ks.processKeySign(1, errCh, outCh, endCh)
+	c.Assert(err, NotNil)
+	c.Assert(err, Equals, blame.ErrTssTimeOut)
+	c.Assert(result, IsNil)
+}
+
+func (s *EddsaKeysignTestSuite) TestProcessKeySignEndCh(c *C) {
+	conf := common.TssConfig{
+		KeySignTimeout: 30 * time.Second,
+	}
+	stopChan := make(chan struct{})
+	ks := NewTssKeySign("localP2PID", conf, nil, stopChan, "msgID", s.nodePrivKeys[0], s.comms[0], &MockLocalStateManager{file: ""}, 1)
+
+	errCh := make(chan struct{})
+	outCh := make(chan btss.Message, 10)
+	endCh := make(chan tsslibcommon.SignatureData, 10)
+
+	// Send a SignatureData to endCh before calling processKeySign
+	sigData := tsslibcommon.SignatureData{}
+	go func() {
+		endCh <- sigData
+	}()
+
+	// reqNum=1, so receiving 1 signature should complete
+	result, err := ks.processKeySign(1, errCh, outCh, endCh)
+	c.Assert(err, IsNil)
+	c.Assert(result, HasLen, 1)
 }
 
 func (s *EddsaKeysignTestSuite) TestCloseKeySignnotifyChannel(c *C) {
