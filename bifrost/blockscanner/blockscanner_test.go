@@ -42,16 +42,21 @@ type BlockScannerTestSuite struct {
 var _ = Suite(&BlockScannerTestSuite{})
 
 func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
-	var err error
-	m, err = metrics.NewMetrics(config.BifrostMetricsConfiguration{
-		Enabled:      false,
-		ListenPort:   9090,
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Second,
-		Chains:       common.Chains{common.ETHChain},
+	initMetricsOnce.Do(func() {
+		var err error
+		m, err = metrics.NewMetrics(config.BifrostMetricsConfiguration{
+			Enabled:      false,
+			ListenPort:   9090,
+			ReadTimeout:  time.Second,
+			WriteTimeout: time.Second,
+			Chains:       common.Chains{common.ETHChain},
+		})
+		if err != nil {
+			panic(err)
+		}
 	})
 	c.Assert(m, NotNil)
-	c.Assert(err, IsNil)
+	var err error
 	thorchain.SetupConfigForTest()
 	cfg := config.BifrostClientConfiguration{
 		ChainID:         "thorchain",

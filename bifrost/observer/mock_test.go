@@ -21,6 +21,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost"
+	stypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // Mock implementations of external dependencies
@@ -191,10 +192,11 @@ func (m *MockPrivKey) Sign(msg []byte) ([]byte, error) {
 
 type MockGRPCClient struct {
 	ebifrost.LocalhostBifrostClient
-	sendQuorumTxFunc         func(ctx context.Context, quorumTx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error)
-	sendQuorumNetworkFeeFunc func(ctx context.Context, quorumNetworkFee *common.QuorumNetworkFee, opts ...grpc.CallOption) (*ebifrost.SendQuorumNetworkFeeResult, error)
-	sendQuorumSolvencyFunc   func(ctx context.Context, quorumSolvency *common.QuorumSolvency, opts ...grpc.CallOption) (*ebifrost.SendQuorumSolvencyResult, error)
-	sendQuorumErrataFunc     func(ctx context.Context, quorumErrata *common.QuorumErrataTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumErrataTxResult, error)
+	sendQuorumTxFunc             func(ctx context.Context, quorumTx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error)
+	sendQuorumNetworkFeeFunc     func(ctx context.Context, quorumNetworkFee *common.QuorumNetworkFee, opts ...grpc.CallOption) (*ebifrost.SendQuorumNetworkFeeResult, error)
+	sendQuorumSolvencyFunc       func(ctx context.Context, quorumSolvency *common.QuorumSolvency, opts ...grpc.CallOption) (*ebifrost.SendQuorumSolvencyResult, error)
+	sendQuorumErrataFunc         func(ctx context.Context, quorumErrata *common.QuorumErrataTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumErrataTxResult, error)
+	sendQuorumPriceFeedBatchFunc func(ctx context.Context, batch *common.QuorumPriceFeedBatch, opts ...grpc.CallOption) (*ebifrost.SendQuorumPriceFeedBatchResult, error)
 }
 
 func (m *MockGRPCClient) SendQuorumTx(ctx context.Context, tx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error) {
@@ -211,6 +213,13 @@ func (m *MockGRPCClient) SendQuorumSolvency(ctx context.Context, quorumSolvency 
 
 func (m *MockGRPCClient) SendQuorumErrataTx(ctx context.Context, quorumErrata *common.QuorumErrataTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumErrataTxResult, error) {
 	return m.sendQuorumErrataFunc(ctx, quorumErrata, opts...)
+}
+
+func (m *MockGRPCClient) SendQuorumPriceFeedBatch(ctx context.Context, batch *common.QuorumPriceFeedBatch, opts ...grpc.CallOption) (*ebifrost.SendQuorumPriceFeedBatchResult, error) {
+	if m.sendQuorumPriceFeedBatchFunc != nil {
+		return m.sendQuorumPriceFeedBatchFunc(ctx, batch, opts...)
+	}
+	return &ebifrost.SendQuorumPriceFeedBatchResult{}, nil
 }
 
 type MockThorchainBridge struct {
@@ -319,6 +328,33 @@ func NewMockEventClient() *MockEventClient {
 	return &MockEventClient{
 		handlers: make(map[string]func(*ebifrost.EventNotification)),
 	}
+}
+
+// MockThorchainBridge2 implements a broader set of ThorchainBridge methods for observer tests
+type MockThorchainBridge2 struct {
+	thorclient.ThorchainBridge
+	nodeStatus   stypes.NodeStatus
+	activeNodes  common.PubKeys
+	getMimirFunc func(key string) (int64, error)
+}
+
+func (m *MockThorchainBridge2) FetchNodeStatus() (stypes.NodeStatus, error) {
+	return m.nodeStatus, nil
+}
+
+func (m *MockThorchainBridge2) FetchActiveNodes() ([]common.PubKey, error) {
+	return m.activeNodes, nil
+}
+
+func (m *MockThorchainBridge2) GetMimir(key string) (int64, error) {
+	if m.getMimirFunc != nil {
+		return m.getMimirFunc(key)
+	}
+	return 0, nil
+}
+
+func (m *MockThorchainBridge2) GetKeysignParty(pubKey common.PubKey) (common.PubKeys, error) {
+	return nil, nil
 }
 
 // Define a custom pipe that implements the stream interface

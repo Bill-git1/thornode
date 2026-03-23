@@ -163,17 +163,10 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 			}
 		}))
 
-	var err error
-	s.metrics, err = metrics.NewMetrics(config.BifrostMetricsConfiguration{
-		Enabled:      false,
-		ListenPort:   9000,
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Second,
-		Chains:       common.Chains{common.AVAXChain},
-	})
+	s.metrics = getSharedTestMetrics()
 	c.Assert(s.metrics, NotNil)
-	c.Assert(err, IsNil)
 
+	var err error
 	cfg := config.BifrostClientConfiguration{
 		ChainID:      "thorchain",
 		ChainHost:    server.Listener.Addr().String(),
