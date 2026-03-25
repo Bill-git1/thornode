@@ -236,23 +236,22 @@ func (s *AddressSuite) TestAddress(c *C) {
 			Chain:   NOBLEChain,
 			Network: CurrentChainNetwork,
 		},
-		// - ZEC ---
 		{
 			Address: "t1bgJzZzNhbXEgFcRo9XmJHdLadhEAbzFbh",
 			Chain:   ZECChain,
-			Network: MainNet,
+			Network: notMockNet,
 			Info:    "p2pkh address",
 		},
 		{
 			Address: "t3cNKv7UpFVqcmRJrvFCMiuzGj9ywpKtDP5",
 			Chain:   ZECChain,
-			Network: MainNet,
+			Network: notMockNet,
 			Info:    "p2sh address",
 		},
 		{
 			Address: "tex1cd8heyc2v8fwe7q78m88x7q9zs2fu82cth96vn",
 			Chain:   ZECChain,
-			Network: MainNet,
+			Network: notMockNet,
 			Info:    "tex address",
 		},
 		{

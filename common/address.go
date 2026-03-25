@@ -450,7 +450,7 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 			if strings.HasPrefix(addr.String(), prefix) {
 				switch prefix {
 				case "t1", "t3", "tex1":
-					return MainNet
+					return mainNetPredicate()
 				case "t2", "tm", "textest1":
 					return MockNet
 				}
