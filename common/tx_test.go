@@ -38,6 +38,16 @@ func (s TxSuite) TestTxID(c *C) {
 			IsValid: true,
 			ToUpper: true,
 		}, {
+			// SOL (87 chars, base58 is case-sensitive so must NOT be uppercased)
+			Id:      "28BRBs5NKV2BaGkKcCxX7PorxbLtiZyGmDP3zt9ChsJaNGS51Eqop8JGKSMh66R93YFXYfec7yp5mHfxnqqo1WtE",
+			IsValid: true,
+			ToUpper: false,
+		}, {
+			// SOL (88 chars)
+			Id:      "5VERv8NMHYqQsM5Cg9J2kDfqyJzHmo6YNXRNh1JFhWaBa1ZNK5e2FtJCA7m1AimKs4Gbno3LnFruJHcxHBxhRFqR",
+			IsValid: true,
+			ToUpper: false,
+		}, {
 			// Bogus
 			Id:      "bogus",
 			IsValid: false,

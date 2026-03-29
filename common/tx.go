@@ -48,7 +48,8 @@ func NewTxID(hash string) (TxID, error) {
 			return TxID(""), err
 		}
 	case 87, 88:
-		// SOL transaction hash, do nothing
+		// SOL transaction hash, base58 is case-sensitive so do not uppercase
+		return TxID(hash), nil
 	default:
 		err := fmt.Errorf("txid error: must be 64 characters (got %d)", len(hash))
 		return TxID(""), err
