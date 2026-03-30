@@ -8,6 +8,8 @@ import (
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/solana/rpc"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 const (
@@ -43,6 +45,7 @@ func makeMemoData(memo string) string {
 
 func newTestScanner() *SOLScanner {
 	return &SOLScanner{
+		cfg:    config.BifrostBlockScannerConfiguration{ChainID: common.SOLChain},
 		logger: log.Logger.With().Str("module", "test").Logger(),
 	}
 }
@@ -242,6 +245,73 @@ func (s *GetTxInItemSuite) TestZeroAmountTransfer(c *C) {
 
 	item := scanner.getTxInItem(txn, 100)
 	c.Assert(item, IsNil)
+}
+
+// TestSubDustTransferRejected verifies that transfers below the SOL dust threshold
+// are ignored and not emitted as observations.
+func (s *GetTxInItemSuite) TestSubDustTransferRejected(c *C) {
+	scanner := newTestScanner()
+
+	subDustLamports := uint64(999_999) // 99_999 in THORChain precision, below the 100_000 dust threshold
+
+	txn := &rpc.TransactionResult{
+		Slot: 100,
+		Meta: rpc.RPCMeta{
+			Fee:          5000,
+			PreBalances:  []uint64{10_000_000_000, 50_000_000_000, 1},
+			PostBalances: []uint64{10_000_000_000 - subDustLamports - 5000, 50_000_000_000 + subDustLamports, 1},
+		},
+		Transaction: rpc.RPCTxnData{
+			Signatures: []string{testTxSig},
+			Message: rpc.RPCMessage{
+				AccountKeys: []string{testSender, testVault, testSystemProgram},
+				Instructions: []rpc.RPCInstruction{
+					{
+						ProgramIdIndex: 2,
+						Accounts:       []int{0, 1},
+						Data:           makeTransferData(subDustLamports),
+					},
+				},
+			},
+		},
+	}
+
+	item := scanner.getTxInItem(txn, 100)
+	c.Assert(item, IsNil)
+}
+
+// TestDustThresholdTransferAccepted verifies that a transfer exactly at the
+// SOL dust threshold is still accepted.
+func (s *GetTxInItemSuite) TestDustThresholdTransferAccepted(c *C) {
+	scanner := newTestScanner()
+
+	dustLamports := uint64(1_000_000) // 100_000 in THORChain precision, exactly the dust threshold
+
+	txn := &rpc.TransactionResult{
+		Slot: 100,
+		Meta: rpc.RPCMeta{
+			Fee:          5000,
+			PreBalances:  []uint64{10_000_000_000, 50_000_000_000, 1},
+			PostBalances: []uint64{10_000_000_000 - dustLamports - 5000, 50_000_000_000 + dustLamports, 1},
+		},
+		Transaction: rpc.RPCTxnData{
+			Signatures: []string{testTxSig},
+			Message: rpc.RPCMessage{
+				AccountKeys: []string{testSender, testVault, testSystemProgram},
+				Instructions: []rpc.RPCInstruction{
+					{
+						ProgramIdIndex: 2,
+						Accounts:       []int{0, 1},
+						Data:           makeTransferData(dustLamports),
+					},
+				},
+			},
+		},
+	}
+
+	item := scanner.getTxInItem(txn, 100)
+	c.Assert(item, NotNil)
+	c.Assert(item.Coins[0].Amount.Equal(common.SOLChain.DustThreshold()), Equals, true)
 }
 
 // TestShortInstructionData verifies that a Transfer instruction with data shorter

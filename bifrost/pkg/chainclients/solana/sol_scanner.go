@@ -805,7 +805,17 @@ func (s *SOLScanner) getTxInItem(txn *rpc.TransactionResult, blockHeight int64) 
 		return nil
 	}
 
-	solCoin := common.NewCoin(common.SOLAsset, convertLamportsToTHORChain(amountMoved))
+	solAmount := convertLamportsToTHORChain(amountMoved)
+	if solAmount.LT(s.cfg.ChainID.DustThreshold()) {
+		s.logger.Debug().
+			Str("txID", txn.Transaction.Signatures[0]).
+			Str("amount", solAmount.String()).
+			Str("dustThreshold", s.cfg.ChainID.DustThreshold().String()).
+			Msg("Transfer amount below dust threshold")
+		return nil
+	}
+
+	solCoin := common.NewCoin(common.SOLAsset, solAmount)
 	gasCoin := common.NewCoin(common.SOLAsset, convertLamportsToTHORChain(fee))
 	solCoin.Decimals = 9
 	gasCoin.Decimals = 9
