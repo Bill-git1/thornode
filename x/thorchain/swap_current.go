@@ -81,12 +81,13 @@ func (s *SwapperImpl) Swap(ctx cosmos.Context,
 	}
 
 	isDoubleSwap := !source.IsRune() && !target.IsRune()
+	stableSwap := isDoubleSwap && isStableToStable(ctx, keeper, source, target)
 	if isDoubleSwap {
 		var swapErr error
 		var swapEvt *EventSwap
 		var amt cosmos.Uint
 		// Here we use a swapTarget of 0 because the target is for the next swap asset in a double swap
-		amt, swapEvt, swapErr = s.swapOne(ctx, mgr, tx, common.RuneAsset(), destination, cosmos.ZeroUint(), synthVirtualDepthMult)
+		amt, swapEvt, swapErr = s.swapOne(ctx, mgr, tx, common.RuneAsset(), destination, cosmos.ZeroUint(), synthVirtualDepthMult, stableSwap)
 		if swapErr != nil {
 			return cosmos.ZeroUint(), swapEvents, swapErr
 		}
@@ -94,7 +95,7 @@ func (s *SwapperImpl) Swap(ctx cosmos.Context,
 		tx.Gas = nil
 		swapEvents = append(swapEvents, swapEvt)
 	}
-	assetAmount, swapEvt, swapErr := s.swapOne(ctx, mgr, tx, target, destination, swapTarget, synthVirtualDepthMult)
+	assetAmount, swapEvt, swapErr := s.swapOne(ctx, mgr, tx, target, destination, swapTarget, synthVirtualDepthMult, stableSwap)
 	if swapErr != nil {
 		return cosmos.ZeroUint(), swapEvents, swapErr
 	}
@@ -217,6 +218,7 @@ func (s *SwapperImpl) swapOne(ctx cosmos.Context,
 	destination common.Address,
 	swapTarget cosmos.Uint,
 	synthVirtualDepthMult int64,
+	stableOverride bool,
 ) (amt cosmos.Uint, evt *EventSwap, swapErr error) {
 	tradeAccountsEnabled := mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
 	tradeAccountsDepositEnabled := mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsDepositEnabled)
@@ -340,7 +342,7 @@ func (s *SwapperImpl) swapOne(ctx cosmos.Context,
 	swapEvt.PoolSlip = swapSlipBps
 
 	// the non-RUNE asset is used to determine which min slip to use
-	minSlipBps := getMinSlipBps(ctx, mgr.Keeper(), minSlipAsset)
+	minSlipBps := getMinSlipBps(ctx, mgr.Keeper(), minSlipAsset, stableOverride)
 
 	var (
 		emitAssets   cosmos.Uint

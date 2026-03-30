@@ -1615,3 +1615,82 @@ func (s *HelperSuite) TestGetMaxSwapQuantityRapidInterval(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(quantity, Equals, uint64(14400), Commentf("rapid interval should respect max length cap"))
 }
+
+func (s *HelperSuite) TestIsStableToStable(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+
+	busd, _ := common.NewAsset("ETH.BUSD-BD1")
+	usdc, _ := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+
+	// Set up pools
+	for _, asset := range []common.Asset{busd, usdc} {
+		pool := NewPool()
+		pool.Asset = asset
+		pool.Status = PoolAvailable
+		pool.BalanceRune = cosmos.NewUint(1000 * common.One)
+		pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+		pool.Decimals = 8
+		c.Assert(k.SetPool(ctx, pool), IsNil)
+	}
+
+	// No anchors configured — should return false
+	c.Assert(isStableToStable(ctx, k, busd, usdc), Equals, false)
+
+	// Enable both as TOR anchors
+	k.SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1)
+	k.SetMimir(ctx, "TorAnchor-ETH-USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48", 1)
+
+	// Both are anchors — should return true
+	c.Assert(isStableToStable(ctx, k, busd, usdc), Equals, true)
+
+	// One stable, one non-stable — should return false
+	c.Assert(isStableToStable(ctx, k, busd, common.BTCAsset), Equals, false)
+	c.Assert(isStableToStable(ctx, k, common.ETHAsset, usdc), Equals, false)
+
+	// RUNE to stable — should return false
+	c.Assert(isStableToStable(ctx, k, common.RuneAsset(), usdc), Equals, false)
+
+	// Synth stablecoin should also match via GetLayer1Asset
+	synthBusd, _ := common.NewAsset("ETH/BUSD-BD1")
+	synthUsdc, _ := common.NewAsset("ETH/USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	c.Assert(isStableToStable(ctx, k, synthBusd, synthUsdc), Equals, true)
+}
+
+func (s *HelperSuite) TestGetMinSlipBpsStableOverride(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+
+	busd, _ := common.NewAsset("ETH.BUSD-BD1")
+
+	// Set up pool
+	pool := NewPool()
+	pool.Asset = busd
+	pool.Status = PoolAvailable
+	pool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.Decimals = 8
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	// Set L1SlipMinBps to 10
+	k.SetMimir(ctx, "L1SlipMinBps", 10)
+
+	// Without stable override, should return L1 min bps
+	result := getMinSlipBps(ctx, k, busd, false)
+	c.Assert(result.Uint64(), Equals, uint64(10))
+
+	// With stable override but StableSlipMinBps=0, should fall through to L1
+	result = getMinSlipBps(ctx, k, busd, true)
+	c.Assert(result.Uint64(), Equals, uint64(10))
+
+	// Set StableSlipMinBps to 3
+	k.SetMimir(ctx, "StableSlipMinBps", 3)
+
+	// With stable override and non-zero StableSlipMinBps, should return stable value
+	result = getMinSlipBps(ctx, k, busd, true)
+	c.Assert(result.Uint64(), Equals, uint64(3))
+
+	// Without stable override, should still return L1 value
+	result = getMinSlipBps(ctx, k, busd, false)
+	c.Assert(result.Uint64(), Equals, uint64(10))
+}

@@ -184,6 +184,7 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 
 	// collect pools involved in this swap
 	minSwapSize := cosmos.ZeroUint()
+	stableSwap := isStableToStable(ctx, mgr.Keeper(), sourceAsset, targetAsset)
 	var sourceAssetPool types.Pool
 	for i, asset := range []common.Asset{sourceAsset, targetAsset} {
 		if asset.IsRune() {
@@ -203,7 +204,7 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 		}
 
 		// get the configured min slip for this asset
-		minSlip := getMinSlipBps(ctx, mgr.Keeper(), asset)
+		minSlip := getMinSlipBps(ctx, mgr.Keeper(), asset, stableSwap)
 		if minSlip.IsZero() {
 			continue
 		}
@@ -275,12 +276,39 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 	return maxSwapQuantity.Uint64(), nil
 }
 
+// isStableToStable returns true if both source and target L1 assets are TOR anchors (stablecoins).
+func isStableToStable(ctx cosmos.Context, k keeper.Keeper, source, target common.Asset) bool {
+	anchors := k.GetAnchors(ctx, common.TOR)
+	if len(anchors) == 0 {
+		return false
+	}
+	sourceL1 := source.GetLayer1Asset()
+	targetL1 := target.GetLayer1Asset()
+	var sourceIsAnchor, targetIsAnchor bool
+	for _, anchor := range anchors {
+		if anchor.Equals(sourceL1) {
+			sourceIsAnchor = true
+		}
+		if anchor.Equals(targetL1) {
+			targetIsAnchor = true
+		}
+	}
+	return sourceIsAnchor && targetIsAnchor
+}
+
 // getMinSlipBps returns artificial slip floor, expressed in basis points (10000).
 func getMinSlipBps(
 	ctx cosmos.Context,
 	k keeper.Keeper,
 	asset common.Asset,
+	stableOverride bool,
 ) cosmos.Uint {
+	if stableOverride {
+		stableBps := k.GetConfigInt64(ctx, constants.StableSlipMinBps)
+		if stableBps > 0 {
+			return cosmos.SafeUintFromInt64(stableBps)
+		}
+	}
 	var ref constants.ConstantName
 	switch {
 	case asset.IsSyntheticAsset():

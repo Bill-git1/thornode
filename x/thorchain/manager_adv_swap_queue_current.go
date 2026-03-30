@@ -433,6 +433,7 @@ func (vm *SwapQueueAdv) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools) {
 func (vm *SwapQueueAdv) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, msg MsgSwap) (uint64, error) {
 	// collect pools involved in this swap
 	minSwapSize := cosmos.ZeroUint()
+	stableSwap := isStableToStable(ctx, vm.k, sourceAsset, targetAsset)
 	var sourceAssetPool types.Pool
 	for i, asset := range []common.Asset{sourceAsset, targetAsset} {
 		if asset.IsRune() {
@@ -452,7 +453,7 @@ func (vm *SwapQueueAdv) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sour
 		}
 
 		// get the configured min slip for this asset
-		minSlip := getMinSlipBps(ctx, vm.k, asset)
+		minSlip := getMinSlipBps(ctx, vm.k, asset, stableSwap)
 		if minSlip.IsZero() {
 			continue
 		}

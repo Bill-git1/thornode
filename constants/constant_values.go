@@ -127,6 +127,7 @@ const (
 	TradeAccountsEnabled
 	TradeAccountsDepositEnabled
 	SecuredAssetSlipMinBps
+	StableSlipMinBps
 	EVMDisableContractWhitelist
 	OperationalVotesMin
 	RUNEPoolEnabled
