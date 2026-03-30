@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	bchtxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/bchd-txscript"
 	dogetxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/dogd-txscript"
@@ -346,6 +347,18 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 		feeRateSats = c.cfg.UTXO.DefaultMinRelayFeeSats
 	}
 
+	transactionSize := c.cfg.UTXO.EstimatedAverageTxSize
+
+	if c.GetChain() == common.ZECChain {
+		// Report static 'worst case' scenario with the maximum possible
+		// amounts of inputs and max memo size of 80 chars, which counts as
+		// 5 actions and will likely always be lower that max inputs.
+		tx := wire.MsgTx{TxIn: make([]*wire.TxIn, c.getMaximumUtxosToSpend()-1)}
+		memo := strings.Repeat("X", 80)
+		feeRateSats = c.getGasCoinZEC(&tx, memo).Amount.Uint64()
+		transactionSize = 1
+	}
+
 	// round to prevent fee observation noise
 	resolution := uint64(c.cfg.BlockScanner.GasPriceResolution)
 	feeRateSats = ((feeRateSats / resolution) + 1) * resolution
@@ -370,7 +383,7 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 	c.globalNetworkFeeQueue <- common.NetworkFee{
 		Chain:           c.cfg.ChainID,
 		Height:          height,
-		TransactionSize: c.cfg.UTXO.EstimatedAverageTxSize,
+		TransactionSize: transactionSize,
 		TransactionRate: feeRateSats,
 	}
 

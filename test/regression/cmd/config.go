@@ -303,11 +303,34 @@ func init() {
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to get address")
 			}
-			lowerChain := strings.ToLower(chain.String())
-			templateAddress[fmt.Sprintf("addr_%s_%s", lowerChain, name)] = addr.String()
 
-			// register address to name
-			addressToName[addr.String()] = name
+			token := strings.ToLower(
+				fmt.Sprintf("addr_%s_%s", chain.String(), name),
+			)
+
+			addresses := map[string]string{
+				token: addr.String(),
+			}
+
+			// add special addresses
+			if chain == common.ZECChain {
+				var texAddr common.Address
+				texAddr, err = addr.ToTexAddress()
+				if err != nil {
+					log.Warn().Err(err).
+						Str("address", addr.String()).
+						Msg("failed to convert to tex address")
+				}
+
+				addresses[token+"_tex"] = texAddr.String()
+			}
+
+			for k, v := range addresses {
+				// register key to address (eg. addr_btc_dog)
+				templateAddress[k] = v
+				// register address to name
+				addressToName[v] = name
+			}
 
 			// register pubkey for thorchain
 			if chain == common.THORChain {

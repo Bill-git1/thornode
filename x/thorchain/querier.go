@@ -604,10 +604,18 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 			return nil, fmt.Errorf("fail to get pubkey for chain: %w", err)
 		}
 
+		address := vaultAddress
+		if chain == common.ZECChain {
+			address, err = address.ToTexAddress()
+			if err != nil {
+				ctx.Logger().Error("fail convert address", "chain", chain.String(), "error", err)
+			}
+		}
+
 		addr := types.QueryInboundAddressResponse{
 			Chain:                chain.String(),
 			PubKey:               pubKey.String(),
-			Address:              vaultAddress.String(),
+			Address:              address.String(),
 			Router:               cc.Router.String(),
 			Halted:               isGlobalTradingPaused || isChainTradingPaused,
 			GlobalTradingPaused:  isGlobalTradingPaused,
