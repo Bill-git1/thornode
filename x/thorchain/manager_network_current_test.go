@@ -1784,6 +1784,344 @@ func (s *NetworkManagerTestSuite) TestCalculateNetworkSolvencyWithStreamingSwaps
 		Commentf("Streaming swap with no progress should deduct full amount, expected 25, got %s", solvency[0].Amount))
 }
 
+func (s *NetworkManagerTestSuite) TestSolvencyStreamingSwapTargetOutput(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create ETH and BTC pools
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(80 * common.One) // Pool already emitted 20 BTC to streaming swap output
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	// Create an active vault
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(150*common.One)),
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Create a V2 streaming swap ETH -> BTC with accumulated output
+	streamingTxID := GetRandomTxHash()
+	streamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    streamingTxID,
+			Chain: common.ETHChain,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))}, // 50 ETH deposit
+		},
+		TargetAsset: common.BTCAsset,
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 10,
+			Count:    6,
+			Interval: 5,
+			Deposit:  cosmos.NewUint(50 * common.One),
+			In:       cosmos.NewUint(30 * common.One), // 30 ETH processed
+			Out:      cosmos.NewUint(20 * common.One), // 20 BTC emitted from pool
+		},
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, streamingSwapMsg), IsNil)
+
+	// No legacy SetStreamingSwap here — this test must exercise the V2 msg.State path only.
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 2)
+
+	// Find ETH and BTC solvency
+	var ethSolvency, btcSolvency math.Int
+	for _, s := range solvency {
+		if s.Asset.Equals(common.ETHAsset) {
+			ethSolvency = s.Amount
+		}
+		if s.Asset.Equals(common.BTCAsset) {
+			btcSolvency = s.Amount
+		}
+	}
+
+	// ETH: Vault 150 - Pool 100 - SwapQueueRemaining 20 = 30
+	c.Assert(ethSolvency.Equal(math.NewInt(30*common.One)), Equals, true,
+		Commentf("ETH solvency: expected 30, got %s", ethSolvency))
+
+	// BTC: Vault 100 - Pool 80 - StreamingOutput 20 = 0
+	// Without the fix, it would be: Vault 100 - Pool 80 = 20 (incorrect over-solvency)
+	c.Assert(btcSolvency.Equal(math.NewInt(0)), Equals, true,
+		Commentf("BTC solvency: expected 0 (streaming output subtracted), got %s", btcSolvency))
+}
+
+// TestSolvencyStreamingSwapTargetOutputFromNativeSource reproduces the case
+// where a V2 streaming swap starts from native RUNE and emits external-chain
+// target assets. The current implementation skips queue processing too early
+// for native sources, so the emitted target liability is not deducted.
+func (s *NetworkManagerTestSuite) TestSolvencyStreamingSwapTargetOutputFromNativeSource(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// The BTC pool has already emitted 20 BTC to the in-flight stream, but the
+	// vault still holds the coins because settleSwap has not created an outbound yet.
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(80 * common.One) // Pool already emitted 20 BTC
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Intentionally rely on inline msg.State only. This exercises the V2 path the
+	// MR 4640 changed, without falling back to the legacy streaming swap record.
+	streamingTxID := GetRandomTxHash()
+	streamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    streamingTxID,
+			Chain: common.THORChain,
+			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(50*common.One))},
+		},
+		TargetAsset: common.BTCAsset,
+		SwapType:    types.SwapType_market,
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 10,
+			Count:    6,
+			Interval: 5,
+			Deposit:  cosmos.NewUint(50 * common.One),
+			In:       cosmos.NewUint(30 * common.One),
+			Out:      cosmos.NewUint(20 * common.One),
+		},
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, streamingSwapMsg), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+	c.Assert(solvency[0].Asset.Equals(common.BTCAsset), Equals, true)
+
+	// BTC: Vault 100 - Pool 80 - StreamingOutput 20 = 0
+	c.Assert(solvency[0].Amount.Equal(math.ZeroInt()), Equals, true,
+		Commentf("BTC solvency: expected 0 when native-source streaming output is deducted, got %s", solvency[0].Amount))
+}
+
+// TestSolvencyStreamingSwapTargetSynthOutput reproduces the case where a
+// streaming swap target is synth. Synth output should not create an external
+// Layer1 liability, because the swap path mints synths without reducing the L1
+// pool asset depth.
+func (s *NetworkManagerTestSuite) TestSolvencyStreamingSwapTargetSynthOutput(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Keep the BTC pool unchanged: synth output should not reduce L1 BTC depth.
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One) // Synth output should not reduce this
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(150*common.One)),
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Again, rely on inline msg.State only so this test covers the new V2
+	// streaming solvency accounting path directly.
+	streamingTxID := GetRandomTxHash()
+	streamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    streamingTxID,
+			Chain: common.ETHChain,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
+		},
+		TargetAsset: common.BTCAsset.GetSyntheticAsset(),
+		SwapType:    types.SwapType_market,
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 10,
+			Count:    6,
+			Interval: 5,
+			Deposit:  cosmos.NewUint(50 * common.One),
+			In:       cosmos.NewUint(30 * common.One),
+			Out:      cosmos.NewUint(20 * common.One),
+		},
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, streamingSwapMsg), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 2)
+
+	var ethSolvency, btcSolvency math.Int
+	for _, s := range solvency {
+		if s.Asset.Equals(common.ETHAsset) {
+			ethSolvency = s.Amount
+		}
+		if s.Asset.Equals(common.BTCAsset) {
+			btcSolvency = s.Amount
+		}
+	}
+
+	// ETH: Vault 150 - Pool 100 - SwapQueueRemaining 20 = 30
+	c.Assert(ethSolvency.Equal(math.NewInt(30*common.One)), Equals, true,
+		Commentf("ETH solvency: expected 30, got %s", ethSolvency))
+
+	// BTC synth output should not create an L1 BTC liability.
+	c.Assert(btcSolvency.Equal(math.ZeroInt()), Equals, true,
+		Commentf("BTC solvency: expected 0 when synth output is ignored for L1 solvency, got %s", btcSolvency))
+}
+
+// TestSolvencyStreamingSwapNativeSourceTargetOutput verifies that RUNE -> L1 streaming swaps
+// still subtract accumulated target output even though the source asset (RUNE) is native.
+func (s *NetworkManagerTestSuite) TestSolvencyStreamingSwapNativeSourceTargetOutput(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: BTC pool where BalanceAsset is already reduced by streaming swap output
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(80 * common.One) // Pool emitted 20 BTC
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	// Vault holds 100 BTC
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// V2 streaming swap: RUNE -> BTC (native source, L1 target)
+	streamingTxID := GetRandomTxHash()
+	streamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    streamingTxID,
+			Chain: common.THORChain,
+			Coins: common.Coins{common.NewCoin(common.RuneNative, cosmos.NewUint(50*common.One))},
+		},
+		TargetAsset: common.BTCAsset,
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 10,
+			Count:    6,
+			Interval: 5,
+			Deposit:  cosmos.NewUint(50 * common.One),
+			In:       cosmos.NewUint(30 * common.One),
+			Out:      cosmos.NewUint(20 * common.One), // 20 BTC emitted
+		},
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, streamingSwapMsg), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	var btcSolvency math.Int
+	for _, s := range solvency {
+		if s.Asset.Equals(common.BTCAsset) {
+			btcSolvency = s.Amount
+		}
+	}
+
+	// BTC: Vault 100 - Pool 80 - StreamingOutput 20 = 0
+	// Without the fix, the native-source continue skips target output accounting,
+	// yielding: Vault 100 - Pool 80 = 20 (incorrectly over-solvent)
+	c.Assert(btcSolvency.Equal(math.NewInt(0)), Equals, true,
+		Commentf("BTC solvency: expected 0 (RUNE->BTC streaming output subtracted), got %s", btcSolvency))
+}
+
+// TestSolvencyStreamingSwapSynthTargetNotSubtracted verifies that streaming swaps targeting
+// synth/trade/secured assets do NOT subtract output from L1 solvency, because those assets
+// are minted without reducing pool.BalanceAsset.
+func (s *NetworkManagerTestSuite) TestSolvencyStreamingSwapSynthTargetNotSubtracted(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: BTC pool with full balance (no L1 assets emitted)
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	// Vault holds 100 BTC
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// V2 streaming swap: RUNE -> BTC/BTC (synth target)
+	// Synth minting does NOT reduce pool.BalanceAsset, so output should NOT be subtracted.
+	synthTarget := common.BTCAsset.GetSyntheticAsset()
+	streamingTxID := GetRandomTxHash()
+	streamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    streamingTxID,
+			Chain: common.THORChain,
+			Coins: common.Coins{common.NewCoin(common.RuneNative, cosmos.NewUint(50*common.One))},
+		},
+		TargetAsset: synthTarget,
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 10,
+			Count:    6,
+			Interval: 5,
+			Deposit:  cosmos.NewUint(50 * common.One),
+			In:       cosmos.NewUint(30 * common.One),
+			Out:      cosmos.NewUint(20 * common.One), // 20 synth BTC minted (not L1)
+		},
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, streamingSwapMsg), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	var btcSolvency math.Int
+	for _, s := range solvency {
+		if s.Asset.Equals(common.BTCAsset) {
+			btcSolvency = s.Amount
+		}
+	}
+
+	// BTC: Vault 100 - Pool 100 = 0
+	// The synth streaming output (20) must NOT be subtracted from L1 solvency.
+	// Without the fix, it would be: Vault 100 - Pool 100 - SynthOutput 20 = -20 (incorrectly under-solvent)
+	c.Assert(btcSolvency.Equal(math.NewInt(0)), Equals, true,
+		Commentf("BTC solvency: expected 0 (synth output NOT subtracted), got %s", btcSolvency))
+}
+
 func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvency(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
@@ -1986,6 +2324,80 @@ func (s *NetworkManagerTestSuite) TestSolvencyWithScheduledOutbounds(c *C) {
 	c.Assert(solvency[0].Amount.Equal(expectedSolvency), Equals, true)
 }
 
+func (s *NetworkManagerTestSuite) TestSolvencyWithPendingOutboundsAtPastHeight(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// Setup: Create a pool
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Create vault with funds
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Add a pending outbound at a PAST block height (OutHash empty - not yet signed).
+	// This simulates an outbound that was scheduled a few blocks ago but Bifrost
+	// hasn't signed it yet. The solvency calc should still deduct it.
+	pastHeight := ctx.BlockHeight() - 5
+	if pastHeight < 1 {
+		pastHeight = 1
+	}
+	txOut := &TxOut{
+		Height: pastHeight,
+		TxArray: []TxOutItem{
+			{
+				Chain:       common.BTCChain,
+				Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(20*common.One)),
+				ToAddress:   GetRandomBTCAddress(),
+				VaultPubKey: vault.PubKey,
+				// OutHash is empty - not yet signed
+			},
+		},
+	}
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	// Calculate solvency - should account for pending outbound at past height
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+
+	// Vault has 150, pool needs 100, pending outbound 20
+	// Expected: 150 - 100 - 20 = 30 over-solvent
+	expectedSolvency := math.NewInt(30 * common.One)
+	c.Assert(solvency[0].Amount.Equal(expectedSolvency), Equals, true,
+		Commentf("expected %s, got %s", expectedSolvency.String(), solvency[0].Amount.String()))
+
+	// Now simulate the outbound being signed (OutHash set).
+	// When OutHash is set, vault.SubFunds has already been called in the same block,
+	// so the item should NOT be deducted anymore.
+	txOut.TxArray[0].OutHash = GetRandomTxHash()
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	// Also decrement vault coins (as vault.SubFunds would do on observation)
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(130*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Calculate solvency again - should still be 30 (130 - 100 = 30)
+	// The signed outbound should be skipped, and vault coins already reflect the send
+	solvency2, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency2), Equals, 1)
+	c.Assert(solvency2[0].Amount.Equal(expectedSolvency), Equals, true,
+		Commentf("expected %s, got %s", expectedSolvency.String(), solvency2[0].Amount.String()))
+}
+
 func (s *NetworkManagerTestSuite) TestSolvencyWithTradeAndSecuredAssets(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
@@ -2029,7 +2441,7 @@ func (s *NetworkManagerTestSuite) TestSolvencyWithTradeAndSecuredAssets(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(len(solvency2), Equals, 1)
 
-	// Vault 150 - Pool 100 - TradeUnits 10 = 40 over-solvent
+	// Vault 150 - Pool 100 - TradeDepth 10 = 40 over-solvent
 	expected = math.NewInt(40 * common.One)
 	c.Assert(solvency2[0].Amount.Equal(expected), Equals, true)
 
@@ -2051,7 +2463,7 @@ func (s *NetworkManagerTestSuite) TestSolvencyWithTradeAndSecuredAssets(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(len(solvency3), Equals, 1)
 
-	// Vault 150 - Pool 100 - TradeUnits 10 - SecuredSupply 15 = 25 over-solvent
+	// Vault 150 - Pool 100 - TradeDepth 10 - SecuredDepth 15 = 25 over-solvent
 	expected = math.NewInt(25 * common.One)
 	c.Assert(solvency3[0].Amount.Equal(expected), Equals, true)
 }

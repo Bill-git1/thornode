@@ -2312,7 +2312,25 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 		// Subtract the source asset coin from the calculation
 		if !msg.Tx.Coins.IsEmpty() {
 			coin := msg.Tx.Coins[0]
-			// Skip native assets
+
+			// For streaming swaps, subtract accumulated output from the TARGET asset
+			// regardless of the source asset. The pool has already emitted these assets
+			// (reducing pool.BalanceAsset), but no outbound exists until settleSwap runs.
+			// Skip synth/trade/secured targets: those are minted without reducing L1 pool balance.
+			if msg.IsLegacyStreaming() && !msg.TargetAsset.IsSyntheticAsset() && !msg.TargetAsset.IsTradeAsset() && !msg.TargetAsset.IsSecuredAsset() {
+				swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
+				if err == nil && swp.TxID.Equals(msg.Tx.ID) {
+					targetAsset := msg.TargetAsset.GetLayer1Asset()
+					if !targetAsset.IsNative() && !swp.Out.IsZero() {
+						if _, ok := assetAmounts[targetAsset]; ok {
+							outAmount := math.NewIntFromBigInt(swp.Out.BigInt())
+							assetAmounts[targetAsset] = assetAmounts[targetAsset].Sub(outAmount)
+						}
+					}
+				}
+			}
+
+			// Skip native source assets (no L1 balance to track)
 			if coin.Asset.IsNative() {
 				continue
 			}
@@ -2346,7 +2364,31 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 		// Subtract the source asset coin from the calculation
 		if !msg.Tx.Coins.IsEmpty() {
 			coin := msg.Tx.Coins[0]
-			// Skip native assets
+
+			// For streaming swaps, subtract accumulated output from the TARGET asset
+			// regardless of the source asset. The pool has already emitted these assets
+			// (reducing pool.BalanceAsset), but no outbound exists until settleSwap runs.
+			// Skip synth/trade/secured targets: those are minted without reducing L1 pool balance.
+			if msg.IsStreaming() && !msg.TargetAsset.IsSyntheticAsset() && !msg.TargetAsset.IsTradeAsset() && !msg.TargetAsset.IsSecuredAsset() {
+				stateOut := msg.State.Out
+				if msg.State.Deposit.IsZero() {
+					swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
+					if err == nil && swp.TxID.Equals(msg.Tx.ID) {
+						stateOut = swp.Out
+					}
+				}
+				if !stateOut.IsZero() {
+					targetAsset := msg.TargetAsset.GetLayer1Asset()
+					if !targetAsset.IsNative() {
+						if _, ok := assetAmounts[targetAsset]; ok {
+							outAmount := math.NewIntFromBigInt(stateOut.BigInt())
+							assetAmounts[targetAsset] = assetAmounts[targetAsset].Sub(outAmount)
+						}
+					}
+				}
+			}
+
+			// Skip native source assets (no L1 balance to track)
 			if coin.Asset.IsNative() {
 				continue
 			}
@@ -2357,10 +2399,20 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 			// For streaming swaps, only deduct the remaining (unprocessed) amount
 			// to avoid double-counting with pool balance which already includes processed amounts
 			if msg.IsStreaming() {
-				swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
-				if err == nil && swp.TxID.Equals(msg.Tx.ID) {
-					// Remaining = Deposit - In (what hasn't been swapped yet)
-					remaining := common.SafeSub(swp.Deposit, swp.In)
+				stateDeposit := msg.State.Deposit
+				stateIn := msg.State.In
+
+				if stateDeposit.IsZero() {
+					swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
+					if err == nil && swp.TxID.Equals(msg.Tx.ID) {
+						stateDeposit = swp.Deposit
+						stateIn = swp.In
+					}
+				}
+
+				// Remaining = Deposit - In (what hasn't been swapped yet)
+				if !stateDeposit.IsZero() {
+					remaining := common.SafeSub(stateDeposit, stateIn)
 					coinAmount = math.NewIntFromBigInt(remaining.BigInt())
 				}
 			}
@@ -2381,24 +2433,81 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 	})
 
 	for _, asset := range assets {
-		// Check total supply of trade asset
+		// Check total supply of trade asset (use Depth, not Units, as Depth represents
+		// the actual asset amount owed to trade account holders)
 		tradeAsset := asset.GetTradeAsset()
 		tu, err := mgr.Keeper().GetTradeUnit(ctx, tradeAsset)
-		if err == nil && tu.Units.GT(math.ZeroUint()) {
-			tradeAmount := math.NewIntFromBigInt(tu.Units.BigInt())
+		if err == nil && tu.Depth.GT(math.ZeroUint()) {
+			tradeAmount := math.NewIntFromBigInt(tu.Depth.BigInt())
 			assetAmounts[asset] = assetAmounts[asset].Sub(tradeAmount)
 		}
 
-		// Check total supply of secured asset
+		// Check depth of secured asset (use Depth, not share supply, as Depth represents
+		// the actual asset amount owed to secured asset holders)
 		securedAsset := asset.GetSecuredAsset()
-		if securedSupply := mgr.Keeper().GetTotalSupply(ctx, securedAsset); securedSupply.GT(math.ZeroUint()) {
-			securedAmount := math.NewIntFromBigInt(securedSupply.BigInt())
+		securedPool, err := mgr.Keeper().GetSecuredAsset(ctx, securedAsset)
+		if err == nil && securedPool.Depth.GT(math.ZeroUint()) {
+			securedAmount := math.NewIntFromBigInt(securedPool.Depth.BigInt())
 			assetAmounts[asset] = assetAmounts[asset].Sub(securedAmount)
 		}
 	}
 
-	// Step 6: Subtract scheduled outbounds (skip inactive vaults)
-	// Get the current block height and check forward blocks for scheduled txouts
+	// Step 6: Subtract pending and scheduled outbounds (skip inactive vaults)
+
+	// Step 6a: Scan backward for pending outbounds that haven't been signed yet.
+	// Outbounds scheduled at past block heights with empty OutHash are still pending
+	// (funds committed but not yet sent). Once OutHash is set, vault coins have already
+	// been decremented in the same block, so those items should be skipped.
+	signingPeriod := vm.k.GetConfigInt64(ctx, constants.SigningTransactionPeriod)
+	startHeight := ctx.BlockHeight() - signingPeriod
+	if startHeight < 1 {
+		startHeight = 1
+	}
+	for height := startHeight; height < ctx.BlockHeight(); height++ {
+		txOut, err := vm.k.GetTxOut(ctx, height)
+		if err != nil {
+			return nil, fmt.Errorf("fail to get txout for height %d: %w", height, err)
+		}
+		for _, item := range txOut.TxArray {
+			// Only deduct items that haven't been signed yet.
+			// When OutHash is set, vault.SubFunds has already been called in the same block.
+			if !item.OutHash.IsEmpty() {
+				continue
+			}
+			// Skip outbounds from inactive vaults
+			vault, err := vm.k.GetVault(ctx, item.VaultPubKey)
+			if err != nil {
+				ctx.Logger().Error("fail to get vault for pending txout", "pubkey", item.VaultPubKey, "error", err)
+				continue
+			}
+			if vault.Status == InactiveVault {
+				continue
+			}
+			if !item.Coin.IsEmpty() {
+				if item.Coin.Asset.IsNative() {
+					continue
+				}
+				if _, ok := assetAmounts[item.Coin.Asset]; !ok {
+					return nil, fmt.Errorf("unexpected asset %s not found in tracking map (pending txout)", item.Coin.Asset)
+				}
+				itemAmount := math.NewIntFromBigInt(item.Coin.Amount.BigInt())
+				assetAmounts[item.Coin.Asset] = assetAmounts[item.Coin.Asset].Sub(itemAmount)
+			}
+			// Also subtract MaxGas - the vault will spend gas when signing this outbound,
+			// which is committed but not yet reflected in vault.Coins
+			for _, gasCoin := range item.MaxGas {
+				if gasCoin.Asset.IsNative() || gasCoin.IsEmpty() {
+					continue
+				}
+				if _, ok := assetAmounts[gasCoin.Asset]; ok {
+					gasAmount := math.NewIntFromBigInt(gasCoin.Amount.BigInt())
+					assetAmounts[gasCoin.Asset] = assetAmounts[gasCoin.Asset].Sub(gasAmount)
+				}
+			}
+		}
+	}
+
+	// Step 6b: Scan forward for scheduled outbounds (current block + future)
 	maxOffset := vm.k.GetConfigInt64(ctx, constants.MaxTxOutOffset)
 	for i := int64(0); i <= maxOffset; i++ {
 		height := ctx.BlockHeight() + i
@@ -2428,6 +2537,16 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 				}
 				itemAmount := math.NewIntFromBigInt(item.Coin.Amount.BigInt())
 				assetAmounts[item.Coin.Asset] = assetAmounts[item.Coin.Asset].Sub(itemAmount)
+			}
+			// Also subtract MaxGas for scheduled outbounds
+			for _, gasCoin := range item.MaxGas {
+				if gasCoin.Asset.IsNative() || gasCoin.IsEmpty() {
+					continue
+				}
+				if _, ok := assetAmounts[gasCoin.Asset]; ok {
+					gasAmount := math.NewIntFromBigInt(gasCoin.Amount.BigInt())
+					assetAmounts[gasCoin.Asset] = assetAmounts[gasCoin.Asset].Sub(gasAmount)
+				}
 			}
 		}
 	}
@@ -2474,13 +2593,19 @@ func (vm *NetworkMgr) processOverSolvency(ctx cosmos.Context, mgr Manager) error
 		return fmt.Errorf("failed to calculate network solvency: %w", err)
 	}
 
-	// Filter to only process assets with positive amounts (over-solvent)
-	// We can't swap assets we don't have (negative/under-solvent amounts)
+	// Filter to only process Available-pool assets with positive amounts (over-solvent).
+	// Staged pools are excluded here (not in calculateNetworkSolvency) so the
+	// /thorchain/vaults/solvency endpoint still reports staged-pool exposure.
 	overSolventAssets := make([]assetAmount, 0)
 	for _, assetAmt := range solvencyAmounts {
-		if assetAmt.Amount.IsPositive() {
-			overSolventAssets = append(overSolventAssets, assetAmt)
+		if !assetAmt.Amount.IsPositive() {
+			continue
 		}
+		pool, err := mgr.Keeper().GetPool(ctx, assetAmt.Asset)
+		if err != nil || pool.Status != PoolAvailable {
+			continue
+		}
+		overSolventAssets = append(overSolventAssets, assetAmt)
 	}
 
 	if len(overSolventAssets) == 0 {
