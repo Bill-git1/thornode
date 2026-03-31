@@ -385,8 +385,9 @@ func (c Chain) P2WPKHOutputValue() int64 {
 		// https://github.com/litecoin-project/litecoin/blob/v0.21.4/src/policy/policy.cpp#L17-L30
 		return 2940
 	case DOGEChain:
-		// using bitcoin default for p2pkh txout
-		return 546
+		// DOGE creates P2PKH scripts for memo overflow outputs and has a dustRelayFee of
+		// 1 DOGE/kB (100,000,000 koinu/kB). P2PKH dust = (34 + 148) * 100,000,000 / 1000.
+		return 18_200_000
 	case BCHChain:
 		// using bitcoin default for p2pkh txout
 		return 546
