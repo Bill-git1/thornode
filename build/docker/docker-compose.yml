@@ -491,7 +491,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-27.0.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-27.1.0
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -592,7 +592,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ${DOCKER_MIRROR:-}ethereum/client-go:v1.17.0
+    image: ${DOCKER_MIRROR:-}ethereum/client-go:v1.17.2
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -610,7 +610,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101608.0
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101609.1
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
