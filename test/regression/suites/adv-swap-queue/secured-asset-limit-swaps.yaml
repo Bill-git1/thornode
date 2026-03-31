@@ -115,7 +115,7 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 5000000
 asserts:
-  - .expected_amount_out == "41501780"
+  - .expected_amount_out == "49013580"
 ---
 # Create limit swap with target higher than current output (won't execute)
 type: tx-deposit

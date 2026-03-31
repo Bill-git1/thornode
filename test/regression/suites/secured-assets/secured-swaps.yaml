@@ -133,12 +133,12 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 5000000
 asserts:
-  - .expected_amount_out == "41501780"
+  - .expected_amount_out == "49013580"
   - .fees.outbound == "0"
-  - .fees.liquidity == "4320290"
-  - .fees.total == "4320290"
-  - .fees.slippage_bps == 942
-  - .fees.total_bps == 942
+  - .fees.liquidity == "496250"
+  - .fees.total == "496250"
+  - .fees.slippage_bps == 100
+  - .fees.total_bps == 100
 ---
 # synth swap should be equivalent, with similar outbound fee
 # (but different since Secured Asset swaps change pool Asset depths)
@@ -187,8 +187,8 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 20750890
 asserts:
-  - .expected_amount_out == "2280054"
-  - .fees.total_bps == 443
+  - .expected_amount_out == "2433824"
+  - .fees.total_bps == 112
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}

@@ -1008,12 +1008,16 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		return nil, fmt.Errorf("failed to simulate swap: %w", err)
 	}
 
+	// Quote rapid/auto streaming only when the advanced queue is enabled.
+	// In legacy mode, interval=0 is still a non-streaming swap.
+	shouldQuoteStreaming := streamingInterval > 0 || qs.mgr.Keeper().AdvSwapQueueEnabled(ctx)
+
 	// if we're using a streaming swap, calculate emit amount by a sub-swap amount instead
 	// of the full amount, then multiply the result by the swap count
-	if streamingInterval > 0 && streamingQuantity == 0 {
+	if shouldQuoteStreaming && streamingQuantity == 0 {
 		streamingQuantity = maxSwapQuantity
 	}
-	if streamingInterval > 0 && streamingQuantity > 0 {
+	if shouldQuoteStreaming && streamingQuantity > 0 {
 		msg.TradeTarget = msg.TradeTarget.QuoUint64(streamingQuantity)
 		// simulate the swap
 		var streamRes *types.QueryQuoteSwapResponse
@@ -1026,20 +1030,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		}
 		res.Fees = streamRes.Fees
 	}
-
-	// TODO: After UIs have transitioned everything below the message definition above
-	// should reduce to the following:
-	//
-	// if streamingInterval > 0 && streamingQuantity == 0 {
-	//   streamingQuantity = maxSwapQuantity
-	// }
-	// if streamingInterval > 0 && streamingQuantity > 0 {
-	//   msg.TradeTarget = msg.TradeTarget.QuoUint64(streamingQuantity)
-	// }
-	// res, emitAmount, outboundFeeAmount, err := quoteSimulateSwap(ctx, mgr, amount, msg, streamingQuantity)
-	// if err != nil {
-	//   return quoteErrorResponse(fmt.Errorf("failed to simulate swap: %w", err))
-	// }
 
 	totalAffFee := cosmos.ZeroUint()
 	// attempt each affiliate fee, skipping those that won't succeed

@@ -635,10 +635,10 @@ params:
   amount: 100000000
   destination: {{ addr_btc_fox }}
 asserts:
-  # same as last quote, just sanity check higher slippage without streaming
-  - .fees.liquidity == "1456289"
-  - .fees.slippage_bps == 1718
-  - .fees.total_bps == 1725
+  # now returns streaming-optimized values matching the streaming quote above
+  - .fees.liquidity == "99674"
+  - .fees.slippage_bps == 101
+  - .fees.total_bps == 109
 ---
 ########################################################################################
 # quote and swap a streaming swap with specified quantity and tolerance
@@ -706,12 +706,12 @@ params:
   amount: 1000000000000
   destination: {{ addr_btc_fox }}
 asserts:
-  - .fees.liquidity == "100517358"
+  - .fees.liquidity == "10974672000"
   - .fees.outbound == "7000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 9989
-  - .fees.total_bps == 9989
-  - .expected_amount_out == "94912"
+  - .fees.slippage_bps == 1244
+  - .fees.total_bps == 1244
+  - .expected_amount_out == "77198105000"
 ---
 ########################################################################################
 # from ETH - affiliate swap too low, should return 0 for affiliate fee
@@ -743,7 +743,7 @@ params:
   destination: {{ addr_eth_fox }}
 status: 200
 asserts:
-  - .fees.affiliate == "1019"
+  - .fees.affiliate == "1030"
 ---
 ########################################################################################
 # multiple affiliates - no valid affiliate fee, should return 0
@@ -759,7 +759,7 @@ params:
   destination: {{ addr_eth_fox }}
 status: 200
 asserts:
-  - .fees.affiliate == "61157"
+  - .fees.affiliate == "61778"
 ---
 ########################################################################################
 # multiple affiliates - 3 valid thornames
@@ -795,7 +795,7 @@ params:
   destination: {{ addr_eth_fox }}
 asserts:
   - .memo == "=:e:{{ addr_eth_fox }}::xx/yy/zz:100/50/40"
-  - .fees.affiliate == "193662"
+  - .fees.affiliate == "195632"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap

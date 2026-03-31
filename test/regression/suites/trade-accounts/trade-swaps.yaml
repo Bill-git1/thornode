@@ -154,12 +154,12 @@ params:
   destination: {{ addr_thor_fox }}
   amount: ${SWAP_IN=5000000}
 asserts:
-  - .expected_amount_out == "${SWAP_OUT=41501780}"
+  - .expected_amount_out == "49013580"
   - .fees.outbound == "${OUTBOUND_FEE=0}"
-  - .fees.liquidity == "${LIQFEE=4320290}"
-  - .fees.total == "${FEES_TOTAL=4320290}"
-  - .fees.slippage_bps == 942
-  - .fees.total_bps == 942
+  - .fees.liquidity == "496250"
+  - .fees.total == "496250"
+  - .fees.slippage_bps == 100
+  - .fees.total_bps == 100
 ---
 # synth swap should be nearly equivalent
 type: check
@@ -171,12 +171,9 @@ params:
   amount: ${SWAP_IN}
 asserts:
   - .fees.outbound|tonumber == ${OUTBOUND_FEE}
-  - .expected_amount_out|tonumber == ${SWAP_OUT} 
-  # This discrepancy is because a Trade Asset swap lowers the ETH.ETH BalanceAsset
-  # and thus the amount of ETH.ETH corresponding to the 0.02 RUNE native outbound fee,
-  # whereas a Synth Asset swap leaves the ETH.ETH BalanceAsset unchanged.
-  - .fees.liquidity|tonumber == ${LIQFEE} + ${LIQFEE_DISCREPANCY=-85191}
-  - .fees.total|tonumber == ${FEES_TOTAL} + ${LIQFEE_DISCREPANCY}
+  - .expected_amount_out == "41501780"
+  - .fees.liquidity == "4235099"
+  - .fees.total == "4235099"
   - .fees.slippage_bps == 925
   - .fees.total_bps == 925
 ---
@@ -200,7 +197,7 @@ asserts:
   - .[0].units == "5000000" # 0.05 BTC remaining
   - .[0].owner == "{{ addr_thor_fox }}"
   - .[1].asset == "ETH~ETH"
-  - .[1].units == "${SWAP_OUT}" # 0.41 ETH
+  - .[1].units == "${SWAP_OUT=41501780}" # 0.41 ETH
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/tx/details/{{ native_txid -1 }}
@@ -230,8 +227,8 @@ params:
   destination: {{ addr_thor_fox }}
   amount: ${SWAP_IN}
 asserts:
-  - .expected_amount_out == "2280054"
-  - .fees.total_bps == 443
+  - .expected_amount_out == "2433824"
+  - .fees.total_bps == 112
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
