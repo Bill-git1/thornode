@@ -44,12 +44,14 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	memo "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 )
 
 // SolvencyReporter is to report solvency info to THORNode
@@ -89,6 +91,7 @@ type CosmosBlockScanner struct {
 	txConfig              client.TxConfig
 	rpc                   TendermintRPC
 	bridge                thorclient.ThorchainBridge
+	pubkeyMgr             pubkeymanager.PubKeyValidator
 	solvencyReporter      SolvencyReporter
 	globalNetworkFeeQueue chan common.NetworkFee
 
@@ -108,6 +111,7 @@ func NewCosmosBlockScanner(
 	bridge thorclient.ThorchainBridge,
 	m *metrics.Metrics,
 	solvencyReporter SolvencyReporter,
+	pubkeyMgr pubkeymanager.PubKeyValidator,
 ) (*CosmosBlockScanner, error) {
 	if scanStorage == nil {
 		return nil, errors.New("scanStorage is nil")
@@ -157,6 +161,7 @@ func NewCosmosBlockScanner(
 		feeCache:         make([]sdkmath.Uint, 0),
 		lastFee:          sdkmath.NewUint(0),
 		bridge:           bridge,
+		pubkeyMgr:        pubkeyMgr,
 		solvencyReporter: solvencyReporter,
 	}, nil
 }
@@ -341,11 +346,21 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 	for i, rawTx := range rawTxs {
 		hash := hex.EncodeToString(tmhash.Sum(rawTx))
 
-		if i >= len(blockResults.TxsResults) || blockResults.TxsResults[i] == nil || blockResults.TxsResults[i].Code != 0 {
+		if i >= len(blockResults.TxsResults) || blockResults.TxsResults[i] == nil {
 			c.logger.Warn().
 				Str("txhash", hash).
 				Int64("height", height).
-				Msg("inbound tx result missing or failed, ignoring...")
+				Msg("inbound tx result missing, ignoring...")
+			continue
+		}
+
+		if blockResults.TxsResults[i].Code != 0 {
+			// Transaction failed on-chain but gas was still consumed. If it was
+			// an outbound from a vault, observe the gas cost so THORChain
+			// accounting stays in sync with the actual on-chain balance.
+			if item := c.getTxInFromFailedTransaction(hash, height, rawTx, decoder); item != nil {
+				txIn = append(txIn, item)
+			}
 			continue
 		}
 
@@ -566,6 +581,83 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 	}
 
 	return txIn, nil
+}
+
+// getTxInFromFailedTransaction checks whether a failed on-chain transaction was an
+// outbound from a vault. If so, it returns a gas-only TxInItem so THORChain can account
+// for the gas consumed by the failed transaction and keep vault balances in sync.
+func (c *CosmosBlockScanner) getTxInFromFailedTransaction(
+	hash string,
+	height int64,
+	rawTx tmtypes.Tx,
+	decoder ctypes.TxDecoder,
+) *types.TxInItem {
+	if c.pubkeyMgr == nil {
+		return nil
+	}
+
+	tx, err := decoder(rawTx)
+	if err != nil {
+		return nil
+	}
+
+	// Extract the sender from the first MsgSend in the transaction.
+	var fromAddress, toAddress string
+	for _, message := range tx.GetMsgs() {
+		msg, ok := message.(*banktypes.MsgSend)
+		if !ok {
+			continue
+		}
+		fromAddress = msg.FromAddress
+		toAddress = msg.ToAddress
+		break
+	}
+	if fromAddress == "" {
+		return nil
+	}
+
+	// Only observe if the sender is a vault address.
+	ok, cif := c.pubkeyMgr.IsValidPoolAddress(fromAddress, c.cfg.ChainID)
+	if !ok || cif.IsEmpty() {
+		return nil
+	}
+
+	// Use the fee paid in the transaction as the gas cost.
+	feeTx, ok := tx.(ctypes.FeeTx)
+	if !ok {
+		return nil
+	}
+	gasFees := common.Gas{}
+	for _, fee := range feeTx.GetFee() {
+		cCoin, err := c.fromCosmosToThorchain(fee)
+		if err != nil {
+			continue
+		}
+		gasFees = append(gasFees, cCoin)
+	}
+	if gasFees.IsEmpty() {
+		c.logger.Error().
+			Str("txhash", hash).
+			Int64("height", height).
+			Msg("failed vault outbound has no gas fee in gas asset")
+		return nil
+	}
+
+	c.logger.Info().
+		Str("txhash", hash).
+		Int64("height", height).
+		Str("from", fromAddress).
+		Msg("observed failed outbound from vault")
+
+	return &types.TxInItem{
+		Tx:          hash,
+		BlockHeight: height,
+		Memo:        memo.NewOutboundMemo(common.TxID(strings.ToUpper(hash))).String(),
+		Sender:      fromAddress,
+		To:          toAddress,
+		Coins:       common.NewCoins(common.NewCoin(c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1))),
+		Gas:         gasFees,
+	}
 }
 
 func (c *CosmosBlockScanner) FetchTxs(height, chainHeight int64) (types.TxIn, error) {

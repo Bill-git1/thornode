@@ -1525,7 +1525,7 @@ func leadingZeros(length int, str string) string {
 }
 
 // isOutboundFakeGasTx returns true if the observed outbound is a "fake gas" transaction
-// for a failed outbound. When an EVM outbound fails (e.g., out of gas), bifrost
+// for a failed outbound. When an outbound fails (e.g., out of gas), bifrost
 // observes the failed transaction and reports it as an outbound observation with
 // amount=1 wei and memo="OUT:failed_txhash" so the gas can be accounted for. This
 // should not trigger slashing as it's a legitimate observation of a failed transaction.

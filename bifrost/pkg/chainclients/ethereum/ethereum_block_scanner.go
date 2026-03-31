@@ -1001,10 +1001,10 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 	}
 }
 
-// getTxInFromFailedTransaction when a transaction failed due to out of gas, this method will check whether the transaction is an outbound
-// it fake a txInItem if the failed transaction is an outbound , and report it back to THORNode , thus the gas fee can be subsidised
-// need to know that this will also cause the vault that send out the outbound to be slashed 1.5x gas
-// it is for security purpose
+// getTxInFromFailedTransaction when a transaction failed due to out of gas, this method
+// will check whether the transaction is an outbound. It fakes a txInItem if the failed
+// transaction is an outbound, and reports it back to THORNode so the gas fee can be
+// deducted from the vault balance to keep accounting in sync.
 func (e *ETHScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receipt *etypes.Receipt) *stypes.TxInItem {
 	if receipt.Status == 1 {
 		e.logger.Info().Str("hash", tx.Hash().String()).Msg("success transaction should not get into getTxInFromFailedTransaction")
@@ -1023,7 +1023,7 @@ func (e *ETHScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receip
 	txHash := tx.Hash().Hex()[2:]
 	return &stypes.TxInItem{
 		Tx:     txHash,
-		Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
+		Memo:   memo.NewOutboundMemo(common.TxID(strings.ToUpper(txHash))).String(),
 		Sender: strings.ToLower(fromAddr.String()),
 		To:     strings.ToLower(tx.To().String()),
 		Coins:  common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),

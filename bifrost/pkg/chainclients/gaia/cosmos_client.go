@@ -34,6 +34,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/runners"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
@@ -83,6 +84,7 @@ func NewCosmosClient(
 	server *tssp.TssServer,
 	thorchainBridge thorclient.ThorchainBridge,
 	m *metrics.Metrics,
+	pubkeyMgr pubkeymanager.PubKeyValidator,
 ) (*CosmosClient, error) {
 	logger := log.With().Str("module", cfg.ChainID.String()).Logger()
 
@@ -156,6 +158,7 @@ func NewCosmosClient(
 		c.thorchainBridge,
 		m,
 		c.ReportSolvency,
+		pubkeyMgr,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cosmos scanner: %w", err)
@@ -395,11 +398,11 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 					SeqNumber:     acc.Sequence,
 					BlockHeight:   currentHeight,
 				}
-				c.accts.Set(tx.VaultPubKey, meta)
 			}
+
 			// Check whether the vault has enough funds for the intended outbound.
 			// If a vault attempts a GAIA outbound with insufficient funds,
-			// the unobserved gas cost will make the vault insolvent.
+			// the failed tx still consumes gas on-chain.
 			neededCoins := tx.Coins.Add(tx.MaxGas...)
 			for _, neededCoin := range neededCoins {
 				vaultCoin := acc.Coins.GetCoin(neededCoin.Asset)
@@ -407,6 +410,10 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 					return nil, nil, nil, fmt.Errorf("insufficient vault balance (%s): %s < %s", vaultCoin.Asset.String(), vaultCoin.Amount.String(), neededCoin.Amount.String())
 				}
 			}
+
+			// Only cache metadata after the balance check passes to ensure
+			// retries within the same block re-run the check.
+			c.accts.Set(tx.VaultPubKey, meta)
 		}
 	}
 

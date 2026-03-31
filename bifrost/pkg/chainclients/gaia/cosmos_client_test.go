@@ -162,7 +162,7 @@ func (s *CosmosTestSuite) TestProcessOutboundTx(c *C) {
 				{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
 			},
 		},
-	}, nil, s.bridge, s.m)
+	}, nil, s.bridge, s.m, nil)
 	c.Assert(err, IsNil)
 
 	vaultPubKey, err := common.NewPubKey("sthorpub1addwnpepqda0q2avvxnferqasee42lu5492jlc4zvf6u264famvg9dywgq2kz0zaecw")
