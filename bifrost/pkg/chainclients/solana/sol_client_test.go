@@ -266,7 +266,143 @@ func (s *SolTestSuite) TestSignSOLTx(c *C) {
 
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	// c.Assert(obs, NotNil)
+
+	// Already signed — signer cache should suppress re-signing
+	txOut := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+	c.Assert(e.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "somesig"), IsNil)
+	result, _, _, err = e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil) // suppressed by signer cache
+}
+
+func (s *SolTestSuite) TestBroadcastTxLandedDespiteError(c *C) {
+	// Build a test server that rejects sendTransaction but confirms the tx on-chain
+	// via getTransaction — simulating a network timeout after the tx was accepted.
+	const landedSlot = uint64(12345)
+	broadcastServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
+		var rpcRequest struct {
+			Method string `json:"method"`
+		}
+		_ = json.Unmarshal(body, &rpcRequest)
+		rw.Header().Set("Content-Type", "application/json")
+		switch rpcRequest.Method {
+		case "sendTransaction":
+			// Simulate RPC error (e.g. node behind, response dropped)
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32005,"message":"Node is behind by 150 slots"}}`))
+		case "getTransaction":
+			_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":{"slot":%d,"meta":{},"transaction":{}}}`, landedSlot)
+		case "getLatestBlockhash":
+			httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
+		default:
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+		}
+	}))
+	defer broadcastServer.Close()
+
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + broadcastServer.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	pubkeys := pubkeyMgr.GetPubKeys()
+
+	txOut := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	// Override the broadcast lookup delay so the test doesn't sleep.
+	broadcastLookupDelay = 0
+
+	e.solScanner.recentBlockHash = "asdfasdf"
+	rawTx, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(rawTx, NotNil)
+
+	// Derive expected sig from raw bytes before broadcast
+	expectedSig, ok := txSigFromRawTx(rawTx)
+	c.Assert(ok, Equals, true)
+
+	// Cache should be empty before broadcast
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false)
+
+	// BroadcastTx should detect the tx on-chain despite the RPC error
+	txSig, err := e.BroadcastTx(txOut, rawTx)
+	c.Assert(err, IsNil)
+	c.Assert(txSig, Equals, expectedSig)
+
+	// Cache must now be written so a future reschedule won't re-sign
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
+}
+
+func TestTxSigFromRawTx(t *testing.T) {
+	sig := make([]byte, 64)
+	for i := range sig {
+		sig[i] = byte(i)
+	}
+	expectedSig := base58.Encode(sig)
+
+	// valid: 1-byte count prefix + 64-byte sig + message bytes
+	validTx := append([]byte{0x01}, sig...)
+	validTx = append(validTx, []byte("message")...)
+
+	tests := []struct {
+		name    string
+		rawTx   []byte
+		wantSig string
+		wantOk  bool
+	}{
+		{"nil input", nil, "", false},
+		{"empty input", []byte{}, "", false},
+		{"too short - only prefix", []byte{0x01}, "", false},
+		{"too short - 64 bytes (missing 1)", append([]byte{0x01}, make([]byte, 63)...), "", false},
+		{"exactly 65 bytes", append([]byte{0x01}, sig...), expectedSig, true},
+		{"valid tx with message", validTx, expectedSig, true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotSig, gotOk := txSigFromRawTx(tc.rawTx)
+			require.Equal(t, tc.wantOk, gotOk)
+			require.Equal(t, tc.wantSig, gotSig)
+		})
+	}
 }
 
 func TestSolAddrKeyringRoundTrip(t *testing.T) {

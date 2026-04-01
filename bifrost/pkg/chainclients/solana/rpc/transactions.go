@@ -61,12 +61,24 @@ type TransactionResult struct {
 	Transaction RPCTxnData `json:"transaction"`
 }
 
-// GetTransactionUntil - makes a getTransaction RPC call to the Solana RPC. Will only return "finalized" data.
+// GetTransaction makes a getTransaction RPC call using "finalized" commitment.
 func (s *SolRPC) GetTransaction(signature string) (*TransactionResult, error) {
+	return s.getTransaction(signature, "finalized")
+}
+
+// GetTransactionConfirmed makes a getTransaction RPC call using "confirmed"
+// commitment, which resolves as soon as the transaction has been voted on by a
+// supermajority of the cluster — well before finalization (~0.4s vs ~13s).
+// Use this when you need to verify a just-broadcast transaction quickly.
+func (s *SolRPC) GetTransactionConfirmed(signature string) (*TransactionResult, error) {
+	return s.getTransaction(signature, "confirmed")
+}
+
+func (s *SolRPC) getTransaction(signature, commitment string) (*TransactionResult, error) {
 	params := []interface{}{
 		signature,
 		map[string]interface{}{
-			"commitment":                     "finalized",
+			"commitment":                     commitment,
 			"encoding":                       "json",
 			"maxSupportedTransactionVersion": 0,
 		},

@@ -126,9 +126,6 @@ func (p *pipeline) SpawnSignings(s pipelineSigner, bridge thorclient.ThorchainBr
 				Msg("found multiple retry items for vault/chain")
 		} else {
 			itemsToSign = append(itemsToSign, items[0])
-			log.Warn().
-				Interface("items", items).
-				Msg("found retry items")
 		}
 	}
 
@@ -201,6 +198,12 @@ func (p *pipeline) SpawnSignings(s pipelineSigner, bridge thorclient.ThorchainBr
 		availableCapacities[vault.Status]--
 		p.vaultChainLock[vc] <- struct{}{}
 		lockedVaultChains[vc] = true
+
+		if _, isRetry := retryItems[vc]; isRetry {
+			sanitized := item
+			sanitized.SignedTx = nil
+			log.Warn().Interface("item", sanitized).Msg("found retry item")
+		}
 
 		// spawn signing routine
 		go func(item TxOutStoreItem, vaultStatus types.VaultStatus) {

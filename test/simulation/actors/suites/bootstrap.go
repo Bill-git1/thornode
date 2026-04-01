@@ -34,7 +34,7 @@ func Bootstrap(rng *rand.Rand) *Actor {
 
 	// create token pools
 	tokenPools := NewActor("Bootstrap-TokenPools", rng)
-	for _, chain := range common.AllChains {
+	for _, chain := range acommon.SimChains {
 		if !chain.IsEVM() {
 			continue
 		}

@@ -34,6 +34,11 @@ import (
 
 const solvencyDivisor = 10
 
+// broadcastLookupDelay is the time to wait after a broadcast error before
+// querying the chain to see if the transaction landed anyway. Exposed as a
+// variable so tests can override it.
+var broadcastLookupDelay = 3 * time.Second
+
 // SOLClient is a client for the Solana blockchain
 type SOLClient struct {
 	logger               zerolog.Logger
@@ -362,6 +367,11 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		return nil, nil, nil, errors.New("vault public key is empty")
 	}
 
+	if c.signerCacheManager.HasSigned(tx.CacheHash()) {
+		c.logger.Info().Interface("tx", tx).Msg("transaction signed before, ignore")
+		return nil, nil, nil, nil
+	}
+
 	// GetMemo returns OriginalMemo for memoless outbounds
 	// For truly memoless transactions (no Memo or OriginalMemo), default to TxOutbound
 	memoForParsing := tx.GetMemo()
@@ -531,6 +541,27 @@ func (c *SOLClient) BroadcastTx(txOutItem stypes.TxOutItem, rawTx []byte) (strin
 	base64Tx := base64.StdEncoding.EncodeToString(rawTx)
 	txSig, err := c.rpcClient.BroadcastTx(base64Tx)
 	if err != nil {
+		c.logger.Err(err).Str("memo", txOutItem.Memo).Msg("broadcast error, checking if tx landed on chain")
+
+		// Wait for the transaction to reach confirmed status before querying. Without this,
+		// the lookup races against block production and likely misses on the first attempt.
+		time.Sleep(broadcastLookupDelay)
+
+		// The RPC call may have errored after the transaction was already accepted and
+		// included on-chain (e.g. network timeout on the response). Extract the signature
+		// from the raw bytes and look it up on chain; if found, treat the broadcast as
+		// successful so the signer cache is written and the transaction is not re-signed on
+		// a future reschedule.
+		if knownSig, ok := txSigFromRawTx(rawTx); ok {
+			if result, lookupErr := c.rpcClient.GetTransactionConfirmed(knownSig); lookupErr == nil && result.Slot > 0 {
+				c.logger.Warn().Str("memo", txOutItem.Memo).Str("txid", knownSig).
+					Msg("tx found on chain despite broadcast error, updating signer cache")
+				if cacheErr := c.signerCacheManager.SetSigned(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), knownSig); cacheErr != nil {
+					c.logger.Err(cacheErr).Interface("txOutItem", txOutItem).Msg("fail to mark tx out item as signed")
+				}
+				return knownSig, nil
+			}
+		}
 		return "", fmt.Errorf("failed to broadcast tx: %w", err)
 	}
 	c.logger.Info().Str("memo", txOutItem.Memo).Str("txid", txSig).Msg("broadcast tx")
@@ -541,6 +572,22 @@ func (c *SOLClient) BroadcastTx(txOutItem stypes.TxOutItem, rawTx []byte) (strin
 	}
 
 	return txSig, nil
+}
+
+// txSigFromRawTx extracts the base58-encoded transaction signature from a
+// serialized Solana transaction. The wire format is:
+//
+//	[compact-u16 sig count = 0x01][64-byte signature][message...]
+//
+// All THORChain outbounds have exactly one signature, so the count prefix is
+// always the single byte 0x01 and the signature occupies bytes [1:65].
+func txSigFromRawTx(rawTx []byte) (string, bool) {
+	const sigOffset = 1 // 1-byte compact-u16 for count=1
+	const sigLen = 64
+	if len(rawTx) < sigOffset+sigLen {
+		return "", false
+	}
+	return base58.Encode(rawTx[sigOffset : sigOffset+sigLen]), true
 }
 
 // --------------------------------- observe ---------------------------------
