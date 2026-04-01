@@ -256,3 +256,46 @@ func (m Migrator) CommonMigrate8to9(ctx sdk.Context) error {
 	// https://gitlab.com/thorchain/thornode/-/issues/2239#note_2690577110
 	return processAsset(common.TRXAsset, cosmos.NewUint(1_000))
 }
+
+// BurnReserveAndReduceMaxSupply implements ADR-023: burns reserve down to 9.3M RUNE
+// and sets MaxRuneSupply to the post-burn total supply (derived from live state).
+func (m Migrator) BurnReserveAndReduceMaxSupply(ctx sdk.Context) error {
+	const reserveRetain uint64 = 9_300_000_00000000 // 9.3M RUNE to keep in reserve
+
+	reserveBalance := m.mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
+	retainAmount := cosmos.NewUint(reserveRetain)
+
+	if reserveBalance.GT(retainAmount) {
+		burnAmount := common.SafeSub(reserveBalance, retainAmount)
+		burnCoin := common.NewCoin(common.RuneNative, burnAmount)
+
+		if err := m.mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, ModuleName, common.NewCoins(burnCoin)); err != nil {
+			return fmt.Errorf("fail to transfer reserve RUNE for burn: %w", err)
+		}
+		if err := m.mgr.Keeper().BurnFromModule(ctx, ModuleName, burnCoin); err != nil {
+			return fmt.Errorf("fail to burn reserve RUNE: %w", err)
+		}
+
+		burnEvt := NewEventMintBurn(BurnSupplyType, burnCoin.Asset.Native(), burnCoin.Amount, "adr023_reserve_burn")
+		if err := m.mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
+			ctx.Logger().Error("fail to emit reserve burn event", "error", err)
+		}
+
+		ctx.Logger().Info("ADR-023: burned reserve RUNE",
+			"burn_amount", burnAmount.String(),
+			"remaining_reserve", retainAmount.String())
+	} else {
+		ctx.Logger().Info("ADR-023: reserve balance already at or below target, skipping burn",
+			"reserve_balance", reserveBalance.String(),
+			"retain_target", retainAmount.String())
+	}
+
+	// Derive MaxRuneSupply from post-burn total supply to avoid state drift.
+	postBurnSupply := m.mgr.Keeper().GetTotalSupply(ctx, common.RuneAsset())
+	newMaxSupply := int64(postBurnSupply.Uint64())
+
+	m.mgr.Keeper().SetMimir(ctx, constants.MaxRuneSupply.String(), newMaxSupply)
+	ctx.Logger().Info("ADR-023: set MaxRuneSupply to post-burn total supply", "new_max_supply", newMaxSupply)
+
+	return nil
+}

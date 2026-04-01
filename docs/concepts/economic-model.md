@@ -17,7 +17,7 @@ This creates a self-balancing system that maintains a target of **2:1 bond-to-st
 
 ### Token Distribution
 
-There are a maximum of 500M RUNE. All supply was created at genesis and distributed as follows:
+There are a maximum of 360M RUNE (reduced from 500M per ADR-023). All supply was created at genesis and distributed as follows:
 
 - 5% (SEED) and 16% (IDO) sold for capital to start the network and give it value.
 - 10% allocated to early developers who worked since 2018.

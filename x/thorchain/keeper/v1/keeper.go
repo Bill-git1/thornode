@@ -404,7 +404,8 @@ func (k KVStore) BurnFromModule(ctx cosmos.Context, module string, coin common.C
 
 func (k KVStore) MintToModule(ctx cosmos.Context, module string, coin common.Coin) error {
 	// circuit breaker
-	// mint new rune coins until we hit the cap (500m). Once we do, borrow
+	// mint new rune coins until we hit the cap. Once we do, borrow
+	// from the reserve instead of minting new tokens
 	// from the reserve instead of minting new tokens
 	maxAmt, _ := k.GetMimir(ctx, constants.MaxRuneSupply.String())
 	if coin.IsRune() && maxAmt > 0 {

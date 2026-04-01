@@ -79,3 +79,13 @@ func (m Migrator) Migrate11to12(ctx sdk.Context) error {
 func (m Migrator) Migrate12to13(ctx sdk.Context) error {
 	return nil
 }
+
+// Migrate13to14 migrates from version 13 to 14.
+func (m Migrator) Migrate13to14(ctx sdk.Context) error {
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	// ADR-023: Burn ~87% of Reserve and reduce MaxRuneSupply to 360M.
+	return m.BurnReserveAndReduceMaxSupply(ctx)
+}
