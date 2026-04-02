@@ -15,6 +15,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	wasm "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/blang/semver"
 	tmhttp "github.com/cometbft/cometbft/rpc/client/http"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -3747,4 +3748,66 @@ func (qs queryServer) querySupply(ctx cosmos.Context, req *types.QuerySupplyRequ
 		},
 		Total: int64(runeSupply.Uint64() / e8),
 	}, nil
+}
+
+func (qs queryServer) queryContractInfo(ctx cosmos.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
+	address, err := cosmos.AccAddressFromBech32(req.Address)
+	if err != nil {
+		return nil, fmt.Errorf("invalid address: %w", err)
+	}
+
+	if qs.mgr.wasmKeeper.GetContractInfo(ctx, address) == nil {
+		return nil, fmt.Errorf("no wasm contract at address %s", req.Address)
+	}
+
+	data := qs.mgr.wasmKeeper.QueryRaw(ctx, address, []byte("contract_info"))
+	if len(data) == 0 {
+		return nil, fmt.Errorf("contract does not expose contract_info")
+	}
+
+	var info ContractInfo
+
+	err = json.Unmarshal(data, &info)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal contract info: %w", err)
+	}
+
+	info.Address = req.Address
+
+	return &types.QueryContractInfoResponse{Info: &info}, nil
+}
+
+func (qs queryServer) queryContractInfos(ctx cosmos.Context, req *types.QueryContractInfosRequest) (*types.QueryContractInfosResponse, error) {
+	var infos []*ContractInfo
+
+	qs.mgr.wasmKeeper.IterateContractInfo(ctx, func(address sdk.AccAddress, _ wasm.ContractInfo) bool {
+		data := qs.mgr.wasmKeeper.QueryRaw(ctx, address, []byte("contract_info"))
+		if len(data) == 0 {
+			return false
+		}
+
+		var info ContractInfo
+
+		err := json.Unmarshal(data, &info)
+		if err != nil {
+			log.Debug().Err(err).Msg("failed to unmarshal contract info")
+			return false
+		}
+
+		if !strings.HasPrefix(info.Contract, req.Contract) {
+			return false
+		}
+
+		if !strings.HasPrefix(info.Version, req.Version) {
+			return false
+		}
+
+		info.Address = address.String()
+
+		infos = append(infos, &info)
+
+		return false
+	})
+
+	return &types.QueryContractInfosResponse{Infos: infos}, nil
 }

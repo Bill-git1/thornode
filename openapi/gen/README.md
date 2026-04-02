@@ -134,6 +134,8 @@ Class | Method | HTTP request | Description
 *SaversApi* | [**Savers**](docs/SaversApi.md#savers) | **Get** /thorchain/pool/{asset}/savers | 
 *SecuredAssetApi* | [**SecuredAsset**](docs/SecuredAssetApi.md#securedasset) | **Get** /thorchain/securedasset/{asset} | 
 *SecuredAssetsApi* | [**SecuredAssets**](docs/SecuredAssetsApi.md#securedassets) | **Get** /thorchain/securedassets | 
+*SmartContractsApi* | [**ContractInfo**](docs/SmartContractsApi.md#contractinfo) | **Get** /thorchain/contract/{address} | 
+*SmartContractsApi* | [**ContractInfos**](docs/SmartContractsApi.md#contractinfos) | **Get** /thorchain/contracts | 
 *StreamingSwapApi* | [**StreamSwap**](docs/StreamingSwapApi.md#streamswap) | **Get** /thorchain/swap/streaming/{hash} | 
 *StreamingSwapApi* | [**StreamSwaps**](docs/StreamingSwapApi.md#streamswaps) | **Get** /thorchain/swaps/streaming | 
 *SupplyApi* | [**Supply**](docs/SupplyApi.md#supply) | **Get** /thorchain/supply | 
@@ -187,6 +189,9 @@ Class | Method | HTTP request | Description
  - [CodesResponse](docs/CodesResponse.md)
  - [Coin](docs/Coin.md)
  - [ConstantsResponse](docs/ConstantsResponse.md)
+ - [ContractInfo](docs/ContractInfo.md)
+ - [ContractInfoResponse](docs/ContractInfoResponse.md)
+ - [ContractInfosResponse](docs/ContractInfosResponse.md)
  - [DerivedPool](docs/DerivedPool.md)
  - [InboundAddress](docs/InboundAddress.md)
  - [InboundConfirmationCountedStage](docs/InboundConfirmationCountedStage.md)

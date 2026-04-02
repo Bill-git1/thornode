@@ -56,6 +56,7 @@ import "types/query_oracle_price.proto";
 import "types/query_eip712.proto";
 import "types/query_reference_memo.proto";
 import "types/query_supply.proto";
+import "types/query_contract_info.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -446,5 +447,15 @@ service Query {
 
   rpc Supply(QuerySupplyRequest) returns (QuerySupplyResponse) {
     option (google.api.http).get = "/thorchain/supply";
+  }
+
+  rpc ContractInfos(QueryContractInfosRequest)
+      returns (QueryContractInfosResponse) {
+    option (google.api.http).get = "/thorchain/contracts";
+  }
+
+  rpc ContractInfo(QueryContractInfoRequest)
+      returns (QueryContractInfoResponse) {
+    option (google.api.http).get = "/thorchain/contract/{address}";
   }
 }

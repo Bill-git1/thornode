@@ -1054,6 +1054,7 @@ github.com/cosmos/cosmos-proto v1.0.0-beta.5 h1:eNcayDLpip+zVLRLYafhzLvQlSmyab+R
 github.com/cosmos/cosmos-proto v1.0.0-beta.5/go.mod h1:hQGLpiIUloJBMdQMMWb/4wRApmI9hjHH05nefC0Ojec=
 github.com/cosmos/cosmos-sdk v0.53.0 h1:ZsB2tnBVudumV059oPuElcr0K1lLOutaI6WJ+osNTbI=
 github.com/cosmos/cosmos-sdk v0.53.0/go.mod h1:UPcRyFwOUy2PfSFBWxBceO/HTjZOuBVqY583WyazIGs=
+github.com/cosmos/evm v1.0.0-rc1/go.mod h1:5CXFoQfFcu5XfouVLcAm6uJnGg01hmmU20OLJ0gJgLY=
 github.com/cosmos/evm v1.0.0-rc2 h1:RHVJmPDKrvi9wvkVayTT9ghl0gXLiIblWUtqfgEDBl0=
 github.com/cosmos/evm v1.0.0-rc2/go.mod h1:p0noo/TdImnDfr9HjAAVHE0GBEKQZ+KbCJ8Zfbpyi+A=
 github.com/cosmos/go-bip39 v1.0.0 h1:pcomnQdrdH22njcAatO0yWojsUnCO3y2tNoV1cb6hHY=

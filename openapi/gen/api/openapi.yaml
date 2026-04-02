@@ -2727,6 +2727,80 @@ paths:
           description: OK
       tags:
       - Supply
+  /thorchain/contracts:
+    get:
+      description: Returns type and version for all contracts with stored `contract_info`
+      operationId: contractInfos
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - description: optional contract type prefix to filter results
+        explode: true
+        in: query
+        name: contract
+        required: false
+        schema:
+          example: rujira-fin
+          type: string
+        style: form
+      - description: optional contract version prefix to filter results
+        explode: true
+        in: query
+        name: version
+        required: false
+        schema:
+          example: 2.0.0
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractInfosResponse'
+          description: OK
+      tags:
+      - Smart Contracts
+  /thorchain/contract/{address}:
+    get:
+      description: Returns type and version from `contract_info` for requested address
+      operationId: contractInfo
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractInfoResponse'
+          description: OK
+      tags:
+      - Smart Contracts
 components:
   parameters:
     queryHeight:
@@ -2822,6 +2896,26 @@ components:
         example: BTC
         type: string
       style: simple
+    contract:
+      description: optional contract type prefix to filter results
+      explode: true
+      in: query
+      name: contract
+      required: false
+      schema:
+        example: rujira-fin
+        type: string
+      style: form
+    version:
+      description: optional contract version prefix to filter results
+      explode: true
+      in: query
+      name: version
+      required: false
+      schema:
+        example: 2.0.0
+        type: string
+      style: form
   schemas:
     Pool:
       example:
@@ -4781,6 +4875,26 @@ components:
       required:
       - amount
       - denom
+      type: object
+    ContractInfo:
+      example:
+        address: thor17cawwg2lsnvcne69fek6nsqkf8snma6gc5ccceshul86rl0u3q4s5l5d0a
+        contract: rujira-fin
+        version: 2.0.0
+      properties:
+        address:
+          example: thor17cawwg2lsnvcne69fek6nsqkf8snma6gc5ccceshul86rl0u3q4s5l5d0a
+          type: string
+        contract:
+          example: rujira-fin
+          type: string
+        version:
+          example: 2.0.0
+          type: string
+      required:
+      - address
+      - contract
+      - version
       type: object
     AccountResponse:
       example:
@@ -7451,6 +7565,35 @@ components:
       required:
       - circulating
       - total
+      type: object
+    ContractInfoResponse:
+      example:
+        info:
+          address: thor17cawwg2lsnvcne69fek6nsqkf8snma6gc5ccceshul86rl0u3q4s5l5d0a
+          contract: rujira-fin
+          version: 2.0.0
+      properties:
+        info:
+          $ref: '#/components/schemas/ContractInfo'
+      required:
+      - info
+      type: object
+    ContractInfosResponse:
+      example:
+        infos:
+        - address: thor17cawwg2lsnvcne69fek6nsqkf8snma6gc5ccceshul86rl0u3q4s5l5d0a
+          contract: rujira-fin
+          version: 2.0.0
+        - address: thor17cawwg2lsnvcne69fek6nsqkf8snma6gc5ccceshul86rl0u3q4s5l5d0a
+          contract: rujira-fin
+          version: 2.0.0
+      properties:
+        infos:
+          items:
+            $ref: '#/components/schemas/ContractInfo'
+          type: array
+      required:
+      - infos
       type: object
     Ping:
       example:

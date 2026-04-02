@@ -392,6 +392,7 @@ type (
 	TCYClaimer               = types.TCYClaimer
 	TCYStaker                = types.TCYStaker
 	VolumeBucket             = types.VolumeBucket
+	ContractInfo             = types.ContractInfo
 
 	// Memo
 	SwapMemo                   = mem.SwapMemo
