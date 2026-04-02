@@ -731,8 +731,29 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 				settleMsg = handleErr.Error()
 			} else {
 				attempted++
-				// Success - commit the changes
+
+				// Update state for successful swap execution (in memory only)
+				msg.State.In = msg.State.In.Add(msg.Tx.Coins[0].Amount)
+				msg.State.Out = msg.State.Out.Add(emit)
+
+				// Update count/height and save swap state in the cache context so
+				// it commits atomically with pool changes. This prevents state
+				// inconsistency where pool balances are committed but swap tracking
+				// state (In, Out, Count) is not persisted.
+				msg.State.Count += 1
+				msg.State.LastHeight = ctx.BlockHeight()
+				msg.Tx.Coins[0].Amount = originalAmount
+				msg.TradeTarget = originalTradeTarget
+				if err := vm.k.SetAdvSwapQueueItem(cacheCtx, *msg); err != nil {
+					ctx.Logger().Error("fail to save swap item in cache context, discarding swap", "error", err)
+					continue
+				}
+
+				// Commit pool changes and swap state atomically
 				commit()
+
+				// All success-side bookkeeping below: only reached after the
+				// cache-context write and commit have both succeeded.
 				settleMsg = "swap has been completed"
 				iterationSuccess++
 
@@ -740,10 +761,6 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 				for _, d := range getSwapDirections(*msg) {
 					lastPoolDir[d.pool] = d.direction
 				}
-
-				// Update state for successful swap
-				msg.State.In = msg.State.In.Add(msg.Tx.Coins[0].Amount)
-				msg.State.Out = msg.State.Out.Add(emit)
 
 				// Only populate todo for limit swap discovery during real execution (not simulations)
 				if !isSimulation {
@@ -757,6 +774,14 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 					marketSwapSuccesses++
 				}
 				swapSuccesses++
+
+				if vm.IsDone(ctx, *msg) {
+					if err := settleSwap(ctx, mgr, *msg, settleMsg); err != nil {
+						ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
+					}
+					completedSwapCount++
+				}
+				continue
 			}
 			msg.State.Count += 1
 			msg.State.LastHeight = ctx.BlockHeight()
@@ -765,7 +790,7 @@ func (vm *SwapQueueAdv) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabl
 			msg.Tx.Coins[0].Amount = originalAmount
 			msg.TradeTarget = originalTradeTarget
 
-			// Save the updated swap state back to the keeper
+			// Save the updated swap state (failure path — no pool commit to be inconsistent with)
 			if err := vm.k.SetAdvSwapQueueItem(ctx, *msg); err != nil {
 				ctx.Logger().Error("fail to save swap item", "error", err)
 			}

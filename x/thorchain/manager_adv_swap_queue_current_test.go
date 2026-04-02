@@ -7582,3 +7582,92 @@ func (s AdvSwapQueueSuite) TestRapidSwapGetTodoNumFreshBudgetPerIteration(c *C) 
 	c.Assert(totalCount > 6, Equals, true,
 		Commentf("total Count across all swaps should be > 6 (proving both iterations processed), got %d", totalCount))
 }
+
+// failSetAdvSwapKeeper wraps a real keeper and fails SetAdvSwapQueueItem after
+// a configurable number of successful calls. This lets setup calls succeed
+// while forcing failures during EndBlock processing.
+type failSetAdvSwapKeeper struct {
+	keeper.Keeper
+	allowedCalls int
+	callCount    int
+}
+
+func (k *failSetAdvSwapKeeper) SetAdvSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error {
+	k.callCount++
+	if k.callCount > k.allowedCalls {
+		return fmt.Errorf("injected SetAdvSwapQueueItem failure")
+	}
+	return k.Keeper.SetAdvSwapQueueItem(ctx, msg)
+}
+
+// TestEndBlockSetAdvSwapQueueItemFailureDiscardsBookkeeping verifies that when
+// RunWithEmit succeeds but SetAdvSwapQueueItem(cacheCtx, *msg) fails, the swap
+// is fully discarded: pool state is not committed, telemetry is not updated,
+// and the swap item state remains unchanged.
+func (s AdvSwapQueueSuite) TestEndBlockSetAdvSwapQueueItemFailureDiscardsBookkeeping(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceAsset = cosmos.NewUint(2088519094783)
+	pool.BalanceRune = cosmos.NewUint(199019591474591)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	tx := GetRandomTx()
+	ethAddr := GetRandomETHAddress()
+	tx.Memo = fmt.Sprintf("swap:ETH.ETH:%s", ethAddr)
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One)))
+	market := NewMsgSwap(
+		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
+		common.NoAddress, cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+	market.State = &types.SwapState{
+		Quantity: 1,
+		Count:    0,
+		Deposit:  cosmos.NewUint(2 * common.One),
+	}
+
+	// Add swap to queue using the real keeper (this call must succeed)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *market), IsNil)
+
+	// Record pool state before EndBlock
+	poolBefore, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+
+	// Create a SwapQueueAdv with a keeper that fails SetAdvSwapQueueItem
+	// after the initial setup call (allowedCalls=0 means all EndBlock saves fail)
+	failKeeper := &failSetAdvSwapKeeper{
+		Keeper:       mgr.Keeper(),
+		allowedCalls: 0,
+	}
+	book := newSwapQueueAdv(failKeeper)
+
+	err = book.EndBlock(ctx, mgr, false)
+	c.Assert(err, IsNil)
+
+	// Pool state should be unchanged (commit was never called)
+	poolAfter, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(poolAfter.BalanceAsset.Equal(poolBefore.BalanceAsset), Equals, true,
+		Commentf("pool asset balance changed despite SetAdvSwapQueueItem failure: before=%s after=%s",
+			poolBefore.BalanceAsset, poolAfter.BalanceAsset))
+	c.Assert(poolAfter.BalanceRune.Equal(poolBefore.BalanceRune), Equals, true,
+		Commentf("pool rune balance changed despite SetAdvSwapQueueItem failure: before=%s after=%s",
+			poolBefore.BalanceRune, poolAfter.BalanceRune))
+
+	// Swap state should be unchanged (count should still be 0)
+	swapAfter, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, market.Tx.ID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(swapAfter.State.Count, Equals, uint64(0),
+		Commentf("swap count incremented despite SetAdvSwapQueueItem failure: got %d", swapAfter.State.Count))
+
+	// No outbound items should have been created
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(len(items), Equals, 0,
+		Commentf("outbound items created despite SetAdvSwapQueueItem failure: got %d", len(items)))
+}
