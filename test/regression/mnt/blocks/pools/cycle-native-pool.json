@@ -1114,28 +1114,6 @@
         "type": "pool_balance_change"
       },
       {
-        "asymmetry": "0.000000000000000000",
-        "basis_points": "10000",
-        "chain": "THOR",
-        "coin": "0 THOR.RUNE",
-        "emit_asset": "0",
-        "emit_rune": "0",
-        "from": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-        "id": "0000000000000000000000000000000000000000000000000000000000000000",
-        "liquidity_provider_units": "50",
-        "memo": "",
-        "mode": "EndBlock",
-        "pool": "THOR.RUJI",
-        "to": "",
-        "type": "withdraw"
-      },
-      {
-        "mode": "EndBlock",
-        "pool": "THOR.RUJI",
-        "pool_status": "Suspended",
-        "type": "pool"
-      },
-      {
         "amount": "100x/ruji",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1158,6 +1136,28 @@
         "mode": "EndBlock",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "message"
+      },
+      {
+        "asymmetry": "0.000000000000000000",
+        "basis_points": "10000",
+        "chain": "THOR",
+        "coin": "0 THOR.RUNE",
+        "emit_asset": "0",
+        "emit_rune": "0",
+        "from": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+        "id": "0000000000000000000000000000000000000000000000000000000000000000",
+        "liquidity_provider_units": "50",
+        "memo": "",
+        "mode": "EndBlock",
+        "pool": "THOR.RUJI",
+        "to": "",
+        "type": "withdraw"
+      },
+      {
+        "mode": "EndBlock",
+        "pool": "THOR.RUJI",
+        "pool_status": "Suspended",
+        "type": "pool"
       }
     ],
     "txs": []

@@ -246,6 +246,7 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 			types.AsgardName:             {},
 			types.BondName:               {},
 			types.ReserveName:            {},
+			types.TreasuryName:           {},
 			types.LendingName:            {},
 			types.AffiliateCollectorName: {},
 			types.TCYStakeName:           {},

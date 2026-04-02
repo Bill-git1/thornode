@@ -61,8 +61,13 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 	var availblePoolCount int64
 	onDeck := NewPool()        // currently staged pool that could get promoted
 	choppingBlock := NewPool() // currently available pool that is on the chopping block to being demoted
+	var synthPoolsToRemove []common.Asset
 	minRuneDepth := cosmos.NewUint(uint64(minRunePoolDepth))
 	minPoolLiquidityFee := mgr.Keeper().GetConfigInt64(ctx, constants.MinimumPoolLiquidityFee)
+	queuedSwapLiabilityAssets, err := pm.getQueuedSwapLiabilityAssets(ctx, mgr)
+	if err != nil {
+		return err
+	}
 	// quick func to check the validity of a pool
 	validPool := func(pool Pool) bool {
 		if pool.BalanceAsset.IsZero() || pool.BalanceRune.IsZero() || pool.BalanceRune.LT(minRuneDepth) {
@@ -95,8 +100,8 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 		if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
 			return err
 		}
-		// skip all cycling on saver pools
-		if pool.Asset.IsSyntheticAsset() {
+		// skip all cycling on saver and derived pools
+		if pool.Asset.IsSyntheticAsset() || pool.Asset.IsDerivedAsset() {
 			continue
 		}
 		if pool.Asset.IsGasAsset() {
@@ -127,15 +132,17 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 				fee = pool.BalanceRune
 			}
 			if !fee.IsZero() {
-				// Transfer fee to reserve first before modifying pool balance.
-				// If the transfer fails, skip pool balance reduction to avoid accounting mismatch.
-				if err := mgr.Keeper().AddPoolFeeToReserve(ctx, fee); err != nil {
+				updatedPool := pool
+				updatedPool.BalanceRune = common.SafeSub(updatedPool.BalanceRune, fee)
+
+				cacheCtx, commit := ctx.CacheContext()
+				if err := mgr.Keeper().AddPoolFeeToReserve(cacheCtx, fee); err != nil {
 					ctx.Logger().Error("fail to add rune to reserve", "from pool", pool.Asset, "err", err)
+				} else if err := mgr.Keeper().SetPool(cacheCtx, updatedPool); err != nil {
+					ctx.Logger().Error("fail to save pool", "pool", pool.Asset, "err", err)
 				} else {
-					pool.BalanceRune = common.SafeSub(pool.BalanceRune, fee)
-					if err := mgr.Keeper().SetPool(ctx, pool); err != nil {
-						ctx.Logger().Error("fail to save pool", "pool", pool.Asset, "err", err)
-					}
+					commit()
+					pool = updatedPool
 
 					emitPoolBalanceChangedEvent(ctx,
 						NewPoolMod(pool.Asset, fee, false, cosmos.ZeroUint(), false),
@@ -149,36 +156,71 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 			// assume, if a pool has asset, but no rune, it should be
 			// abandoned.
 			if pool.BalanceRune.IsZero() && !pool.BalanceAsset.IsZero() {
+				// Pending inbound liquidity still belongs to LPs and may be
+				// committed later by cleanupPendingLiquidity. Do not burn a staged
+				// pool until all pending liquidity has been resolved.
+				if !pool.PendingInboundRune.IsZero() || !pool.PendingInboundAsset.IsZero() {
+					ctx.Logger().Info(
+						"skipping staged pool burn while pending liquidity remains",
+						"pool", pool.Asset,
+						"pending_rune", pool.PendingInboundRune,
+						"pending_asset", pool.PendingInboundAsset,
+					)
+					continue
+				}
+				// Queued swaps can still need this pool asset either for a refund of
+				// unprocessed input or for already-accounted output settlement.
+				if _, ok := queuedSwapLiabilityAssets[pool.Asset.String()]; ok {
+					ctx.Logger().Info(
+						"skipping staged pool burn while queued swap liabilities remain",
+						"pool", pool.Asset,
+					)
+					continue
+				}
+				// Scheduled but unsent txouts still rely on this asset balance in
+				// vault accounting, so do not zero the asset out underneath them.
+				if pm.hasPendingOutboundLiability(ctx, pool.Asset, mgr) {
+					ctx.Logger().Info(
+						"skipping staged pool burn while pending outbound liabilities remain",
+						"pool", pool.Asset,
+					)
+					continue
+				}
+				// Related synth, saver, trade, or secured asset state can still have
+				// claims on the same underlying L1 backing, so block the burn until
+				// those liabilities are gone as well.
+				relatedAssetLiabilityReason, err := pm.getRelatedAssetLiabilityReason(ctx, pool.Asset, mgr, queuedSwapLiabilityAssets)
+				if err != nil {
+					return err
+				}
+				if relatedAssetLiabilityReason != "" {
+					ctx.Logger().Info(
+						"skipping staged pool burn while related asset liabilities remain",
+						"pool", pool.Asset,
+						"reason", relatedAssetLiabilityReason,
+					)
+					continue
+				}
+
 				// the staged pool no longer has any rune, abandon the pool
 				// and liquidity provider, and burn the asset (via zero'ing
 				// the vaults for the asset, and churning away from the
 				// tokens)
 				ctx.Logger().Info("burning pool", "pool", pool.Asset)
 
-				// Transfer any pending RUNE to the Reserve so it isn't left in the Pool Module after pool deletion
-				if !pool.PendingInboundRune.IsZero() {
-					if err := mgr.Keeper().AddPoolFeeToReserve(ctx, pool.PendingInboundRune); err != nil {
-						ctx.Logger().Error("fail to transfer pending inbound rune to reserve during pool burning, skipping pool burn", "from pool", pool.Asset, "err", err)
-						continue
-					}
+				if err := pm.burnStagedPool(ctx, pool, mgr, queuedSwapLiabilityAssets); err != nil {
+					ctx.Logger().Error("fail to burn staged pool, skipping pool burn", "from pool", pool.Asset, "err", err)
+					continue
 				}
-
-				// remove LPs
-				pm.removeLiquidityProviders(ctx, pool.Asset, mgr)
-
-				// delete the pool
-				mgr.Keeper().RemovePool(ctx, pool.Asset)
-
-				poolEvent := NewEventPool(pool.Asset, PoolSuspended)
-				if err := mgr.EventMgr().EmitEvent(ctx, poolEvent); err != nil {
-					ctx.Logger().Error("fail to emit pool event", "error", err)
-				}
-				// remove asset from Vault
-				pm.removeAssetFromVault(ctx, pool.Asset, mgr)
+				synthPoolsToRemove = append(synthPoolsToRemove, pool.Asset.GetSyntheticAsset())
 			} else if validPool(pool) && onDeck.BalanceRune.LT(pool.BalanceRune) {
 				onDeck = pool
 			}
 		}
+	}
+
+	for _, synthAsset := range synthPoolsToRemove {
+		mgr.Keeper().RemovePool(ctx, synthAsset)
 	}
 
 	if availblePoolCount >= maxAvailablePools {
@@ -227,41 +269,238 @@ func (pm *PoolMgr) poolMeetTradingVolumeCriteria(ctx cosmos.Context, mgr Manager
 	return cosmos.NewUint(blockPoolLiquidityFee).GTE(minPoolLiquidityFee)
 }
 
-// removeAssetFromVault set asset balance to zero for all vaults holding the asset
-func (pm *PoolMgr) removeAssetFromVault(ctx cosmos.Context, asset common.Asset, mgr Manager) {
-	if asset.IsNative() {
-		// get asgard module balance
-		asgardAddress, err := mgr.Keeper().GetModuleAddress(AsgardName)
-		if err != nil {
-			ctx.Logger().Error("fail to get asgard address", "error", err)
+// getQueuedSwapLiabilityAssets returns assets with balances still owed to
+// queued swaps, either as remaining deposits to refund or as already-emitted
+// swap output awaiting settlement.
+func (pm *PoolMgr) getQueuedSwapLiabilityAssets(ctx cosmos.Context, mgr Manager) (map[string]struct{}, error) {
+	liabilities := make(map[string]struct{})
+	markLiability := func(asset common.Asset) {
+		if !asset.IsEmpty() {
+			liabilities[asset.String()] = struct{}{}
+		}
+	}
+
+	swapIter := mgr.Keeper().GetSwapQueueIterator(ctx)
+	defer swapIter.Close()
+	for ; swapIter.Valid(); swapIter.Next() {
+		var msg MsgSwap
+		if err := mgr.Keeper().Cdc().Unmarshal(swapIter.Value(), &msg); err != nil {
+			return nil, fmt.Errorf("fail to unmarshal queued swap: %w", err)
+		}
+		if msg.Tx.Coins.IsEmpty() {
+			continue
 		}
 
-		asgardAccAddress, err := asgardAddress.AccAddress()
-		if err != nil {
-			ctx.Logger().Error("fail to get asgard acc address", "error", err)
-		}
-
-		asgardCoins := mgr.Keeper().GetBalance(ctx, asgardAccAddress)
-
-		for _, coin := range asgardCoins {
-			if asset.Native() != coin.Denom {
-				continue
-			}
-			err = mgr.Keeper().SendFromModuleToModule(
-				ctx,
-				AsgardName,
-				TreasuryName,
-				common.Coins{{
-					Asset:  asset,
-					Amount: cosmos.NewUint(coin.Amount.Uint64()),
-				}},
-			)
+		swp := msg.GetStreamingSwap()
+		if msg.IsLegacyStreaming() && mgr.Keeper().StreamingSwapExists(ctx, msg.Tx.ID) {
+			var err error
+			swp, err = mgr.Keeper().GetStreamingSwap(ctx, msg.Tx.ID)
 			if err != nil {
-				ctx.Logger().Error("fail to send coins to treasury", "error", err)
+				return nil, fmt.Errorf("fail to get streaming swap %s: %w", msg.Tx.ID, err)
 			}
-			// done processing native asset
-			return
 		}
+
+		if swp.Deposit.GT(swp.In) {
+			markLiability(msg.Tx.Coins[0].Asset)
+		}
+		if !swp.Out.IsZero() {
+			markLiability(msg.TargetAsset)
+		}
+	}
+
+	advSwapIter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+	defer advSwapIter.Close()
+	for ; advSwapIter.Valid(); advSwapIter.Next() {
+		var msg MsgSwap
+		if err := mgr.Keeper().Cdc().Unmarshal(advSwapIter.Value(), &msg); err != nil {
+			return nil, fmt.Errorf("fail to unmarshal advanced queued swap: %w", err)
+		}
+		if msg.Tx.Coins.IsEmpty() || msg.State == nil {
+			continue
+		}
+
+		if msg.State.Deposit.GT(msg.State.In) {
+			markLiability(msg.Tx.Coins[0].Asset)
+		}
+		if !msg.State.Out.IsZero() {
+			markLiability(msg.TargetAsset)
+		}
+	}
+
+	return liabilities, nil
+}
+
+// hasPendingOutboundLiability returns true when the asset already has unsent
+// txouts assigned to vaults. Burning the pool would otherwise zero balances
+// still owed by those outbounds.
+func (pm *PoolMgr) hasPendingOutboundLiability(ctx cosmos.Context, asset common.Asset, mgr Manager) bool {
+	return len(mgr.Keeper().GetPendingOutbounds(ctx, asset)) > 0
+}
+
+// hasLiquidityProviders returns true when any LP or saver position state still
+// exists for the given asset.
+func (pm *PoolMgr) hasLiquidityProviders(ctx cosmos.Context, asset common.Asset, mgr Manager) bool {
+	iterator := mgr.Keeper().GetLiquidityProviderIterator(ctx, asset)
+	defer iterator.Close()
+	return iterator.Valid()
+}
+
+// getRelatedAssetLiabilityReason returns the first reason an L1 pool still
+// has outstanding liabilities in related asset systems that depend on the
+// same underlying asset backing. Burning the L1 pool must stay blocked while
+// any of these related claims remain.
+func (pm *PoolMgr) getRelatedAssetLiabilityReason(ctx cosmos.Context, asset common.Asset, mgr Manager, queuedSwapLiabilityAssets map[string]struct{}) (string, error) {
+	// THOR-native assets do not have L1-backed synth/trade/secured related assets.
+	if asset.IsNative() {
+		return "", nil
+	}
+
+	// Synths and savers are direct related pools whose supply and LP state are
+	// backed by the same L1 pool asset.
+	synthAsset := asset.GetSyntheticAsset()
+	if _, ok := queuedSwapLiabilityAssets[synthAsset.String()]; ok {
+		return "queued synth swap liabilities remain", nil
+	}
+	if pm.hasPendingOutboundLiability(ctx, synthAsset, mgr) {
+		return "pending synth outbound liabilities remain", nil
+	}
+	if !mgr.Keeper().GetTotalSupply(ctx, synthAsset).IsZero() {
+		return "synth supply remains", nil
+	}
+	if pm.hasLiquidityProviders(ctx, synthAsset, mgr) {
+		return "saver lp state remains", nil
+	}
+
+	synthPool, err := mgr.Keeper().GetPool(ctx, synthAsset)
+	if err != nil {
+		return "", fmt.Errorf("fail to get related synth pool %s: %w", synthAsset, err)
+	}
+	if !synthPool.IsEmpty() &&
+		(!synthPool.BalanceRune.IsZero() ||
+			!synthPool.BalanceAsset.IsZero() ||
+			!synthPool.LPUnits.IsZero() ||
+			!synthPool.PendingInboundRune.IsZero() ||
+			!synthPool.PendingInboundAsset.IsZero()) {
+		return "synthetic pool state remains", nil
+	}
+
+	// Trade accounts are backed by the underlying L1 asset depth recorded in the
+	// trade unit, so pool burning must wait until that depth and its units are gone.
+	tradeAsset := asset.GetTradeAsset()
+	if _, ok := queuedSwapLiabilityAssets[tradeAsset.String()]; ok {
+		return "queued trade asset liabilities remain", nil
+	}
+	if pm.hasPendingOutboundLiability(ctx, tradeAsset, mgr) {
+		return "pending trade outbound liabilities remain", nil
+	}
+	tradeUnit, err := mgr.Keeper().GetTradeUnit(ctx, tradeAsset)
+	if err != nil {
+		return "", fmt.Errorf("fail to get related trade unit %s: %w", tradeAsset, err)
+	}
+	if !tradeUnit.Depth.IsZero() || !tradeUnit.Units.IsZero() {
+		return "trade asset depth remains", nil
+	}
+
+	// Secured assets also represent claims on the same underlying L1 asset, so
+	// both the recorded depth and the minted share supply must be zero first.
+	securedAsset := asset.GetSecuredAsset()
+	if _, ok := queuedSwapLiabilityAssets[securedAsset.String()]; ok {
+		return "queued secured asset liabilities remain", nil
+	}
+	if pm.hasPendingOutboundLiability(ctx, securedAsset, mgr) {
+		return "pending secured outbound liabilities remain", nil
+	}
+	securedState, err := mgr.Keeper().GetSecuredAsset(ctx, securedAsset)
+	if err != nil {
+		return "", fmt.Errorf("fail to get related secured asset %s: %w", securedAsset, err)
+	}
+	if !securedState.Depth.IsZero() || !mgr.Keeper().GetTotalSupply(ctx, securedAsset).IsZero() {
+		return "secured asset depth remains", nil
+	}
+
+	return "", nil
+}
+
+// burnStagedPool atomically removes a staged pool and its backing funds.
+func (pm *PoolMgr) burnStagedPool(ctx cosmos.Context, pool Pool, mgr Manager, queuedSwapLiabilityAssets map[string]struct{}) error {
+	if !pool.PendingInboundRune.IsZero() || !pool.PendingInboundAsset.IsZero() {
+		return fmt.Errorf("cannot burn staged pool %s with pending inbound liquidity", pool.Asset)
+	}
+	if _, ok := queuedSwapLiabilityAssets[pool.Asset.String()]; ok {
+		return fmt.Errorf("cannot burn staged pool %s with queued swap liabilities", pool.Asset)
+	}
+	if pm.hasPendingOutboundLiability(ctx, pool.Asset, mgr) {
+		return fmt.Errorf("cannot burn staged pool %s with pending outbound liabilities", pool.Asset)
+	}
+	relatedAssetLiabilityReason, err := pm.getRelatedAssetLiabilityReason(ctx, pool.Asset, mgr, queuedSwapLiabilityAssets)
+	if err != nil {
+		return err
+	}
+	if relatedAssetLiabilityReason != "" {
+		return fmt.Errorf("cannot burn staged pool %s while related asset liabilities remain: %s", pool.Asset, relatedAssetLiabilityReason)
+	}
+
+	cacheCtx, commit := ctx.CacheContext()
+
+	if pool.Asset.IsNative() {
+		// Native pool assets live in module balances rather than vaults, so
+		// move them first and rely on the cached context to discard the move if
+		// any later step in pool burning fails.
+		if err := pm.removeAssetFromVault(cacheCtx, pool.Asset, mgr); err != nil {
+			return fmt.Errorf("fail to remove native asset from asgard during pool burning: %w", err)
+		}
+	}
+
+	if err := pm.removeLiquidityProviders(cacheCtx, pool.Asset, mgr); err != nil {
+		return fmt.Errorf("fail to remove liquidity providers during pool burning: %w", err)
+	}
+
+	mgr.Keeper().RemovePool(cacheCtx, pool.Asset)
+
+	poolEvent := NewEventPool(pool.Asset, PoolSuspended)
+	if err := mgr.EventMgr().EmitEvent(cacheCtx, poolEvent); err != nil {
+		return fmt.Errorf("fail to emit pool event: %w", err)
+	}
+
+	if !pool.Asset.IsNative() {
+		if err := pm.removeAssetFromVault(cacheCtx, pool.Asset, mgr); err != nil {
+			return fmt.Errorf("fail to remove asset from vault during pool burning: %w", err)
+		}
+	}
+
+	commit()
+	return nil
+}
+
+// removeAssetFromVault moves native assets out of Asgard or zeroes asset
+// balances in all vaults that still hold the pool asset.
+func (pm *PoolMgr) removeAssetFromVault(ctx cosmos.Context, asset common.Asset, mgr Manager) error {
+	if asset.IsNative() {
+		asgardAccAddress := mgr.Keeper().GetModuleAccAddress(AsgardName)
+		if asgardAccAddress.Empty() {
+			return fmt.Errorf("fail to get asgard acc address")
+		}
+
+		nativeBalance := mgr.Keeper().GetBalanceOfModule(ctx, AsgardName, asset.Native())
+		if nativeBalance.IsZero() {
+			return fmt.Errorf("native asset %s missing from asgard during pool burn", asset)
+		}
+
+		// Native pool assets live in module balances rather than vault,
+		// so preserve whatever balance remains by moving it to Treasury.
+		if err := mgr.Keeper().SendFromModuleToModule(
+			ctx,
+			AsgardName,
+			TreasuryName,
+			common.Coins{{
+				Asset:  asset,
+				Amount: nativeBalance,
+			}},
+		); err != nil {
+			return fmt.Errorf("fail to send native pool asset to treasury: %w", err)
+		}
+
+		return nil
 	}
 
 	// zero vaults with the pool asset
@@ -270,32 +509,31 @@ func (pm *PoolMgr) removeAssetFromVault(ctx cosmos.Context, asset common.Asset, 
 	for ; vaultIter.Valid(); vaultIter.Next() {
 		var vault Vault
 		if err := mgr.Keeper().Cdc().Unmarshal(vaultIter.Value(), &vault); err != nil {
-			ctx.Logger().Error("fail to unmarshal vault", "error", err)
-			continue
+			return fmt.Errorf("fail to unmarshal vault: %w", err)
 		}
 		if vault.HasAsset(asset) {
 			for i, coin := range vault.Coins {
 				if asset.Equals(coin.Asset) {
 					vault.Coins[i].Amount = cosmos.ZeroUint()
 					if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
-						ctx.Logger().Error("fail to save vault", "error", err)
+						return fmt.Errorf("fail to save vault: %w", err)
 					}
 					break
 				}
 			}
 		}
 	}
+	return nil
 }
 
 // removeLiquidityProviders remove all lps for the given asset pool
-func (pm *PoolMgr) removeLiquidityProviders(ctx cosmos.Context, asset common.Asset, mgr Manager) {
+func (pm *PoolMgr) removeLiquidityProviders(ctx cosmos.Context, asset common.Asset, mgr Manager) error {
 	iterator := mgr.Keeper().GetLiquidityProviderIterator(ctx, asset)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
 		var lp LiquidityProvider
 		if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &lp); err != nil {
-			ctx.Logger().Error("fail to unmarshal liquidity provider", "error", err)
-			continue
+			return fmt.Errorf("fail to unmarshal liquidity provider: %w", err)
 		}
 
 		// fields must be populated with empty values or midgard will not process
@@ -315,11 +553,12 @@ func (pm *PoolMgr) removeLiquidityProviders(ctx cosmos.Context, asset common.Ass
 			cosmos.ZeroUint(),
 		)
 		if err := mgr.EventMgr().EmitEvent(ctx, withdrawEvt); err != nil {
-			ctx.Logger().Error("fail to emit pool withdraw event", "error", err)
+			return fmt.Errorf("fail to emit pool withdraw event: %w", err)
 		}
 
 		mgr.Keeper().RemoveLiquidityProvider(ctx, lp)
 	}
+	return nil
 }
 
 func (pm *PoolMgr) cleanupPendingLiquidity(ctx cosmos.Context, mgr Manager) {

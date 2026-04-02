@@ -1,17 +1,45 @@
 package thorchain
 
 import (
+	"fmt"
+	"math/big"
+
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type PoolMgrSuite struct{}
 
 var _ = Suite(&PoolMgrSuite{})
+
+type failNativePoolBurnKeeper struct {
+	keeper.Keeper
+}
+
+func (k failNativePoolBurnKeeper) SendFromModuleToModule(ctx cosmos.Context, from, to string, coins common.Coins) error {
+	// Fail only the native asset evacuation path added to pool burning.
+	if from == AsgardName && to == TreasuryName {
+		return fmt.Errorf("fail native burn transfer")
+	}
+	return k.Keeper.SendFromModuleToModule(ctx, from, to, coins)
+}
+
+type failStageCostPoolSaveKeeper struct {
+	keeper.Keeper
+	asset common.Asset
+}
+
+func (k failStageCostPoolSaveKeeper) SetPool(ctx cosmos.Context, pool Pool) error {
+	if pool.Asset.Equals(k.asset) {
+		return fmt.Errorf("fail staged pool save")
+	}
+	return k.Keeper.SetPool(ctx, pool)
+}
 
 func (s *PoolMgrSuite) TestEnableNextPool(c *C) {
 	var err error
@@ -77,12 +105,33 @@ func (s *PoolMgrSuite) TestEnableNextPool(c *C) {
 	c.Check(pool.Status, Equals, PoolAvailable)
 
 	// should NOT enable XMR, since it has no assets
-	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 10*common.One, mgr), IsNil)
+	c.Assert(poolMgr.cyclePools(ctx, 100, 20*common.One, 10*common.One, mgr), IsNil)
 	pool, err = k.GetPool(ctx, xmrAsset)
 	c.Assert(err, IsNil)
 	c.Assert(pool.IsEmpty(), Equals, false)
 	c.Check(pool.Status, Equals, PoolStaged)
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(30*common.One))
+}
+
+func (s *PoolMgrSuite) TestCyclePoolsSkipsDerivedPools(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	derivedAsset := common.BTCAsset.GetDerivedAsset()
+	pool := NewPool()
+	pool.Asset = derivedAsset
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	pool, err := k.GetPool(ctx, derivedAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.IsEmpty(), Equals, false)
+	c.Check(pool.Status, Equals, PoolAvailable)
+	c.Check(pool.BalanceRune.IsZero(), Equals, true)
+	c.Check(pool.BalanceAsset.IsZero(), Equals, true)
 }
 
 func (s *PoolMgrSuite) TestAbandonPool(c *C) {
@@ -98,6 +147,11 @@ func (s *PoolMgrSuite) TestAbandonPool(c *C) {
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	synthPool := NewPool()
+	synthPool.Asset = usdAsset.GetSyntheticAsset()
+	synthPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, synthPool), IsNil)
 
 	vault := GetRandomVault()
 	vault.Coins = common.Coins{
@@ -160,6 +214,11 @@ func (s *PoolMgrSuite) TestAbandonPool(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(pool.BalanceRune.IsZero(), Equals, true)
 	c.Assert(pool.BalanceAsset.IsZero(), Equals, true)
+
+	// check related synth pool record was also deleted
+	synthPool, err = k.GetPool(ctx, usdAsset.GetSyntheticAsset())
+	c.Assert(err, IsNil)
+	c.Assert(synthPool.IsEmpty(), Equals, true)
 
 	// check vault remove pool asset
 	vault, err = k.GetVault(ctx, vault.PubKey)
@@ -260,6 +319,894 @@ func (s *PoolMgrSuite) TestDemotePoolWithLowLiquidityFees(c *C) {
 	c.Assert(afterETHEth.Status == PoolStaged, Equals, true)
 }
 
+// TestBurnStagedPoolSkipsPendingLiquidity verifies that staged-pool burning
+// does not delete LP state or sweep pending funds while a single-sided add is
+// still pending on the pool.
+func (s *PoolMgrSuite) TestBurnStagedPoolSkipsPendingLiquidity(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	pendingRune := cosmos.NewUint(55 * common.One)
+	// Fund Asgard so the pre-fix bug would actually sweep pending rune to
+	// Reserve instead of only failing due to insufficient funds.
+	FundModule(c, ctx, k, AsgardName, pendingRune.Uint64())
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.PendingInboundRune = pendingRune
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  pendingRune,
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	reserveRuneBefore := k.GetRuneBalanceOfModule(ctx, ReserveName)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceRune.IsZero(), Equals, true)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+	c.Assert(afterPool.PendingInboundRune.Equal(pendingRune), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	reserveRuneAfter := k.GetRuneBalanceOfModule(ctx, ReserveName)
+	c.Assert(reserveRuneAfter.Equal(reserveRuneBefore), Equals, true)
+}
+
+// TestAbandonNativePoolSkipsBurnOnTreasuryTransferFailure verifies that a
+// failed native Asgard -> Treasury transfer aborts pool burning before pool
+// deletion or LP cleanup.
+func (s *PoolMgrSuite) TestAbandonNativePoolSkipsBurnOnTreasuryTransferFailure(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(failNativePoolBurnKeeper{Keeper: k})
+
+	// Use a THOR-native pool asset so pool burning must evacuate the Asgard
+	// module balance instead of only zeroing vault coin entries.
+	pool := NewPool()
+	pool.Asset = common.TCY
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        common.TCY,
+		RuneAddress:  GetRandomTHORAddress(),
+		AssetAddress: GetRandomTHORAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	// Seed the native asset where the burn path expects to find it: in Asgard's
+	// module balance for the native denom.
+	coin := common.NewCoin(common.TCY, cosmos.NewUint(100*common.One))
+	c.Assert(k.MintToModule(ctx, ModuleName, coin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(coin)), IsNil)
+
+	// Snapshot the module balances before the burn attempt. Because pool burning
+	// now runs in a CacheContext, a failed native Treasury transfer should leave
+	// all of these balances unchanged.
+	asgardNativeBefore := k.GetBalanceOfModule(ctx, AsgardName, common.TCY.Native())
+	treasuryNativeBefore := k.GetBalanceOfModule(ctx, TreasuryName, common.TCY.Native())
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	// The failed Asgard -> Treasury transfer should abort the burn before pool
+	// deletion or LP cleanup, leaving the pool intact for retry.
+	afterPool, err := k.GetPool(ctx, common.TCY)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	// LP cleanup must also be rolled back when the cached burn aborts.
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, common.TCY)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	// The failed native asset move must not persist after the cached burn
+	// attempt aborts.
+	asgardBalance := k.GetBalanceOfModule(ctx, AsgardName, common.TCY.Native())
+	c.Assert(asgardBalance.Equal(asgardNativeBefore), Equals, true)
+	treasuryBalance := k.GetBalanceOfModule(ctx, TreasuryName, common.TCY.Native())
+	c.Assert(treasuryBalance.Equal(treasuryNativeBefore), Equals, true)
+}
+
+// TestAbandonNativePoolSkipsBurnWhenAsgardBalanceMissing verifies that pool
+// burning fails closed if native module funds are missing from Asgard.
+func (s *PoolMgrSuite) TestAbandonNativePoolSkipsBurnWhenAsgardBalanceMissing(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	pool := NewPool()
+	pool.Asset = common.TCY
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        common.TCY,
+		RuneAddress:  GetRandomTHORAddress(),
+		AssetAddress: GetRandomTHORAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, common.TCY)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, common.TCY)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	asgardBalance := k.GetBalanceOfModule(ctx, AsgardName, common.TCY.Native())
+	c.Assert(asgardBalance.IsZero(), Equals, true)
+	treasuryBalance := k.GetBalanceOfModule(ctx, TreasuryName, common.TCY.Native())
+	c.Assert(treasuryBalance.IsZero(), Equals, true)
+}
+
+// TestAbandonNativePoolSkipsBurnWithAdvancedQueuedNativeDepositLiability
+// verifies that a staged native pool is not removed while an advanced queued
+// swap still holds source-asset deposit liability in that native asset.
+func (s *PoolMgrSuite) TestAbandonNativePoolSkipsBurnWithAdvancedQueuedNativeDepositLiability(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	pool := NewPool()
+	pool.Asset = common.TCY
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        common.TCY,
+		RuneAddress:  GetRandomTHORAddress(),
+		AssetAddress: GetRandomTHORAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	coin := common.NewCoin(common.TCY, cosmos.NewUint(115*common.One))
+	c.Assert(k.MintToModule(ctx, ModuleName, coin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(coin)), IsNil)
+
+	txID := GetRandomTxHash()
+	swapMsg := MsgSwap{
+		Tx: common.Tx{
+			ID:          txID,
+			Chain:       common.THORChain,
+			FromAddress: GetRandomTHORAddress(),
+			Coins:       common.Coins{common.NewCoin(common.TCY, cosmos.NewUint(25*common.One))},
+		},
+		TargetAsset: common.RuneAsset(),
+		SwapType:    MarketSwap,
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 1,
+			Deposit:  cosmos.NewUint(25 * common.One),
+			In:       cosmos.NewUint(10 * common.One),
+			Out:      cosmos.ZeroUint(),
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, swapMsg), IsNil)
+
+	asgardNativeBefore := k.GetBalanceOfModule(ctx, AsgardName, common.TCY.Native())
+	treasuryNativeBefore := k.GetBalanceOfModule(ctx, TreasuryName, common.TCY.Native())
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, common.TCY)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, common.TCY)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	asgardBalance := k.GetBalanceOfModule(ctx, AsgardName, common.TCY.Native())
+	c.Assert(asgardBalance.Equal(asgardNativeBefore), Equals, true)
+	treasuryBalance := k.GetBalanceOfModule(ctx, TreasuryName, common.TCY.Native())
+	c.Assert(treasuryBalance.Equal(treasuryNativeBefore), Equals, true)
+}
+
+// TestAbandonNativePoolSkipsBurnWithLegacyQueuedNativeOutput verifies that a
+// staged native pool is not removed while the legacy swap queue still has
+// accumulated native output awaiting settlement.
+func (s *PoolMgrSuite) TestAbandonNativePoolSkipsBurnWithLegacyQueuedNativeOutput(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	pool := NewPool()
+	pool.Asset = common.TCY
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        common.TCY,
+		RuneAddress:  GetRandomTHORAddress(),
+		AssetAddress: GetRandomTHORAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	coin := common.NewCoin(common.TCY, cosmos.NewUint(125*common.One))
+	c.Assert(k.MintToModule(ctx, ModuleName, coin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(coin)), IsNil)
+
+	txID := GetRandomTxHash()
+	swapMsg := MsgSwap{
+		Tx: common.Tx{
+			ID:          txID,
+			Chain:       common.THORChain,
+			FromAddress: GetRandomTHORAddress(),
+			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(25*common.One))},
+		},
+		TargetAsset:    common.TCY,
+		StreamInterval: 10,
+		Version:        types.SwapVersion_v1,
+	}
+	c.Assert(k.SetSwapQueueItem(ctx, swapMsg, 0), IsNil)
+
+	streamingSwap := NewStreamingSwap(txID, 5, 10, cosmos.ZeroUint(), cosmos.NewUint(25*common.One))
+	streamingSwap.In = cosmos.NewUint(25 * common.One)
+	streamingSwap.Out = cosmos.NewUint(25 * common.One)
+	k.SetStreamingSwap(ctx, streamingSwap)
+
+	asgardNativeBefore := k.GetBalanceOfModule(ctx, AsgardName, common.TCY.Native())
+	treasuryNativeBefore := k.GetBalanceOfModule(ctx, TreasuryName, common.TCY.Native())
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, common.TCY)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, common.TCY)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	asgardBalance := k.GetBalanceOfModule(ctx, AsgardName, common.TCY.Native())
+	c.Assert(asgardBalance.Equal(asgardNativeBefore), Equals, true)
+	treasuryBalance := k.GetBalanceOfModule(ctx, TreasuryName, common.TCY.Native())
+	c.Assert(treasuryBalance.Equal(treasuryNativeBefore), Equals, true)
+}
+
+// TestAbandonPoolSkipsBurnWithPendingOutboundLiability verifies that a staged
+// vault-backed pool is not removed while an unsent txout still depends on its
+// asset balance.
+func (s *PoolMgrSuite) TestAbandonPoolSkipsBurnWithPendingOutboundLiability(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	txOutHeight := ctx.BlockHeight() + 1
+	if txOutHeight < 1 {
+		txOutHeight = 1
+	}
+	pendingOutbound := TxOutItem{
+		Chain:       usdAsset.GetChain(),
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: vault.PubKey,
+		Coin:        common.NewCoin(usdAsset, cosmos.NewUint(25*common.One)),
+		InHash:      GetRandomTxHash(),
+		Memo:        "OUT:pending",
+	}
+	c.Assert(k.AppendTxOut(ctx, txOutHeight, pendingOutbound), IsNil)
+	c.Assert(len(k.GetPendingOutbounds(ctx, usdAsset)), Equals, 1)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+	c.Assert(len(k.GetPendingOutbounds(ctx, usdAsset)), Equals, 1)
+}
+
+// TestAbandonPoolSkipsBurnWithRelatedAssetSynthSupply verifies that a staged L1
+// pool is not removed while related synth supply still exists.
+func (s *PoolMgrSuite) TestAbandonPoolSkipsBurnWithRelatedAssetSynthSupply(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	synthAsset := usdAsset.GetSyntheticAsset()
+	synthCoin := common.NewCoin(synthAsset, cosmos.NewUint(25*common.One))
+	c.Assert(k.MintToModule(ctx, ModuleName, synthCoin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(synthCoin)), IsNil)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+	c.Assert(k.GetTotalSupply(ctx, synthAsset).Equal(synthCoin.Amount), Equals, true)
+}
+
+// TestAbandonPoolSkipsBurnWithRelatedAssetSaverLP verifies that a staged L1 pool
+// is not removed while saver LP state still exists on the related synth pool.
+func (s *PoolMgrSuite) TestAbandonPoolSkipsBurnWithRelatedAssetSaverLP(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	synthAsset := usdAsset.GetSyntheticAsset()
+	synthPool := NewPool()
+	synthPool.Asset = synthAsset
+	synthPool.Status = PoolAvailable
+	synthPool.BalanceAsset = cosmos.NewUint(25 * common.One)
+	synthPool.LPUnits = cosmos.NewUint(25 * common.One)
+	c.Assert(k.SetPool(ctx, synthPool), IsNil)
+
+	saverLP := LiquidityProvider{
+		Asset:        synthAsset,
+		RuneAddress:  common.NoAddress,
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.NewUint(25 * common.One),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, saverLP)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	saverCount := 0
+	saverIterator := k.GetLiquidityProviderIterator(ctx, synthAsset)
+	defer saverIterator.Close()
+	for ; saverIterator.Valid(); saverIterator.Next() {
+		saverCount++
+	}
+	c.Assert(saverCount, Equals, 1)
+}
+
+// TestAbandonPoolSkipsBurnWithRelatedAssetTradeUnits verifies that a staged L1
+// pool is not removed while trade-account depth still depends on the same
+// underlying asset backing.
+func (s *PoolMgrSuite) TestAbandonPoolSkipsBurnWithRelatedAssetTradeUnits(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	tradeAsset := usdAsset.GetTradeAsset()
+	tradeUnit := types.NewTradeUnit(tradeAsset)
+	tradeUnit.Units = cosmos.NewUint(25 * common.One)
+	tradeUnit.Depth = cosmos.NewUint(25 * common.One)
+	k.SetTradeUnit(ctx, tradeUnit)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	afterTradeUnit, err := k.GetTradeUnit(ctx, tradeAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterTradeUnit.Depth.Equal(tradeUnit.Depth), Equals, true)
+	c.Assert(afterTradeUnit.Units.Equal(tradeUnit.Units), Equals, true)
+}
+
+// TestAbandonPoolSkipsBurnWithQueuedTradeAssetOutput verifies that a staged L1
+// pool is not removed while a queued swap still has already-accounted trade
+// asset output awaiting settlement.
+func (s *PoolMgrSuite) TestAbandonPoolSkipsBurnWithQueuedTradeAssetOutput(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	tradeAsset := usdAsset.GetTradeAsset()
+	swapMsg := MsgSwap{
+		Tx: common.Tx{
+			ID:          GetRandomTxHash(),
+			Chain:       common.THORChain,
+			FromAddress: GetRandomTHORAddress(),
+			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(25*common.One))},
+		},
+		TargetAsset: tradeAsset,
+		SwapType:    MarketSwap,
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 1,
+			Deposit:  cosmos.NewUint(25 * common.One),
+			In:       cosmos.NewUint(25 * common.One),
+			Out:      cosmos.NewUint(10 * common.One),
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, swapMsg), IsNil)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+}
+
+// TestAbandonPoolSkipsBurnWithPendingTradeAssetOutbound verifies that a staged
+// L1 pool is not removed while a scheduled but unsent trade-asset outbound
+// still depends on the underlying pool backing.
+func (s *PoolMgrSuite) TestAbandonPoolSkipsBurnWithPendingTradeAssetOutbound(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	txOutHeight := ctx.BlockHeight() + 1
+	if txOutHeight < 1 {
+		txOutHeight = 1
+	}
+	pendingOutbound := TxOutItem{
+		Chain:       usdAsset.GetChain(),
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: vault.PubKey,
+		Coin:        common.NewCoin(usdAsset.GetTradeAsset(), cosmos.NewUint(25*common.One)),
+		InHash:      GetRandomTxHash(),
+		Memo:        "OUT:pending-trade",
+	}
+	c.Assert(k.AppendTxOut(ctx, txOutHeight, pendingOutbound), IsNil)
+	c.Assert(len(k.GetPendingOutbounds(ctx, usdAsset.GetTradeAsset())), Equals, 1)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+	c.Assert(len(k.GetPendingOutbounds(ctx, usdAsset.GetTradeAsset())), Equals, 1)
+}
+
+// TestAbandonPoolSkipsBurnWithRelatedAssetSecuredDepth verifies that a staged L1
+// pool is not removed while secured-asset depth or supply still depends on the
+// same underlying asset backing.
+func (s *PoolMgrSuite) TestAbandonPoolSkipsBurnWithRelatedAssetSecuredDepth(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.ZeroUint()
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	securedAsset := usdAsset.GetSecuredAsset()
+	securedCoin := common.NewCoin(securedAsset, cosmos.NewUint(25*common.One))
+	c.Assert(k.MintAndSendToAccount(ctx, GetRandomBech32Addr(), securedCoin), IsNil)
+
+	securedState := types.NewSecuredAsset(securedAsset)
+	securedState.Depth = cosmos.NewUint(25 * common.One)
+	k.SetSecuredAsset(ctx, securedState)
+
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	afterSecuredState, err := k.GetSecuredAsset(ctx, securedAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterSecuredState.Depth.Equal(securedState.Depth), Equals, true)
+	c.Assert(k.GetTotalSupply(ctx, securedAsset).Equal(securedCoin.Amount), Equals, true)
+}
+
+// TestStageCostSaveFailureDoesNotCommitReserveOrBurnPool verifies that staged
+// pool fees are only committed when the pool update also commits.
+func (s *PoolMgrSuite) TestStageCostSaveFailureDoesNotCommitReserveOrBurnPool(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = usdAsset
+	pool.Status = PoolStaged
+	pool.BalanceRune = cosmos.NewUint(10 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Coins = common.Coins{
+		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	lp := LiquidityProvider{
+		Asset:        usdAsset,
+		RuneAddress:  GetRandomRUNEAddress(),
+		AssetAddress: GetRandomETHAddress(),
+		Units:        cosmos.ZeroUint(),
+		PendingRune:  cosmos.ZeroUint(),
+		PendingAsset: cosmos.ZeroUint(),
+	}
+	k.SetLiquidityProvider(ctx, lp)
+
+	FundModule(c, ctx, k, AsgardName, 10*common.One)
+	reserveRuneBefore := k.GetRuneBalanceOfModule(ctx, ReserveName)
+
+	mgr := NewDummyMgrWithKeeper(failStageCostPoolSaveKeeper{Keeper: k, asset: usdAsset})
+	poolMgr := newPoolMgr()
+	c.Assert(poolMgr.cyclePools(ctx, 100, 20*common.One, 10*common.One, mgr), IsNil)
+
+	afterPool, err := k.GetPool(ctx, usdAsset)
+	c.Assert(err, IsNil)
+	c.Assert(afterPool.IsEmpty(), Equals, false)
+	c.Assert(afterPool.Status, Equals, PoolStaged)
+	c.Assert(afterPool.BalanceRune.Equal(pool.BalanceRune), Equals, true)
+	c.Assert(afterPool.BalanceAsset.Equal(pool.BalanceAsset), Equals, true)
+
+	afterVault, err := k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(afterVault.HasAsset(usdAsset), Equals, true)
+
+	count := 0
+	iterator := k.GetLiquidityProviderIterator(ctx, usdAsset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		count++
+	}
+	c.Assert(count, Equals, 1)
+
+	reserveRuneAfter := k.GetRuneBalanceOfModule(ctx, ReserveName)
+	c.Assert(reserveRuneAfter.Equal(reserveRuneBefore), Equals, true)
+}
+
 func (s *PoolMgrSuite) TestPoolMeetTradingVolumeCriteria(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
@@ -319,7 +1266,7 @@ func (s *PoolMgrSuite) TestRemoveAssetFromVault(c *C) {
 	c.Assert(v1.HasAsset(asset), Equals, true,
 		Commentf("vault1 should have asset balance"))
 
-	pm.removeAssetFromVault(ctx, asset, mgr)
+	c.Assert(pm.removeAssetFromVault(ctx, asset, mgr), IsNil)
 
 	v0, err := k.GetVault(ctx, v0.PubKey)
 	c.Assert(err, IsNil)
@@ -330,6 +1277,45 @@ func (s *PoolMgrSuite) TestRemoveAssetFromVault(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(v1.HasAsset(asset), Equals, false,
 		Commentf("vault1 should no longer have asset"))
+}
+
+func (s *PoolMgrSuite) TestRemoveNativeAssetFromVault(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+	pm := newPoolMgr()
+
+	asset := common.TCY
+	largeAmount := cosmos.NewUintFromBigInt(new(big.Int).Lsh(big.NewInt(1), 64))
+	coin := common.NewCoin(asset, largeAmount)
+
+	c.Assert(k.MintToModule(ctx, ModuleName, coin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(coin)), IsNil)
+
+	c.Assert(pm.removeAssetFromVault(ctx, asset, mgr), IsNil)
+
+	asgardBalance := k.GetBalanceOfModule(ctx, AsgardName, asset.Native())
+	c.Assert(asgardBalance.IsZero(), Equals, true)
+
+	treasuryBalance := k.GetBalanceOfModule(ctx, TreasuryName, asset.Native())
+	c.Assert(treasuryBalance.Equal(largeAmount), Equals, true)
+}
+
+func (s *PoolMgrSuite) TestRemoveNativeAssetFromVaultMissingBalance(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+	pm := newPoolMgr()
+
+	asset := common.TCY
+
+	err := pm.removeAssetFromVault(ctx, asset, mgr)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "native asset THOR.TCY missing from asgard during pool burn")
+
+	asgardBalance := k.GetBalanceOfModule(ctx, AsgardName, asset.Native())
+	c.Assert(asgardBalance.IsZero(), Equals, true)
+
+	treasuryBalance := k.GetBalanceOfModule(ctx, TreasuryName, asset.Native())
+	c.Assert(treasuryBalance.IsZero(), Equals, true)
 }
 
 func (s *PoolMgrSuite) TestRemoveLiquidityProviders(c *C) {
@@ -363,7 +1349,7 @@ func (s *PoolMgrSuite) TestRemoveLiquidityProviders(c *C) {
 	c.Assert(countLiquidityProviders(ctx, k, asset), Equals, 2,
 		Commentf("should have 2 lps after adding"))
 
-	pm.removeLiquidityProviders(ctx, asset, mgr)
+	c.Assert(pm.removeLiquidityProviders(ctx, asset, mgr), IsNil)
 
 	c.Assert(countLiquidityProviders(ctx, k, asset), Equals, 0,
 		Commentf("should have 0 lps after removing"))
