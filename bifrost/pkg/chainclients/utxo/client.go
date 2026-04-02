@@ -741,7 +741,11 @@ func (c *Client) ReportSolvency(height int64) error {
 		return fmt.Errorf("fail to get asgards: %w", err)
 	}
 
-	currentGasFee := cosmos.NewUint(3 * c.cfg.UTXO.EstimatedAverageTxSize * c.lastFeeRate.Load())
+	txSize := c.cfg.UTXO.EstimatedAverageTxSize
+	if c.GetChain() == common.ZECChain {
+		txSize = 1 // ZEC lastFeeRate is already the full ZIP-317 fee, not a per-byte rate
+	}
+	currentGasFee := cosmos.NewUint(3 * txSize * c.lastFeeRate.Load())
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent

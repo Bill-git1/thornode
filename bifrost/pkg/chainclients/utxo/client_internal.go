@@ -332,24 +332,11 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 		}
 	}
 
-	// skip updating network fee if there are no utxos (except coinbase) in the block
-	if totalVSize == 0 {
-		return nil
-	}
-	amt, err := btcutil.NewAmount(total - c.cfg.ChainID.DefaultCoinbase())
-	if err != nil {
-		return fmt.Errorf("fail to parse total block fee amount, err: %w", err)
-	}
-
-	// average fee rate in sats/vbyte or default min relay fee
-	feeRateSats := uint64(amt.ToUnit(btcutil.AmountSatoshi) / float64(totalVSize))
-	if c.cfg.UTXO.DefaultMinRelayFeeSats > feeRateSats {
-		feeRateSats = c.cfg.UTXO.DefaultMinRelayFeeSats
-	}
-
 	transactionSize := c.cfg.UTXO.EstimatedAverageTxSize
+	var feeRateSats uint64
 
 	if c.GetChain() == common.ZECChain {
+		// ZEC uses ZIP-317 static fee calculation, independent of block contents.
 		// Report static 'worst case' scenario with the maximum possible
 		// amounts of inputs and max memo size of 80 chars, which counts as
 		// 5 actions and will likely always be lower that max inputs.
@@ -357,6 +344,21 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 		memo := strings.Repeat("X", 80)
 		feeRateSats = c.getGasCoinZEC(&tx, memo).Amount.Uint64()
 		transactionSize = 1
+	} else {
+		// skip updating network fee if there are no utxos (except coinbase) in the block
+		if totalVSize == 0 {
+			return nil
+		}
+		amt, err := btcutil.NewAmount(total - c.cfg.ChainID.DefaultCoinbase())
+		if err != nil {
+			return fmt.Errorf("fail to parse total block fee amount, err: %w", err)
+		}
+
+		// average fee rate in sats/vbyte or default min relay fee
+		feeRateSats = uint64(amt.ToUnit(btcutil.AmountSatoshi) / float64(totalVSize))
+		if c.cfg.UTXO.DefaultMinRelayFeeSats > feeRateSats {
+			feeRateSats = c.cfg.UTXO.DefaultMinRelayFeeSats
+		}
 	}
 
 	// round to prevent fee observation noise
