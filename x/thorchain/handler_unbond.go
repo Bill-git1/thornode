@@ -61,7 +61,7 @@ func (h UnBondHandler) validate(ctx cosmos.Context, msg MsgUnBond) error {
 	}
 
 	if h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseUnbond) > 0 {
-		return ErrInternal(err, "unbonding has been paused")
+		return fmt.Errorf("unbonding has been paused")
 	}
 
 	bp, err := h.mgr.Keeper().GetBondProviders(ctx, msg.NodeAddress)
@@ -105,7 +105,7 @@ func (h UnBondHandler) handle(ctx cosmos.Context, msg MsgUnBond) error {
 		}
 	}
 	if isMemberOfRetiringVault {
-		return ErrInternal(err, "fail to unbond, still part of the retiring vault")
+		return fmt.Errorf("fail to unbond, still part of the retiring vault")
 	}
 
 	from, err := cosmos.AccAddressFromBech32(msg.BondAddress.String())
