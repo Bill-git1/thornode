@@ -162,7 +162,7 @@ func NewConstantValue() *ConstantVals {
 		},
 		stringValues: map[ConstantName]string{
 			DefaultPoolStatus:    "Staged",
-			DevFundAddress:       "thor1d8c0wv4y72kmlytegjmgx825xwumt9qt5xe07k", // dev fund address for ADR 18,  initially set via to address pre-funded 1M by TC treasury
+			DevFundAddress:       "thor1sgnuptp32y2fht3258vlx68mq8wsk2uz4wrshu", // dev fund address for ADR 18
 			MarketingFundAddress: "thor1usj8cqjmjea32csxn5fma96ffeulln40gyrahn", // marketing fund address for ADR 21
 			OverSolvencyAddress:  "thor1lhufh0mwasa0lk9udppdegmvnkgqt08f0m9p5g", // over-solvency sweep destination address
 			RequiredPriceFeeds:   "ATOM,AVAX,BCH,BNB,BTC,DOGE,ETH,LTC,RUNE,SOL,TRX,USDC,USDT,XRP,ZEC",
