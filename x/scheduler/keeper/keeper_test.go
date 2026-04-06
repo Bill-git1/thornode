@@ -12,10 +12,13 @@ import (
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/stretchr/testify/suite"
+	. "gopkg.in/check.v1"
+
 	"gitlab.com/thorchain/thornode/v3/x/scheduler/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/scheduler/types"
 )
+
+func TestPackage(t *testing.T) { TestingT(t) }
 
 var (
 	authAcc  = sdk.AccAddress([]byte("auth1_______________"))
@@ -26,22 +29,19 @@ var (
 )
 
 type KeeperTestSuite struct {
-	suite.Suite
-
 	ctx    context.Context
 	keeper keeper.Keeper
 
 	queryClient types.QueryClient
 	msgServer   types.MsgServer
 
-	encCfg moduletestutil.TestEncodingConfig
+	encCfg    moduletestutil.TestEncodingConfig
+	storeKeys map[string]*storetypes.KVStoreKey
 }
 
-func TestKeeperTestSuite(t *testing.T) {
-	suite.Run(t, new(KeeperTestSuite))
-}
+var _ = Suite(&KeeperTestSuite{})
 
-func (suite *KeeperTestSuite) SetupTest() {
+func (s *KeeperTestSuite) SetUpTest(c *C) {
 	keys := storetypes.NewKVStoreKeys(authtypes.StoreKey, banktypes.StoreKey, types.StoreKey)
 	testCtx := testutil.DefaultContextWithKeys(
 		keys,
@@ -50,8 +50,9 @@ func (suite *KeeperTestSuite) SetupTest() {
 	)
 	wasmkeeper := &MockWasmKeeper{}
 	encCfg := moduletestutil.MakeTestEncodingConfig()
-	suite.ctx = testCtx
-	suite.keeper = keeper.NewKeeper(
+	s.ctx = testCtx
+	s.storeKeys = keys
+	s.keeper = keeper.NewKeeper(
 		encCfg.Codec,
 		runtime.NewKVStoreService(keys[types.StoreKey]),
 		wasmkeeper,
@@ -61,11 +62,11 @@ func (suite *KeeperTestSuite) SetupTest() {
 	authtypes.RegisterInterfaces(encCfg.InterfaceRegistry)
 	types.RegisterInterfaces(encCfg.InterfaceRegistry)
 	queryHelper := baseapp.NewQueryServerTestHelper(testCtx, encCfg.InterfaceRegistry)
-	types.RegisterQueryServer(queryHelper, suite.keeper)
+	types.RegisterQueryServer(queryHelper, s.keeper)
 
-	suite.queryClient = types.NewQueryClient(queryHelper)
-	suite.msgServer = keeper.NewMsgServerImpl(suite.keeper)
-	suite.encCfg = encCfg
+	s.queryClient = types.NewQueryClient(queryHelper)
+	s.msgServer = keeper.NewMsgServerImpl(s.keeper)
+	s.encCfg = encCfg
 }
 
 var _ types.WasmKeeper = MockWasmKeeper{}

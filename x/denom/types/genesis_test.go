@@ -67,6 +67,18 @@ func TestGenesisState_Validate(t *testing.T) {
 			valid: true,
 		},
 		{
+			desc: "invalid denom - wrong prefix",
+			genState: &types.GenesisState{
+				Admins: []types.GenesisDenom{
+					{
+						Denom: "ibc/bitcoin",
+						Admin: "",
+					},
+				},
+			},
+			valid: false,
+		},
+		{
 			desc: "invalid admin",
 			genState: &types.GenesisState{
 				Admins: []types.GenesisDenom{
