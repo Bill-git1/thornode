@@ -628,7 +628,9 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 
 	start := time.Now()
 	defer func() {
-		s.m.GetHistograms(metrics.SignAndBroadcastDuration(chain.GetChain())).Observe(time.Since(start).Seconds())
+		if h := s.m.GetHistograms(metrics.SignAndBroadcastDuration(chain.GetChain())); h != nil {
+			h.Observe(time.Since(start).Seconds())
+		}
 	}()
 
 	if !tx.OutHash.IsEmpty() {

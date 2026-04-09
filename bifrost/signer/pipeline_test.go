@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -448,4 +449,32 @@ func (s *PipelineSuite) testPipelineRetry(c *C, round7, broadcast bool) {
 
 	// the retry item should have been the first one processed
 	c.Assert(mockSigner.processed[0].TxOutItem.Equals(retryTosis[2].TxOutItem), Equals, true)
+}
+
+func (s *PipelineSuite) TestPipelineGetVaultError(c *C) {
+	pipeline, err := newPipeline(2)
+	c.Assert(pipeline, NotNil)
+	c.Assert(err, IsNil)
+
+	// Use a bridge that always returns error on GetVault
+	bridge := &vaultErrBridge{}
+	mockSigner := &mockPipelineSigner{
+		storageListItems: append([]TxOutStoreItem{}, tosis[0:1]...),
+	}
+
+	// SpawnSignings should handle GetVault error gracefully (logs and returns)
+	pipeline.SpawnSignings(mockSigner, bridge)
+	pipeline.Wait()
+
+	// No items should be processed since GetVault failed
+	c.Assert(len(mockSigner.processed), Equals, 0)
+}
+
+// vaultErrBridge is a mock bridge that always returns an error on GetVault
+type vaultErrBridge struct {
+	fakeBridge
+}
+
+func (b *vaultErrBridge) GetVault(pubkey string) (ttypes.Vault, error) {
+	return ttypes.Vault{}, fmt.Errorf("vault not found")
 }
