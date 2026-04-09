@@ -298,12 +298,19 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	for _, txOut := range redeemTx.TxOut { // subtract all vouts to from vins to get the gas
 		gas -= txOut.Value
 	}
+
+	// ZEC hash is computed from zecTx instead of redeemTx
+	txHash := redeemTx.TxHash().String()
+	if c.cfg.ChainID == common.ZECChain {
+		txHash = zecTx.TxHash().String()
+	}
+
 	var txIn *stypes.TxInItem
 	sender, err := tx.VaultPubKey.GetAddress(tx.Chain)
 	if err == nil {
 		txIn = stypes.NewTxInItem(
 			chainHeight,
-			redeemTx.TxHash().String(),
+			txHash,
 			tx.Memo,
 			sender.String(),
 			tx.ToAddress.String(),
