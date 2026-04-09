@@ -38,3 +38,13 @@ func (s *MigrationsV2Suite) TestV2Migrations(c *C) {
 
 	c.Check(store.Has([]byte(key)), Equals, false)
 }
+
+func (s *MigrationsV2Suite) TestV2MigrationsNoKey(c *C) {
+	storeKey := storetypes.NewKVStoreKey("thorchain")
+	serviceThorchain := runtime.NewKVStoreService(storeKey)
+	ctx := testutil.DefaultContext(storeKey, storetypes.NewTransientStoreKey("transient_test"))
+
+	// Call MigrateStore without setting the key - should succeed (no-op)
+	err := v2.MigrateStore(ctx, serviceThorchain)
+	c.Assert(err, IsNil)
+}
