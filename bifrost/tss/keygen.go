@@ -138,7 +138,7 @@ func (kg *KeyGen) GenerateNewKey(keygenBlockHeight int64, pKeys common.PubKeys) 
 			b = types.Blame{
 				FailReason: responses[0].Blame.FailReason,
 				IsUnicast:  responses[0].Blame.IsUnicast,
-				Round:      responses[0].Blame.Round,
+				Round:      types.CanonicalTssRound(responses[0].Blame.Round, responses[0].Algo),
 				BlameNodes: make([]types.Node, len(responses[0].Blame.BlameNodes)),
 			}
 			for i, n := range responses[0].Blame.BlameNodes {
@@ -160,7 +160,7 @@ func (kg *KeyGen) GenerateNewKey(keygenBlockHeight int64, pKeys common.PubKeys) 
 		b := types.Blame{
 			FailReason: resp.Blame.FailReason,
 			IsUnicast:  resp.Blame.IsUnicast,
-			Round:      resp.Blame.Round,
+			Round:      types.CanonicalTssRound(resp.Blame.Round, resp.Algo),
 			BlameNodes: make([]types.Node, len(resp.Blame.BlameNodes)),
 		}
 		for i, n := range resp.Blame.BlameNodes {

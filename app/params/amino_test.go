@@ -10,6 +10,7 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	"github.com/stretchr/testify/require"
 	appparams "gitlab.com/thorchain/thornode/v3/app/params"
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	thorchaintypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -111,11 +112,11 @@ func TestAminoThorchainMessages(t *testing.T) {
 		{
 			name: "MsgTssKeysignFail",
 			message: func() sdk.Msg {
-				msg, err := thorchaintypes.NewMsgTssKeysignFail(1234567890, thorchaintypes.Blame{FailReason: "fail reason", IsUnicast: true, BlameNodes: []thorchaintypes.Node{{Pubkey: "blame", BlameData: []byte("blame data"), BlameSignature: []byte("blame signature")}}}, "memo", common.NewCoins(common.NewCoin(common.AVAXAsset, math.NewUint(12323142345))), sdk.AccAddress("signer"), common.PubKey("pubkey"))
+				msg, err := thorchaintypes.NewMsgTssKeysignFail(1234567890, thorchaintypes.Blame{FailReason: "fail reason", IsUnicast: true, Round: tssMessages.KEYSIGN1aUnicast, BlameNodes: []thorchaintypes.Node{{Pubkey: "blame", BlameData: []byte("blame data"), BlameSignature: []byte("blame signature")}}}, "memo", common.NewCoins(common.NewCoin(common.AVAXAsset, math.NewUint(12323142345))), sdk.AccAddress("signer"), common.PubKey("pubkey"))
 				require.NoError(t, err)
 				return msg
 			},
-			expectedSignDoc: `{"account_number":"123","chain_id":"thorchain-1","fee":{"amount":[{"amount":"100","denom":"rune"}],"gas":"200000"},"memo":"memo","msgs":[{"type":"thorchain/TssKeysignFail","value":{"blame":{"blame_nodes":[{"blame_data":"YmxhbWUgZGF0YQ==","blame_signature":"YmxhbWUgc2lnbmF0dXJl","pubkey":"blame"}],"fail_reason":"fail reason","is_unicast":true},"coins":[{"amount":"12323142345","asset":"AVAX.AVAX"}],"height":"1234567890","id":"206496950d8d5a47c73d9eb94e718b6f2b69fb8f6816fd04503aa2fb798076bb","memo":"memo","pub_key":"pubkey","signer":"cosmos1wd5kwmn9wgr5dmap"}}],"sequence":"456"}`,
+			expectedSignDoc: `{"account_number":"123","chain_id":"thorchain-1","fee":{"amount":[{"amount":"100","denom":"rune"}],"gas":"200000"},"memo":"memo","msgs":[{"type":"thorchain/TssKeysignFail","value":{"blame":{"blame_nodes":[{"blame_data":"YmxhbWUgZGF0YQ==","blame_signature":"YmxhbWUgc2lnbmF0dXJl","pubkey":"blame"}],"fail_reason":"fail reason","is_unicast":true,"round":"SignRound1Message1"},"coins":[{"amount":"12323142345","asset":"AVAX.AVAX"}],"height":"1234567890","id":"a564405be4a54733cf450e63c0ba1f7ab0f976f0934e1d7087ad30ff41a174f2","memo":"memo","pub_key":"pubkey","signer":"cosmos1wd5kwmn9wgr5dmap"}}],"sequence":"456"}`,
 		},
 		{
 			name: "MsgTssPool",

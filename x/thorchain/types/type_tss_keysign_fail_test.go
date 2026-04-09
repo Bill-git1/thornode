@@ -3,6 +3,7 @@ package types
 import (
 	. "gopkg.in/check.v1"
 
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -17,7 +18,7 @@ func (s *TypeTssKeysignFailTestSuite) TestVoter(c *C) {
 		{Pubkey: GetRandomPubKey().String()},
 		{Pubkey: GetRandomPubKey().String()},
 	}
-	b := Blame{BlameNodes: nodes, FailReason: "fail to keysign"}
+	b := Blame{BlameNodes: nodes, FailReason: "fail to keysign", Round: tssMessages.KEYSIGN1aUnicast}
 	m, err := NewMsgTssKeysignFail(1, b, "hello", common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}, GetRandomBech32Addr(), GetRandomPubKey())
 	c.Assert(err, IsNil)
 	tss := NewTssKeysignFailVoter(m.ID, 1)

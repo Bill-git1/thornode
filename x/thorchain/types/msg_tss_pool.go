@@ -183,6 +183,22 @@ func (m *MsgTssPool) ValidateBasic() error {
 		}
 	}
 
+	if len(m.KeysharesBackupEddsa) != 0 {
+		if MatchMnemonic.Match(m.KeysharesBackupEddsa) {
+			return cosmos.ErrUnknownRequest("invalid eddsa keyshares backup")
+		}
+
+		if len(m.KeysharesBackupEddsa) < 1024 {
+			return cosmos.ErrUnknownRequest("invalid eddsa keyshares backup")
+		}
+
+		entropy := common.Entropy(m.KeysharesBackupEddsa)
+		// analyze-ignore(float-comparison)
+		if entropy < MinKeysharesBackupEntropy {
+			return cosmos.ErrUnknownRequest("invalid eddsa keyshares backup")
+		}
+	}
+
 	return nil
 }
 

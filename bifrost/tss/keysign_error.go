@@ -26,5 +26,8 @@ func (k KeysignError) Error() string {
 }
 
 func (k KeysignError) IsRound7() bool {
-	return k.Blame.Round == tssMessages.KEYSIGN7
+	round := types.CanonicalTssRound(k.Blame.Round, "")
+	// Ed25519 reaches its terminal keysign phase at round 3, which is handled the
+	// same way as secp256k1 round 7 by the retry/freeze paths.
+	return round == tssMessages.KEYSIGN7 || round == tssMessages.EDDSAKEYSIGN3
 }

@@ -1,12 +1,18 @@
 package thorchain
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/blang/semver"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	. "gopkg.in/check.v1"
 
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
@@ -81,6 +87,32 @@ func signVoter(ctx cosmos.Context, keeper keeper.Keeper, except cosmos.AccAddres
 	return
 }
 
+// legacyKeysignFailID reproduces the raw round hashing used before canonical
+// round normalization so tests can assert those IDs are rejected.
+func legacyKeysignFailID(members []Node, height int64, memo string, coins common.Coins, pubKey common.PubKey, round string) (string, error) {
+	sort.SliceStable(members, func(i, j int) bool {
+		return members[i].Pubkey < members[j].Pubkey
+	})
+
+	var sb strings.Builder
+	for _, item := range members {
+		sb.WriteString(item.Pubkey)
+	}
+	sb.WriteString(fmt.Sprintf("%d", height))
+	sb.WriteString(memo)
+	sb.WriteString(pubKey.String())
+	for _, coin := range coins {
+		sb.WriteString(coin.String())
+	}
+	sb.WriteString(round)
+
+	hash := sha256.New()
+	if _, err := hash.Write([]byte(sb.String())); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
 func newTssKeysignHandlerTestHelper(c *C) tssKeysignFailHandlerTestHelper {
 	ctx, k := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(1023)
@@ -100,6 +132,7 @@ func newTssKeysignHandlerTestHelper(c *C) tssKeysignFailHandlerTestHelper {
 	}
 	blame := Blame{
 		FailReason: "whatever",
+		Round:      tssMessages.KEYSIGN1aUnicast,
 		BlameNodes: []Node{members[0], members[1]},
 	}
 	asgardVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
@@ -181,6 +214,7 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler(c *C) {
 			messageCreator: func(helper tssKeysignFailHandlerTestHelper) cosmos.Msg {
 				msg, err := NewMsgTssKeysignFail(helper.ctx.BlockHeight(), Blame{
 					FailReason: "",
+					Round:      tssMessages.KEYSIGN1aUnicast,
 					BlameNodes: []Node{},
 				}, "hello", common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}, helper.nodeAccount.NodeAddress, GetRandomPubKey())
 				c.Assert(err, IsNil)
@@ -367,6 +401,33 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_accept_standby_node_me
 	msg1.Blame.BlameNodes = []Node{}
 	c.Assert(err, IsNil)
 	result, err = handler.Run(helper.ctx, msg1)
+	c.Assert(result, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(errors.Is(err, se.ErrUnknownRequest), Equals, true)
+}
+
+// TestTssKeysignFailHandler_rejects_legacy_round_ids ensures Thornode only
+// accepts the canonical voter ID once round normalization is enforced.
+func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_rejects_legacy_round_ids(c *C) {
+	helper := newTssKeysignHandlerTestHelper(c)
+	handler := NewTssKeysignHandler(NewDummyMgrWithKeeper(helper.keeper))
+	coins := common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}
+
+	helper.blame.Round = tssMessages.KEYSIGN7
+	legacyID, err := legacyKeysignFailID(helper.blame.BlameNodes, helper.ctx.BlockHeight(), "hello", coins, helper.retiringVault.PubKey, "thorchain.tsslib.ecdsa.signing.SignRound7Message")
+	c.Assert(err, IsNil)
+
+	msg := &MsgTssKeysignFail{
+		ID:     legacyID,
+		Height: helper.ctx.BlockHeight(),
+		Blame:  helper.blame,
+		Memo:   "hello",
+		Coins:  coins,
+		Signer: helper.nodeAccount.NodeAddress,
+		PubKey: helper.retiringVault.PubKey,
+	}
+
+	result, err := handler.Run(helper.ctx, msg)
 	c.Assert(result, IsNil)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Is(err, se.ErrUnknownRequest), Equals, true)

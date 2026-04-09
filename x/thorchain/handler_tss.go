@@ -57,6 +57,13 @@ var verifySecp256K1Signature = func(pk common.PubKey, sig []byte) error {
 	// build the signature
 	r := new(big.Int).SetBytes(sig[:32])
 	s := new(big.Int).SetBytes(sig[32:])
+
+	// reject high-S signatures (BIP-62) to prevent signature malleability
+	halfOrder := new(big.Int).Rsh(btcec.S256().N, 1)
+	if s.Cmp(halfOrder) == 1 {
+		return fmt.Errorf("high-S signature rejected (BIP-62)")
+	}
+
 	signature := &btcec.Signature{R: r, S: s}
 
 	// verify the signature
@@ -546,8 +553,8 @@ func judgeLateSigner(ctx cosmos.Context, mgr Manager, msg *MsgTssPool, voter Tss
 func TssAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgTssPool) (cosmos.Context, error) {
 	err := validateTssAuth(ctx, k, msg.Signer)
 	if err != nil {
-		return ctx.WithPriority(ActiveNodePriority), err
+		return ctx, err
 	}
 
-	return ctx, nil
+	return ctx.WithPriority(ActiveNodePriority), nil
 }

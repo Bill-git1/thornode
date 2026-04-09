@@ -37,3 +37,20 @@ const (
 	EDDSAKEYGEN
 	EDDSAKEYSIGN
 )
+
+// ValidTssKeysignRounds is the accepted canonical keysign-round set after
+// alias normalization. Defined here alongside the constants so additions to
+// the round constants are reflected in the validity set.
+var ValidTssKeysignRounds = map[string]bool{
+	KEYSIGN1aUnicast: true,
+	KEYSIGN1b:        true,
+	KEYSIGN2Unicast:  true,
+	KEYSIGN3:         true,
+	KEYSIGN4:         true,
+	KEYSIGN5:         true,
+	KEYSIGN6:         true,
+	KEYSIGN7:         true,
+	EDDSAKEYSIGN1:    true,
+	EDDSAKEYSIGN2:    true,
+	EDDSAKEYSIGN3:    true,
+}

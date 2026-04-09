@@ -166,7 +166,7 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	signer, err := common.PubKey(keygen.Members[0]).GetThorAddress()
 	c.Assert(err, IsNil)
 	keygenTime := int64(1024)
-	msg, err := NewMsgTssPoolV2(keygen.Members, newVaultPk, []byte("fakeSignature"), nil, AsgardKeygen, ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), signer, keygenTime, GetRandomPubKey(), []byte("backup"))
+	msg, err := NewMsgTssPoolV2(keygen.Members, newVaultPk, []byte("fakeSignature"), nil, AsgardKeygen, ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), signer, keygenTime, GetRandomPubKey(), nil)
 	c.Assert(err, IsNil)
 	tssHandler := NewTssHandler(mgr)
 

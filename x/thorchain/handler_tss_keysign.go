@@ -130,10 +130,17 @@ func (h TssKeysignHandler) handle(ctx cosmos.Context, msg MsgTssKeysignFail) (*c
 		vaultMemberNodes = append(vaultMemberNodes, na)
 	}
 
-	// track the count of round 7 failures, only from vault members
+	// Track terminal-round failures from the vault's actual signing committee,
+	// not just the current active validator set. Retiring vault members can
+	// still participate in keysign during churn after leaving the active set,
+	// so using IsNodeKeys here would undercount final-round reports and could
+	// miss freezing a vault that is still failing at the terminal round.
 	if msg.Blame.Round == tssMessages.KEYSIGN7 || msg.Blame.Round == tssMessages.EDDSAKEYSIGN3 {
-		if vaultMemberNodes.IsNodeKeys(msg.Signer) {
-			voter.LastRoundCount++
+		for _, na := range vaultMemberNodes {
+			if msg.Signer.Equals(na.NodeAddress) {
+				voter.LastRoundCount++
+				break
+			}
 		}
 	}
 	h.mgr.Keeper().SetTssKeysignFailVoter(ctx, voter)

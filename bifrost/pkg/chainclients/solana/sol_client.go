@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/mr-tron/base58"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -388,6 +389,16 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 
 	signedTx, err := c.signTransaction(solTx, tx)
 	if err != nil {
+		// Forward blamed TSS failures to Thornode so EdDSA outbounds participate
+		// in the same slash/freeze handling as the secp256k1 signer paths.
+		var keysignError tss.KeysignError
+		if errors.As(err, &keysignError) && len(keysignError.Blame.BlameNodes) > 0 {
+			txID, errPostKeysignFail := c.bridge.PostKeysignFailure(keysignError.Blame, height, tx.GetMemo(), tx.Coins, tx.VaultPubKeyEddsa)
+			if errPostKeysignFail != nil {
+				return checkPointBytes, nil, nil, multierror.Append(err, errPostKeysignFail)
+			}
+			c.logger.Info().Str("tx_id", txID.String()).Msg("post keysign failure to THORChain")
+		}
 		return checkPointBytes, nil, nil, fmt.Errorf("fail to sign tx: %w", err)
 	}
 
