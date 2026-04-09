@@ -475,21 +475,23 @@ func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				toi.VaultPubKey = vault.PubKey
 				toi.VaultPubKeyEddsa = vault.PubKeyEddsa
 
-				// update max gas
+				// update max gas - update voter first, only update txOut if voter succeeds
 				if !maxGasCoin.IsEmpty() {
-					toi.MaxGas = common.Gas{maxGasCoin}
-					// Update MaxGas in ObservedTxVoter action as well
 					if err = updateTxOutGas(ctx, s.keeper, toi, common.Gas{maxGasCoin}); err != nil {
 						ctx.Logger().Error("Failed to update MaxGas of action in ObservedTxVoter", "hash", toi.InHash, "error", err)
+					} else {
+						toi.MaxGas = common.Gas{maxGasCoin}
 					}
 				}
 				// Equals checks GasRate so update actions GasRate too (before updating in the queue item)
 				// for future updates of MaxGas, which must match for matchActionItem in AddOutTx.
+				// Only update txOut GasRate if voter update succeeds to prevent permanent desync.
 				gasRate := int64(mgr.GasMgr().GetGasRate(ctx, toi.Chain).Uint64())
 				if err = updateTxOutGasRate(ctx, s.keeper, toi, gasRate); err != nil {
 					ctx.Logger().Error("Failed to update GasRate of action in ObservedTxVoter", "hash", toi.InHash, "error", err)
+				} else {
+					toi.GasRate = gasRate
 				}
-				toi.GasRate = gasRate
 			}
 
 			// if a pool with the asset name doesn't exist, skip rescheduling

@@ -174,6 +174,19 @@ func (s TxOutStoreSuite) TestEndBlock(c *C) {
 		InHash:    GetRandomTxHash(),
 		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(20*common.One)),
 	}
+
+	// Set up voter with the item as an action so EndBlock can update gas in both txOut and voter.
+	voter := NewObservedTxVoter(item.InHash, common.ObservedTxs{
+		common.ObservedTx{
+			Tx:          GetRandomTx(),
+			Status:      common.Status_incomplete,
+			BlockHeight: 1,
+			Signers:     []string{w.activeNodeAccount.NodeAddress.String()},
+		},
+	})
+	voter.Actions = []TxOutItem{item}
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
 	err := txOutStore.UnSafeAddTxOutItem(w.ctx, w.mgr, item, w.ctx.BlockHeight())
 	c.Assert(err, IsNil)
 

@@ -48,6 +48,7 @@ func (tos *TxOutStorage) EndBlock(ctx cosmos.Context, mgr Manager) error {
 
 	maxGasCache := make(map[common.Chain]common.Coin)
 	gasRateCache := make(map[common.Chain]int64)
+	gasDetailsFailed := make(map[common.Chain]bool)
 
 	for i, tx := range txOut.TxArray {
 		voter, err := tos.keeper.GetObservedTxInVoter(ctx, tx.InHash)
@@ -67,26 +68,38 @@ func (tos *TxOutStorage) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		gasRate, okGasRate := gasRateCache[tx.Chain]
 		// update cache if needed
 		if !okMaxGas || !okGasRate {
-			maxGasCoin, gasRate, _ = mgr.GasMgr().GetGasDetails(ctx, tx.Chain)
+			if gasDetailsFailed[tx.Chain] {
+				continue
+			}
+			var err error
+			maxGasCoin, gasRate, err = mgr.GasMgr().GetGasDetails(ctx, tx.Chain)
+			if err != nil {
+				ctx.Logger().Error("fail to get gas details", "chain", tx.Chain, "error", err)
+				gasDetailsFailed[tx.Chain] = true
+				continue
+			}
 			maxGasCache[tx.Chain] = maxGasCoin
 			gasRateCache[tx.Chain] = gasRate
 		}
 
 		if len(tx.MaxGas) == 0 || (!maxGasCoin.IsEmpty() && !maxGasCoin.Amount.Equal(tx.MaxGas[0].Amount)) {
-			txOut.TxArray[i].MaxGas = common.Gas{maxGasCoin}
-			// Update MaxGas in ObservedTxVoter action as well
-			err := updateTxOutGas(ctx, tos.keeper, tx, common.Gas{maxGasCoin})
-			if err != nil {
+			// Update MaxGas in ObservedTxVoter action first; only update txOut if voter update succeeds
+			// to maintain consistency between the txOut item and the voter action.
+			if err := updateTxOutGas(ctx, tos.keeper, tx, common.Gas{maxGasCoin}); err != nil {
 				ctx.Logger().Error("Failed to update MaxGas of action in ObservedTxVoter", "hash", tx.InHash, "error", err)
+			} else {
+				txOut.TxArray[i].MaxGas = common.Gas{maxGasCoin}
 			}
 		}
 		if gasRate > 0 && txOut.TxArray[i].GasRate != gasRate {
 			// Equals checks GasRate so update actions GasRate too (before updating in the queue item)
 			// for future updates of MaxGas, which must match for matchActionItem in AddOutTx.
+			// Only update txOut GasRate if voter update succeeds to prevent permanent desync.
 			if err := updateTxOutGasRate(ctx, tos.keeper, tx, gasRate); err != nil {
 				ctx.Logger().Error("Failed to update GasRate of action in ObservedTxVoter", "hash", tx.InHash, "error", err)
+			} else {
+				txOut.TxArray[i].GasRate = gasRate
 			}
-			txOut.TxArray[i].GasRate = gasRate
 		}
 	}
 

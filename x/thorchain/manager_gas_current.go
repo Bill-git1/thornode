@@ -250,7 +250,11 @@ func (gm *GasMgr) GetGasDetails(ctx cosmos.Context, chain common.Chain) (common.
 
 // GetGasRate return the gas rate
 func (gm *GasMgr) GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.Uint {
-	_, gasRate, _ := gm.GetGasDetails(ctx, chain)
+	_, gasRate, err := gm.GetGasDetails(ctx, chain)
+	if err != nil {
+		ctx.Logger().Error("fail to get gas rate", "chain", chain, "error", err)
+		return cosmos.ZeroUint()
+	}
 	return cosmos.NewUint(uint64(gasRate))
 }
 
