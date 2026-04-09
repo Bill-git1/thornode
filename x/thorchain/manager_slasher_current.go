@@ -288,8 +288,11 @@ func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				}
 			}
 
-			// If vault is inactive, do not reassign the outbound to another vault. This must
-			// be done before treasury recovery to avoid making active vaults insolvent.
+			// If vault is inactive, check if it still has sufficient funds to fulfill
+			// the outbound. If so, reschedule to the same vault (retired vault recovery).
+			// If the vault has been drained (e.g. migration completed before this outbound
+			// was signed), fall through to active vault selection so the outbound can be
+			// fulfilled from a vault that actually holds the funds.
 			if vault.Status == InactiveVault {
 				maxRetiredVaultRecoveryAttempts := mgr.Keeper().GetConfigInt64(ctx, constants.MaxRetiredVaultRecoveryAttempts)
 				age := ctx.BlockHeight() - voter.FinalisedHeight
@@ -302,14 +305,34 @@ func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 					continue
 				}
 
-				err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, toi, rescheduleHeight)
-				if err != nil {
-					ctx.Logger().Error("fail to add outbound to queue for retired vault recovery", "error", err)
-					resultErr = fmt.Errorf("failed to add outbound to queue for retired vault recovery: %w", err)
-				} else {
-					txs.TxArray[i].OutHash = common.BlankTxID
+				// Check if the inactive vault has enough funds for the outbound.
+				// Include gas cost when the gas asset is the same as the outbound asset.
+				requiredAmount := toi.Coin.Amount
+				for _, gas := range toi.MaxGas {
+					if gas.Asset.Equals(toi.Coin.Asset) {
+						requiredAmount = requiredAmount.Add(gas.Amount)
+					}
 				}
-				continue
+				vaultBalance := vault.GetCoin(toi.Coin.Asset).Amount
+				if vaultBalance.GTE(requiredAmount) {
+					// Vault still has funds — reschedule to the same vault for signing.
+					err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, toi, rescheduleHeight)
+					if err != nil {
+						ctx.Logger().Error("fail to add outbound to queue for retired vault recovery", "error", err)
+						resultErr = fmt.Errorf("failed to add outbound to queue for retired vault recovery: %w", err)
+					} else {
+						txs.TxArray[i].OutHash = common.BlankTxID
+					}
+					continue
+				}
+
+				// Vault has been drained — fall through to active vault selection.
+				ctx.Logger().Info("inactive vault has insufficient funds, reassigning to active vault",
+					"hash", toi.InHash,
+					"vault", vault.PubKey,
+					"asset", toi.Coin.Asset,
+					"required", requiredAmount,
+					"available", vaultBalance)
 			}
 
 			if maxOutboundAttempts > 0 {

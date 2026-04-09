@@ -188,6 +188,85 @@ func (s *SlashingSuite) TestNotSigningSlash(c *C) {
 	c.Assert(keeper.txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
 }
 
+func (s *SlashingSuite) TestInactiveVaultDrainedReroute(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(201)
+	txOutStore := NewTxStoreDummy()
+	ver := GetCurrentVersion()
+	constAccessor := constants.GetConstantValues(ver)
+	na := GetRandomValidatorNode(NodeActive)
+	inTx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
+		common.Coins{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(3200000000)),
+		},
+		nil,
+		"REFUND:"+GetRandomTxHash().String(),
+	)
+
+	// Create the inactive vault (drained — 0 ETH)
+	inactiveVault := GetRandomVault()
+	inactiveVault.Type = AsgardVault
+	inactiveVault.Status = InactiveVault
+	inactiveVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
+	}
+
+	txOutItem := TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      inTx.ID,
+		VaultPubKey: inactiveVault.PubKey,
+		ToAddress:   GetRandomETHAddress(),
+		Coin: common.NewCoin(
+			common.ETHAsset, cosmos.NewUint(31239*common.One),
+		),
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(150000)),
+		},
+		Memo: "REFUND:" + inTx.ID.String(),
+	}
+	txOut := NewTxOut(3)
+	txOut.TxArray = append(txOut.TxArray, txOutItem)
+
+	// Create an active vault with sufficient ETH
+	activeVault := GetRandomVault()
+	activeVault.Type = AsgardVault
+	activeVault.Status = ActiveVault
+	activeVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(500000*common.One)),
+	}
+
+	keeper := &TestSlashingLackKeeper{
+		txOut:  txOut,
+		na:     na,
+		vaults: Vaults{inactiveVault, activeVault},
+		voter: ObservedTxVoter{
+			Actions:         []TxOutItem{txOutItem},
+			FinalisedHeight: 3,
+		},
+		slashPts: make(map[string]int64),
+	}
+
+	signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
+	ctx = ctx.WithBlockHeight(3 + signingTransactionPeriod)
+	mgr := NewDummyMgr()
+	mgr.txOutStore = txOutStore
+	slasher := newSlasher(keeper, NewDummyEventMgr())
+	c.Assert(slasher.LackSigning(ctx, mgr), IsNil)
+
+	outItems, err := txOutStore.GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(outItems, HasLen, 1)
+	// The outbound should have been rerouted to the active vault, NOT the inactive one
+	c.Assert(outItems[0].VaultPubKey.Equals(inactiveVault.PubKey), Equals, false)
+	c.Assert(outItems[0].VaultPubKey.Equals(activeVault.PubKey), Equals, true)
+	// voter action should also be updated
+	c.Assert(keeper.voter.Actions[0].VaultPubKey.Equals(activeVault.PubKey), Equals, true)
+	c.Assert(keeper.txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
+}
+
 func (s *SlashingSuite) TestNewSlasher(c *C) {
 	nas := NodeAccounts{
 		GetRandomValidatorNode(NodeActive),
