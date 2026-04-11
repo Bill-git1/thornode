@@ -1031,7 +1031,7 @@
         "coin": "100000000 BTC.BTC",
         "emit_asset": "25001359557 THOR.RUNE",
         "from": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
-        "id": "797aa5882fa238fd002519657dba2d49cdb3e3f88c564c49db6419e1d6ed8223",
+        "id": "797AA5882FA238FD002519657DBA2D49CDB3E3F88C564C49DB6419E1D6ED8223",
         "liquidity_fee": "25001359557",
         "liquidity_fee_in_rune": "25001359557",
         "memo": "SWAP:THOR.RUNE:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
@@ -1075,7 +1075,7 @@
         "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "id": "0000000000000000000000000000000000000000000000000000000000000000",
         "in_tx_id": "797AA5882FA238FD002519657DBA2D49CDB3E3F88C564C49DB6419E1D6ED8223",
-        "memo": "OUT:797aa5882fa238fd002519657dba2d49cdb3e3f88c564c49db6419e1d6ed8223",
+        "memo": "OUT:797AA5882FA238FD002519657DBA2D49CDB3E3F88C564C49DB6419E1D6ED8223",
         "mode": "EndBlock",
         "to": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "type": "outbound"

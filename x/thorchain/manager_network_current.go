@@ -552,6 +552,7 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 		blockOut, err = mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get block tx out", "error", err)
+			continue
 		}
 		if height > ctx.BlockHeight()+maxTxOutOffset && len(blockOut.TxArray) == 0 {
 			// we've hit our max offset, and an empty block, we can assume the
@@ -1516,14 +1517,14 @@ func (vm *NetworkMgr) withdrawLiquidity(ctx cosmos.Context, pool Pool, na NodeAc
 
 	// If any RUNE remains in the pool (such as if the last withdraw were Asset-address-only),
 	// transfer it to the Reserve to prevent broken-invariant Pool Module oversolvency.
-	remainingRune := common.NewCoin(common.RuneAsset(), pool.BalanceRune)
-	pool.BalanceRune = cosmos.ZeroUint()
-	remainingRune.Amount = remainingRune.Amount.Add(pool.PendingInboundRune)
-	pool.PendingInboundRune = cosmos.ZeroUint()
+	remainingRune := common.NewCoin(common.RuneAsset(), pool.BalanceRune.Add(pool.PendingInboundRune))
 	if !remainingRune.IsEmpty() {
 		if err = vm.k.SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(remainingRune)); err != nil {
 			// Still proceed to suspend the pool, but log the error.
 			ctx.Logger().Error("fail to transfer remaining pool ragnarok rune from asgard to reserve", "error", err)
+		} else {
+			pool.BalanceRune = cosmos.ZeroUint()
+			pool.PendingInboundRune = cosmos.ZeroUint()
 		}
 	}
 
@@ -1569,7 +1570,7 @@ func (vm *NetworkMgr) withdrawLiquidity(ctx cosmos.Context, pool Pool, na NodeAc
 	vm.k.RemovePool(ctx, pool.Asset.GetSyntheticAsset())
 	vm.k.RemovePool(ctx, pool.Asset.GetDerivedAsset())
 
-	return err
+	return nil
 }
 
 // UpdateNetwork Update the network data to reflect changing in this block
@@ -1764,13 +1765,13 @@ func (vm *NetworkMgr) payPoolRewards(ctx cosmos.Context, poolRewards []cosmos.Ui
 		if reward.IsZero() {
 			continue
 		}
-		pools[i].BalanceRune = pools[i].BalanceRune.Add(reward)
-		if err := vm.k.SetPool(ctx, pools[i]); err != nil {
-			return fmt.Errorf("fail to set pool: %w", err)
-		}
 		coin := common.NewCoin(common.RuneNative, reward)
 		if err := vm.k.SendFromModuleToModule(ctx, ReserveName, AsgardName, common.NewCoins(coin)); err != nil {
 			return fmt.Errorf("fail to transfer funds from reserve to asgard: %w", err)
+		}
+		pools[i].BalanceRune = pools[i].BalanceRune.Add(reward)
+		if err := vm.k.SetPool(ctx, pools[i]); err != nil {
+			return fmt.Errorf("fail to set pool: %w", err)
 		}
 	}
 	return nil
@@ -2003,6 +2004,11 @@ func (vm *NetworkMgr) redeemSynthAssetToReserve(ctx cosmos.Context, p Pool) erro
 		runeValue = p.BalanceRune
 	}
 
+	if err := vm.k.SendFromModuleToModule(ctx, AsgardName, ReserveName,
+		common.NewCoins(common.NewCoin(common.RuneNative, runeValue))); err != nil {
+		return fmt.Errorf("fail to send redeemed synth RUNE to reserve: %w", err)
+	}
+
 	p.BalanceRune = common.SafeSub(p.BalanceRune, runeValue)
 	// Here didn't set synth unit to zero , but `GetTotalSupply` will check pool ragnarok status
 	// with GetPoolRagnarokStart, then the synth supply will return zero.
@@ -2010,10 +2016,6 @@ func (vm *NetworkMgr) redeemSynthAssetToReserve(ctx cosmos.Context, p Pool) erro
 		return fmt.Errorf("fail to save pool,err: %w", err)
 	}
 	vm.k.SetPoolRagnarokStart(ctx, p.Asset)
-	if err := vm.k.SendFromModuleToModule(ctx, AsgardName, ReserveName,
-		common.NewCoins(common.NewCoin(common.RuneNative, runeValue))); err != nil {
-		ctx.Logger().Error("fail to send redeemed synth RUNE to reserve", "error", err)
-	}
 	ctx.Logger().
 		With("synth_supply", totalSupply.String()).
 		With("rune_amount", runeValue).
@@ -2204,6 +2206,10 @@ func (vm *NetworkMgr) claimingSwapRuneToTCY(ctx cosmos.Context, mgr Manager) err
 	}
 
 	assetDisbursement := pool.AssetDisbursementForRuneAdd(claimingRuneBalance)
+	if assetDisbursement.IsZero() {
+		return nil
+	}
+
 	pool.BalanceRune = pool.BalanceRune.Add(claimingRuneBalance)
 	pool.BalanceAsset = common.SafeSub(pool.BalanceAsset, assetDisbursement)
 
@@ -2723,7 +2729,7 @@ func (vm *NetworkMgr) createSwapToOverSolvency(ctx cosmos.Context, mgr Manager, 
 	// Generate a deterministic 64-character hex hash for chain compatibility
 	hashInput := fmt.Sprintf("OVERSOLVENCY-%s-%d", asset.String(), ctx.BlockHeight())
 	hash := sha256.Sum256([]byte(hashInput))
-	txID := common.TxID(hex.EncodeToString(hash[:]))
+	txID, _ := common.NewTxID(hex.EncodeToString(hash[:]))
 
 	// Create the swap message using streaming swap (interval=1, quantity=1)
 	// This ensures the swap executes as a streaming swap with minimal slippage impact
