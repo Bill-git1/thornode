@@ -88,6 +88,7 @@ func init() {
 	btcChainRPCs["getrawtransaction-27de3e1865c098cd4fded71bae1e8236fd27ce5dce6e524a9ac5cd1a17b5c241"] = loadFixture("../../../../test/fixtures/btc/tx-c241.json")
 	btcChainRPCs["getrawtransaction"] = loadFixture("../../../../test/fixtures/btc/tx.json")
 	btcChainRPCs["createwallet"] = loadFixture("../../../../test/fixtures/btc/createwallet.json")
+	btcChainRPCs["sendrawtransaction"] = loadFixture("../../../../test/fixtures/btc/sendrawtransaction.json")
 }
 
 func (s *BitcoinSuite) SetUpTest(c *C) {
