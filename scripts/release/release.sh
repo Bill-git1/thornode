@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "ERROR: Script failed at line $LINENO (exit code $?)" >&2' ERR
 
 # ---------------------------------------------------------------------------
 # THORNode Release Automation
@@ -17,7 +18,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VERSION_FILE="$REPO_ROOT/version"
 UPGRADES_FILE="$REPO_ROOT/app/upgrades.go"
 PRLOG_SCRIPT="$SCRIPT_DIR/prlog.py"
-THORNODE_API="https://thornode.thorchain.liquify.com/thorchain"
+THORNODE_API="https://gateway.liquify.com/chain/thorchain_api/thorchain"
 
 # ---------------------------------------------------------------------------
 # Utility functions
@@ -106,7 +107,7 @@ cmd_stagenet() {
   echo ""
 
   # Predict next RC number by finding the highest existing RC tag
-  git -C "$REPO_ROOT" fetch --tags --quiet
+  git -C "$REPO_ROOT" fetch --tags --force --quiet
   local latest_rc
   latest_rc="$(git -C "$REPO_ROOT" tag -l "v${VERSION}-rc*" |
     sed 's/.*-rc//' |
@@ -156,7 +157,7 @@ cmd_stagenet() {
   # Generate changelog
   info "Generating changelog..."
   local changelog
-  changelog="$(generate_changelog "$milestone" 2>&1)" || die "Failed to generate changelog."
+  changelog="$(generate_changelog "$milestone")" || die "Failed to generate changelog."
   echo ""
   echo "--- Changelog Preview ---"
   echo "$changelog"
@@ -176,11 +177,15 @@ cmd_stagenet() {
   # Push stagenet branch
   confirm "Checkout $rc_tag and force-push the 'stagenet' branch?"
 
-  git -C "$REPO_ROOT" fetch --tags origin
+  git -C "$REPO_ROOT" fetch --tags --force origin
+  local original_branch
+  original_branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)"
+  [[ $original_branch != "HEAD" ]] || original_branch="$(git -C "$REPO_ROOT" rev-parse HEAD)"
   git -C "$REPO_ROOT" checkout "$rc_tag"
   git -C "$REPO_ROOT" branch -D stagenet 2>/dev/null || true
   git -C "$REPO_ROOT" checkout -b stagenet
   git -C "$REPO_ROOT" push -f origin stagenet
+  git -C "$REPO_ROOT" checkout "$original_branch" --quiet
 
   info "Branch 'stagenet' force-pushed to origin."
   echo ""
@@ -259,7 +264,7 @@ cmd_mainnet() {
     local milestone
     read -rp "Milestone name for changelog [Release-${VERSION}]: " milestone
     milestone="${milestone:-Release-${VERSION}}"
-    rc_notes="$(generate_changelog "$milestone" 2>&1)" || die "Failed to generate changelog."
+    rc_notes="$(generate_changelog "$milestone")" || die "Failed to generate changelog."
   fi
 
   # Compose mainnet release body
@@ -286,10 +291,14 @@ EOF
   confirm "Checkout $rc_tag and force-push the 'mainnet' branch?"
 
   git -C "$REPO_ROOT" fetch origin
+  local original_branch
+  original_branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)"
+  [[ $original_branch != "HEAD" ]] || original_branch="$(git -C "$REPO_ROOT" rev-parse HEAD)"
   git -C "$REPO_ROOT" checkout "$rc_tag"
   git -C "$REPO_ROOT" branch -D mainnet 2>/dev/null || true
   git -C "$REPO_ROOT" checkout -b mainnet
   git -C "$REPO_ROOT" push -f origin mainnet
+  git -C "$REPO_ROOT" checkout "$original_branch" --quiet
 
   info "Branch 'mainnet' force-pushed to origin."
   echo ""
@@ -409,11 +418,16 @@ cmd_bifrost_patch() {
   # Edit app/upgrades.go
   info "Updating app/upgrades.go with consensus version entry..."
 
-  # Find the closing } of the var Upgrades slice.
-  # We look for the first } that closes the Upgrades block.
+  # Find the closing } of the var Upgrades slice by locating its opening line
+  # and then finding the matching closing brace.
+  local start_line
+  start_line="$(grep -n '^var Upgrades' "$UPGRADES_FILE" | head -1 | cut -d: -f1)"
+  [[ -n $start_line ]] || die "Could not find 'var Upgrades' in $UPGRADES_FILE"
+
   local closing_line
-  closing_line="$(grep -n '^}' "$UPGRADES_FILE" | head -1 | cut -d: -f1)"
-  [[ -n $closing_line ]] || die "Could not find closing brace in $UPGRADES_FILE"
+  closing_line="$(tail -n +"$start_line" "$UPGRADES_FILE" | grep -n '^}' | head -1 | cut -d: -f1)"
+  [[ -n $closing_line ]] || die "Could not find closing brace of Upgrades slice in $UPGRADES_FILE"
+  closing_line=$((start_line + closing_line - 1))
 
   # Insert the standard.NewUpgrade entry before the closing brace
   local entry
@@ -459,7 +473,7 @@ cmd_bifrost_patch() {
     local milestone
     read -rp "Milestone name [Release-${new_version}]: " milestone
     milestone="${milestone:-Release-${new_version}}"
-    changelog="$(generate_changelog "$milestone" 2>&1)" || die "Failed to generate changelog."
+    changelog="$(generate_changelog "$milestone")" || die "Failed to generate changelog."
     ;;
   2)
     changelog=""
