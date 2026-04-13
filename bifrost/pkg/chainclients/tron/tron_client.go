@@ -624,7 +624,7 @@ func (c *TronClient) ReportSolvency(height int64) error {
 		}
 
 		currentGasFee := c.config.ChainID.NativeGasToThorchain(fee)
-		if runners.IsVaultSolvent(acc, vaults[i], currentGasFee) {
+		if runners.IsVaultSolvent(c.config.ChainID, acc, vaults[i], currentGasFee) {
 			solventMsgs = append(solventMsgs, msg)
 			continue
 		}

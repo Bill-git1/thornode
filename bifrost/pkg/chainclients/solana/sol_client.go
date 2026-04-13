@@ -308,7 +308,7 @@ func (c *SOLClient) ReportSolvency(height int64) error {
 			Coins:  acct.Coins,
 		}
 
-		if runners.IsVaultSolvent(acct, v, currentFeeRate) {
+		if runners.IsVaultSolvent(c.cfg.ChainID, acct, v, currentFeeRate) {
 			solventMsgs = append(solventMsgs, msg) // Solvent-vault message
 			continue
 		}

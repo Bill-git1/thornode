@@ -96,29 +96,59 @@ func SolvencyCheckRunner(chain common.Chain,
 	}
 }
 
-// IsVaultSolvent check whether the given vault is solvent or not , if it is not solvent , then it will need to report solvency to thornode
-func IsVaultSolvent(account common.Account, vault types.Vault, currentGasFee cosmos.Uint) bool {
+// IsVaultSolvent checks whether the chain-specific portion of the given vault is solvent.
+// Vaults contain assets for all chains, so filter to the caller's chain before comparing
+// account balances.
+func IsVaultSolvent(chain common.Chain, account common.Account, vault types.Vault, currentGasFee cosmos.Uint) bool {
 	logger := log.Logger
-	for _, c := range account.Coins {
-		asgardCoin := vault.GetCoin(c.Asset)
+	currentGasFee10x := currentGasFee.MulUint64(10)
 
-		// when wallet has more coins or equal exactly as asgard , then the vault is solvent
-		if c.Amount.GTE(asgardCoin.Amount) {
+	// Intentionally compare against vault expectations, treating an absent wallet asset as
+	// zero. Iterating wallet coins can miss vault-required assets that are absent from the
+	// wallet and incorrectly appear solvent.
+	for _, asgardCoin := range vault.Coins {
+		if !asgardCoin.Asset.Chain.Equals(chain) {
+			continue
+		}
+		if asgardCoin.Amount.IsZero() {
 			continue
 		}
 
-		gap := asgardCoin.Amount.Sub(c.Amount)
+		walletAmt := cosmos.ZeroUint()
+		walletCoin := account.Coins.GetCoin(asgardCoin.Asset)
+		if walletCoin.IsEmpty() {
+			logger.Info().
+				Stringer("asset", asgardCoin.Asset).
+				Stringer("amount", asgardCoin.Amount).
+				Msg("asset exists in vault but not in wallet, insolvent")
+		} else {
+			walletAmt = walletCoin.Amount
+		}
+
+		// when wallet has more coins or equal exactly as asgard , then the vault is solvent
+		if walletAmt.GTE(asgardCoin.Amount) {
+			continue
+		}
+
+		gap := asgardCoin.Amount.Sub(walletAmt)
 		// thornode allow 10x of MaxGas as the gap
-		if c.Asset.IsGasAsset() && gap.LT(currentGasFee.MulUint64(10)) {
+		if asgardCoin.Asset.IsGasAsset() && gap.LT(currentGasFee10x) {
 			continue
 		}
 		logger.Info().
-			Str("asset", c.Asset.String()).
-			Str("asgard amount", asgardCoin.Amount.String()).
-			Str("wallet amount", c.Amount.String()).
-			Str("gap", gap.String()).
+			Stringer("chain", chain).
+			Stringer("asset", asgardCoin.Asset).
+			Stringer("asgard_amount", asgardCoin.Amount).
+			Stringer("wallet_amount", walletAmt).
+			Stringer("gap", gap).
 			Msg("insolvency detected")
 		return false
 	}
+	logger.Debug().
+		Stringer("chain", chain).
+		Stringer("vault", vault.Coins).
+		Stringer("wallet", account.Coins).
+		Stringer("currentGasFee10x", currentGasFee10x).
+		Msg("vault is solvent")
 	return true
 }

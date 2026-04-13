@@ -1382,7 +1382,7 @@ func (c *Client) ReportSolvency(ethBlockHeight int64) error {
 			Coins:  acct.Coins,
 		}
 
-		if runners.IsVaultSolvent(acct, asgardVaults[i], currentGasFee) {
+		if runners.IsVaultSolvent(c.cfg.ChainID, acct, asgardVaults[i], currentGasFee) {
 			solventMsgs = append(solventMsgs, msg) // Solvent-vault message
 			continue
 		}

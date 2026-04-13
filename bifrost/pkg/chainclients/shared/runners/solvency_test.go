@@ -1,6 +1,7 @@
 package runners
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,8 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	ckeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
@@ -227,17 +230,66 @@ func (s *SolvencyTestSuite) TestIsVaultSolvent(c *C) {
 		AccountNumber: 0,
 		Coins:         common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(102400000000))),
 	}
-	c.Assert(IsVaultSolvent(acct, vault, cosmos.NewUint(0)), Equals, true)
+	c.Assert(IsVaultSolvent(common.ETHChain, acct, vault, cosmos.NewUint(0)), Equals, true)
 	acct = common.Account{
 		Sequence:      0,
 		AccountNumber: 0,
 		Coins:         common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(102305000000))),
 	}
-	c.Assert(IsVaultSolvent(acct, vault, cosmos.NewUint(80000*120)), Equals, true)
+	c.Assert(IsVaultSolvent(common.ETHChain, acct, vault, cosmos.NewUint(80000*120)), Equals, true)
 	acct = common.Account{
 		Sequence:      0,
 		AccountNumber: 0,
 		Coins:         common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(102205000000))),
 	}
-	c.Assert(IsVaultSolvent(acct, vault, cosmos.NewUint(80000*120)), Equals, false)
+	c.Assert(IsVaultSolvent(common.ETHChain, acct, vault, cosmos.NewUint(80000*120)), Equals, false)
+
+	tokenAsset, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	c.Assert(err, IsNil)
+	vault.Coins = common.NewCoins(
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(102400000000)),
+		common.NewCoin(tokenAsset, cosmos.NewUint(100)),
+	)
+	acct = common.Account{
+		Sequence:      0,
+		AccountNumber: 0,
+		Coins:         common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(102400000000))),
+	}
+	c.Assert(IsVaultSolvent(common.ETHChain, acct, vault, cosmos.NewUint(0)), Equals, false)
+
+	vault.Coins = common.NewCoins(
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(102400000000)),
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100)),
+	)
+	c.Assert(IsVaultSolvent(common.ETHChain, acct, vault, cosmos.NewUint(0)), Equals, true)
+}
+
+func (s *SolvencyTestSuite) TestIsVaultSolventMissingZeroAmountAssetDoesNotLogInsolvent(c *C) {
+	originalLogger := log.Logger
+	var buf bytes.Buffer
+	log.Logger = zerolog.New(&buf)
+	defer func() {
+		log.Logger = originalLogger
+	}()
+
+	tokenAsset, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	c.Assert(err, IsNil)
+
+	vault := types.Vault{
+		BlockHeight: 1,
+		PubKey:      types.GetRandomPubKey(),
+		Coins: common.NewCoins(
+			common.NewCoin(tokenAsset, cosmos.ZeroUint()),
+		),
+		Type:   types.VaultType_AsgardVault,
+		Status: types.VaultStatus_ActiveVault,
+	}
+	acct := common.Account{
+		Sequence:      0,
+		AccountNumber: 0,
+		Coins:         common.NewCoins(),
+	}
+
+	c.Assert(IsVaultSolvent(common.ETHChain, acct, vault, cosmos.ZeroUint()), Equals, true)
+	c.Assert(strings.Contains(buf.String(), "insolvent"), Equals, false)
 }
