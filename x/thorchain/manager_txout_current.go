@@ -298,7 +298,16 @@ func (tos *TxOutStorage) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manager, 
 		}
 
 		var targetHeight int64
-		targetHeight, cloutApplied, err = tos.CalcTxOutHeight(ctx, mgr.GetVersion(), outputs[0])
+		// Build a synthetic TxOutItem representing the whole batch so
+		// CalcTxOutHeight sees the total Coin and MaxGas values.
+		scheduled := outputs[0]
+		scheduled.Coin.Amount = cosmos.ZeroUint()
+		scheduled.MaxGas = common.Gas{}
+		for _, output := range outputs {
+			scheduled.Coin.Amount = scheduled.Coin.Amount.Add(output.Coin.Amount)
+			scheduled.MaxGas = scheduled.MaxGas.Add(output.MaxGas...)
+		}
+		targetHeight, cloutApplied, err = tos.CalcTxOutHeight(ctx, mgr.GetVersion(), scheduled)
 		if err != nil {
 			ctx.Logger().Error("failed to calc target block height for txout item", "error", err)
 		}
@@ -360,6 +369,25 @@ func (tos *TxOutStorage) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi
 	if toi.ToAddress.IsNoop() {
 		return nil
 	}
+
+	// EVM outbounds to the null address should be dropped and a security event emitted
+	if toi.Chain.IsEVM() && toi.ToAddress.Equals(common.EVMNullAddress) {
+		ctx.Logger().Error("evm outbound to null address in UnSafeAddTxOutItem", "txout", toi)
+		etx := common.Tx{
+			ID:        toi.InHash,
+			Chain:     toi.Chain,
+			ToAddress: toi.ToAddress,
+			Coins:     common.Coins{toi.Coin},
+			Gas:       toi.MaxGas,
+			Memo:      toi.Memo,
+		}
+		event := NewEventSecurity(etx, "evm outbound to null address in UnSafeAddTxOutItem")
+		if err := tos.eventMgr.EmitEvent(ctx, event); err != nil {
+			ctx.Logger().Error("failed to emit security event", "error", err)
+		}
+		return nil
+	}
+
 	// BCH chain will convert legacy address to new format automatically , thus when observe it back can't be associated with the original inbound
 	// so here convert the legacy address to new format
 	if toi.Chain.Equals(common.BCHChain) {
@@ -392,7 +420,6 @@ func (tos *TxOutStorage) selectFallbackVault(ctx cosmos.Context, toi TxOutItem, 
 			chains, err := common.NewChains(vault.Frozen)
 			if err != nil {
 				ctx.Logger().Error("failed to convert chains", "error", err)
-				continue
 			}
 			if chains.Has(toi.Chain) {
 				continue
@@ -404,6 +431,12 @@ func (tos *TxOutStorage) selectFallbackVault(ctx cosmos.Context, toi TxOutItem, 
 		originalVault, err := tos.keeper.GetVault(ctx, vault.PubKey)
 		if err != nil {
 			ctx.Logger().Error("failed to get vault from keeper", "error", err)
+			continue
+		}
+
+		// Skip if vault address matches ToAddress (prevent self-sends)
+		fromAddr, err := originalVault.GetAddress(toi.Chain)
+		if err != nil || fromAddr.IsEmpty() || toi.ToAddress.Equals(fromAddr) {
 			continue
 		}
 
@@ -529,6 +562,9 @@ func (tos *TxOutStorage) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmo
 		// XRP wallets must keep 1 XRP (the dust threshold) in the wallet
 		if toi.Coin.Asset.Equals(common.XRPAsset) {
 			vaultCoinAmount = common.SafeSub(vaultCoinAmount, common.XRPChain.DustThreshold())
+			if vaultCoinAmount.IsZero() {
+				continue
+			}
 		}
 
 		toi.VaultPubKey = vault.PubKey
