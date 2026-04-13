@@ -244,6 +244,9 @@ func USDValue(height int64, coin common.Coin) float64 {
 		if pool.Asset != asset.GetLayer1Asset().String() {
 			continue
 		}
+		if pool.AssetTorPrice == "" {
+			return 0
+		}
 		price := cosmos.NewUintFromString(pool.AssetTorPrice)
 		return float64(coin.Amount.Uint64()) / common.One * float64(price.Uint64()) / common.One
 	}
