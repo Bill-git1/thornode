@@ -981,19 +981,19 @@
         "type": "message"
       },
       {
-        "amount": "119335rune",
+        "amount": "119336rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "119335rune",
+        "amount": "119336rune",
         "mode": "EndBlock",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
-        "amount": "119335rune",
+        "amount": "119336rune",
         "mode": "EndBlock",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -1010,7 +1010,7 @@
         "ETH.USDX-0X9999999999999999999999999999999999999999": "239795",
         "ETH.USDY-0X9999999999999999999999999999999999999999": "185438",
         "ETH.USDZ-0X9999999999999999999999999999999999999999": "185438",
-        "bond_reward": "119335",
+        "bond_reward": "119336",
         "dev_fund_reward": "0",
         "income_burn": "0",
         "marketing_fund_reward": "0",
@@ -1212,7 +1212,7 @@
               "type": "slash"
             },
             {
-              "amount": "7467175976",
+              "amount": "7500030116",
               "bond_address": "",
               "bond_type": "bond_cost",
               "chain": "",
@@ -1226,19 +1226,19 @@
               "type": "bond"
             },
             {
-              "amount": "2467155899rune",
+              "amount": "2500010039rune",
               "msg_index": "0",
               "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "coin_spent"
             },
             {
-              "amount": "2467155899rune",
+              "amount": "2500010039rune",
               "msg_index": "0",
               "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "type": "coin_received"
             },
             {
-              "amount": "2467155899rune",
+              "amount": "2500010039rune",
               "msg_index": "0",
               "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",

@@ -40,7 +40,7 @@ func (s *SlashingSuite) TestNodeSignSlashErrors(c *C) {
 			condition: func(keeper *TestSlashingLackKeeper) {
 				keeper.failGetVault = true
 			},
-			shouldError: false,
+			shouldError: true,
 		},
 		{
 			name: "fail to get node account by pub key should return an error",
