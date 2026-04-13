@@ -953,73 +953,63 @@ func (vm *SwapQueueAdv) parseRatioFromKey(key string) (uint64, error) {
 	return strconv.ParseUint(parts[len(parts)-2], 10, 64)
 }
 
-// processExpiredLimitSwaps processes limit swaps that have expired (reached TTL) up to the current block height
+// processExpiredLimitSwaps processes limit swaps that have expired (reached TTL) at the current block height.
+// TTL entries are stored at their exact expiry height when a swap is added, and failed settlements
+// are re-queued at currentHeight+1, so only the current height needs to be checked each block.
 func (vm *SwapQueueAdv) processExpiredLimitSwaps(ctx cosmos.Context, mgr Manager) error {
 	currentHeight := ctx.BlockHeight()
 
-	// Process TTL entries for all block heights up to and including the current height
-	// We check a reasonable range of past blocks to catch any expired swaps
-	// Since TTL entries are stored at their expiry height, we need to check all heights <= currentHeight
-	maxAge := vm.k.GetConfigInt64(ctx, constants.StreamingLimitSwapMaxAge)
-	startHeight := currentHeight - maxAge // Go back maxAge blocks to catch anything we might have missed
-	if startHeight < 1 {
-		startHeight = 1
+	expiredTxHashes, err := vm.k.GetLimitSwapTTL(ctx, currentHeight)
+	if err != nil {
+		ctx.Logger().Error("fail to get limit swap TTL", "error", err, "blockHeight", currentHeight)
+		return nil
 	}
 
-	for height := startHeight; height <= currentHeight; height++ {
-		// Get all expired transaction hashes for this block height
-		expiredTxHashes, err := vm.k.GetLimitSwapTTL(ctx, height)
-		if err != nil {
-			// If no TTL entries exist for this block, that's normal - continue to next height
-			continue
-		}
+	if len(expiredTxHashes) == 0 {
+		return nil
+	}
 
-		if len(expiredTxHashes) == 0 {
-			continue
-		}
+	// Process each expired swap, tracking failures for retry
+	var failedTxHashes []common.TxID
+	for _, txHash := range expiredTxHashes {
+		// Try to find the swap in the advanced queue
+		// Iterate until HasAdvSwapQueueItem returns false to handle all indices
+		found := false
+		settleFailed := false
+		for index := 0; vm.k.HasAdvSwapQueueItem(ctx, txHash, index); index++ {
+			swap, err := vm.k.GetAdvSwapQueueItem(ctx, txHash, index)
+			if err != nil {
+				ctx.Logger().Error("fail to get expired swap item", "error", err, "txID", txHash.String(), "index", index)
+				continue
+			}
 
-		// Process each expired swap for this height, tracking failures for retry
-		var failedTxHashes []common.TxID
-		for _, txHash := range expiredTxHashes {
-			// Try to find the swap in the advanced queue
-			// Iterate until HasAdvSwapQueueItem returns false to handle all indices
-			found := false
-			settleFailed := false
-			for index := 0; vm.k.HasAdvSwapQueueItem(ctx, txHash, index); index++ {
-				swap, err := vm.k.GetAdvSwapQueueItem(ctx, txHash, index)
-				if err != nil {
-					ctx.Logger().Error("fail to get expired swap item", "error", err, "txID", txHash.String(), "index", index)
-					continue
+			// Verify this is actually a limit swap that should expire
+			if swap.IsLimitSwap() {
+				if err := settleSwap(ctx, mgr, swap, "limit swap expired"); err != nil {
+					ctx.Logger().Error("fail to settle expired limit swap", "error", err, "txID", txHash.String(), "index", index)
+					settleFailed = true
 				}
-
-				// Verify this is actually a limit swap that should expire
-				if swap.IsLimitSwap() {
-					if err := settleSwap(ctx, mgr, swap, "limit swap expired"); err != nil {
-						ctx.Logger().Error("fail to settle expired limit swap", "error", err, "txID", txHash.String(), "index", index)
-						settleFailed = true
-					}
-					found = true
-				}
-			}
-
-			if settleFailed {
-				failedTxHashes = append(failedTxHashes, txHash)
-			}
-
-			if !found {
-				ctx.Logger().Debug("expired swap not found in queue", "txID", txHash.String(), "blockHeight", height)
+				found = true
 			}
 		}
 
-		// Remove the TTL entry since we've processed all expired swaps for this height
-		vm.k.RemoveLimitSwapTTL(ctx, height)
+		if settleFailed {
+			failedTxHashes = append(failedTxHashes, txHash)
+		}
 
-		// Re-add failed txHashes at a future height for retry so they are not permanently orphaned
-		for _, txHash := range failedTxHashes {
-			retryHeight := currentHeight + 1
-			if err := vm.k.AddToLimitSwapTTL(ctx, retryHeight, txHash); err != nil {
-				ctx.Logger().Error("fail to re-add failed limit swap TTL for retry", "error", err, "txID", txHash.String(), "retryHeight", retryHeight)
-			}
+		if !found {
+			ctx.Logger().Debug("expired swap not found in queue", "txID", txHash.String(), "blockHeight", currentHeight)
+		}
+	}
+
+	// Remove the TTL entry since we've processed all expired swaps for this height
+	vm.k.RemoveLimitSwapTTL(ctx, currentHeight)
+
+	// Re-add failed txHashes at a future height for retry so they are not permanently orphaned
+	for _, txHash := range failedTxHashes {
+		retryHeight := currentHeight + 1
+		if err := vm.k.AddToLimitSwapTTL(ctx, retryHeight, txHash); err != nil {
+			ctx.Logger().Error("fail to re-add failed limit swap TTL for retry", "error", err, "txID", txHash.String(), "retryHeight", retryHeight)
 		}
 	}
 
