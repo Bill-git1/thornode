@@ -2540,6 +2540,10 @@ components:
           type: integer
           format: int64
           description: the block height of the latest swap
+        initial_height:
+          type: integer
+          format: int64
+          description: the block height when the swap first entered the queue
         trade_target:
           type: string
           example: "100"

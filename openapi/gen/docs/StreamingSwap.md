@@ -9,6 +9,7 @@ Name | Type | Description | Notes
 **Quantity** | Pointer to **int64** | the total number of swaps in a streaming swaps | [optional] 
 **Count** | Pointer to **int64** | the amount of swap attempts so far | [optional] 
 **LastHeight** | Pointer to **int64** | the block height of the latest swap | [optional] 
+**InitialHeight** | Pointer to **int64** | the block height when the swap first entered the queue | [optional] 
 **TradeTarget** | **string** | the total number of tokens the swapper wants to receive of the output asset | 
 **SourceAsset** | Pointer to **string** | the asset to be swapped from | [optional] 
 **TargetAsset** | Pointer to **string** | the asset to be swapped to | [optional] 
@@ -162,6 +163,31 @@ SetLastHeight sets LastHeight field to given value.
 `func (o *StreamingSwap) HasLastHeight() bool`
 
 HasLastHeight returns a boolean if a field has been set.
+
+### GetInitialHeight
+
+`func (o *StreamingSwap) GetInitialHeight() int64`
+
+GetInitialHeight returns the InitialHeight field if non-nil, zero value otherwise.
+
+### GetInitialHeightOk
+
+`func (o *StreamingSwap) GetInitialHeightOk() (*int64, bool)`
+
+GetInitialHeightOk returns a tuple with the InitialHeight field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetInitialHeight
+
+`func (o *StreamingSwap) SetInitialHeight(v int64)`
+
+SetInitialHeight sets InitialHeight field to given value.
+
+### HasInitialHeight
+
+`func (o *StreamingSwap) HasInitialHeight() bool`
+
+HasInitialHeight returns a boolean if a field has been set.
 
 ### GetTradeTarget
 

@@ -3765,8 +3765,8 @@ components:
     StreamingSwap:
       example:
         failed_swaps:
-        - 5
-        - 5
+        - 2
+        - 2
         quantity: 6
         in: "100"
         trade_target: "100"
@@ -3779,6 +3779,7 @@ components:
         last_height: 5
         out: "100"
         target_asset: ETH.ETH
+        initial_height: 5
         deposit: "100"
         interval: 0
         source_asset: BTC.BTC
@@ -3801,6 +3802,10 @@ components:
           type: integer
         last_height:
           description: the block height of the latest swap
+          format: int64
+          type: integer
+        initial_height:
+          description: the block height when the swap first entered the queue
           format: int64
           type: integer
         trade_target:

@@ -41,6 +41,8 @@ message QueryStreamingSwapResponse {
   repeated int64 failed_swaps = 13;
   // the list of reasons that sub-swaps have failed
   repeated string failed_swap_reasons = 14;
+  // the block height when the swap first entered the queue
+  int64 initial_height = 15;
 }
 
 message QueryStreamingSwapsRequest { string height = 1; }

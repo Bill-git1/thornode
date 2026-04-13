@@ -26,6 +26,8 @@ type StreamingSwap struct {
 	Count *int64 `json:"count,omitempty"`
 	// the block height of the latest swap
 	LastHeight *int64 `json:"last_height,omitempty"`
+	// the block height when the swap first entered the queue
+	InitialHeight *int64 `json:"initial_height,omitempty"`
 	// the total number of tokens the swapper wants to receive of the output asset
 	TradeTarget string `json:"trade_target"`
 	// the asset to be swapped from
@@ -225,6 +227,38 @@ func (o *StreamingSwap) HasLastHeight() bool {
 // SetLastHeight gets a reference to the given int64 and assigns it to the LastHeight field.
 func (o *StreamingSwap) SetLastHeight(v int64) {
 	o.LastHeight = &v
+}
+
+// GetInitialHeight returns the InitialHeight field value if set, zero value otherwise.
+func (o *StreamingSwap) GetInitialHeight() int64 {
+	if o == nil || o.InitialHeight == nil {
+		var ret int64
+		return ret
+	}
+	return *o.InitialHeight
+}
+
+// GetInitialHeightOk returns a tuple with the InitialHeight field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StreamingSwap) GetInitialHeightOk() (*int64, bool) {
+	if o == nil || o.InitialHeight == nil {
+		return nil, false
+	}
+	return o.InitialHeight, true
+}
+
+// HasInitialHeight returns a boolean if a field has been set.
+func (o *StreamingSwap) HasInitialHeight() bool {
+	if o != nil && o.InitialHeight != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetInitialHeight gets a reference to the given int64 and assigns it to the InitialHeight field.
+func (o *StreamingSwap) SetInitialHeight(v int64) {
+	o.InitialHeight = &v
 }
 
 // GetTradeTarget returns the TradeTarget field value
@@ -499,6 +533,9 @@ func (o StreamingSwap) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.LastHeight != nil {
 		toSerialize["last_height"] = o.LastHeight
+	}
+	if o.InitialHeight != nil {
+		toSerialize["initial_height"] = o.InitialHeight
 	}
 	if true {
 		toSerialize["trade_target"] = o.TradeTarget
