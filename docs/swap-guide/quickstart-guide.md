@@ -11,7 +11,7 @@ For chains with limited memo space (like Bitcoin's 80-byte OP_RETURN), see the [
 ```
 
 ```admonish info
-The following examples use a free, hosted API provided by Liquify. If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md).
+The following examples use free, public endpoints. See [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md) for a full list of providers or to run your own full node.
 ```
 
 ### 1. Determine the correct asset name
@@ -215,7 +215,9 @@ Memo format:
 
 Quote example:
 
-[_https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&streaming_interval=10_](https://gateway.liquify.com/chain/thorchain_api/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&streaming_interval=10)
+`https://<stagenet-thornode>/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&streaming_interval=10`
+
+_Note: Stagenet endpoints are being transitioned to the Maya team. See [Connecting to THORChain](../concepts/connecting-to-thorchain.md) for current URLs._
 
 ```json
 {

@@ -41,7 +41,7 @@ const defaultMidgardConfig: Record<Network, MidgardConfig> = {
     midgardBaseUrls: [
       'https://gateway.liquify.com/chain/thorchain_midgard',
       'https://gateway.liquify.com/chain/thorchain_midgard',
-      'https://midgard.thorswap.net',
+      'https://midgard.thorchain.network',
     ],
   },
   ...
@@ -86,7 +86,7 @@ const defaultThornodeConfig: Record<Network, ThornodeConfig> = {
     apiRetries: 3,
     thornodeBaseUrls: [
       `https://gateway.liquify.com/chain/thorchain_api`,
-      `https://thornode.thorswap.net`,
+      `https://thornode.thorchain.network`,
       `https://gateway.liquify.com/chain/thorchain_api/`,
     ],
   },

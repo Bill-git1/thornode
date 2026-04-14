@@ -1,11 +1,16 @@
 # Connecting to THORChain
 
-This guide helps developers connect to THORChain’s network for querying data, building wallets, dashboards, or debugging network issues. THORChain provides four primary data sources:
+This guide helps developers connect to THORChain's network for querying data, building wallets, dashboards, or debugging network issues. THORChain provides five primary data sources:
 
 - **Midgard**: Consumer data for swaps, pools, and volume, ideal for dashboards.
 - **THORNode**: Raw blockchain data for THORChain-specific queries, used by wallets and explorers.
 - **Cosmos RPC**: Generic Cosmos SDK data, such as balances and transactions.
 - **Tendermint RPC**: Consensus and node status data for monitoring.
+- **gRPC**: Full Cosmos SDK interface via protocol buffers.
+
+```admonish warning
+**Endpoint Migration (April 2025)**: Nine Realms is retiring all `*.ninerealms.com` endpoints. 301 redirects are being placed starting the week of April 7, redirects will be removed around April 14, and all endpoints will be fully shut down after **April 20, 2025**. Clients must migrate to the new endpoints listed below before that date.
+```
 
 ```admonish info
 The below endpoints are run by specific organisations for public use. There is a cost to running these services. If you want to run your own full node, please see [https://docs.thorchain.org/thornodes/overview.](https://docs.thorchain.org/thornodes/overview)
@@ -13,18 +18,27 @@ The below endpoints are run by specific organisations for public use. There is a
 
 ## Quick Reference
 
-| Source             | Purpose                            | Mainnet URLs                                                                                                                   | Stagenet URLs                         |
-| ------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| **Midgard**        | Swap, pool, volume, and user data  | \- midgard.thorswap.net<br>- gateway.liquify.com/chain/thorchain_midgard                                                       | \- stagenet-midgard.ninerealms.com    |
-| **THORNode**       | THORChain-specific blockchain data | \- thornode.thorswap.net<br>- gateway.liquify.com/chain/thorchain_api<br>- V1 Fork: gateway.liquify.com/chain/thorchain_v1_api | \- stagenet-thornode.ninerealms.com   |
-| **Cosmos RPC**     | Cosmos SDK data (e.g., balances)   | \- Example: gateway.liquify.com/chain/thorchain_api                                                                            | \- Not publicly available; run a node |
-| **Tendermint RPC** | Consensus and node status data     | \- gateway.liquify.com/chain/thorchain_rpc<br>- rpc.thorswap.net                                                               | \- stagenet-rpc.ninerealms.com        |
+| Source             | Purpose                            | Mainnet URLs                                                                                                                                                | Stagenet URLs |
+| ------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| **Midgard**        | Swap, pool, volume, and user data  | \- gateway.liquify.com/chain/thorchain_midgard<br>- midgard.thorchain.network                                                                               | TBD           |
+| **THORNode**       | THORChain-specific blockchain data | \- gateway.liquify.com/chain/thorchain_api<br>- thornode.thorchain.network<br>- Pre-hard-fork (blocks ≤4786559): gateway.liquify.com/chain/thorchain_v1_api | TBD           |
+| **Cosmos RPC**     | Cosmos SDK data (e.g., balances)   | \- gateway.liquify.com/chain/thorchain_api<br>- thornode.thorchain.network                                                                                  | TBD           |
+| **Tendermint RPC** | Consensus and node status data     | \- gateway.liquify.com/chain/thorchain_rpc<br>- rpc.thorchain.network<br>- Pre-hard-fork (blocks ≤4786559): gateway.liquify.com/chain/thorchain_v1_rpc      | TBD           |
+| **gRPC**           | Cosmos SDK via protocol buffers    | \- grpc.thorchain.network                                                                                                                                   | TBD           |
+
+```admonish info
+Stagenet endpoints are being transitioned. New URLs will be published when available.
+```
+
+```admonish info
+THORSwap (`*.thorswap.net`) provides private endpoints for THORSwap application users. Contact THORSwap for access.
+```
 
 ## Usage Guidelines
 
-- **Rate Limits**: Public endpoints may enforce limits (e.g., 100 requests/minute for Midgard). Check provider docs or contact operators (e.g., THORSwap, Liquify).
+- **Rate Limits**: Liquify enforces a rate limit of 50,000 requests per day per IP. Include an `x-client-id` header to identify your application — Liquify can increase limits for applications that include this header.
 - **Run Your Own Node**: For production apps, run a THORNode to avoid rate limits and ensure uptime. See THORNode Setup Guide.
-- **Hard-Fork Note**: Mainnet hard-fork at block 4786560 requires post-hard-fork endpoints for newer data; use pre-hard-fork endpoints for historical queries (blocks ≤4786559).
+- **Hard-Fork Note**: Mainnet hard-fork at block 4786560 requires post-hard-fork endpoints for newer data. Liquify provides full archive support and smart-routes archive requests, so both pre and post hard-fork data is accessible via the same endpoints. Dedicated pre-hard-fork endpoints are also available (see below).
 - **Error Handling**: Handle HTTP 429 (rate limit) or 503 (node overload) with exponential backoff for retries.
 
 ## Midgard
@@ -33,27 +47,23 @@ Midgard provides time-series data for swaps, pools, volume, and liquidity provid
 
 - **Mainnet:**
   - [https://gateway.liquify.com/chain/thorchain_midgard/v2/doc](https://gateway.liquify.com/chain/thorchain_midgard/v2/doc)
-  - [https://midgard.thorswap.net/v2/doc](https://midgard.thorswap.net/v2/doc)
-- **Stagenet:**
-  - [https://stagenet-midgard.ninerealms.com/v2/doc](https://stagenet-midgard.ninerealms.com/v2/doc)
+  - [https://midgard.thorchain.network/v2/doc](https://midgard.thorchain.network/v2/doc)
+- **Stagenet:** TBD
 
 ## THORNode
 
-THORNode provides raw blockchain data (e.g., balances, transactions) specific to THORChain’s state machine, critical for wallets and block explorers. Avoid excessive queries to public nodes to prevent overloading.
+THORNode provides raw blockchain data (e.g., balances, transactions) specific to THORChain's state machine, critical for wallets and block explorers. Avoid excessive queries to public nodes to prevent overloading.
 
-- **Mainnet:**
-  - [https://thornode.thorswap.net/thorchain/doc](https://thornode.thorswap.net/thorchain/doc)
+- **Mainnet (for post-hard-fork blocks 4786560 and later):**
   - [https://gateway.liquify.com/chain/thorchain_api/thorchain/doc](https://gateway.liquify.com/chain/thorchain_api/thorchain/doc)
-  - **V1 Fork**\
+  - [https://thornode.thorchain.network/thorchain/doc](https://thornode.thorchain.network/thorchain/doc)
+  - **Pre-hard-fork blocks 4786559 and earlier**\
     [https://gateway.liquify.com/chain/thorchain_v1_api/thorchain/doc](https://gateway.liquify.com/chain/thorchain_v1_api/thorchain/doc)
-- **Stagenet:**
-  - [https://stagenet-thornode.ninerealms.com/thorchain/doc](https://stagenet-thornode.ninerealms.com/thorchain/doc)
+- **Stagenet:** TBD
 
 ## Cosmos RPC
 
 Cosmos RPC provides generic Cosmos SDK data (e.g., account balances, transactions). Common endpoints include `/cosmos/bank/v1beta1/balances` and `/cosmos/base/tendermint/v1beta1/blocks`. Not all endpoints are enabled.
-
-Archive node RPC may be available from public endpoint providers. Run your own node for guaranteed access.
 
 ### Cosmos Documentation
 
@@ -65,7 +75,7 @@ Use THORNode URLs with `/cosmos/...` paths.
 
 - **Example**
   - **Mainnet** [https://gateway.liquify.com/chain/thorchain_api/cosmos/bank/v1beta1/balances/thor1dheycdevq39qlkxs2a6wuuzyn4aqxhve4qxtxt](https://gateway.liquify.com/chain/thorchain_api/cosmos/bank/v1beta1/balances/thor1dheycdevq39qlkxs2a6wuuzyn4aqxhve4qxtxt)
-  - **Stagenet** [https://stagenet-thornode.ninerealms.com/cosmos/bank/v1beta1/balances/sthor1qhm0wjsrlw8wpvzrnpj8xxqu87tcucd6h98le4](https://stagenet-thornode.ninerealms.com/cosmos/bank/v1beta1/balances/sthor1qhm0wjsrlw8wpvzrnpj8xxqu87tcucd6h98le4)
+  - **Stagenet** TBD
 
 ## Tendermint RPC
 
@@ -84,11 +94,26 @@ Tendermint (CometBFT) RPC provides consensus and node status data (e.g., block h
 
 - **Mainnet: (for post-hard-fork blocks 4786560 and later)**
   - [https://gateway.liquify.com/chain/thorchain_rpc](https://gateway.liquify.com/chain/thorchain_rpc)
-  - [https://rpc.thorswap.net/](https://rpc.thorswap.net/)
-  - **V1 Fork**\
-    [https://gateway.liquify.com/chain/thorchain_v1_rpc](https://gateway.liquify.com/chain/thorchain_v1_rpc)
-- **Stagenet:**
-  - [https://stagenet-rpc.ninerealms.com](https://stagenet-rpc.ninerealms.com/)
+  - [https://rpc.thorchain.network](https://rpc.thorchain.network)
+- **Mainnet: Pre-hard-fork blocks 4786559 and earlier.**
+  - [https://gateway.liquify.com/chain/thorchain_v1_rpc](https://gateway.liquify.com/chain/thorchain_v1_rpc)
+- **Stagenet:** TBD
+
+```admonish info
+Chainnet (`rpc.thorchain.network`) intentionally restricts some Tendermint RPC endpoints (e.g., `net_info`, `consensus_state`, `dump_consensus_state`). Use Liquify for full Tendermint RPC access.
+```
+
+## gRPC
+
+gRPC provides the full Cosmos SDK interface via protocol buffers, useful for programmatic access from languages with gRPC support.
+
+- **Mainnet:** `grpc.thorchain.network`
+- **Documentation:** [Cosmos gRPC Guide](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
+- **Stagenet:** TBD
+
+```admonish info
+gRPC uses protocol buffers over HTTP/2, not JSON over HTTP. Standard HTTP clients (curl, browsers) will not work — use a gRPC client library.
+```
 
 ## P2P
 
@@ -106,3 +131,32 @@ P2P is the peer-to-peer network layer for node communication, useful for debuggi
 ```bash
 curl -X GET "https://gateway.liquify.com/chain/thorchain_rpc/net_info" -H "accept: application/json"
 ```
+
+## Other Services
+
+The following services have also moved:
+
+| Old URL                      | New URL                                             |
+| ---------------------------- | --------------------------------------------------- |
+| `track.ninerealms.com`       | [track.thorchain.org](https://track.thorchain.org/) |
+| `haskoin.ninerealms.com/bch` | [api.haskoin.com/bch](https://api.haskoin.com/bch)  |
+| `dashboards.ninerealms.com`  | TBD                                                 |
+| `ops.ninerealms.com/tools`   | Deprecated                                          |
+
+## External Chain RPCs
+
+Nine Realms previously provided public RPC proxies for external chains (e.g., `bitcoin.ninerealms.com`, `ethereum.ninerealms.com`). These endpoints are being retired. Clients should migrate to a provider of their choice for external chain RPC access.
+
+The following endpoints are affected:
+
+- `avalanche.ninerealms.com`
+- `base.ninerealms.com`
+- `binance-smart.ninerealms.com`
+- `bitcoin-cash.ninerealms.com`
+- `bitcoin.ninerealms.com`
+- `dogecoin.ninerealms.com`
+- `ethereum.ninerealms.com`
+- `gaia.ninerealms.com`
+- `litecoin.ninerealms.com`
+- `tron.ninerealms.com`
+- `xrp.ninerealms.com`

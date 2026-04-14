@@ -57,7 +57,7 @@ THORChain has several APIs with Swagger documentation.
 - Cosmos RPC - [https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
 - CometBFT RPC - [https://docs.cometbft.com/v0.38/rpc/](https://docs.cometbft.com/v0.38/rpc/)
 
-See [Connecting to THORChain](concepts/connecting-to-thorchain.md "mention") for more information.
+See [Connecting to THORChain](concepts/connecting-to-thorchain.md "mention") for a full list of public endpoints and more information.
 
 ### Support and Questions
 

@@ -41,7 +41,7 @@ Oracle prices are **not** the same as pool-derived or TOR prices. Oracle prices 
 Returns the current oracle price for every supported symbol.
 
 ```bash
-curl https://thornode.ninerealms.com/thorchain/oracle/prices
+curl https://gateway.liquify.com/chain/thorchain_api/thorchain/oracle/prices
 ```
 
 Example response:
@@ -59,7 +59,7 @@ Example response:
 Returns the oracle price for a specific symbol.
 
 ```bash
-curl https://thornode.ninerealms.com/thorchain/oracle/price/BTC
+curl https://gateway.liquify.com/chain/thorchain_api/thorchain/oracle/price/BTC
 ```
 
 Example response:
@@ -72,7 +72,7 @@ Example response:
 Oracle prices are cleared at the start of every block and recalculated from fresh price feeds. If queried between blocks before the price feed transaction is processed, the endpoint may return empty results.
 ```
 
-For the full API specification, see the [OpenAPI docs](https://thornode.ninerealms.com/thorchain/doc).
+For the full API specification, see the [OpenAPI docs](https://gateway.liquify.com/chain/thorchain_api/thorchain/doc).
 
 ## Concept
 
