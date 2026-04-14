@@ -64,3 +64,29 @@ func (b *MetaTestSuite) TestMeta(c *C) {
 	tokenMeta := NewTokenMeta("TKN", "0xa7d9ddbe1f17865597fbd27ec712455208b6b76d", 18)
 	c.Assert(tokenMeta, NotNil)
 }
+
+func (b *MetaTestSuite) TestSignedTxItemString(c *C) {
+	st := SignedTxItem{Hash: "0xabc123"}
+	c.Assert(st.String(), Equals, "0xabc123")
+
+	st2 := SignedTxItem{}
+	c.Assert(st2.String(), Equals, "")
+}
+
+func (b *MetaTestSuite) TestTokenMetaIsEmpty(c *C) {
+	// empty
+	tm := TokenMeta{}
+	c.Assert(tm.IsEmpty(), Equals, true)
+
+	// symbol only
+	tm = TokenMeta{Symbol: "TKN"}
+	c.Assert(tm.IsEmpty(), Equals, false)
+
+	// address only
+	tm = TokenMeta{Address: "0xabc"}
+	c.Assert(tm.IsEmpty(), Equals, false)
+
+	// both set
+	tm = NewTokenMeta("TKN", "0xabc", 18)
+	c.Assert(tm.IsEmpty(), Equals, false)
+}
