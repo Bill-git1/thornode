@@ -21,6 +21,21 @@ var m *metrics.Metrics
 
 func TestPackage(t *testing.T) { TestingT(t) }
 
+func TestUpdateCurrentBlockHeightMonotonic(t *testing.T) {
+	client := &Client{}
+
+	client.updateCurrentBlockHeight(100)
+	client.updateCurrentBlockHeight(90)
+	if got := client.getCurrentBlockHeight(); got != 100 {
+		t.Fatalf("expected current block height to remain 100, got %d", got)
+	}
+
+	client.updateCurrentBlockHeight(110)
+	if got := client.getCurrentBlockHeight(); got != 110 {
+		t.Fatalf("expected current block height to advance to 110, got %d", got)
+	}
+}
+
 func GetMetricForTest(c *C, chain common.Chain) *metrics.Metrics {
 	if m != nil {
 		return m

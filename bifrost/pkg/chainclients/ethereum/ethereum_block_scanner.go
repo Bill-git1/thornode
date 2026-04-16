@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	stdatomic "sync/atomic"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -72,7 +73,7 @@ type ETHScanner struct {
 	bridge                thorclient.ThorchainBridge
 	pubkeyMgr             pubkeymanager.PubKeyValidator
 	eipSigner             etypes.Signer
-	currentBlockHeight    int64
+	currentBlockHeight    stdatomic.Int64
 	gasCache              []*big.Int
 	solvencyReporter      SolvencyReporter
 	whitelistTokens       []tokenlist.ERC20Token
@@ -199,7 +200,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 		e.logger.Err(err).Msgf("fail to save block meta of height: %d ", blockMeta.Height)
 	}
 
-	e.currentBlockHeight = height
+	e.updateCurrentBlockHeight(height)
 	pruneHeight := height - e.cfg.MaxReorgRescanBlocks
 	if pruneHeight > 0 {
 		defer func() {
@@ -239,6 +240,24 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 		}
 	}
 	return txIn, nil
+}
+
+func (e *ETHScanner) getCurrentBlockHeight() int64 {
+	return e.currentBlockHeight.Load()
+}
+
+// updateCurrentBlockHeight records the highest scanner height seen without
+// allowing concurrent prefetches to move it backwards.
+func (e *ETHScanner) updateCurrentBlockHeight(height int64) {
+	for {
+		currentHeight := e.currentBlockHeight.Load()
+		if height <= currentHeight {
+			return
+		}
+		if e.currentBlockHeight.CompareAndSwap(currentHeight, height) {
+			return
+		}
+	}
 }
 
 // updateGasPrice records base fee + 25th percentile priority fee, rounded up 10 gwei.

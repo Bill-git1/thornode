@@ -444,7 +444,7 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 		return txIn, fmt.Errorf("fail to get block: %w", err)
 	}
 
-	c.currentBlockHeight.Store(height)
+	c.updateCurrentBlockHeight(height)
 	reScannedTxs, err := c.processReorg(block)
 	if err != nil {
 		c.log.Err(err).Msg("fail to process re-org")
@@ -688,7 +688,7 @@ func (c *Client) ConfirmationCountReady(txIn types.TxIn) bool {
 	// check if we have the necessary number of confirmations
 	height := txIn.TxArray[0].BlockHeight
 	confirm := txIn.ConfirmationRequired
-	ready := (c.currentBlockHeight.Load() - height) >= confirm // every tx already has 1
+	ready := (c.getCurrentBlockHeight() - height) >= confirm // every tx already has 1
 	c.log.Info().
 		Int64("height", height).
 		Int64("required", confirm).
@@ -696,6 +696,24 @@ func (c *Client) ConfirmationCountReady(txIn types.TxIn) bool {
 		Msg("confirmation count check")
 
 	return ready
+}
+
+func (c *Client) getCurrentBlockHeight() int64 {
+	return c.currentBlockHeight.Load()
+}
+
+// updateCurrentBlockHeight records the highest scanner height seen without
+// allowing concurrent prefetches to move it backwards.
+func (c *Client) updateCurrentBlockHeight(height int64) {
+	for {
+		currentHeight := c.getCurrentBlockHeight()
+		if height <= currentHeight {
+			return
+		}
+		if c.currentBlockHeight.CompareAndSwap(currentHeight, height) {
+			return
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

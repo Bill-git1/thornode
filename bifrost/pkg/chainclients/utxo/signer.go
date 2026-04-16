@@ -197,7 +197,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	chainHeight, err := c.rpc.GetBlockCount()
 	if err != nil {
 		// fall back to the scanner height, thornode voter does not use height
-		chainHeight = c.currentBlockHeight.Load()
+		chainHeight = c.getCurrentBlockHeight()
 		c.log.Warn().Err(err).
 			Int64("fallback_height", chainHeight).
 			Msg("failed to get block height from RPC, falling back to scanner height")

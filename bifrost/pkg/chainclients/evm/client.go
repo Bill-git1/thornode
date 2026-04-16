@@ -1117,7 +1117,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	// create the observation to be sent by the signer before broadcast
 	chainHeight, err := c.GetHeight()
 	if err != nil { // fall back to the scanner height, thornode voter does not use height
-		chainHeight = c.evmScanner.currentBlockHeight
+		chainHeight = c.evmScanner.getCurrentBlockHeight()
 	}
 
 	coin := tx.Coins[0]
@@ -1429,7 +1429,7 @@ func (c *EVMClient) ConfirmationCountReady(txIn stypes.TxIn) bool {
 		blockHeight := txIn.TxArray[0].BlockHeight
 		confirm := txIn.ConfirmationRequired
 		c.logger.Info().Msgf("confirmation required: %d", confirm)
-		return (c.evmScanner.currentBlockHeight - blockHeight) >= confirm
+		return (c.evmScanner.getCurrentBlockHeight() - blockHeight) >= confirm
 	case common.BASEChain:
 		// block is already finalized(settled to l1)
 		return true
@@ -1449,7 +1449,7 @@ func (c *EVMClient) ReportSolvency(height int64) error {
 
 	// when block scanner is not healthy, only report from auto-unhalt SolvencyCheckRunner
 	// (FetchTxs passes currentBlockHeight, while SolvencyCheckRunner passes chainHeight)
-	if !c.IsBlockScannerHealthy() && height == c.evmScanner.currentBlockHeight {
+	if !c.IsBlockScannerHealthy() && height == c.evmScanner.getCurrentBlockHeight() {
 		return nil
 	}
 

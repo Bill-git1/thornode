@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	stdatomic "sync/atomic"
 
 	_ "embed"
 
@@ -62,7 +63,7 @@ type EVMScanner struct {
 	bridge                thorclient.ThorchainBridge
 	pubkeyMgr             pubkeymanager.PubKeyValidator
 	eipSigner             etypes.Signer
-	currentBlockHeight    int64
+	currentBlockHeight    stdatomic.Int64
 	gasCache              []*big.Int
 	solvencyReporter      SolvencyReporter
 	whitelistTokens       []tokenlist.ERC20Token
@@ -240,7 +241,7 @@ func (e *EVMScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	}
 
 	// process all transactions in the block
-	e.currentBlockHeight = height
+	e.updateCurrentBlockHeight(height)
 	block, err := e.ethRpc.GetBlock(height)
 	if err != nil {
 		return stypes.TxIn{}, err
@@ -281,6 +282,24 @@ func (e *EVMScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	}
 
 	return txIn, nil
+}
+
+func (e *EVMScanner) getCurrentBlockHeight() int64 {
+	return e.currentBlockHeight.Load()
+}
+
+// updateCurrentBlockHeight records the highest scanner height seen without
+// allowing concurrent prefetches to move it backwards.
+func (e *EVMScanner) updateCurrentBlockHeight(height int64) {
+	for {
+		currentHeight := e.currentBlockHeight.Load()
+		if height <= currentHeight {
+			return
+		}
+		if e.currentBlockHeight.CompareAndSwap(currentHeight, height) {
+			return
+		}
+	}
 }
 
 // --------------------------------- extraction ---------------------------------

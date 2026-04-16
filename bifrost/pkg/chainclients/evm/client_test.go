@@ -38,6 +38,21 @@ import (
 
 func TestEVMPackage(t *testing.T) { TestingT(t) }
 
+func TestUpdateCurrentBlockHeightMonotonic(t *testing.T) {
+	scanner := &EVMScanner{}
+
+	scanner.updateCurrentBlockHeight(100)
+	scanner.updateCurrentBlockHeight(90)
+	if got := scanner.getCurrentBlockHeight(); got != 100 {
+		t.Fatalf("expected current block height to remain 100, got %d", got)
+	}
+
+	scanner.updateCurrentBlockHeight(110)
+	if got := scanner.getCurrentBlockHeight(); got != 110 {
+		t.Fatalf("expected current block height to advance to 110, got %d", got)
+	}
+}
+
 type EVMSuite struct {
 	thordir        string
 	thorKeys       *thorclient.Keys
