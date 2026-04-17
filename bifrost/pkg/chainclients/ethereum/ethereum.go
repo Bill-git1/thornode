@@ -803,6 +803,14 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to marshal nonce: %w", err)
 		}
+
+		// Wait for the approval to be mined before estimating gas for the outbound.
+		// The transferFrom will revert if the approval isn't on-chain yet. This only
+		// happens once per vault per token, so the one-time delay is acceptable.
+		// If the approval is still not mined in time, the outbound will be rescheduled.
+		wait := time.Duration(c.cfg.ChainID.ApproximateBlockMilliseconds()*3) * time.Millisecond
+		c.logger.Info().Dur("wait", wait).Msg("waiting for approval transaction to be mined")
+		time.Sleep(wait)
 	}
 
 	// Convert TxOutItem gas rate units to Wei.
@@ -890,7 +898,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		// when this fail , chain client should skip the outbound and move on to the next. The network will reschedule the outbound
 		// after 300 blocks
 		c.logger.Err(err).Msgf("fail to estimate gas")
-		return nil, nonceBytes, nil, nil
+		return nil, nil, nil, nil
 	}
 	c.logger.Info().Msgf("memo:%s estimated gas unit: %d", tx.Memo, estimatedGas)
 
