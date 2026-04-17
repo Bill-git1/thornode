@@ -667,6 +667,32 @@ func formatNodeMimirMessage(height int64, node, key, value string) (string, *uti
 // TOR Anchor Drift
 ////////////////////////////////////////////////////////////////////////////////////////
 
+// isChainTradingHalted mirrors keeper.IsChainTradingHalted using the mimir map
+// returned by /thorchain/mimir (keys are upper-cased by the endpoint).
+func isChainTradingHalted(mimirs map[string]int64, chain common.Chain, height int64) bool {
+	if v := mimirs[fmt.Sprintf("HALT%sTRADING", chain)]; v > 0 && v <= height {
+		return true
+	}
+	return isChainHalted(mimirs, chain, height)
+}
+
+// isChainHalted mirrors keeper.IsChainHalted.
+func isChainHalted(mimirs map[string]int64, chain common.Chain, height int64) bool {
+	if v := mimirs["HALTCHAINGLOBAL"]; v > 0 && v <= height {
+		return true
+	}
+	if v := mimirs["NODEPAUSECHAINGLOBAL"]; v >= height {
+		return true
+	}
+	if v := mimirs[fmt.Sprintf("HALT%sCHAIN", chain)]; v > 0 && v <= height {
+		return true
+	}
+	if v := mimirs[fmt.Sprintf("SOLVENCYHALT%sCHAIN", chain)]; v > 0 && v <= height {
+		return true
+	}
+	return false
+}
+
 func TORAnchorDrift(block *thorscan.BlockResponse) {
 	if block.Header.Height%config.Get().TORAnchorCheckBlocks != 0 {
 		return
@@ -696,16 +722,22 @@ func TORAnchorDrift(block *thorscan.BlockResponse) {
 		if err != nil {
 			log.Panic().Err(err).Msg("failed to parse pool asset")
 		}
-		if mimirs[fmt.Sprintf("TORANCHOR-%s", asset.MimirString())] > 0 {
-			price := cosmos.NewUintFromString(pool.AssetTorPrice)
-			if price.LT(minPrice) {
-				minPrice = price
-			}
-			if price.GT(maxPrice) {
-				maxPrice = price
-			}
-			torPools = append(torPools, pool)
+		if mimirs[fmt.Sprintf("TORANCHOR-%s", asset.MimirString())] == 0 {
+			continue
 		}
+		// skip anchor pools on chains with trading halted — their stale
+		// AssetTorPrice would otherwise trigger false-positive drift alerts.
+		if isChainTradingHalted(mimirs, asset.Chain, block.Header.Height) {
+			continue
+		}
+		price := cosmos.NewUintFromString(pool.AssetTorPrice)
+		if price.LT(minPrice) {
+			minPrice = price
+		}
+		if price.GT(maxPrice) {
+			maxPrice = price
+		}
+		torPools = append(torPools, pool)
 	}
 
 	// skip if not over the drift threshold
