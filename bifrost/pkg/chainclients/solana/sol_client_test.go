@@ -658,3 +658,249 @@ func TestSolAddrKeyringRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+// solCacheRPCServer mocks a Solana RPC server for cache-precheck tests.
+// method-by-method behavior is parameterized so each test can choose whether
+// getTransaction reports the tx as confirmed, missing, or an RPC error.
+type solCacheRPCServer struct {
+	getTxCalls       int
+	getTxReturnsSlot uint64 // > 0 → confirmed on chain
+	getTxReturnsErr  bool   // true → respond with a JSON-RPC error body
+}
+
+func newSolCacheRPCServer(c *C, s *solCacheRPCServer) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
+		var rpcRequest struct {
+			Method string `json:"method"`
+		}
+		_ = json.Unmarshal(body, &rpcRequest)
+		rw.Header().Set("Content-Type", "application/json")
+		switch rpcRequest.Method {
+		case "getTransaction":
+			s.getTxCalls++
+			switch {
+			case s.getTxReturnsErr:
+				_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"rpc error"}}`))
+			case s.getTxReturnsSlot > 0:
+				_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":{"slot":%d,"meta":{},"transaction":{}}}`, s.getTxReturnsSlot)
+			default:
+				// result:null → tx not on chain
+				_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+			}
+		case "getLatestBlockhash":
+			httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
+		default:
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+		}
+	}))
+}
+
+// newSolCacheTestClient builds a SOLClient wired to a mock RPC server for cache tests.
+// Returns the client, the first vault pubkey, and the pubkey manager that callers
+// must Stop when done.
+func (s *SolTestSuite) newSolCacheTestClient(c *C, server *httptest.Server) (*SOLClient, common.PubKey, *pubkeymanager.PubKeyManager) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + server.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	e.solScanner.recentBlockHash = "asdfasdf"
+	pubkeys := pubkeyMgr.GetPubKeys()
+	return e, pubkeys[0], pubkeyMgr
+}
+
+func newSolCacheTestTxOut(pub common.PubKey) stypes.TxOutItem {
+	return stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pub,
+		VaultPubKeyEddsa: pub,
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+}
+
+// TestSignTxUnexpiredCacheRespectedNoRPC verifies the pre-expiry fast path: while
+// the cache entry is still within its expiry window the recorded broadcast may
+// still land on Solana (its blockhash has not necessarily expired yet), so SignTx
+// must respect the cache unconditionally — no RPC call, no re-sign.
+func (s *SolTestSuite) TestSignTxUnexpiredCacheRespectedNoRPC(c *C) {
+	rpc := &solCacheRPCServer{} // if called, would return not-on-chain
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	expiry := time.Now().Add(time.Hour).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "cached-sig", expiry,
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil)                                                   // suppressed
+	c.Assert(rpc.getTxCalls, Equals, 0)                                       // no RPC lookup on fast path
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true) // preserved
+}
+
+// TestSignTxExpiredEntryOnChainProtectsAgainstDoubleSpend verifies the critical
+// property that motivates the two-gate invariant: when thorchain observation
+// consensus lags behind actual Solana inclusion, thornode may reschedule an
+// outbound whose broadcast has already landed. The cache entry will be past its
+// expiry by the time the reschedule arrives, but because the recorded sig IS on
+// chain, SignTx must NOT re-sign — otherwise a second broadcast lands alongside
+// the first and we double-spend. The entry must also remain in storage.
+func (s *SolTestSuite) TestSignTxExpiredEntryOnChainProtectsAgainstDoubleSpend(c *C) {
+	rpc := &solCacheRPCServer{getTxReturnsSlot: 42} // RPC confirms on chain
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "slow-obs-sig", expired,
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil)             // did NOT re-sign
+	c.Assert(rpc.getTxCalls, Equals, 1) // RPC was consulted because expired
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
+}
+
+// TestSignTxExpiredEntryNotOnChainReSigns verifies the only path that re-signs:
+// the cache entry is past expiry AND the RPC definitively reports the recorded
+// broadcast is not on chain. This is the dropped-broadcast recovery path.
+func (s *SolTestSuite) TestSignTxExpiredEntryNotOnChainReSigns(c *C) {
+	rpc := &solCacheRPCServer{} // result:null → not on chain
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "dropped-sig", expired,
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)                                                   // re-signed
+	c.Assert(rpc.getTxCalls, Equals, 1)                                        // RPC verified first
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false) // cleared
+}
+
+// TestSignTxExpiredEntryRPCErrorRespectsCache verifies the fail-closed behavior:
+// when the cache is past expiry but the RPC returns an error, SignTx must respect
+// the cache — we cannot confirm absence, so re-signing could double-spend.
+func (s *SolTestSuite) TestSignTxExpiredEntryRPCErrorRespectsCache(c *C) {
+	rpc := &solCacheRPCServer{getTxReturnsErr: true}
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "cached-sig", expired,
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil)                                                   // respected cache
+	c.Assert(rpc.getTxCalls, Equals, 1)                                       // RPC attempted
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true) // preserved
+}
+
+// TestSignTxLegacyCacheEntryRespected verifies backward compatibility: a legacy
+// SetSigned entry (no expiry, no recorded tx hash) still suppresses re-signing
+// without any RPC lookup.
+func (s *SolTestSuite) TestSignTxLegacyCacheEntryRespected(c *C) {
+	rpc := &solCacheRPCServer{}
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	// Legacy SetSigned: permanent flag with no tx hash recorded.
+	c.Assert(e.signerCacheManager.SetSigned(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "legacy-sig",
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil) // suppressed by cache without RPC call
+	c.Assert(rpc.getTxCalls, Equals, 0)
+}
+
+// TestBroadcastTxWritesExpiringCacheEntry verifies that a successful BroadcastTx writes
+// a signer-cache entry with expiry semantics: HasSigned is true and GetSignedTxHash
+// returns the broadcast signature. Counterpart to TestSignTxCachedBroadcastConfirmed
+// that exercises the write path.
+func (s *SolTestSuite) TestBroadcastTxWritesExpiringCacheEntry(c *C) {
+	// A minimal test server that accepts any broadcast and reports success.
+	broadcastServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
+		var rpcRequest struct {
+			Method string `json:"method"`
+		}
+		_ = json.Unmarshal(body, &rpcRequest)
+		rw.Header().Set("Content-Type", "application/json")
+		switch rpcRequest.Method {
+		case "sendTransaction":
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"broadcast-sig"}`))
+		case "getLatestBlockhash":
+			httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
+		default:
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+		}
+	}))
+	defer broadcastServer.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, broadcastServer)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	rawTx, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(rawTx, NotNil)
+
+	txSig, err := e.BroadcastTx(txOut, rawTx)
+	c.Assert(err, IsNil)
+	c.Assert(txSig, Equals, "broadcast-sig")
+
+	// Cache should now treat this item as signed and expose the forward index.
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
+	sig, ok := e.signerCacheManager.GetSignedTxHash(txOut.CacheHash())
+	c.Assert(ok, Equals, true)
+	c.Assert(sig, Equals, "broadcast-sig")
+}
