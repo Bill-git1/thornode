@@ -977,9 +977,7 @@ thor:
     enabled: false
     block_buffer: 150_000
     peers:
-      # NOTE: example format only, endpoints being decommissioned.
-      - c3613862c2608b3e861406ad02146f41cf5124e6@statesync-seed.ninerealms.com:27146
-      - dbd1730bff1e8a21aad93bc6083209904d483185@statesync-seed-2.ninerealms.com:27146
+      - 8c25390487996c8b32e3c0b6defb56e74d337bca@thor-statesync-1.liquify.com:17146
   cosmos:
     pruning: nothing
     halt_height: 0

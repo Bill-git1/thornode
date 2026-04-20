@@ -22,20 +22,26 @@ docker run \
   registry.gitlab.com/thorchain/thornode:mainnet
 ```
 
-The above commands only work when the current release can sync from the present fork height - which is not the case since the move to the x/upgrade release pattern. Snapshots taken from a statesync recovery can be downloaded without need for a high memory machine to recover the statesync snapshot. Ensure `aria2c` is installed (you can `wget` or `curl` instead, but they are slower), then pull the latest statesync snapshot via:
+The above commands only work when the current release can sync from the present fork height - which is not the case since the move to the x/upgrade release pattern. Snapshots taken from a statesync recovery can be downloaded without need for a high memory machine to recover the statesync snapshot. Ensure `aria2c`, `curl`, and `jq` are installed, then pull the latest snapshot via the [Liquify snapshot API](https://snapshot-api.liquify.com):
 
 ```bash
 mkdir -p thornode-data/data
-MINIO_IMAGE="minio/minio:RELEASE.2023-10-25T06-33-25Z@sha256:858ee1ca619396ea1b77cc12a36b857a6b57cb4f5d53128b1224365ee1da7305"
-LATEST_SNAPSHOT_KEY=$(
-  docker run --rm --entrypoint sh "${MINIO_IMAGE}" -c "
-    mc config host add minio https://snapshots.ninerealms.com '' '' >/dev/null;
-    mc ls minio/snapshots/thornode --json | tail -n1 | jq -r '.key'"
-)
+LIQUIFY_API="https://snapshot-api.liquify.com"
+
+# fetch the latest snapshot file ID
+SNAPSHOTS_JSON=$(curl -sf "${LIQUIFY_API}/files/by-network/thorchain?type=mainnet-pruned")
+FILE_ID=$(echo "${SNAPSHOTS_JSON}" | jq -r '.files | sort_by(-.block_height) | .[0] | .id')
+
+# get signed download URL
+DOWNLOAD_JSON=$(curl -sf -X POST "${LIQUIFY_API}/files/${FILE_ID}/download-url")
+DOWNLOAD_URL=$(echo "${DOWNLOAD_JSON}" | jq -r '.urls | to_entries[0].value')
+SNAP_FILE=$(basename "${DOWNLOAD_URL%%\?*}")
+
+# download and extract
 aria2c --split=16 --max-concurrent-downloads=16 --max-connection-per-server=16 \
-  --continue --min-split-size=100M --out=$LATEST_SNAPSHOT_KEY \
-  "https://snapshots.ninerealms.com/snapshots/thornode/$LATEST_SNAPSHOT_KEY"
-tar xvf $LATEST_SNAPSHOT_KEY -C thornode-data
+  --continue --min-split-size=100M --check-certificate=true \
+  --out="${SNAP_FILE}" "${DOWNLOAD_URL}"
+tar xf "${SNAP_FILE}" -C thornode-data
 docker run \
   -v $(pwd)/thornode-data:/root/.thornode \
   -e CHAIN_ID=thorchain-1 \
