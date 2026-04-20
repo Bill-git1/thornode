@@ -115,6 +115,7 @@
         "income_burn": "0",
         "marketing_fund_reward": "0",
         "mode": "EndBlock",
+        "pol_reserve_reward": "0",
         "tcy_stake_reward": "0",
         "type": "rewards"
       }
@@ -316,6 +317,7 @@
         "income_burn": "0",
         "marketing_fund_reward": "0",
         "mode": "EndBlock",
+        "pol_reserve_reward": "0",
         "tcy_stake_reward": "0",
         "type": "rewards"
       }
@@ -612,6 +614,7 @@
         "income_burn": "0",
         "marketing_fund_reward": "0",
         "mode": "EndBlock",
+        "pol_reserve_reward": "0",
         "tcy_stake_reward": "0",
         "type": "rewards"
       }
@@ -734,6 +737,7 @@
         "income_burn": "0",
         "marketing_fund_reward": "0",
         "mode": "EndBlock",
+        "pol_reserve_reward": "0",
         "tcy_stake_reward": "0",
         "type": "rewards"
       },
@@ -1091,6 +1095,7 @@
         "income_burn": "0",
         "marketing_fund_reward": "0",
         "mode": "EndBlock",
+        "pol_reserve_reward": "0",
         "tcy_stake_reward": "0",
         "type": "rewards"
       }

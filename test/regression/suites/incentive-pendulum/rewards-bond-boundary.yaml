@@ -82,5 +82,5 @@ type: check
 endpoint: http://localhost:1317/thorchain/block?height=1
 asserts:
   - .end_block_events[] | select(.type == "rewards") | .bond_reward == "110984"
-  - .end_block_events[] | select(.type == "rewards") | keys | length == 7
-  - .end_block_events[] | select(.type == "rewards") | keys == ["bond_reward","dev_fund_reward","income_burn","marketing_fund_reward","mode","tcy_stake_reward","type"]
+  - .end_block_events[] | select(.type == "rewards") | keys | length == 8
+  - .end_block_events[] | select(.type == "rewards") | keys == ["bond_reward","dev_fund_reward","income_burn","marketing_fund_reward","mode","pol_reserve_reward","tcy_stake_reward","type"]

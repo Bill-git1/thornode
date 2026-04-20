@@ -76,6 +76,7 @@ func init() {
 	ModuleAddrRUNEPool = authtypes.NewModuleAddress("rune_pool").String()                     // "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80"
 	ModuleAddrClaiming = authtypes.NewModuleAddress("tcy_claim").String()                     // "tthor1ss8rrf3twa20kf9frdyru05dmu2kg9llwwcgag"
 	ModuleAddrTCYStake = authtypes.NewModuleAddress("tcy_stake").String()                     // "tthor128a8hqnkaxyqv7qwajpggmfyudh64jl3uxmuaf"
+	ModuleAddrPOLReserve = authtypes.NewModuleAddress("pol_reserve").String()                 // derived at runtime
 }
 
 func clientContextAndFactory(routine int) (client.Context, tx.Factory) {
@@ -176,6 +177,7 @@ var (
 	ModuleAddrRUNEPool           string
 	ModuleAddrClaiming           string
 	ModuleAddrTCYStake           string
+	ModuleAddrPOLReserve         string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

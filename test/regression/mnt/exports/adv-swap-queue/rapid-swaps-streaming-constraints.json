@@ -395,7 +395,8 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ]
+      ],
+      "pol_reserve_deposits": []
     },
     "upgrade": {},
     "wasm": {

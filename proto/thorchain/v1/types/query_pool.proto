@@ -56,6 +56,13 @@ message QueryPoolResponse {
   string volume_rune = 25 [ (gogoproto.jsontag) = "volume_rune" ];
   // 24h trading volume asset
   string volume_asset = 26 [ (gogoproto.jsontag) = "volume_asset" ];
+  // cumulative RUNE deposited by POL Reserve into this pool
+  string pol_reserve_rune_deposited = 27
+      [ (gogoproto.jsontag) = "pol_reserve_rune_deposited" ];
+  // rolling liquidity fees accumulated (in RUNE) since the last pool cycle
+  // reset; used as the numerator of the POL Reserve deployment score
+  string rolling_pool_liquidity_fee_rune = 28
+      [ (gogoproto.jsontag) = "rolling_pool_liquidity_fee_rune" ];
 }
 
 message QueryPoolsRequest { string height = 1; }

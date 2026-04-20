@@ -156,6 +156,8 @@ func NewConstantValue() *ConstantVals {
 			OverSolvencyCheckInterval:           600,                // interval in blocks for over-solvency checks (approximately 30 days)
 			MaxRetiredVaultRecoveryAttempts:     100,                // maximum retries for retired vault recovery refunds
 			ModifyLimitSwapMaxIterations:        100,                // maximum iterations when searching for a user's swap in a ratio-grouped index
+			POLReserveSystemIncomeBps:           0,                  // basis points of system income routed to POL reserve, 0 = disabled
+			POLReserveMaxDeployment:             10_000_000_000,     // maximum RUNE deployed per pool per block (100 RUNE in 1e8 units)
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

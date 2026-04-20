@@ -14,6 +14,7 @@ const (
 	RUNEPoolName           = types.RUNEPoolName
 	TCYClaimingName        = types.TCYClaimingName
 	TCYStakeName           = types.TCYStakeName
+	POLReserveName         = types.POLReserveName
 	BondName               = types.BondName
 	LendingName            = types.LendingName
 	StoreKey               = types.StoreKey
@@ -51,6 +52,7 @@ var (
 	NewStreamingSwap           = types.NewStreamingSwap
 	NewNetwork                 = types.NewNetwork
 	NewProtocolOwnedLiquidity  = types.NewProtocolOwnedLiquidity
+	NewPOLReserveDeposit       = types.NewPOLReserveDeposit
 	NewRUNEPool                = types.NewRUNEPool
 	NewObservedTx              = common.NewObservedTx
 	NewTssVoter                = types.NewTssVoter
@@ -143,6 +145,7 @@ type (
 	NodeMimir                = types.NodeMimir
 	NodeMimirs               = types.NodeMimirs
 	ProtocolOwnedLiquidity   = types.ProtocolOwnedLiquidity
+	POLReserveDeposit        = types.POLReserveDeposit
 	SwapperClout             = types.SwapperClout
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit

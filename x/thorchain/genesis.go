@@ -141,6 +141,7 @@ func DefaultGenesisState() GenesisState {
 		RuneProviders:           make([]RUNEProvider, 0),
 		RunePool:                NewRUNEPool(),
 		AffiliateCollectors:     []AffiliateFeeCollector{},
+		PolReserveDeposits:      make([]POLReserveDeposit, 0),
 	}
 }
 
@@ -282,6 +283,12 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 	for _, unit := range data.TradeUnits {
 		keeper.SetTradeUnit(ctx, unit)
 	}
+	for _, prd := range data.PolReserveDeposits {
+		if err := keeper.SetPOLReserveDeposit(ctx, prd); err != nil {
+			panic(err)
+		}
+	}
+
 	for _, a := range data.SecuredAssets {
 		keeper.SetSecuredAsset(ctx, a)
 	}
@@ -721,6 +728,15 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		securedAssets = append(securedAssets, a)
 	}
 
+	polReserveDeposits := make([]POLReserveDeposit, 0)
+	iterPOLReserveDeposits := k.GetPOLReserveDepositIterator(ctx)
+	defer iterPOLReserveDeposits.Close()
+	for ; iterPOLReserveDeposits.Valid(); iterPOLReserveDeposits.Next() {
+		var prd POLReserveDeposit
+		k.Cdc().MustUnmarshal(iterPOLReserveDeposits.Value(), &prd)
+		polReserveDeposits = append(polReserveDeposits, prd)
+	}
+
 	// Use Coin struct to represent these Asset-Amount pairs.
 	outboundFeeWithheldRune := common.Coins{}
 	outboundFeeSpentRune := common.Coins{}
@@ -794,5 +810,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		AffiliateCollectors:     affiliateCollectors,
 		TcyClaimers:             tcyClaimers,
 		TcyStakers:              tcyStakers,
+		PolReserveDeposits:      polReserveDeposits,
 	}
 }

@@ -54,6 +54,10 @@ type Pool struct {
 	VolumeAsset *string `json:"volume_asset,omitempty"`
 	// 24h volume in rune
 	VolumeRune *string `json:"volume_rune,omitempty"`
+	// cumulative RUNE deposited by POL Reserve into this pool
+	PolReserveRuneDeposited *string `json:"pol_reserve_rune_deposited,omitempty"`
+	// rolling liquidity fees accumulated (in RUNE) since the last pool cycle reset; used as the numerator of the POL Reserve deployment score
+	RollingPoolLiquidityFeeRune *string `json:"rolling_pool_liquidity_fee_rune,omitempty"`
 }
 
 // NewPool instantiates a new Pool object
@@ -683,6 +687,70 @@ func (o *Pool) SetVolumeRune(v string) {
 	o.VolumeRune = &v
 }
 
+// GetPolReserveRuneDeposited returns the PolReserveRuneDeposited field value if set, zero value otherwise.
+func (o *Pool) GetPolReserveRuneDeposited() string {
+	if o == nil || o.PolReserveRuneDeposited == nil {
+		var ret string
+		return ret
+	}
+	return *o.PolReserveRuneDeposited
+}
+
+// GetPolReserveRuneDepositedOk returns a tuple with the PolReserveRuneDeposited field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Pool) GetPolReserveRuneDepositedOk() (*string, bool) {
+	if o == nil || o.PolReserveRuneDeposited == nil {
+		return nil, false
+	}
+	return o.PolReserveRuneDeposited, true
+}
+
+// HasPolReserveRuneDeposited returns a boolean if a field has been set.
+func (o *Pool) HasPolReserveRuneDeposited() bool {
+	if o != nil && o.PolReserveRuneDeposited != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPolReserveRuneDeposited gets a reference to the given string and assigns it to the PolReserveRuneDeposited field.
+func (o *Pool) SetPolReserveRuneDeposited(v string) {
+	o.PolReserveRuneDeposited = &v
+}
+
+// GetRollingPoolLiquidityFeeRune returns the RollingPoolLiquidityFeeRune field value if set, zero value otherwise.
+func (o *Pool) GetRollingPoolLiquidityFeeRune() string {
+	if o == nil || o.RollingPoolLiquidityFeeRune == nil {
+		var ret string
+		return ret
+	}
+	return *o.RollingPoolLiquidityFeeRune
+}
+
+// GetRollingPoolLiquidityFeeRuneOk returns a tuple with the RollingPoolLiquidityFeeRune field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Pool) GetRollingPoolLiquidityFeeRuneOk() (*string, bool) {
+	if o == nil || o.RollingPoolLiquidityFeeRune == nil {
+		return nil, false
+	}
+	return o.RollingPoolLiquidityFeeRune, true
+}
+
+// HasRollingPoolLiquidityFeeRune returns a boolean if a field has been set.
+func (o *Pool) HasRollingPoolLiquidityFeeRune() bool {
+	if o != nil && o.RollingPoolLiquidityFeeRune != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetRollingPoolLiquidityFeeRune gets a reference to the given string and assigns it to the RollingPoolLiquidityFeeRune field.
+func (o *Pool) SetRollingPoolLiquidityFeeRune(v string) {
+	o.RollingPoolLiquidityFeeRune = &v
+}
+
 func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -753,6 +821,12 @@ func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.VolumeRune != nil {
 		toSerialize["volume_rune"] = o.VolumeRune
+	}
+	if o.PolReserveRuneDeposited != nil {
+		toSerialize["pol_reserve_rune_deposited"] = o.PolReserveRuneDeposited
+	}
+	if o.RollingPoolLiquidityFeeRune != nil {
+		toSerialize["rolling_pool_liquidity_fee_rune"] = o.RollingPoolLiquidityFeeRune
 	}
 	return json.Marshal(toSerialize)
 }

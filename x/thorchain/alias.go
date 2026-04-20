@@ -20,6 +20,7 @@ const (
 	RUNEPoolName           = types.RUNEPoolName
 	TCYClaimingName        = types.TCYClaimingName
 	TCYStakeName           = types.TCYStakeName
+	POLReserveName         = types.POLReserveName
 	RouterKey              = types.RouterKey
 	StoreKey               = types.StoreKey
 	DefaultCodespace       = types.DefaultCodespace
@@ -105,6 +106,7 @@ var (
 	NewPool                        = types.NewPool
 	NewNetwork                     = types.NewNetwork
 	NewProtocolOwnedLiquidity      = types.NewProtocolOwnedLiquidity
+	NewPOLReserveDeposit           = types.NewPOLReserveDeposit
 	NewRUNEPool                    = types.NewRUNEPool
 	NewObservedTx                  = common.NewObservedTx
 	NewTssVoter                    = types.NewTssVoter
@@ -142,6 +144,7 @@ var (
 	NewMsgPriceFeedQuorumBatch     = types.NewMsgPriceFeedQuorumBatch
 	NewTxOut                       = types.NewTxOut
 	NewEventRewards                = types.NewEventRewards
+	NewEventPOLReserveDeploy       = types.NewEventPOLReserveDeploy
 	NewEventPool                   = types.NewEventPool
 	NewEventDonate                 = types.NewEventDonate
 	NewEventSwap                   = types.NewEventSwap
@@ -359,6 +362,7 @@ type (
 	BondProvider             = types.BondProvider
 	Network                  = types.Network
 	ProtocolOwnedLiquidity   = types.ProtocolOwnedLiquidity
+	POLReserveDeposit        = types.POLReserveDeposit
 	VaultStatus              = types.VaultStatus
 	GasPool                  = types.GasPool
 	EventGas                 = types.EventGas

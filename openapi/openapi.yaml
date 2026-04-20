@@ -1980,6 +1980,14 @@ components:
           type: string
           example: "123456"
           description: 24h volume in rune
+        pol_reserve_rune_deposited:
+          type: string
+          example: "10000000000"
+          description: cumulative RUNE deposited by POL Reserve into this pool
+        rolling_pool_liquidity_fee_rune:
+          type: string
+          example: "12345678"
+          description: rolling liquidity fees accumulated (in RUNE) since the last pool cycle reset; used as the numerator of the POL Reserve deployment score
     DerivedPool:
       type: object
       required:

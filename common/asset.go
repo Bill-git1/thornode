@@ -390,6 +390,10 @@ func (a Asset) IsNative() bool {
 	return a.GetChain().IsTHORChain()
 }
 
+func (a Asset) IsExternalL1Asset() bool {
+	return !a.IsSyntheticAsset() && !a.IsDerivedAsset() && !a.IsTradeAsset() && !a.IsSecuredAsset() && !a.IsNative()
+}
+
 // MarshalJSON implement Marshaler interface
 func (a Asset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())

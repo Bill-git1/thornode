@@ -23,6 +23,8 @@ const (
 	TCYClaimingName = "tcy_claim"
 	// TCYStakeName the name of the account used to track stake funds from $TCY
 	TCYStakeName = "tcy_stake"
+	// POLReserveName the name of the account used to store POL reserve funds from system income
+	POLReserveName = "pol_reserve"
 
 	// StoreKey to be used when creating the KVStore
 	StoreKey = ModuleName

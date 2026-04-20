@@ -132,6 +132,7 @@ var maccPerms = map[string][]string{
 	schedulertypes.ModuleName:        {},
 	thorchain.TCYClaimingName:        {},
 	thorchain.TCYStakeName:           {},
+	thorchain.POLReserveName:         {},
 }
 
 var (

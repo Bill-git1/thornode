@@ -62,6 +62,7 @@ const (
 	OraclePriceEvent                = "oracle_price"
 	FailedOutboundRecoveryEventType = "failed_outbound_recovery"
 	VaultOverSolvencyEventType      = "vault_over_solvency"
+	POLReserveDeployEventType       = "pol_reserve_deploy"
 )
 
 // PoolMods a list of pool modifications
@@ -393,7 +394,7 @@ func (m *EventPool) Events() (cosmos.Events, error) {
 }
 
 // NewEventRewards create a new reward event
-func NewEventRewards(bondReward cosmos.Uint, poolRewards []PoolAmt, devFundReward, incomeBurn, tcyStakeReward, marketingFundReward cosmos.Uint) *EventRewards {
+func NewEventRewards(bondReward cosmos.Uint, poolRewards []PoolAmt, devFundReward, incomeBurn, tcyStakeReward, marketingFundReward, polReserveReward cosmos.Uint) *EventRewards {
 	return &EventRewards{
 		BondReward:          bondReward,
 		PoolRewards:         poolRewards,
@@ -401,6 +402,7 @@ func NewEventRewards(bondReward cosmos.Uint, poolRewards []PoolAmt, devFundRewar
 		IncomeBurn:          incomeBurn,
 		TcyStakeReward:      tcyStakeReward,
 		MarketingFundReward: marketingFundReward,
+		PolReserveReward:    polReserveReward,
 	}
 }
 
@@ -417,6 +419,7 @@ func (m *EventRewards) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("income_burn", m.IncomeBurn.String()),
 		cosmos.NewAttribute("tcy_stake_reward", m.TcyStakeReward.String()),
 		cosmos.NewAttribute("marketing_fund_reward", m.MarketingFundReward.String()),
+		cosmos.NewAttribute("pol_reserve_reward", m.PolReserveReward.String()),
 	)
 	for _, item := range m.PoolRewards {
 		evt = evt.AppendAttributes(cosmos.NewAttribute(item.Asset.String(), strconv.FormatInt(item.Amount, 10)))
@@ -1444,6 +1447,29 @@ func (m *EventVaultOverSolvency) Events() (cosmos.Events, error) {
 		)
 	}
 	return cosmos.Events{evt}, nil
+}
+
+// NewEventPOLReserveDeploy create a new POL reserve deploy event
+func NewEventPOLReserveDeploy(pool common.Asset, runeAmount cosmos.Uint) *EventPOLReserveDeploy {
+	return &EventPOLReserveDeploy{
+		Pool:       pool,
+		RuneAmount: runeAmount,
+	}
+}
+
+// Type return POL reserve deploy event type
+func (m *EventPOLReserveDeploy) Type() string {
+	return POLReserveDeployEventType
+}
+
+// Events convert EventPOLReserveDeploy to key value pairs used in cosmos
+func (m *EventPOLReserveDeploy) Events() (cosmos.Events, error) {
+	return cosmos.Events{
+		cosmos.NewEvent(m.Type(),
+			cosmos.NewAttribute("pool", m.Pool.String()),
+			cosmos.NewAttribute("rune_amount", m.RuneAmount.String()),
+		),
+	}, nil
 }
 
 // NewEventFailedOutboundRecovery create a new EventFailedOutboundRecovery

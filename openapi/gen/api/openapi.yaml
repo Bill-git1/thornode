@@ -2919,27 +2919,29 @@ components:
   schemas:
     Pool:
       example:
-        volume_rune: "123456"
+        rolling_pool_liquidity_fee_rune: "12345678"
         synth_units: "0"
-        volume_asset: "123456"
-        savers_fill_bps: "4500"
         savers_depth: "199998"
-        savers_units: "199998"
         derived_depth_bps: "123456"
         balance_asset: "3197744873"
         synth_supply: "0"
-        savers_capacity_remaining: "1000"
-        trading_halted: false
         asset_tor_price: "123456"
         synth_mint_paused: true
+        pol_reserve_rune_deposited: "10000000000"
+        balance_rune: "13460619152985"
+        pool_units: "14694928607473"
+        short_code: b
+        volume_rune: "123456"
+        volume_asset: "123456"
+        savers_fill_bps: "4500"
+        savers_units: "199998"
+        savers_capacity_remaining: "1000"
+        trading_halted: false
         pending_inbound_rune: "464993836"
         decimals: 6
         LP_units: "14694928607473"
-        balance_rune: "13460619152985"
         asset: BTC.BTC
-        pool_units: "14694928607473"
         synth_supply_remaining: "123456"
-        short_code: b
         status: Available
         pending_inbound_asset: "101713319"
       properties:
@@ -3029,6 +3031,16 @@ components:
         volume_rune:
           description: 24h volume in rune
           example: "123456"
+          type: string
+        pol_reserve_rune_deposited:
+          description: cumulative RUNE deposited by POL Reserve into this pool
+          example: "10000000000"
+          type: string
+        rolling_pool_liquidity_fee_rune:
+          description: rolling liquidity fees accumulated (in RUNE) since the last
+            pool cycle reset; used as the numerator of the POL Reserve deployment
+            score
+          example: "12345678"
           type: string
       required:
       - LP_units

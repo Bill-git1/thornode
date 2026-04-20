@@ -420,6 +420,16 @@ func (k KVStoreDummy) GetRollingPoolLiquidityFee(ctx cosmos.Context, asset commo
 }
 
 func (k KVStoreDummy) ResetRollingPoolLiquidityFee(ctx cosmos.Context, asset common.Asset) {}
+func (k KVStoreDummy) SavePrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset, fee uint64) {
+}
+
+func (k KVStoreDummy) GetPrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error) {
+	return 0, kaboom
+}
+
+func (k KVStoreDummy) GetEffectivePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error) {
+	return 0, kaboom
+}
 
 func (k KVStoreDummy) GetChains(_ cosmos.Context) (common.Chains, error) { return nil, kaboom }
 func (k KVStoreDummy) SetChains(_ cosmos.Context, _ common.Chains)       {}
@@ -502,6 +512,22 @@ func (k KVStoreDummy) GetPOL(_ cosmos.Context) (ProtocolOwnedLiquidity, error) {
 
 func (k KVStoreDummy) SetPOL(_ cosmos.Context, _ ProtocolOwnedLiquidity) error {
 	return kaboom
+}
+
+func (k KVStoreDummy) GetPOLReserveDeposit(_ cosmos.Context, _ common.Asset) (POLReserveDeposit, error) {
+	return POLReserveDeposit{}, kaboom
+}
+
+func (k KVStoreDummy) SetPOLReserveDeposit(_ cosmos.Context, _ POLReserveDeposit) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) IsPOLReserveEligiblePool(_ cosmos.Context, _ common.Asset) bool {
+	return false
+}
+
+func (k KVStoreDummy) GetPOLReserveDepositIterator(_ cosmos.Context) cosmos.Iterator {
+	return nil
 }
 
 func (k KVStoreDummy) SetTssKeysignFailVoter(_ cosmos.Context, tss TssKeysignFailVoter) {

@@ -95,6 +95,7 @@ type Keeper interface {
 	KeeperTCYClaimer
 	KeeperTCYStaker
 	KeeperVolume
+	KeeperPOLReserve
 }
 
 type KeeperConfig interface {
@@ -225,6 +226,9 @@ type KeeperLiquidityFees interface {
 	GetPoolLiquidityFees(ctx cosmos.Context, height uint64, asset common.Asset) (cosmos.Uint, error)
 	GetRollingPoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error)
 	ResetRollingPoolLiquidityFee(ctx cosmos.Context, asset common.Asset)
+	SavePrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset, fee uint64)
+	GetPrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error)
+	GetEffectivePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error)
 }
 
 type KeeperOutboundFees interface {
@@ -307,6 +311,14 @@ type KeeperNetwork interface {
 	SetNetwork(ctx cosmos.Context, data Network) error
 	GetPOL(ctx cosmos.Context) (ProtocolOwnedLiquidity, error)
 	SetPOL(ctx cosmos.Context, data ProtocolOwnedLiquidity) error
+}
+
+// KeeperPOLReserve func to access POL reserve deposit data in key value store
+type KeeperPOLReserve interface {
+	GetPOLReserveDeposit(ctx cosmos.Context, asset common.Asset) (POLReserveDeposit, error)
+	SetPOLReserveDeposit(ctx cosmos.Context, data POLReserveDeposit) error
+	GetPOLReserveDepositIterator(ctx cosmos.Context) cosmos.Iterator
+	IsPOLReserveEligiblePool(ctx cosmos.Context, asset common.Asset) bool
 }
 
 type KeeperTss interface {

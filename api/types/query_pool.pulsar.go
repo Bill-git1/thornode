@@ -498,30 +498,32 @@ func (x *fastReflection_QueryPoolRequest) ProtoMethods() *protoiface.Methods {
 }
 
 var (
-	md_QueryPoolResponse                           protoreflect.MessageDescriptor
-	fd_QueryPoolResponse_asset                     protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_short_code                protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_status                    protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_decimals                  protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_pending_inbound_asset     protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_pending_inbound_rune      protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_balance_asset             protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_balance_rune              protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_asset_tor_price           protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_pool_units                protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_LP_units                  protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_synth_units               protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_synth_supply              protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_savers_depth              protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_savers_units              protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_savers_fill_bps           protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_savers_capacity_remaining protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_synth_mint_paused         protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_synth_supply_remaining    protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_derived_depth_bps         protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_trading_halted            protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_volume_rune               protoreflect.FieldDescriptor
-	fd_QueryPoolResponse_volume_asset              protoreflect.FieldDescriptor
+	md_QueryPoolResponse                                 protoreflect.MessageDescriptor
+	fd_QueryPoolResponse_asset                           protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_short_code                      protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_status                          protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_decimals                        protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_pending_inbound_asset           protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_pending_inbound_rune            protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_balance_asset                   protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_balance_rune                    protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_asset_tor_price                 protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_pool_units                      protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_LP_units                        protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_synth_units                     protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_synth_supply                    protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_savers_depth                    protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_savers_units                    protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_savers_fill_bps                 protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_savers_capacity_remaining       protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_synth_mint_paused               protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_synth_supply_remaining          protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_derived_depth_bps               protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_trading_halted                  protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_volume_rune                     protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_volume_asset                    protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_pol_reserve_rune_deposited      protoreflect.FieldDescriptor
+	fd_QueryPoolResponse_rolling_pool_liquidity_fee_rune protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -550,6 +552,8 @@ func init() {
 	fd_QueryPoolResponse_trading_halted = md_QueryPoolResponse.Fields().ByName("trading_halted")
 	fd_QueryPoolResponse_volume_rune = md_QueryPoolResponse.Fields().ByName("volume_rune")
 	fd_QueryPoolResponse_volume_asset = md_QueryPoolResponse.Fields().ByName("volume_asset")
+	fd_QueryPoolResponse_pol_reserve_rune_deposited = md_QueryPoolResponse.Fields().ByName("pol_reserve_rune_deposited")
+	fd_QueryPoolResponse_rolling_pool_liquidity_fee_rune = md_QueryPoolResponse.Fields().ByName("rolling_pool_liquidity_fee_rune")
 }
 
 var _ protoreflect.Message = (*fastReflection_QueryPoolResponse)(nil)
@@ -755,6 +759,18 @@ func (x *fastReflection_QueryPoolResponse) Range(f func(protoreflect.FieldDescri
 			return
 		}
 	}
+	if x.PolReserveRuneDeposited != "" {
+		value := protoreflect.ValueOfString(x.PolReserveRuneDeposited)
+		if !f(fd_QueryPoolResponse_pol_reserve_rune_deposited, value) {
+			return
+		}
+	}
+	if x.RollingPoolLiquidityFeeRune != "" {
+		value := protoreflect.ValueOfString(x.RollingPoolLiquidityFeeRune)
+		if !f(fd_QueryPoolResponse_rolling_pool_liquidity_fee_rune, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -816,6 +832,10 @@ func (x *fastReflection_QueryPoolResponse) Has(fd protoreflect.FieldDescriptor) 
 		return x.VolumeRune != ""
 	case "types.QueryPoolResponse.volume_asset":
 		return x.VolumeAsset != ""
+	case "types.QueryPoolResponse.pol_reserve_rune_deposited":
+		return x.PolReserveRuneDeposited != ""
+	case "types.QueryPoolResponse.rolling_pool_liquidity_fee_rune":
+		return x.RollingPoolLiquidityFeeRune != ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryPoolResponse"))
@@ -878,6 +898,10 @@ func (x *fastReflection_QueryPoolResponse) Clear(fd protoreflect.FieldDescriptor
 		x.VolumeRune = ""
 	case "types.QueryPoolResponse.volume_asset":
 		x.VolumeAsset = ""
+	case "types.QueryPoolResponse.pol_reserve_rune_deposited":
+		x.PolReserveRuneDeposited = ""
+	case "types.QueryPoolResponse.rolling_pool_liquidity_fee_rune":
+		x.RollingPoolLiquidityFeeRune = ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryPoolResponse"))
@@ -963,6 +987,12 @@ func (x *fastReflection_QueryPoolResponse) Get(descriptor protoreflect.FieldDesc
 	case "types.QueryPoolResponse.volume_asset":
 		value := x.VolumeAsset
 		return protoreflect.ValueOfString(value)
+	case "types.QueryPoolResponse.pol_reserve_rune_deposited":
+		value := x.PolReserveRuneDeposited
+		return protoreflect.ValueOfString(value)
+	case "types.QueryPoolResponse.rolling_pool_liquidity_fee_rune":
+		value := x.RollingPoolLiquidityFeeRune
+		return protoreflect.ValueOfString(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryPoolResponse"))
@@ -1029,6 +1059,10 @@ func (x *fastReflection_QueryPoolResponse) Set(fd protoreflect.FieldDescriptor, 
 		x.VolumeRune = value.Interface().(string)
 	case "types.QueryPoolResponse.volume_asset":
 		x.VolumeAsset = value.Interface().(string)
+	case "types.QueryPoolResponse.pol_reserve_rune_deposited":
+		x.PolReserveRuneDeposited = value.Interface().(string)
+	case "types.QueryPoolResponse.rolling_pool_liquidity_fee_rune":
+		x.RollingPoolLiquidityFeeRune = value.Interface().(string)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryPoolResponse"))
@@ -1095,6 +1129,10 @@ func (x *fastReflection_QueryPoolResponse) Mutable(fd protoreflect.FieldDescript
 		panic(fmt.Errorf("field volume_rune of message types.QueryPoolResponse is not mutable"))
 	case "types.QueryPoolResponse.volume_asset":
 		panic(fmt.Errorf("field volume_asset of message types.QueryPoolResponse is not mutable"))
+	case "types.QueryPoolResponse.pol_reserve_rune_deposited":
+		panic(fmt.Errorf("field pol_reserve_rune_deposited of message types.QueryPoolResponse is not mutable"))
+	case "types.QueryPoolResponse.rolling_pool_liquidity_fee_rune":
+		panic(fmt.Errorf("field rolling_pool_liquidity_fee_rune of message types.QueryPoolResponse is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryPoolResponse"))
@@ -1153,6 +1191,10 @@ func (x *fastReflection_QueryPoolResponse) NewField(fd protoreflect.FieldDescrip
 	case "types.QueryPoolResponse.volume_rune":
 		return protoreflect.ValueOfString("")
 	case "types.QueryPoolResponse.volume_asset":
+		return protoreflect.ValueOfString("")
+	case "types.QueryPoolResponse.pol_reserve_rune_deposited":
+		return protoreflect.ValueOfString("")
+	case "types.QueryPoolResponse.rolling_pool_liquidity_fee_rune":
 		return protoreflect.ValueOfString("")
 	default:
 		if fd.IsExtension() {
@@ -1312,6 +1354,14 @@ func (x *fastReflection_QueryPoolResponse) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 2 + l + runtime.Sov(uint64(l))
 		}
+		l = len(x.PolReserveRuneDeposited)
+		if l > 0 {
+			n += 2 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.RollingPoolLiquidityFeeRune)
+		if l > 0 {
+			n += 2 + l + runtime.Sov(uint64(l))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -1340,6 +1390,24 @@ func (x *fastReflection_QueryPoolResponse) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.RollingPoolLiquidityFeeRune) > 0 {
+			i -= len(x.RollingPoolLiquidityFeeRune)
+			copy(dAtA[i:], x.RollingPoolLiquidityFeeRune)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.RollingPoolLiquidityFeeRune)))
+			i--
+			dAtA[i] = 0x1
+			i--
+			dAtA[i] = 0xe2
+		}
+		if len(x.PolReserveRuneDeposited) > 0 {
+			i -= len(x.PolReserveRuneDeposited)
+			copy(dAtA[i:], x.PolReserveRuneDeposited)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.PolReserveRuneDeposited)))
+			i--
+			dAtA[i] = 0x1
+			i--
+			dAtA[i] = 0xda
 		}
 		if len(x.VolumeAsset) > 0 {
 			i -= len(x.VolumeAsset)
@@ -2269,6 +2337,70 @@ func (x *fastReflection_QueryPoolResponse) ProtoMethods() *protoiface.Methods {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
 				}
 				x.VolumeAsset = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 27:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PolReserveRuneDeposited", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.PolReserveRuneDeposited = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 28:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field RollingPoolLiquidityFeeRune", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.RollingPoolLiquidityFeeRune = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
@@ -3319,6 +3451,11 @@ type QueryPoolResponse struct {
 	VolumeRune string `protobuf:"bytes,25,opt,name=volume_rune,json=volumeRune,proto3" json:"volume_rune,omitempty"`
 	// 24h trading volume asset
 	VolumeAsset string `protobuf:"bytes,26,opt,name=volume_asset,json=volumeAsset,proto3" json:"volume_asset,omitempty"`
+	// cumulative RUNE deposited by POL Reserve into this pool
+	PolReserveRuneDeposited string `protobuf:"bytes,27,opt,name=pol_reserve_rune_deposited,json=polReserveRuneDeposited,proto3" json:"pol_reserve_rune_deposited,omitempty"`
+	// rolling liquidity fees accumulated (in RUNE) since the last pool cycle
+	// reset; used as the numerator of the POL Reserve deployment score
+	RollingPoolLiquidityFeeRune string `protobuf:"bytes,28,opt,name=rolling_pool_liquidity_fee_rune,json=rollingPoolLiquidityFeeRune,proto3" json:"rolling_pool_liquidity_fee_rune,omitempty"`
 }
 
 func (x *QueryPoolResponse) Reset() {
@@ -3502,6 +3639,20 @@ func (x *QueryPoolResponse) GetVolumeAsset() string {
 	return ""
 }
 
+func (x *QueryPoolResponse) GetPolReserveRuneDeposited() string {
+	if x != nil {
+		return x.PolReserveRuneDeposited
+	}
+	return ""
+}
+
+func (x *QueryPoolResponse) GetRollingPoolLiquidityFeeRune() string {
+	if x != nil {
+		return x.RollingPoolLiquidityFeeRune
+	}
+	return ""
+}
+
 type QueryPoolsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3582,7 +3733,7 @@ var file_types_query_pool_proto_rawDesc = []byte{
 	0x6f, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x61, 0x73, 0x73,
 	0x65, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x61, 0x73, 0x73, 0x65, 0x74, 0x12,
 	0x16, 0x0a, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x22, 0x93, 0x0a, 0x0a, 0x11, 0x51, 0x75, 0x65, 0x72,
+	0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x22, 0xdb, 0x0b, 0x0a, 0x11, 0x51, 0x75, 0x65, 0x72,
 	0x79, 0x50, 0x6f, 0x6f, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a,
 	0x05, 0x61, 0x73, 0x73, 0x65, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x09, 0xea, 0xde,
 	0x1f, 0x05, 0x61, 0x73, 0x73, 0x65, 0x74, 0x52, 0x05, 0x61, 0x73, 0x73, 0x65, 0x74, 0x12, 0x1d,
@@ -3663,23 +3814,36 @@ var file_types_query_pool_proto_rawDesc = []byte{
 	0x6c, 0x75, 0x6d, 0x65, 0x52, 0x75, 0x6e, 0x65, 0x12, 0x33, 0x0a, 0x0c, 0x76, 0x6f, 0x6c, 0x75,
 	0x6d, 0x65, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74, 0x18, 0x1a, 0x20, 0x01, 0x28, 0x09, 0x42, 0x10,
 	0xea, 0xde, 0x1f, 0x0c, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74,
-	0x52, 0x0b, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x41, 0x73, 0x73, 0x65, 0x74, 0x22, 0x2b, 0x0a,
-	0x11, 0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x6f, 0x6f, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x22, 0x44, 0x0a, 0x12, 0x51, 0x75,
-	0x65, 0x72, 0x79, 0x50, 0x6f, 0x6f, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x2e, 0x0a, 0x05, 0x70, 0x6f, 0x6f, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
-	0x18, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x6f, 0x6f,
-	0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x05, 0x70, 0x6f, 0x6f, 0x6c, 0x73,
-	0x42, 0x7f, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0e, 0x51,
-	0x75, 0x65, 0x72, 0x79, 0x50, 0x6f, 0x6f, 0x6c, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a,
-	0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72,
-	0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76,
-	0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58,
-	0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65,
-	0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74,
-	0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe2, 0x1e,
-	0x01, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x52, 0x0b, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x41, 0x73, 0x73, 0x65, 0x74, 0x12, 0x5b, 0x0a,
+	0x1a, 0x70, 0x6f, 0x6c, 0x5f, 0x72, 0x65, 0x73, 0x65, 0x72, 0x76, 0x65, 0x5f, 0x72, 0x75, 0x6e,
+	0x65, 0x5f, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x65, 0x64, 0x18, 0x1b, 0x20, 0x01, 0x28,
+	0x09, 0x42, 0x1e, 0xea, 0xde, 0x1f, 0x1a, 0x70, 0x6f, 0x6c, 0x5f, 0x72, 0x65, 0x73, 0x65, 0x72,
+	0x76, 0x65, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x5f, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x65,
+	0x64, 0x52, 0x17, 0x70, 0x6f, 0x6c, 0x52, 0x65, 0x73, 0x65, 0x72, 0x76, 0x65, 0x52, 0x75, 0x6e,
+	0x65, 0x44, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x65, 0x64, 0x12, 0x69, 0x0a, 0x1f, 0x72, 0x6f,
+	0x6c, 0x6c, 0x69, 0x6e, 0x67, 0x5f, 0x70, 0x6f, 0x6f, 0x6c, 0x5f, 0x6c, 0x69, 0x71, 0x75, 0x69,
+	0x64, 0x69, 0x74, 0x79, 0x5f, 0x66, 0x65, 0x65, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x18, 0x1c, 0x20,
+	0x01, 0x28, 0x09, 0x42, 0x23, 0xea, 0xde, 0x1f, 0x1f, 0x72, 0x6f, 0x6c, 0x6c, 0x69, 0x6e, 0x67,
+	0x5f, 0x70, 0x6f, 0x6f, 0x6c, 0x5f, 0x6c, 0x69, 0x71, 0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x5f,
+	0x66, 0x65, 0x65, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x52, 0x1b, 0x72, 0x6f, 0x6c, 0x6c, 0x69, 0x6e,
+	0x67, 0x50, 0x6f, 0x6f, 0x6c, 0x4c, 0x69, 0x71, 0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x46, 0x65,
+	0x65, 0x52, 0x75, 0x6e, 0x65, 0x22, 0x2b, 0x0a, 0x11, 0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x6f,
+	0x6f, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x68, 0x65,
+	0x69, 0x67, 0x68, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x68, 0x65, 0x69, 0x67,
+	0x68, 0x74, 0x22, 0x44, 0x0a, 0x12, 0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x6f, 0x6f, 0x6c, 0x73,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2e, 0x0a, 0x05, 0x70, 0x6f, 0x6f, 0x6c,
+	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e,
+	0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x6f, 0x6f, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x52, 0x05, 0x70, 0x6f, 0x6f, 0x6c, 0x73, 0x42, 0x7f, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e,
+	0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x6f, 0x6f, 0x6c,
+	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e,
+	0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68,
+	0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79,
+	0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65,
+	0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65,
+	0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05,
+	0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe2, 0x1e, 0x01, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (

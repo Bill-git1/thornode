@@ -61,6 +61,7 @@ type (
 	NodeStatus               = types.NodeStatus
 	Network                  = types.Network
 	ProtocolOwnedLiquidity   = types.ProtocolOwnedLiquidity
+	POLReserveDeposit        = types.POLReserveDeposit
 	VaultStatus              = types.VaultStatus
 	NetworkFee               = types.NetworkFee
 	ObservedNetworkFeeVoter  = types.ObservedNetworkFeeVoter

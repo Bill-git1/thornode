@@ -56,6 +56,32 @@ func (k KVStore) ResetRollingPoolLiquidityFee(ctx cosmos.Context, asset common.A
 	k.setUint64(ctx, key, 0)
 }
 
+// SavePrevCyclePoolLiquidityFee snapshots the current rolling fee as the previous cycle value
+func (k KVStore) SavePrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset, fee uint64) {
+	key := k.GetKey(prefixPrevCyclePoolLiquidityFee, asset.String())
+	k.setUint64(ctx, key, fee)
+}
+
+// GetPrevCyclePoolLiquidityFee returns the previous cycle's rolling liquidity fee
+func (k KVStore) GetPrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error) {
+	key := k.GetKey(prefixPrevCyclePoolLiquidityFee, asset.String())
+	var record uint64
+	_, err := k.getUint64(ctx, key, &record)
+	return record, err
+}
+
+// GetEffectivePoolLiquidityFee returns the prev-cycle fee if available, falling back to the current rolling fee
+func (k KVStore) GetEffectivePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error) {
+	prev, err := k.GetPrevCyclePoolLiquidityFee(ctx, asset)
+	if err != nil {
+		return 0, err
+	}
+	if prev > 0 {
+		return prev, nil
+	}
+	return k.GetRollingPoolLiquidityFee(ctx, asset)
+}
+
 func (k KVStore) getLiquidityFees(ctx cosmos.Context, key []byte) (cosmos.Uint, error) {
 	var record uint64
 	_, err := k.getUint64(ctx, key, &record)

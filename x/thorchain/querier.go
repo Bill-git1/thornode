@@ -1496,6 +1496,16 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 	p.SynthSupplyRemaining = synthSupplyRemaining.String()
 	p.DerivedDepthBps = dbps.String()
 
+	polReserveDeposit, err := qs.mgr.Keeper().GetPOLReserveDeposit(ctx, pool.Asset)
+	if err == nil {
+		p.PolReserveRuneDeposited = polReserveDeposit.RuneDeposited.String()
+	}
+
+	rollingFee, err := qs.mgr.Keeper().GetRollingPoolLiquidityFee(ctx, pool.Asset)
+	if err == nil {
+		p.RollingPoolLiquidityFeeRune = cosmos.NewUint(rollingFee).String()
+	}
+
 	if !pool.BalanceAsset.IsZero() && !pool.BalanceRune.IsZero() {
 		dollarsPerRune := dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper())
 		p.AssetTorPrice = dollarsPerRune.Mul(pool.BalanceRune).Quo(pool.BalanceAsset).String()
@@ -1618,6 +1628,16 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 		p.SynthMintPaused = (synthMintPausedErr != nil)
 		p.SynthSupplyRemaining = synthSupplyRemaining.String()
 		p.DerivedDepthBps = dbps.String()
+
+		polReserveDeposit, polErr := qs.mgr.Keeper().GetPOLReserveDeposit(ctx, pool.Asset)
+		if polErr == nil {
+			p.PolReserveRuneDeposited = polReserveDeposit.RuneDeposited.String()
+		}
+
+		rollingFee, rollingErr := qs.mgr.Keeper().GetRollingPoolLiquidityFee(ctx, pool.Asset)
+		if rollingErr == nil {
+			p.RollingPoolLiquidityFeeRune = cosmos.NewUint(rollingFee).String()
+		}
 
 		if !pool.BalanceAsset.IsZero() && !pool.BalanceRune.IsZero() {
 			p.AssetTorPrice = dollarsPerRune.Mul(pool.BalanceRune).Quo(pool.BalanceAsset).String()

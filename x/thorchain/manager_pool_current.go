@@ -105,6 +105,12 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 			continue
 		}
 		if pool.Asset.IsGasAsset() {
+			if fee, err := mgr.Keeper().GetRollingPoolLiquidityFee(ctx, pool.Asset); err != nil {
+				ctx.Logger().Error("fail to get rolling pool liquidity fee", "asset", pool.Asset, "error", err)
+			} else {
+				mgr.Keeper().SavePrevCyclePoolLiquidityFee(ctx, pool.Asset, fee)
+			}
+			mgr.Keeper().ResetRollingPoolLiquidityFee(ctx, pool.Asset)
 			continue
 		}
 		switch pool.Status {
@@ -123,7 +129,11 @@ func (pm *PoolMgr) cyclePools(ctx cosmos.Context, maxAvailablePools, minRunePool
 					return err
 				}
 			}
-			// reset the pool rolling liquidity fee to zero
+			if fee, feeErr := mgr.Keeper().GetRollingPoolLiquidityFee(ctx, pool.Asset); feeErr != nil {
+				ctx.Logger().Error("fail to get rolling pool liquidity fee", "asset", pool.Asset, "error", feeErr)
+			} else {
+				mgr.Keeper().SavePrevCyclePoolLiquidityFee(ctx, pool.Asset, fee)
+			}
 			mgr.Keeper().ResetRollingPoolLiquidityFee(ctx, pool.Asset)
 		case PoolStaged:
 			// deduct staged pool rune fee

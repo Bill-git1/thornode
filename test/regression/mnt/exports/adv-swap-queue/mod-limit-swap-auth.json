@@ -230,7 +230,7 @@
             "from_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
             "gas": null,
             "id": "33F61E5132E5C07FEA1CE5CC2098906EA2D5CD3B85316EC8FE7D94620424EB11",
-            "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:8998438",
+            "memo": "=<:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:8998438",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
           },
           "version": 1
@@ -372,7 +372,7 @@
                 }
               ],
               "id": "0000000000000000000000000000000000000000000000000000000000000002",
-              "memo": "m=\u003c:1000000BTC.BTC:500000000000000000ETH.ETH:100000000000000000",
+              "memo": "m=<:1000000BTC.BTC:500000000000000000ETH.ETH:100000000000000000",
               "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
             }
           },
@@ -401,7 +401,7 @@
                   }
                 ],
                 "id": "0000000000000000000000000000000000000000000000000000000000000002",
-                "memo": "m=\u003c:1000000BTC.BTC:500000000000000000ETH.ETH:100000000000000000",
+                "memo": "m=<:1000000BTC.BTC:500000000000000000ETH.ETH:100000000000000000",
                 "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
               }
             }
@@ -459,7 +459,7 @@
                 }
               ],
               "id": "0000000000000000000000000000000000000000000000000000000000000001",
-              "memo": "=\u003c:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:500000000000000000",
+              "memo": "=<:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:500000000000000000",
               "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
             }
           },
@@ -488,7 +488,7 @@
                   }
                 ],
                 "id": "0000000000000000000000000000000000000000000000000000000000000001",
-                "memo": "=\u003c:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:500000000000000000",
+                "memo": "=<:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:500000000000000000",
                 "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
               }
             }
@@ -634,7 +634,8 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ]
+      ],
+      "pol_reserve_deposits": []
     },
     "upgrade": {},
     "wasm": {

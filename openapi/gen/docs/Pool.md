@@ -27,6 +27,8 @@ Name | Type | Description | Notes
 **TradingHalted** | Pointer to **bool** | indicates if the pool can be used for swaps | [optional] 
 **VolumeAsset** | Pointer to **string** | 24h volume in asset | [optional] 
 **VolumeRune** | Pointer to **string** | 24h volume in rune | [optional] 
+**PolReserveRuneDeposited** | Pointer to **string** | cumulative RUNE deposited by POL Reserve into this pool | [optional] 
+**RollingPoolLiquidityFeeRune** | Pointer to **string** | rolling liquidity fees accumulated (in RUNE) since the last pool cycle reset; used as the numerator of the POL Reserve deployment score | [optional] 
 
 ## Methods
 
@@ -531,6 +533,56 @@ SetVolumeRune sets VolumeRune field to given value.
 `func (o *Pool) HasVolumeRune() bool`
 
 HasVolumeRune returns a boolean if a field has been set.
+
+### GetPolReserveRuneDeposited
+
+`func (o *Pool) GetPolReserveRuneDeposited() string`
+
+GetPolReserveRuneDeposited returns the PolReserveRuneDeposited field if non-nil, zero value otherwise.
+
+### GetPolReserveRuneDepositedOk
+
+`func (o *Pool) GetPolReserveRuneDepositedOk() (*string, bool)`
+
+GetPolReserveRuneDepositedOk returns a tuple with the PolReserveRuneDeposited field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPolReserveRuneDeposited
+
+`func (o *Pool) SetPolReserveRuneDeposited(v string)`
+
+SetPolReserveRuneDeposited sets PolReserveRuneDeposited field to given value.
+
+### HasPolReserveRuneDeposited
+
+`func (o *Pool) HasPolReserveRuneDeposited() bool`
+
+HasPolReserveRuneDeposited returns a boolean if a field has been set.
+
+### GetRollingPoolLiquidityFeeRune
+
+`func (o *Pool) GetRollingPoolLiquidityFeeRune() string`
+
+GetRollingPoolLiquidityFeeRune returns the RollingPoolLiquidityFeeRune field if non-nil, zero value otherwise.
+
+### GetRollingPoolLiquidityFeeRuneOk
+
+`func (o *Pool) GetRollingPoolLiquidityFeeRuneOk() (*string, bool)`
+
+GetRollingPoolLiquidityFeeRuneOk returns a tuple with the RollingPoolLiquidityFeeRune field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRollingPoolLiquidityFeeRune
+
+`func (o *Pool) SetRollingPoolLiquidityFeeRune(v string)`
+
+SetRollingPoolLiquidityFeeRune sets RollingPoolLiquidityFeeRune field to given value.
+
+### HasRollingPoolLiquidityFeeRune
+
+`func (o *Pool) HasRollingPoolLiquidityFeeRune() bool`
+
+HasRollingPoolLiquidityFeeRune returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

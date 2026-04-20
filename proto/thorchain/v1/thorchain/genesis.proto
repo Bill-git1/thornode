@@ -12,6 +12,7 @@ import "types/type_affiliate_fee_collector.proto";
 import "types/type_streaming_swap.proto";
 import "types/type_network.proto";
 import "types/type_pol.proto";
+import "types/type_pol_reserve.proto";
 import "types/type_reserve_contributor.proto";
 import "types/type_vault.proto";
 import "types/type_tx_out.proto";
@@ -120,5 +121,7 @@ message GenesisState {
   repeated types.TCYClaimer tcy_claimers = 42 [ (gogoproto.nullable) = false ];
   repeated types.TCYStaker tcy_stakers = 43 [ (gogoproto.nullable) = false ];
   repeated types.ReferenceMemo reference_memos = 44
+      [ (gogoproto.nullable) = false ];
+  repeated types.POLReserveDeposit pol_reserve_deposits = 45
       [ (gogoproto.nullable) = false ];
 }

@@ -275,6 +275,10 @@ message EventRewards {
     (gogoproto.customtype) = "cosmossdk.io/math.Uint",
     (gogoproto.nullable) = false
   ];
+  string pol_reserve_reward = 7 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
 }
 
 message EventRefund {
@@ -713,4 +717,15 @@ message AssetOverSolvency {
 message EventVaultOverSolvency {
   repeated AssetOverSolvency assets = 1 [ (gogoproto.nullable) = false ];
   int64 over_solvency_basis_points = 2;
+}
+
+message EventPOLReserveDeploy {
+  common.Asset pool = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"
+  ];
+  string rune_amount = 2 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
 }
