@@ -261,6 +261,8 @@ func (s *LitecoinSuite) TestGetSender(c *C) {
 	sender, err = s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "tltc1qjw8h4l3dtz5xxc7uyh5ys70qkezspgfus9tapm")
+
+	assertSenderUTXOValidation(c, s.client)
 }
 
 func (s *LitecoinSuite) TestGetMemo(c *C) {

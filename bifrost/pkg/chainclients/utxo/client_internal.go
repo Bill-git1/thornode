@@ -831,6 +831,15 @@ func (c *Client) getSender(tx *btcjson.TxRawResult, vinZeroTxs map[string]*btcjs
 		vout = vinTx.Vout[tx.Vin[0].Vout]
 	}
 
+	// Validate sender UTXO is single-sig to prevent multisig sender spoofing.
+	// An attacker could create a bare multisig with [victim_pubkey, attacker_pubkey],
+	// sign with their key, and have the transaction attributed to the victim
+	// (since ExtractPkScriptAddrs returns addresses[0] for bare multisig).
+	// P2SH/P2WSH-wrapped multisig is unaffected (returns single 3xxx/bc1q address).
+	if !c.isValidUTXO(vout.ScriptPubKey.Hex) {
+		return "", fmt.Errorf("sender utxo must be single-sig")
+	}
+
 	addresses := c.getAddressesFromScriptPubKey(vout.ScriptPubKey)
 	if len(addresses) == 0 {
 		return "", fmt.Errorf("no address available in vout")

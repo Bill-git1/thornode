@@ -267,6 +267,8 @@ func (s *DogecoinSuite) TestGetSender(c *C) {
 	sender, err = s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "nfWiQeddE4zsYsDuYhvpgVC7y4gjr5RyqK")
+
+	assertSenderUTXOValidation(c, s.client)
 }
 
 func (s *DogecoinSuite) TestGetMemo(c *C) {

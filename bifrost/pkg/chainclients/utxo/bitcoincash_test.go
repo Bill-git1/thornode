@@ -260,6 +260,8 @@ func (s *BitcoinCashSuite) TestGetSender(c *C) {
 	sender, err = s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "qzfc77h794v2scmrmsj7sjreuzmy2q9p8sc74ea43r")
+
+	assertSenderUTXOValidation(c, s.client)
 }
 
 func (s *BitcoinCashSuite) TestGetMemo(c *C) {

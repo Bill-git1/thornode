@@ -1184,6 +1184,8 @@ func (s *CoverageBackfillSuite) TestGetSenderWithVinZeroTxs(c *C) {
 			{
 				Value: 1.0,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					// P2PKH script; isValidUTXO accepts single-address/single-sig.
+					Hex:       "76a91415fb126815935f6ae83a206d7d82f1065bc63e2588ac",
 					Addresses: []string{"sender_addr"},
 				},
 			},

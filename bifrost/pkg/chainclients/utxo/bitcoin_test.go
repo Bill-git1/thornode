@@ -282,6 +282,8 @@ func (s *BitcoinSuite) TestGetSender(c *C) {
 	sender, err = s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "tb1qdxxlx4r4jk63cve3rjpj428m26xcukjn5yegff")
+
+	assertSenderUTXOValidation(c, s.client)
 }
 
 func (s *BitcoinSuite) TestGetMemo(c *C) {
