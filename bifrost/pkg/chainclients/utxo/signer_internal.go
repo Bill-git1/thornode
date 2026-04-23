@@ -416,8 +416,11 @@ func (c *Client) getGasCoinZEC(tx *wire.MsgTx, memo string) common.Coin {
 	// https://zips.z.cash/zip-0317
 	// 8 bytes value + 1 byte length + OP_RETURN + OP_PUSHBYTES/DATA
 	// -> 8 + 1 + 1 + 2 (using two bytes for OP_PUSHDATA2 for simplicity)
-	bytesOpReturn := 12 + len(memo)
-	actionsMemo := (bytesOpReturn + 34 - 1) / 34
+	var actionsMemo int
+	if len(memo) > 0 {
+		bytesOpReturn := 12 + len(memo)
+		actionsMemo = (bytesOpReturn + 34 - 1) / 34
+	}
 
 	// assume 2 tx out: one to customer + one back to self
 	amount := 5000*max(len(tx.TxIn), 2+actionsMemo) + ZecExtraFee

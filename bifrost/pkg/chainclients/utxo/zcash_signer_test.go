@@ -405,10 +405,10 @@ func (s *ZcashSignerSuite) TestGetGasCoinZEC(c *C) {
 		ExpectedGas uint64
 	}{
 		{
-			Info:        "empty memo counts as 1 logical action, > 1 vin",
+			Info:        "empty memo counts as 0 logical action, 1 vin, 2 vout",
 			Vin:         1,
 			Memo:        "",
-			ExpectedGas: 15_000,
+			ExpectedGas: 10_000,
 		},
 		{
 			Info:        "short memo counts as 1 logical action == 3 vin",

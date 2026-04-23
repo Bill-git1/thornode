@@ -1,23 +1,31 @@
 [mining]
-miner_address = 'tmGn7qKhnpbnwZPsaPt9XXAQz1Q3HAUCrwh'
+miner_address = "tmGn7qKhnpbnwZPsaPt9XXAQz1Q3HAUCrwh"
 
 [network]
 network = "Regtest"
 initial_testnet_peers = []
 initial_mainnet_peers = []
 
-
-# This section may be omitted when testing only Canopy
 [network.testnet_parameters.activation_heights]
-# Configured activation heights must be greater than or equal to 1,
-# block height 0 is reserved for the Genesis network upgrade in Zebra
 NU5 = 1
+NU6 = 1
+"NU6.1" = 1
 
-# This section may be omitted if a persistent Regtest chain state is desired
+[network.testnet_parameters.post_nu6_funding_streams.height_range]
+start = 1
+end = 10000
+
+[[network.testnet_parameters.post_nu6_funding_streams.recipients]]
+receiver = "Deferred"
+numerator = 12
+
+[[network.testnet_parameters.lockbox_disbursements]]
+address = "t2RnBRiqrN1nW4ecZs1Fj3WWjNdnSs4kiX8"
+amount = 75000000
+
 [state]
 ephemeral = true
 
-# This section may be omitted if it's not necessary to send transactions to Zebra's mempool
 [rpc]
 listen_addr = "0.0.0.0:18232"
 enable_cookie_auth = false

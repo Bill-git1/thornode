@@ -394,9 +394,6 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		args := []any{hex.EncodeToString(payload)}
 
 		err = c.rpc.Call(&txid, "sendrawtransaction", args...)
-		if err != nil {
-			c.log.Err(err).Msg("fail to call SendRawTransaction")
-		}
 		if txid == "" {
 			c.log.Error().Msg("fail to call SendRawTransaction")
 		}
@@ -421,6 +418,8 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		bm.AddSelfTransaction(txid)
 	}
 
+	msgs := []string{"already in block chain"}
+
 	if err != nil {
 		switch c.cfg.ChainID {
 		case common.ZECChain:
@@ -431,16 +430,25 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 			slices.Reverse(final)
 
 			txid = hex.EncodeToString(final)
+
+			// zebrad specific messages
+			msgs = append(msgs, []string{
+				"already exists in mempool",
+				"transaction was committed to the best chain",
+			}...)
 		default:
 			txid = redeemTx.TxHash().String()
 		}
 
-		if strings.Contains(err.Error(), "already in block chain") {
-			c.log.Info().Str("hash", txid).Msg("broadcasted by another node")
-			if cacheErr := c.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(c.GetChain()), txid); cacheErr != nil {
-				c.log.Err(cacheErr).Msgf("fail to mark tx out item (%+v) as signed", txOut)
+		for _, msg := range msgs {
+			if strings.Contains(err.Error(), msg) {
+				c.log.Info().Str("hash", txid).Msg("broadcasted by another node")
+				err = c.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(c.GetChain()), txid)
+				if err != nil {
+					c.log.Err(err).Msgf("fail to mark tx out item (%+v) as signed", txOut)
+				}
+				return txid, nil
 			}
-			return txid, nil
 		}
 
 		return "", fmt.Errorf("fail to broadcast transaction to chain: %w", err)

@@ -779,19 +779,16 @@ services:
   # ------------------------------ zcash ------------------------------
 
   zcash:
-    user: root
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ${DOCKER_MIRROR:-}electriccoinco/zcashd:v6.10.0
+    image: ${DOCKER_MIRROR:-}zfnd/zebra:4.3.0
     restart: unless-stopped
+    entrypoint: ["/etc/entrypoint.sh"]
     environment:
-      ZCASH_MASTER_ADDR: ${ZCASH_MASTER_ADDR:-tmGn7qKhnpbnwZPsaPt9XXAQz1Q3HAUCrwh}
       BLOCK_TIME: ${BLOCK_TIME:-1}
     volumes:
-      - "./mocknet/zcash/zcash.conf:/srv/zcashd/.zcash/zcash.conf"
-      - "./mocknet/zcash/entrypoint-mock.sh:/usr/local/bin/entrypoint-mock.sh"
+      - "./mocknet/zcash/zebrad.toml:/etc/zebrad.toml"
+      - "./mocknet/zcash/entrypoint.sh:/etc/entrypoint.sh"
     ports:
       - 18232:18232
-    entrypoint: entrypoint-mock.sh
-    platform: linux/amd64
