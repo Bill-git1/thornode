@@ -594,7 +594,7 @@ func (c *TronClient) ReportSolvency(height int64) error {
 		return nil
 	}
 
-	vaults, err := c.bridge.GetAsgards()
+	asgardVaults, err := c.bridge.GetAsgards()
 	if err != nil {
 		c.logger.Err(err).Msg("failed to get asgard vaults")
 		return err
@@ -602,10 +602,19 @@ func (c *TronClient) ReportSolvency(height int64) error {
 
 	fee := math.NewUint(c.tronScanner.currentFee)
 
-	solventMsgs := make([]types.Solvency, 0, len(vaults))
-	insolventMsgs := make([]types.Solvency, 0, len(vaults))
+	// report insolvent asgard vaults,
+	// or else all if the chain is halted and all are solvent
+	chainVaults := asgardVaults[:0]
+	for _, asgard := range asgardVaults {
+		if asgard.HasFundsForChain(c.config.ChainID) {
+			chainVaults = append(chainVaults, asgard)
+		}
+	}
 
-	for i, vault := range vaults {
+	solventMsgs := make([]types.Solvency, 0, len(chainVaults))
+	insolventMsgs := make([]types.Solvency, 0, len(chainVaults))
+	processedVaults := 0
+	for i, vault := range chainVaults {
 		acc, err := c.GetAccount(vault.PubKey, big.NewInt(height))
 		if err != nil {
 			c.logger.Err(err).Msgf("failed to get account balance")
@@ -619,12 +628,13 @@ func (c *TronClient) ReportSolvency(height int64) error {
 			// recent observation.
 			Height: height - FinalityBlocks,
 			Chain:  c.config.ChainID,
-			PubKey: vaults[i].PubKey,
+			PubKey: chainVaults[i].PubKey,
 			Coins:  acc.Coins,
 		}
+		processedVaults++
 
 		currentGasFee := c.config.ChainID.NativeGasToThorchain(fee)
-		if runners.IsVaultSolvent(c.config.ChainID, acc, vaults[i], currentGasFee) {
+		if runners.IsVaultSolvent(c.config.ChainID, acc, chainVaults[i], currentGasFee) {
 			solventMsgs = append(solventMsgs, msg)
 			continue
 		}
@@ -635,7 +645,14 @@ func (c *TronClient) ReportSolvency(height int64) error {
 	msgs := insolventMsgs
 	solvent := false
 
-	if !c.IsBlockScannerHealthy() && len(solventMsgs) == len(vaults) {
+	// Only if the block scanner is unhealthy (e.g. solvency-halted) and all chain-specific vaults are solvent,
+	// report that all the chain-specific vaults are solvent.
+	// If there are any insolvent vaults, report only them.
+	// Not reporting both solvent and insolvent vaults is to avoid noise (spam):
+	// Reporting both could halt-and-unhalt SolvencyHalt in the same THOR block
+	// (resetting its height), plus making it harder to know at a glance from solvency reports which vaults were insolvent.
+	allVaultsProcessed := len(chainVaults) > 0 && processedVaults == len(chainVaults)
+	if !c.IsBlockScannerHealthy() && allVaultsProcessed && len(solventMsgs) == processedVaults {
 		msgs = solventMsgs
 		solvent = true
 	}

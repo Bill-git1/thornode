@@ -33,6 +33,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
 	"gitlab.com/thorchain/thornode/v3/config"
+	stypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
 	. "gopkg.in/check.v1"
 )
@@ -466,6 +467,74 @@ func (s *BackfillSuite) TestShouldReportSolvencyAdditional(c *C) {
 	c.Assert(s.client.ShouldReportSolvency(20), Equals, true)
 	c.Assert(s.client.ShouldReportSolvency(5), Equals, false)
 	c.Assert(s.client.ShouldReportSolvency(15), Equals, false)
+}
+
+type mockTronSolvencyBridge struct {
+	thorclient.ThorchainBridge
+	asgards stypes.Vaults
+}
+
+func (m *mockTronSolvencyBridge) GetAsgards() (stypes.Vaults, error) {
+	return m.asgards, nil
+}
+
+func (s *BackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults(c *C) {
+	accountSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/wallet/getaccount" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"balance":100000000000}`))
+	}))
+	defer accountSrv.Close()
+
+	tronVault := stypes.Vault{
+		PubKey: stypes.GetRandomPubKey(),
+		Coins:  common.NewCoins(common.NewCoin(common.TRXAsset, cosmos.NewUint(1_000_000_000))),
+	}
+	unrelatedBTCVault := stypes.Vault{
+		PubKey: stypes.GetRandomPubKey(),
+		Coins:  common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1_000_000))),
+	}
+	bridge := &mockTronSolvencyBridge{
+		asgards: stypes.Vaults{tronVault, unrelatedBTCVault},
+	}
+
+	storage, err := blockscanner.NewBlockScannerStorage(filepath.Join(s.tmpdir, "tron-solvency"), config.LevelDBOptions{})
+	c.Assert(err, IsNil)
+
+	client := *s.client
+	clientConfig := client.config
+	clientConfig.BlockScanner.ChainID = common.TRONChain
+	clientConfig.BlockScanner.StartBlockHeight = 100
+
+	client.blockScanner, err = blockscanner.NewBlockScanner(clientConfig.BlockScanner, storage, GetMetricForTest(c), bridge, s.scanner)
+	c.Assert(err, IsNil)
+	client.config = clientConfig
+	client.bridge = bridge
+	client.api = api.NewTronApi(accountSrv.URL, time.Second)
+	client.whitelist = nil
+	client.globalSolvencyQueue = make(chan types.Solvency, 10)
+
+	err = client.ReportSolvency(120)
+	c.Assert(err, IsNil)
+
+	select {
+	case msg := <-client.globalSolvencyQueue:
+		c.Assert(msg.Height, Equals, 120-FinalityBlocks)
+		c.Assert(msg.Chain, Equals, common.TRONChain)
+		c.Assert(msg.PubKey.Equals(tronVault.PubKey), Equals, true)
+	case <-time.After(time.Second):
+		c.Fatal("expected all-solvent report for the TRON vault")
+	}
+
+	select {
+	case msg := <-client.globalSolvencyQueue:
+		c.Fatalf("unexpected extra solvency report for %s", msg.PubKey)
+	default:
+	}
 }
 
 // ---- getTokenBalance ----

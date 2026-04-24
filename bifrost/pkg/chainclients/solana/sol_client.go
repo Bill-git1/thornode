@@ -301,9 +301,17 @@ func (c *SOLClient) ReportSolvency(height int64) error {
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent
-	msgs := make([]stypes.Solvency, 0, len(asgardVaults))
-	solventMsgs := make([]stypes.Solvency, 0, len(asgardVaults))
-	for _, v := range asgardVaults {
+	chainVaults := asgardVaults[:0]
+	for _, asgard := range asgardVaults {
+		if asgard.HasFundsForChain(c.cfg.ChainID) {
+			chainVaults = append(chainVaults, asgard)
+		}
+	}
+
+	msgs := make([]stypes.Solvency, 0, len(chainVaults))
+	solventMsgs := make([]stypes.Solvency, 0, len(chainVaults))
+	processedVaults := 0
+	for _, v := range chainVaults {
 		if v.PubKeyEddsa.IsEmpty() {
 			c.logger.Error().Msg("asgard vault pubkey is empty, skipping solvency check")
 			continue
@@ -320,6 +328,7 @@ func (c *SOLClient) ReportSolvency(height int64) error {
 			PubKey: v.PubKey, // or v.PubKeyEddsa
 			Coins:  acct.Coins,
 		}
+		processedVaults++
 
 		if runners.IsVaultSolvent(c.cfg.ChainID, acct, v, currentFeeRate) {
 			solventMsgs = append(solventMsgs, msg) // Solvent-vault message
@@ -328,14 +337,15 @@ func (c *SOLClient) ReportSolvency(height int64) error {
 		msgs = append(msgs, msg) // Insolvent-vault message
 	}
 
-	// Only if the block scanner is unhealthy (e.g. solvency-halted) and all vaults are solvent,
-	// report that all the vaults are solvent.
+	// Only if the block scanner is unhealthy (e.g. solvency-halted) and all chain-specific vaults are solvent,
+	// report that all the chain-specific vaults are solvent.
 	// If there are any insolvent vaults, report only them.
 	// Not reporting both solvent and insolvent vaults is to avoid noise (spam):
 	// Reporting both could halt-and-unhalt SolvencyHalt in the same THOR block
 	// (resetting its height), plus making it harder to know at a glance from solvency reports which vaults were insolvent.
 	solvent := false
-	if !c.IsBlockScannerHealthy() && len(solventMsgs) == len(asgardVaults) {
+	allVaultsProcessed := len(chainVaults) > 0 && processedVaults == len(chainVaults)
+	if !c.IsBlockScannerHealthy() && allVaultsProcessed && len(solventMsgs) == processedVaults {
 		msgs = solventMsgs
 		solvent = true
 	}
