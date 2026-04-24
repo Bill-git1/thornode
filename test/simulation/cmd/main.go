@@ -3,6 +3,8 @@ package main
 import (
 	crypto_rand "crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"math/rand/v2"
@@ -117,24 +119,20 @@ func main() {
 		time.Sleep(time.Second)
 	}
 
-	// wait for tron chain to produce its first block
+	// wait for tron fullnode to sync to a fresh tip with an active peer
+	tronReadyMaxTipAge := 30 * time.Second
 	for {
-		res, err := http.Post(
-			"http://localhost:8090/wallet/getblockbynum",
-			"application/json",
-			strings.NewReader(`{"num":1}`),
-		)
-
-		if err == nil && res.StatusCode == 200 {
-			defer res.Body.Close()
-
-			data, err := io.ReadAll(res.Body)
-			if err == nil && len(data) > 3 {
-				break
-			}
+		height, tipAge, peers, err := getTronFullnodeStatus()
+		if err == nil && tipAge >= 0 && tipAge < tronReadyMaxTipAge && peers > 0 {
+			break
 		}
 
-		log.Info().Msg("waiting for tron to be ready")
+		log.Info().
+			Err(err).
+			Int64("height", height).
+			Dur("tip_age", tipAge).
+			Int64("peers", peers).
+			Msg("waiting for tron fullnode to sync")
 		time.Sleep(time.Second)
 	}
 
@@ -205,4 +203,52 @@ func main() {
 
 	// run the simulation
 	dag.Execute(cfg, root, parallelismInt, rng)
+}
+
+func getTronFullnodeStatus() (int64, time.Duration, int64, error) {
+	postJSON := func(path string, out any) error {
+		res, err := http.Post(
+			"http://localhost:8090/wallet/"+path,
+			"application/json",
+			strings.NewReader(`{}`),
+		)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			return fmt.Errorf("%s returned status code: %d", path, res.StatusCode)
+		}
+		return json.NewDecoder(res.Body).Decode(out)
+	}
+
+	var block struct {
+		BlockHeader struct {
+			RawData struct {
+				Number    int64 `json:"number"`
+				Timestamp int64 `json:"timestamp"`
+			} `json:"raw_data"`
+		} `json:"block_header"`
+	}
+	if err := postJSON("getnowblock", &block); err != nil {
+		return 0, 0, 0, err
+	}
+	if block.BlockHeader.RawData.Timestamp == 0 {
+		return 0, 0, 0, fmt.Errorf("missing block timestamp")
+	}
+
+	tipTime := time.UnixMilli(block.BlockHeader.RawData.Timestamp)
+	height := block.BlockHeader.RawData.Number
+	tipAge := time.Since(tipTime)
+
+	var node struct {
+		CurrentConnectCount int64 `json:"currentConnectCount"`
+	}
+	if err := postJSON("getnodeinfo", &node); err != nil {
+		return 0, 0, 0, err
+	}
+	peers := node.CurrentConnectCount
+
+	return height, tipAge, peers, nil
 }

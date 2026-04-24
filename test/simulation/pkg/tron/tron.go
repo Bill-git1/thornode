@@ -153,5 +153,9 @@ func (c *Client) BroadcastTx(signed []byte) (string, error) {
 		return "", err
 	}
 
+	if !response.Result {
+		return "", fmt.Errorf("failed to broadcast TRON transaction: %s - %s", response.Code, response.Message)
+	}
+
 	return response.TxId, nil
 }

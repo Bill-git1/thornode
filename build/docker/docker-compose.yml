@@ -728,6 +728,26 @@ services:
     environment:
       TRON_NODE_TYPE: mocknet-fullnode
       TRON_SEED_NODE: docker-tron-supernode-1:18888
+    healthcheck:
+      # The simulator signs TRON txs with wall-clock timestamps, but TRON sets tx
+      # expiration from the fullnode's latest block. Require a fresh fullnode tip
+      # and an active peer so mocknet cannot start when TRON txs will be stale or
+      # accepted locally without propagating to the block producer.
+      test:
+        - CMD-SHELL
+        - >
+          ts=$$(curl -sf localhost:8090/wallet/getnowblock |
+          jq -er '.block_header.raw_data.timestamp') &&
+          peers=$$(curl -sf localhost:8090/wallet/getnodeinfo |
+          jq -er '.currentConnectCount') &&
+          age=$$(( $$(date +%s) * 1000 - ts )) &&
+          [ $$age -ge 0 ] &&
+          [ $$age -lt 30000 ] &&
+          [ $$peers -gt 0 ]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
 
   # ------------------------------ solana ------------------------------
 
