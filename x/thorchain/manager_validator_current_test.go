@@ -354,6 +354,40 @@ func (vts *ValidatorMgrTestSuite) TestFindLowBondActor(c *C) {
 	c.Assert(na.Bond.IsZero(), Equals, true)
 }
 
+func (vts *ValidatorMgrTestSuite) TestMarkLowBondActorOnlyAtCapacity(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(1000)
+
+	networkMgr := newValidatorMgr(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(networkMgr, NotNil)
+
+	lowBond := GetRandomValidatorNode(NodeActive)
+	lowBond.Bond = cosmos.NewUint(9)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, lowBond), IsNil)
+
+	higherBond := GetRandomValidatorNode(NodeActive)
+	higherBond.Bond = cosmos.NewUint(10)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, higherBond), IsNil)
+
+	c.Assert(networkMgr.markLowBondActor(ctx, 3), IsNil)
+	lowBondAfter, err := mgr.Keeper().GetNodeAccount(ctx, lowBond.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(lowBondAfter.LeaveScore, Equals, uint64(0))
+
+	highestBond := GetRandomValidatorNode(NodeActive)
+	highestBond.Bond = cosmos.NewUint(11)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, highestBond), IsNil)
+
+	c.Assert(networkMgr.markLowBondActor(ctx, 3), IsNil)
+	lowBondAfter, err = mgr.Keeper().GetNodeAccount(ctx, lowBond.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(lowBondAfter.LeaveScore > 0, Equals, true)
+
+	higherBondAfter, err := mgr.Keeper().GetNodeAccount(ctx, higherBond.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(higherBondAfter.LeaveScore, Equals, uint64(0))
+}
+
 func (vts *ValidatorMgrTestSuite) TestRagnarokBond(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(1)

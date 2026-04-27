@@ -163,8 +163,8 @@ func (vm *ValidatorMgr) churnInner(ctx cosmos.Context) error {
 		return err
 	}
 
-	// mark someone to get churned out for low bond
-	if err = vm.markLowBondActor(ctx); err != nil {
+	// mark someone to get churned out for low bond only once the active set is at capacity
+	if err = vm.markLowBondActor(ctx, desiredValidatorSet); err != nil {
 		return err
 	}
 
@@ -1224,8 +1224,18 @@ func (vm *ValidatorMgr) markOldActor(ctx cosmos.Context) error {
 	return nil
 }
 
-// Mark an low bond actor to be churned out
-func (vm *ValidatorMgr) markLowBondActor(ctx cosmos.Context) error {
+// Mark a low bond actor to be churned out once the active set is at capacity.
+func (vm *ValidatorMgr) markLowBondActor(ctx cosmos.Context, desiredValidatorSet int64) error {
+	if desiredValidatorSet > 0 {
+		nas, err := vm.k.ListActiveValidators(ctx)
+		if err != nil {
+			return err
+		}
+		if int64(len(nas)) < desiredValidatorSet {
+			return nil
+		}
+	}
+
 	na, err := vm.findLowBondActor(ctx)
 	if err != nil {
 		return err
