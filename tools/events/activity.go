@@ -997,10 +997,25 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 				continue
 			}
 
+			// skip if this is late observation for inbound with consensus already reached
+			txResp := openapi.TxResponse{}
+			err := util.ThornodeCachedRetryGet(
+				fmt.Sprintf("thorchain/tx/%s", tx.Tx.ID),
+				block.Header.Height-1,
+				&txResp,
+			)
+			if err != nil {
+				log.Warn().Err(err).
+					Str("hash", tx.Tx.ID.String()).
+					Msg("unable to load tx for inactive vault inbound consensus check")
+			} else if txResp.ConsensusHeight != nil {
+				continue
+			}
+
 			// skip previously seen inactive inbounds
 			seen := false
 			seenKey := fmt.Sprintf("seen-inactive-inbound/%s", tx.Tx.ID.String())
-			err := util.Load(seenKey, &seen)
+			err = util.Load(seenKey, &seen)
 			if err != nil {
 				log.Debug().Err(err).Msg("unable to load seen inactive inbound")
 			}
