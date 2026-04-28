@@ -1018,6 +1018,7 @@ thor:
       external_address: ""
       persistent_peers: ""
       addr_book_strict: false
+      pex: true
       max_num_inbound_peers: 40
       max_num_outbound_peers: 10
       allow_duplicate_ip: true

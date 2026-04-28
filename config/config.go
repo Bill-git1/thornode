@@ -493,6 +493,7 @@ type Thornode struct {
 			MaxNumOutboundPeers int64  `mapstructure:"max_num_outbound_peers"`
 			AllowDuplicateIP    bool   `mapstructure:"allow_duplicate_ip"`
 			Seeds               string `mapstructure:"seeds"`
+			Pex                 bool   `mapstructure:"pex"`
 		} `mapstructure:"p2p"`
 
 		StateSync struct {
