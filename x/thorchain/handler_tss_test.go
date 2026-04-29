@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/blang/semver"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
@@ -833,4 +834,137 @@ func (s *HandlerTssSuite) TestObservingSlashing(c *C) {
 	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 3, 0})
 
 	// Note that nas[6], the Standby node, remains unaffected by the Actives nodes' observations.
+}
+
+func makeInitVault(chains []string) Vault {
+	return Vault{
+		PubKey: GetRandomPubKey(),
+		Status: InitVault,
+		Type:   AsgardVault,
+		Chains: chains,
+	}
+}
+
+func makeInitVaultAt(height int64, membership common.PubKeys, chains []string) Vault {
+	return Vault{
+		BlockHeight: height,
+		PubKey:      GetRandomPubKey(),
+		Status:      InitVault,
+		Type:        AsgardVault,
+		Membership:  membership.Strings(),
+		Chains:      chains,
+	}
+}
+
+func (s *HandlerTssSuite) TestInitVaultsAgreeOnChains(c *C) {
+	// "NEWCHAIN" is not in the chain enum, which proves the helper compares
+	// strings; any chain rolling out mid-churn is handled the same way.
+	with := []string{
+		common.BTCChain.String(),
+		common.ETHChain.String(),
+		common.THORChain.String(),
+		"NEWCHAIN",
+	}
+	without := with[:len(with)-1]
+
+	c.Assert(initVaultsAgreeOnChains(Vaults{}), Equals, true)
+	c.Assert(initVaultsAgreeOnChains(Vaults{makeInitVault(with)}), Equals, true)
+	c.Assert(initVaultsAgreeOnChains(Vaults{
+		makeInitVault(with),
+		makeInitVault(with),
+		makeInitVault(with),
+		makeInitVault(with),
+	}), Equals, true)
+	c.Assert(initVaultsAgreeOnChains(Vaults{
+		makeInitVault(with),
+		makeInitVault(with),
+		makeInitVault(without),
+		makeInitVault(with),
+	}), Equals, false)
+}
+
+func (s *HandlerTssSuite) TestInitVaultsForKeygenBlock(c *C) {
+	groupA := common.PubKeys{GetRandomPubKey(), GetRandomPubKey(), GetRandomPubKey()}
+	groupB := common.PubKeys{GetRandomPubKey(), GetRandomPubKey(), GetRandomPubKey()}
+	otherGroup := common.PubKeys{GetRandomPubKey(), GetRandomPubKey(), GetRandomPubKey()}
+	chains := []string{common.BTCChain.String(), common.ETHChain.String()}
+
+	keygenBlock := KeygenBlock{
+		Height: 1000,
+		Keygens: []Keygen{
+			{Members: groupA.Strings()},
+			{Members: groupB.Strings()},
+		},
+	}
+
+	currentA := makeInitVaultAt(1010, groupA, chains)
+	currentB := makeInitVaultAt(1015, groupB, chains)
+	staleByHeight := makeInitVaultAt(900, groupA, chains)
+	foreignByMembership := makeInitVaultAt(1010, otherGroup, chains)
+
+	filtered := initVaultsForKeygenBlock(Vaults{staleByHeight, currentA, foreignByMembership, currentB}, keygenBlock)
+	c.Assert(filtered, HasLen, 2)
+	c.Assert(filtered[0].PubKey.Equals(currentA.PubKey), Equals, true)
+	c.Assert(filtered[1].PubKey.Equals(currentB.PubKey), Equals, true)
+
+	c.Assert(initVaultsForKeygenBlock(Vaults{}, keygenBlock), HasLen, 0)
+	c.Assert(initVaultsForKeygenBlock(Vaults{currentA}, KeygenBlock{Height: 1000}), HasLen, 0)
+}
+
+func (s *HandlerTssSuite) TestRotateInitVaultsGuardrail(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	mgr := NewDummyMgrWithKeeper(helper.keeper)
+	// DummyEventMgr.EmitEvent is a no-op, which would silently mask a
+	// missing security event. Use the real one.
+	mgr.eventMgr = newEventMgr()
+	handler := NewTssHandler(mgr)
+	netMgr, ok := mgr.NetworkMgr().(*NetworkMgrDummy)
+	c.Assert(ok, Equals, true)
+
+	chainSet := []string{
+		common.BTCChain.String(),
+		common.ETHChain.String(),
+		common.THORChain.String(),
+		"NEWCHAIN",
+	}
+	matching := Vaults{
+		makeInitVault(chainSet),
+		makeInitVault(chainSet),
+		makeInitVault(chainSet),
+		makeInitVault(chainSet),
+	}
+	c.Assert(handler.tryRotateInitVaults(helper.ctx, matching), IsNil)
+	c.Assert(netMgr.rotated, HasLen, len(matching))
+	for i, v := range matching {
+		c.Assert(netMgr.rotated[i].PubKey.Equals(v.PubKey), Equals, true)
+	}
+
+	netMgr.rotated = nil
+	ctx := helper.ctx.WithEventManager(cosmos.NewEventManager())
+	dropped := chainSet[:len(chainSet)-1]
+	mismatched := Vaults{
+		makeInitVault(chainSet),
+		makeInitVault(chainSet),
+		makeInitVault(dropped),
+		makeInitVault(chainSet),
+	}
+	c.Assert(handler.tryRotateInitVaults(ctx, mismatched), IsNil)
+	c.Assert(netMgr.rotated, HasLen, 0)
+
+	var securityMsg string
+	for _, evt := range ctx.EventManager().Events() {
+		if evt.Type != "security" {
+			continue
+		}
+		for _, attr := range evt.Attributes {
+			if attr.Key == "msg" {
+				securityMsg = attr.Value
+			}
+		}
+	}
+	c.Assert(securityMsg, Not(Equals), "")
+	c.Assert(strings.HasPrefix(securityMsg, "init vault chain set mismatch"), Equals, true)
+	// Operators page on the security event; the diverging vault's pubkey
+	// must be in the message body so they can identify the drifted keygen.
+	c.Assert(strings.Contains(securityMsg, mismatched[2].PubKey.String()), Equals, true)
 }

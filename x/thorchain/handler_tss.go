@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
+	"slices"
 	"sort"
 	"strings"
 
@@ -472,15 +473,14 @@ func (h TssHandler) handle(ctx cosmos.Context, msg *MsgTssPool) error {
 				}
 			}
 
-			if len(initVaults) == len(keygenBlock.Keygens) {
-				ctx.Logger().Info("tss keygen results churn", "asgards", len(initVaults))
-				for _, v := range initVaults {
-					if err = h.mgr.NetworkMgr().RotateVault(ctx, v); err != nil {
-						return fmt.Errorf("fail to rotate vault: %w", err)
-					}
+			currentInitVaults := initVaultsForKeygenBlock(initVaults, keygenBlock)
+			if len(currentInitVaults) == len(keygenBlock.Keygens) {
+				ctx.Logger().Info("tss keygen results churn", "asgards", len(currentInitVaults))
+				if err = h.tryRotateInitVaults(ctx, currentInitVaults); err != nil {
+					return err
 				}
 			} else {
-				ctx.Logger().Info("not enough keygen yet", "expecting", len(keygenBlock.Keygens), "current", len(initVaults))
+				ctx.Logger().Info("not enough keygen yet", "expecting", len(keygenBlock.Keygens), "current", len(currentInitVaults))
 			}
 
 			addrs, err := vault.GetMembership().Addresses()
@@ -499,6 +499,66 @@ func (h TssHandler) handle(ctx cosmos.Context, msg *MsgTssPool) error {
 	}
 
 	return nil
+}
+
+// tryRotateInitVaults rotates every vault into Active, or skips and emits
+// a security event if their Chains disagree. vault.Chains is immutable
+// post-creation, so an asymmetric set would leave some Asgards permanently
+// without an address for a chain. ChurnRetryInterval retries on skip.
+func (h TssHandler) tryRotateInitVaults(ctx cosmos.Context, initVaults Vaults) error {
+	if !initVaultsAgreeOnChains(initVaults) {
+		chainSets := make([]string, len(initVaults))
+		for i, v := range initVaults {
+			chainSets[i] = fmt.Sprintf("%s:[%s]", v.PubKey.String(), strings.Join(v.Chains, ","))
+		}
+		secMsg := fmt.Sprintf("init vault chain set mismatch, skipping rotation: %s", strings.Join(chainSets, " | "))
+		ctx.Logger().Error(secMsg)
+		if err := h.mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(common.Tx{ID: common.BlankTxID}, secMsg)); err != nil {
+			ctx.Logger().Error("fail to emit security event", "error", err)
+		}
+		return nil
+	}
+	for _, v := range initVaults {
+		if err := h.mgr.NetworkMgr().RotateVault(ctx, v); err != nil {
+			return fmt.Errorf("fail to rotate vault: %w", err)
+		}
+	}
+	return nil
+}
+
+// initVaultsForKeygenBlock returns the subset of vaults produced by a
+// keygen in kb. Stale init vaults from prior churns (e.g. left at
+// InitVault status because TriggerKeygen's funds-aware sweep skipped them)
+// are excluded so they don't poison the count check that gates rotation.
+func initVaultsForKeygenBlock(vaults Vaults, kb KeygenBlock) Vaults {
+	out := make(Vaults, 0, len(vaults))
+	for _, v := range vaults {
+		if v.BlockHeight < kb.Height {
+			continue
+		}
+		if slices.ContainsFunc(kb.Keygens, func(kg Keygen) bool {
+			return v.MembershipEquals(kg.GetMembers())
+		}) {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// initVaultsAgreeOnChains returns true if every vault's Chains slice is
+// identical. ConsensusChains() sorts before returning, so a positional
+// equality check is sufficient.
+func initVaultsAgreeOnChains(vaults Vaults) bool {
+	if len(vaults) < 2 {
+		return true
+	}
+	ref := vaults[0].Chains
+	for _, v := range vaults[1:] {
+		if !slices.Equal(v.Chains, ref) {
+			return false
+		}
+	}
+	return true
 }
 
 func judgeLateSigner(ctx cosmos.Context, mgr Manager, msg *MsgTssPool, voter TssVoter) {
