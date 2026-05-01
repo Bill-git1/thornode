@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -32,13 +31,13 @@ import (
 // -------------------------------------------------------------------------------------
 
 type P2PStatusPeer struct {
-	Address string `json:"address"`
-	IP      string `json:"ip"`
-	Status  string `json:"status"`
+	Address   string `json:"address"`
+	IP        string `json:"ip"`
+	Status    string `json:"status"`
+	Direction string `json:"direction"`
 
-	StoredPeerID   string `json:"stored_peer_id"`
-	NodesPeerID    string `json:"nodes_peer_id"`
-	ReturnedPeerID string `json:"returned_peer_id"`
+	StoredPeerID string `json:"stored_peer_id"`
+	NodesPeerID  string `json:"nodes_peer_id"`
 
 	P2PPortOpen bool  `json:"p2p_port_open"`
 	P2PDialMs   int64 `json:"p2p_dial_ms"`
@@ -215,6 +214,7 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 			peer := P2PStatusPeer{
 				StoredPeerID: pi.ID,
 				IP:           pi.Address,
+				Direction:    pi.Direction,
 			}
 
 			defer func() {
@@ -234,25 +234,6 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 				peer.Address = node.NodeAddress
 				peer.Status = node.Status
 				peer.NodesPeerID = node.PeerId
-			}
-
-			// get the peer id
-			resp, err = http.Get(fmt.Sprintf("http://%s:6040/p2pid", pi.Address))
-			status := ""
-			if resp != nil {
-				status = resp.Status
-			}
-			if err != nil {
-				peer.ReturnedPeerID = fmt.Sprintf("failed, status=\"%s\"", status)
-			} else {
-				defer resp.Body.Close()
-				var b []byte
-				b, err = io.ReadAll(resp.Body)
-				if err != nil {
-					peer.ReturnedPeerID = fmt.Sprintf("failed to read body, status=\"%s\"", status)
-				} else {
-					peer.ReturnedPeerID = string(b)
-				}
 			}
 
 			// check the p2p port

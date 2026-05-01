@@ -527,6 +527,61 @@ func (s *NodeGaterTestSuite) TestIsPeerAllowed(c *C) {
 	c.Assert(nodeAddr, Equals, "")
 }
 
+func (s *NodeGaterTestSuite) TestFilterAllowedPeers(c *C) {
+	gater := NewNodeGater(s.mockBridge, time.Minute)
+
+	// Allowlist contains the node for testPubKey1
+	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
+		{
+			NodeAddress: "thor1test1",
+			Status:      "Active",
+			TotalBond:   "200000000",
+			PubKeySet: common.PubKeySet{
+				Secp256k1: common.PubKey(testPubKey1),
+			},
+		},
+	})
+	gater.refreshAllowlist()
+
+	allowedPeerID, err := getPeerIDFromPubKey(testPubKey1)
+	c.Assert(err, IsNil)
+	disallowedPeerID, err := getPeerIDFromPubKey(testPubKey2)
+	c.Assert(err, IsNil)
+
+	allowedAddr, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/1.2.3.4/tcp/5040/ipfs/%s", allowedPeerID))
+	c.Assert(err, IsNil)
+	disallowedAddr, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/5.6.7.8/tcp/5040/ipfs/%s", disallowedPeerID))
+	c.Assert(err, IsNil)
+	// A multiaddr without a peer ID component cannot be parsed by AddrInfoFromP2pAddr.
+	noPeerAddr, err := ma.NewMultiaddr("/ip4/9.10.11.12/tcp/5040")
+	c.Assert(err, IsNil)
+
+	filtered := gater.FilterAllowedPeers([]ma.Multiaddr{allowedAddr, disallowedAddr, noPeerAddr})
+	c.Assert(len(filtered), Equals, 1)
+	c.Assert(filtered[0].Equal(allowedAddr), Equals, true)
+
+	// Empty input yields empty output (no allocation panic).
+	c.Assert(len(gater.FilterAllowedPeers(nil)), Equals, 0)
+}
+
+func (s *NodeGaterTestSuite) TestFilterAllowedPeersGatingDisabled(c *C) {
+	gater := NewNodeGater(s.mockBridge, time.Minute)
+
+	// Even with no node accounts, the P2PGateDisabled mimir bypass must
+	// return the input list unchanged.
+	s.mockBridge.SetMimir(constants.P2PGateDisabled.String(), 1)
+	gater.refreshAllowlist()
+
+	disallowedPeerID, err := getPeerIDFromPubKey(testPubKey1)
+	c.Assert(err, IsNil)
+	addr, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/1.2.3.4/tcp/5040/ipfs/%s", disallowedPeerID))
+	c.Assert(err, IsNil)
+
+	filtered := gater.FilterAllowedPeers([]ma.Multiaddr{addr})
+	c.Assert(len(filtered), Equals, 1)
+	c.Assert(filtered[0].Equal(addr), Equals, true)
+}
+
 func (s *NodeGaterTestSuite) TestInterceptPeerDial(c *C) {
 	gater := NewNodeGater(s.mockBridge, time.Minute)
 	randomPeerID := peer.ID("12D3KooWRandom")

@@ -45,8 +45,9 @@ type TssServer struct {
 }
 
 type PeerInfo struct {
-	ID      string
-	Address string
+	ID        string
+	Address   string
+	Direction string
 }
 
 // NewTss create a new instance of Tss
@@ -218,8 +219,9 @@ func (t *TssServer) GetKnownPeers() []PeerInfo {
 		addrs := conn.RemoteMultiaddr()
 		ip, _ := addrs.ValueForProtocol(multiaddr.P_IP4)
 		pi := PeerInfo{
-			ID:      peer.String(),
-			Address: ip,
+			ID:        peer.String(),
+			Address:   ip,
+			Direction: conn.Stat().Direction.String(),
 		}
 		infos = append(infos, pi)
 	}

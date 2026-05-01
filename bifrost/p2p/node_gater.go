@@ -193,6 +193,43 @@ func (g *NodeGater) isPeerAllowed(p peer.ID) (bool, string) {
 	return ok, nodeAddr
 }
 
+// FilterAllowedPeers returns the subset of peer multiaddrs whose peer IDs
+// are in the current allowlist, applying the same gating logic used for
+// inbound connections. When P2PGateDisabled mimir is set, the input list
+// is returned unchanged. Multiaddrs that cannot be parsed as p2p addresses
+// or whose peer ID is not in the allowlist are dropped (with a warn log).
+func (g *NodeGater) FilterAllowedPeers(peers []ma.Multiaddr) []ma.Multiaddr {
+	g.mu.RLock()
+	disabled := g.gateDisabled
+	g.mu.RUnlock()
+	if disabled {
+		return peers
+	}
+
+	allowed := make([]ma.Multiaddr, 0, len(peers))
+	for _, p := range peers {
+		info, err := peer.AddrInfoFromP2pAddr(p)
+		if err != nil {
+			g.logger.Warn().Err(err).Stringer("addr", p).Msg("excluding bootstrap peer with invalid multiaddr")
+			continue
+		}
+		ok, nodeAddr := g.isPeerAllowed(info.ID)
+		if !ok {
+			g.logger.Warn().
+				Str("peer_id", info.ID.String()).
+				Stringer("addr", p).
+				Msg("excluding bootstrap peer not in allowlist")
+			continue
+		}
+		g.logger.Debug().
+			Str("peer_id", info.ID.String()).
+			Str("node_addr", nodeAddr).
+			Msg("bootstrap peer allowed")
+		allowed = append(allowed, p)
+	}
+	return allowed
+}
+
 // InterceptPeerDial tests whether we're permitted to dial the specified peer.
 // For outbound connections, we allow all dials (we trust our own node to dial correctly).
 func (g *NodeGater) InterceptPeerDial(p peer.ID) bool {

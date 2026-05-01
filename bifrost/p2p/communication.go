@@ -272,6 +272,12 @@ func (c *Communication) getPeers() addr.AddrList {
 		}
 	}
 
+	// Apply the same allowlist used by the inbound connection gater so that
+	// outbound bootstrap dials are restricted to bonded validator peers.
+	if c.nodeGater != nil {
+		bootstrapPeers = c.nodeGater.FilterAllowedPeers(bootstrapPeers)
+	}
+
 	return bootstrapPeers
 }
 
