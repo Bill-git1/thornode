@@ -99,6 +99,7 @@ var (
 	NewSwapperClout            = types.NewSwapperClout
 	NewTCYClaimer              = types.NewTCYClaimer
 	NewTCYStaker               = types.NewTCYStaker
+	NewDynamicFeeAccumulator   = types.NewDynamicFeeAccumulator
 )
 
 type (
@@ -161,6 +162,8 @@ type (
 	PriceFeed                = types.PriceFeed
 	Volume                   = types.Volume
 	VolumeBucket             = types.VolumeBucket
+	DynamicFeeRecord         = types.DynamicFeeRecord
+	DynamicFeeAccumulator    = types.DynamicFeeAccumulator
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64

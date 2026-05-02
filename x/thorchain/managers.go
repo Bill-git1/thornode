@@ -50,6 +50,7 @@ type Manager interface {
 	WasmManager() WasmManager
 	SwitchManager() SwitchManager
 	ScheduledMigrationManager() ScheduledMigrationManager
+	DynamicFeeMgr() DynamicFeeManager
 }
 
 type TradeAccountManager interface {
@@ -226,6 +227,7 @@ type Swapper interface {
 		swp StreamingSwap,
 		synthVirtualDepthMult int64,
 		mgr Manager,
+		affiliates []string, affiliateBps []cosmos.Uint,
 	) (cosmos.Uint, []*EventSwap, error)
 	CalcAssetEmission(X, x, Y cosmos.Uint) cosmos.Uint
 	CalcLiquidityFee(X, x, Y cosmos.Uint) cosmos.Uint
@@ -250,6 +252,12 @@ type VolumeManager interface {
 	EndBlock(ctx cosmos.Context) error
 }
 
+type DynamicFeeManager interface {
+	CreditSwap(ctx cosmos.Context, affiliates []string, affiliateBps []cosmos.Uint, sourceAsset, targetAsset common.Asset, volumeTor, feesTor cosmos.Uint)
+	GetDynamicBps(ctx cosmos.Context, affiliates []string, affiliateBps []cosmos.Uint, sourceAsset, targetAsset common.Asset) uint64
+	EndBlock(ctx cosmos.Context) error
+}
+
 // Mgrs is an implementation of Manager interface
 type Mgrs struct {
 	currentVersion            semver.Version
@@ -271,6 +279,7 @@ type Mgrs struct {
 	scheduledMigrationManager ScheduledMigrationManager
 	oracleManager             OracleManager
 	volumeManager             VolumeManager
+	dynamicFeeManager         DynamicFeeManager
 
 	K             keeper.Keeper
 	cdc           codec.Codec
@@ -429,6 +438,11 @@ func (mgr *Mgrs) recreateManagers(ctx cosmos.Context, v semver.Version) error {
 		return fmt.Errorf("fail to create volume manager: %w", err)
 	}
 
+	mgr.dynamicFeeManager, err = GetDynamicFeeManager(v, mgr.K)
+	if err != nil {
+		return fmt.Errorf("fail to create dynamic fee manager: %w", err)
+	}
+
 	mgr.scheduledMigrationManager, err = GetScheduledMigrationManager(v, mgr)
 	if err != nil {
 		return fmt.Errorf("fail to create scheduled migration manager: %w", err)
@@ -485,6 +499,8 @@ func (mgr *Mgrs) ScheduledMigrationManager() ScheduledMigrationManager {
 func (mgr *Mgrs) OracleManager() OracleManager { return mgr.oracleManager }
 
 func (mgr *Mgrs) VolumeManager() VolumeManager { return mgr.volumeManager }
+
+func (mgr *Mgrs) DynamicFeeMgr() DynamicFeeManager { return mgr.dynamicFeeManager }
 
 // GetKeeper return Keeper
 func GetKeeper(
@@ -584,4 +600,8 @@ func GetOracleManager(_ semver.Version, keeper keeper.Keeper, eventMgr EventMana
 
 func GetVolumeManager(_ semver.Version, keeper keeper.Keeper) (VolumeManager, error) {
 	return newVolumeMgr(keeper), nil
+}
+
+func GetDynamicFeeManager(_ semver.Version, keeper keeper.Keeper) (DynamicFeeManager, error) {
+	return newDynamicFeeMgr(keeper), nil
 }

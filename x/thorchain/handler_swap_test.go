@@ -799,3 +799,91 @@ func processSwapQueues(ctx cosmos.Context, mgr Manager) error {
 	}
 	return nil
 }
+
+// TestSwapDynamicFeeIntegration exercises the end-to-end wiring that the
+// DynamicFeeMgr unit tests alone cannot cover: two full epoch cycles through
+// the manager used at runtime (mgr.DynamicFeeMgr()), followed by
+// getMaxSwapQuantity consulting that same manager via the affiliate tuple.
+// A regression that mis-threads the (affiliates, affiliateBps, sourceAsset,
+// targetAsset) tuple through getMaxSwapQuantity — or that wires a different
+// DynamicFeeMgr into the swap-sizing path than the one EndBlock seals to —
+// would make the affiliate case collapse back to the trivial quantity=1
+// branch. The bare-call assertion catches both hazards cheaply.
+func (s *HandlerSwapSuite) TestSwapDynamicFeeIntegration(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, btcPool), IsNil)
+
+	// Enable the feature with a short epoch so EndBlock seals deterministically
+	// at blocks 10 and 20. Leave L1SlipMinBps=0 so the dynamic bps is the only
+	// thing that can produce a non-zero minSlip in getMaxSwapQuantity — without
+	// this, the baseline L1 floor would mask whether the dynamic lookup fired.
+	setDynamicFeeTestMimirs(ctx, k)
+	k.SetMimir(ctx, constants.L1SlipMinBps.String(), 0)
+
+	registerThorname(ctx, k, "bentley", 1)
+
+	pairA, pairB, ok := dynamicFeePairKey(common.BTCAsset, common.RuneAsset())
+	c.Assert(ok, Equals, true)
+
+	affiliates := []string{"bentley"}
+	affiliateBps := []cosmos.Uint{cosmos.NewUint(100)}
+
+	// --- Epoch 1 (block 10) ---
+	mgr.DynamicFeeMgr().CreditSwap(ctx, affiliates, affiliateBps,
+		common.BTCAsset, common.RuneAsset(),
+		cosmos.NewUint(10*common.One), cosmos.NewUint(100),
+	)
+	acc1, err := k.GetDynamicFeeAccumulator(ctx, "bentley", pairA, pairB)
+	c.Assert(err, IsNil)
+	c.Check(acc1.VolumeTor.Equal(cosmos.NewUint(10*common.One)), Equals, true,
+		Commentf("CreditSwap must populate the accumulator via the runtime DynamicFeeMgr"))
+
+	ctx = ctx.WithBlockHeight(10)
+	c.Assert(mgr.DynamicFeeMgr().EndBlock(ctx), IsNil)
+
+	rec1, err := k.GetDynamicFeeRecord(ctx, "bentley", pairA, pairB)
+	c.Assert(err, IsNil)
+	c.Check(rec1.DynamicBps, Equals, uint64(2),
+		Commentf("epoch 1 seals as cold_start_probe from floor=1"))
+
+	// --- Epoch 2 (block 20) ---
+	mgr.DynamicFeeMgr().CreditSwap(ctx, affiliates, affiliateBps,
+		common.BTCAsset, common.RuneAsset(),
+		cosmos.NewUint(20*common.One), cosmos.NewUint(300),
+	)
+	ctx = ctx.WithBlockHeight(20)
+	c.Assert(mgr.DynamicFeeMgr().EndBlock(ctx), IsNil)
+
+	rec2, err := k.GetDynamicFeeRecord(ctx, "bentley", pairA, pairB)
+	c.Assert(err, IsNil)
+	c.Check(rec2.DynamicBps, Equals, uint64(3),
+		Commentf("epoch 2 seals again as cold_start_probe from 2→3"))
+
+	// --- Assert the dynamic floor visibly reshapes next-swap pricing ---
+	swp := StreamingSwap{
+		TxID:     GetRandomTxHash(),
+		Interval: 1,
+		Deposit:  cosmos.NewUint(10 * common.One),
+	}
+
+	qWithAffiliate, err := getMaxSwapQuantity(ctx, mgr,
+		common.BTCAsset, common.RuneAsset(), swp, affiliates, affiliateBps)
+	c.Assert(err, IsNil)
+
+	qWithoutAffiliate, err := getMaxSwapQuantity(ctx, mgr,
+		common.BTCAsset, common.RuneAsset(), swp, nil, nil)
+	c.Assert(err, IsNil)
+
+	c.Check(qWithoutAffiliate, Equals, uint64(1),
+		Commentf("no affiliate + L1SlipMinBps=0 → zero floor → trivial quantity"))
+	c.Check(qWithAffiliate > qWithoutAffiliate, Equals, true,
+		Commentf("whitelisted affiliate must surface its sealed dynamic bps to getMaxSwapQuantity (got %d vs %d)",
+			qWithAffiliate, qWithoutAffiliate))
+}

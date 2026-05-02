@@ -84,4 +84,6 @@ type (
 	OraclePrice              = types.OraclePrice
 	Volume                   = types.Volume
 	VolumeBucket             = types.VolumeBucket
+	DynamicFeeRecord         = types.DynamicFeeRecord
+	DynamicFeeAccumulator    = types.DynamicFeeAccumulator
 )

@@ -4363,6 +4363,61 @@ func (s AdvSwapQueueSuite) TestGetMaxSwapQuantityDerivedAsset(c *C) {
 	c.Assert(quantity < 15000, Equals, true, Commentf("Quantity should be reasonable"))
 }
 
+// TestGetMaxSwapQuantityHonorsDynamicFloor verifies that the advanced-queue
+// sub-swap sizing pulls affiliates off the memo and honors their dynamic-fee
+// floor (mirrors the free-function behavior fixed in helpers.go).
+func (s AdvSwapQueueSuite) TestGetMaxSwapQuantityHonorsDynamicFloor(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(10 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, btcPool), IsNil)
+
+	k.SetMimir(ctx, "L1SlipMinBps", 10)
+	k.SetMimir(ctx, "StreamingSwapMaxLength", 14400)
+	setDynamicFeeTestMimirs(ctx, k)
+
+	registerThorname(ctx, k, "mytn", 1)
+	pairA, pairB, ok := dynamicFeePairKey(common.BTCAsset, common.RuneAsset())
+	c.Assert(ok, Equals, true)
+	c.Assert(k.SetDynamicFeeRecord(ctx, types.DynamicFeeRecord{
+		Thorname:   "mytn",
+		PairAssetA: pairA,
+		PairAssetB: pairB,
+		DynamicBps: 50,
+	}), IsNil)
+
+	vm := newSwapQueueAdv(k)
+	deposit := cosmos.NewUint(1000 * common.One)
+
+	msgNoAff := MsgSwap{
+		Tx: common.Tx{
+			Coins: common.Coins{common.NewCoin(common.RuneAsset(), deposit)},
+			Memo:  "=:BTC.BTC:" + GetRandomBTCAddress().String(),
+		},
+		TargetAsset: common.BTCAsset,
+		State: &types.SwapState{
+			Deposit:  deposit,
+			Interval: 1,
+			Quantity: 0,
+		},
+	}
+	qNoAff, err := vm.getMaxSwapQuantity(ctx, mgr, common.RuneAsset(), common.BTCAsset, msgNoAff)
+	c.Assert(err, IsNil)
+
+	msgWithAff := msgNoAff
+	msgWithAff.Tx.Memo = "=:BTC.BTC:" + GetRandomBTCAddress().String() + "::mytn:100"
+	qWithAff, err := vm.getMaxSwapQuantity(ctx, mgr, common.RuneAsset(), common.BTCAsset, msgWithAff)
+	c.Assert(err, IsNil)
+
+	c.Assert(qWithAff < qNoAff, Equals, true, Commentf("50 bps dynamic floor should yield fewer sub-swaps than static 10 bps"))
+	c.Assert(qWithAff*5, Equals, qNoAff, Commentf("dynamic 50bps is 5x the static 10bps → 1/5 the sub-swaps"))
+}
+
 // TestRapidSwapFailedMarketSwapSkip verifies that failed market swaps on rapid swap
 // iteration 1+ do not count as attempts. This prevents rapid swaps from burning through
 // all subswaps of a streaming swap in a single block when swaps fail.

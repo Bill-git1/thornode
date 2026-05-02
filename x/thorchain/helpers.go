@@ -174,7 +174,7 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 	}
 }
 
-func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
+func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap, affiliates []string, affiliateBps []cosmos.Uint) (uint64, error) {
 	// Interval 0 is rapid streaming. For quantity limits, treat it as 1 block
 	// so rapid requests can still be bounded by swap size and max length rules.
 	interval := swp.Interval
@@ -203,8 +203,22 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 			sourceAssetPool = pool
 		}
 
-		// get the configured min slip for this asset
-		minSlip := getMinSlipBps(ctx, mgr.Keeper(), asset, stableSwap)
+		// Dynamic fee records are keyed per executed leg, not per end-to-end
+		// L1->L1 route. Double swaps therefore need BTC->RUNE / RUNE->ETH style
+		// lookups here, matching both execution-time fee application and crediting.
+		legSource, legTarget := sourceAsset, targetAsset
+		if !sourceAsset.IsRune() && !targetAsset.IsRune() {
+			if i == 0 {
+				legSource, legTarget = sourceAsset, common.RuneAsset()
+			} else {
+				legSource, legTarget = common.RuneAsset(), targetAsset
+			}
+		}
+
+		// Honor any dynamic floor for this thorname/pair so sub-swaps sized
+		// below the dynamic minimum aren't carved out here only to be charged
+		// the floor at swap time.
+		minSlip := getMinSlipBps(ctx, mgr.Keeper(), asset, stableSwap, affiliates, affiliateBps, legSource, legTarget, mgr.DynamicFeeMgr())
 		if minSlip.IsZero() {
 			continue
 		}
@@ -302,13 +316,11 @@ func getMinSlipBps(
 	k keeper.Keeper,
 	asset common.Asset,
 	stableOverride bool,
+	affiliates []string,
+	affiliateBps []cosmos.Uint,
+	sourceAsset, targetAsset common.Asset,
+	dynamicFeeMgr DynamicFeeManager,
 ) cosmos.Uint {
-	if stableOverride {
-		stableBps := k.GetConfigInt64(ctx, constants.StableSlipMinBps)
-		if stableBps > 0 {
-			return cosmos.SafeUintFromInt64(stableBps)
-		}
-	}
 	var ref constants.ConstantName
 	switch {
 	case asset.IsSyntheticAsset():
@@ -321,6 +333,18 @@ func getMinSlipBps(
 		ref = constants.SecuredAssetSlipMinBps
 	default:
 		ref = constants.L1SlipMinBps
+		if dynamicFeeMgr != nil && len(affiliates) > 0 {
+			dynBps := dynamicFeeMgr.GetDynamicBps(ctx, affiliates, affiliateBps, sourceAsset, targetAsset)
+			if dynBps > 0 {
+				return cosmos.SafeUintFromInt64(int64(dynBps))
+			}
+		}
+	}
+	if stableOverride {
+		stableBps := k.GetConfigInt64(ctx, constants.StableSlipMinBps)
+		if stableBps > 0 {
+			return cosmos.SafeUintFromInt64(stableBps)
+		}
 	}
 	minFeeMimir := k.GetConfigInt64(ctx, ref)
 	return cosmos.SafeUintFromInt64(minFeeMimir)

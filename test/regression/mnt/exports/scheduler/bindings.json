@@ -216,6 +216,8 @@
         }
       ],
       "chain_contracts": [],
+      "dynamic_fee_accumulators": [],
+      "dynamic_fee_records": [],
       "last_chain_heights": [],
       "liquidity_providers": null,
       "mimirs": [

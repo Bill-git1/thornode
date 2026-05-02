@@ -96,6 +96,7 @@ type Keeper interface {
 	KeeperTCYStaker
 	KeeperVolume
 	KeeperPOLReserve
+	KeeperDynamicFee
 }
 
 type KeeperConfig interface {
@@ -451,6 +452,22 @@ type KeeperVolume interface {
 	GetVolumeBucketIterator(ctx cosmos.Context, pool common.Asset) cosmos.Iterator
 	GetVolume(ctx cosmos.Context, pool common.Asset) (Volume, error)
 	SetVolume(ctx cosmos.Context, volume Volume) error
+}
+
+type KeeperDynamicFee interface {
+	GetDynamicFeeRecord(ctx cosmos.Context, thorname, pairAssetA, pairAssetB string) (DynamicFeeRecord, error)
+	SetDynamicFeeRecord(ctx cosmos.Context, record DynamicFeeRecord) error
+	DeleteDynamicFeeRecord(ctx cosmos.Context, thorname, pairAssetA, pairAssetB string) error
+	GetDynamicFeeRecordIterator(ctx cosmos.Context) cosmos.Iterator
+	GetDynamicFeeRecordIteratorForThorname(ctx cosmos.Context, thorname string) cosmos.Iterator
+	GetDynamicFeeAccumulator(ctx cosmos.Context, thorname, pairAssetA, pairAssetB string) (DynamicFeeAccumulator, error)
+	SetDynamicFeeAccumulator(ctx cosmos.Context, acc DynamicFeeAccumulator) error
+	DeleteDynamicFeeAccumulator(ctx cosmos.Context, thorname, pairAssetA, pairAssetB string) error
+	GetDynamicFeeAccumulatorIterator(ctx cosmos.Context) cosmos.Iterator
+	DeleteAllDynamicFeeStateForThorname(ctx cosmos.Context, thorname string) error
+	GetRemovedDynamicFeeWhitelistThornames(ctx cosmos.Context) []string
+	GetLastObservedDynamicFeeEpochBlocks(ctx cosmos.Context) (int64, error)
+	SetLastObservedDynamicFeeEpochBlocks(ctx cosmos.Context, value int64)
 }
 
 type KeeperReferenceMemo interface {

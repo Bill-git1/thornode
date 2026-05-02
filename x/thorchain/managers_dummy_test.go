@@ -87,6 +87,7 @@ func (m DummyMgr) SwitchManager() SwitchManager             { return m.switchMgr
 func (m DummyMgr) ScheduledMigrationManager() ScheduledMigrationManager {
 	return m.scheduledMigrationManager
 }
+func (m DummyMgr) DynamicFeeMgr() DynamicFeeManager { return newDynamicFeeMgr(m.K) }
 
 // DummyAdvSwapQueue is for test purpose
 type DummyAdvSwapQueue struct{}

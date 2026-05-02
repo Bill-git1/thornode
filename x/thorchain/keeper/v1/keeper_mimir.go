@@ -145,12 +145,17 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 		"MIMIRUPGRADECONTRACT",
 		"EVMALLOWANCECHECK",
 		"POLRESERVEBLACKLIST",
+		"DYNAMICFEE-WHITELIST",
 	}
 	for i := range partialMatches {
 		// Contains rather than HasPrefix to include cases like StreamingSwapPause.
 		if strings.Contains(key, partialMatches[i]) {
 			return true
 		}
+	}
+
+	if strings.HasPrefix(key, "L1DYNAMICFEE") {
+		return true
 	}
 
 	// all min slip mimirs are operational, but not SlipMinBpsMax

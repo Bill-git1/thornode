@@ -57,6 +57,7 @@ import "types/query_eip712.proto";
 import "types/query_reference_memo.proto";
 import "types/query_supply.proto";
 import "types/query_contract_info.proto";
+import "types/query_dynamic_fee.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -457,5 +458,20 @@ service Query {
   rpc ContractInfo(QueryContractInfoRequest)
       returns (QueryContractInfoResponse) {
     option (google.api.http).get = "/thorchain/contract/{address}";
+  }
+
+  rpc DynamicL1Fees(QueryDynamicL1FeesRequest)
+      returns (QueryDynamicL1FeesResponse) {
+    option (google.api.http).get = "/thorchain/dynamic_l1_fees";
+  }
+
+  rpc DynamicL1FeesByThorname(QueryDynamicL1FeesByThornameRequest)
+      returns (QueryDynamicL1FeesByThornameResponse) {
+    option (google.api.http).get = "/thorchain/dynamic_l1_fees/{thorname}";
+  }
+
+  rpc DynamicL1FeesCurrent(QueryDynamicL1FeesCurrentRequest)
+      returns (QueryDynamicL1FeesCurrentResponse) {
+    option (google.api.http).get = "/thorchain/dynamic_l1_fees_current";
   }
 }

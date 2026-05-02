@@ -158,6 +158,13 @@ func NewConstantValue() *ConstantVals {
 			ModifyLimitSwapMaxIterations:        100,                // maximum iterations when searching for a user's swap in a ratio-grouped index
 			POLReserveSystemIncomeBps:           0,                  // basis points of system income routed to POL reserve, 0 = disabled
 			POLReserveMaxDeployment:             10_000_000_000,     // maximum RUNE deployed per pool per block (100 RUNE in 1e8 units)
+			L1DynamicFeeEnabled:                 0,                  // enable/disable dynamic L1 min fee
+			L1DynamicFeeEpochBlocks:             14400,              // number of blocks per dynamic fee epoch
+			L1DynamicFeeFloorBPS:                1,                  // floor basis points for dynamic L1 min fee
+			L1DynamicFeeCeilingBPS:              20,                 // ceiling basis points for dynamic L1 min fee
+			L1DynamicFeeStepBPS:                 1,                  // step basis points for dynamic L1 min fee adjustment
+			L1DynamicFeeDeadbandBPS:             1000,               // % change in fees_rune (in bps, 10000 = 100%) below which the dynamic L1 fee controller holds
+			L1DynamicFeeWindowEpochs:            3,                  // epochs averaged on each side of the last bps change when measuring the fees_rune gradient (clamped into [1, MaxDynamicFeeHistory])
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

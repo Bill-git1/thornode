@@ -7,6 +7,7 @@ api_bank.go
 api_block.go
 api_clout.go
 api_codes.go
+api_dynamic_l1_fees.go
 api_export.go
 api_health.go
 api_invariants.go
@@ -70,6 +71,14 @@ docs/ContractInfo.md
 docs/ContractInfoResponse.md
 docs/ContractInfosResponse.md
 docs/DerivedPool.md
+docs/DynamicL1FeeCurrentEntry.md
+docs/DynamicL1FeeEntry.md
+docs/DynamicL1FeeHistoryEntry.md
+docs/DynamicL1FeePairDetail.md
+docs/DynamicL1FeesApi.md
+docs/DynamicL1FeesByThornameResponse.md
+docs/DynamicL1FeesCurrentResponse.md
+docs/DynamicL1FeesResponse.md
 docs/ExportApi.md
 docs/HealthApi.md
 docs/InboundAddress.md
@@ -224,6 +233,13 @@ model_contract_info.go
 model_contract_info_response.go
 model_contract_infos_response.go
 model_derived_pool.go
+model_dynamic_l1_fee_current_entry.go
+model_dynamic_l1_fee_entry.go
+model_dynamic_l1_fee_history_entry.go
+model_dynamic_l1_fee_pair_detail.go
+model_dynamic_l1_fees_by_thorname_response.go
+model_dynamic_l1_fees_current_response.go
+model_dynamic_l1_fees_response.go
 model_inbound_address.go
 model_inbound_confirmation_counted_stage.go
 model_inbound_finalised_stage.go

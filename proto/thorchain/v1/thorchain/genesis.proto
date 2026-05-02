@@ -29,6 +29,7 @@ import "types/type_rune_pool.proto";
 import "types/type_secured_asset.proto";
 import "types/type_tcy_claimer.proto";
 import "types/type_tcy_staker.proto";
+import "types/type_dynamic_fee.proto";
 import "gogoproto/gogo.proto";
 
 message lastChainHeight {
@@ -124,4 +125,9 @@ message GenesisState {
       [ (gogoproto.nullable) = false ];
   repeated types.POLReserveDeposit pol_reserve_deposits = 45
       [ (gogoproto.nullable) = false ];
+  repeated types.DynamicFeeRecord dynamic_fee_records = 46
+      [ (gogoproto.nullable) = false ];
+  repeated types.DynamicFeeAccumulator dynamic_fee_accumulators = 47
+      [ (gogoproto.nullable) = false ];
+  int64 last_observed_dynamic_fee_epoch_blocks = 48;
 }

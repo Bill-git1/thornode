@@ -52,6 +52,7 @@ func (s *SwapperImpl) Swap(ctx cosmos.Context,
 	dexAggLimit *cosmos.Uint,
 	swp StreamingSwap,
 	synthVirtualDepthMult int64, mgr Manager,
+	affiliates []string, affiliateBps []cosmos.Uint,
 ) (cosmos.Uint, []*EventSwap, error) {
 	var swapEvents []*EventSwap
 
@@ -87,7 +88,7 @@ func (s *SwapperImpl) Swap(ctx cosmos.Context,
 		var swapEvt *EventSwap
 		var amt cosmos.Uint
 		// Here we use a swapTarget of 0 because the target is for the next swap asset in a double swap
-		amt, swapEvt, swapErr = s.swapOne(ctx, mgr, tx, common.RuneAsset(), destination, cosmos.ZeroUint(), synthVirtualDepthMult, stableSwap)
+		amt, swapEvt, swapErr = s.swapOne(ctx, mgr, tx, common.RuneAsset(), destination, cosmos.ZeroUint(), synthVirtualDepthMult, stableSwap, affiliates, affiliateBps)
 		if swapErr != nil {
 			return cosmos.ZeroUint(), swapEvents, swapErr
 		}
@@ -95,7 +96,7 @@ func (s *SwapperImpl) Swap(ctx cosmos.Context,
 		tx.Gas = nil
 		swapEvents = append(swapEvents, swapEvt)
 	}
-	assetAmount, swapEvt, swapErr := s.swapOne(ctx, mgr, tx, target, destination, swapTarget, synthVirtualDepthMult, stableSwap)
+	assetAmount, swapEvt, swapErr := s.swapOne(ctx, mgr, tx, target, destination, swapTarget, synthVirtualDepthMult, stableSwap, affiliates, affiliateBps)
 	if swapErr != nil {
 		return cosmos.ZeroUint(), swapEvents, swapErr
 	}
@@ -219,6 +220,7 @@ func (s *SwapperImpl) swapOne(ctx cosmos.Context,
 	swapTarget cosmos.Uint,
 	synthVirtualDepthMult int64,
 	stableOverride bool,
+	affiliates []string, affiliateBps []cosmos.Uint,
 ) (amt cosmos.Uint, evt *EventSwap, swapErr error) {
 	tradeAccountsEnabled := mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
 	tradeAccountsDepositEnabled := mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsDepositEnabled)
@@ -342,7 +344,7 @@ func (s *SwapperImpl) swapOne(ctx cosmos.Context,
 	swapEvt.PoolSlip = swapSlipBps
 
 	// the non-RUNE asset is used to determine which min slip to use
-	minSlipBps := getMinSlipBps(ctx, mgr.Keeper(), minSlipAsset, stableOverride)
+	minSlipBps := getMinSlipBps(ctx, mgr.Keeper(), minSlipAsset, stableOverride, affiliates, affiliateBps, source, target, mgr.DynamicFeeMgr())
 
 	var (
 		emitAssets   cosmos.Uint

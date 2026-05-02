@@ -103,6 +103,9 @@ const (
 	prefixOraclePrice               types.DbPrefix = "oracle_price/"
 	prefixVolumeBucket              types.DbPrefix = "volume_bucket/"
 	prefixVolume                    types.DbPrefix = "volume/"
+	prefixDynamicFee                types.DbPrefix = "dynfee/"
+	prefixDynamicFeeAcc             types.DbPrefix = "dynfeeacc/"
+	prefixDynamicFeeEpochBlocks     types.DbPrefix = "dynfeeebo/"
 )
 
 func dbError(ctx cosmos.Context, wrapper string, err error) error {

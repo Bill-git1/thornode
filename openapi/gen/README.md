@@ -82,6 +82,9 @@ Class | Method | HTTP request | Description
 *BlockApi* | [**Block**](docs/BlockApi.md#block) | **Get** /thorchain/block | 
 *CloutApi* | [**SwapperClout**](docs/CloutApi.md#swapperclout) | **Get** /thorchain/clout/swap/{address} | 
 *CodesApi* | [**Codes**](docs/CodesApi.md#codes) | **Get** /thorchain/codes | 
+*DynamicL1FeesApi* | [**DynamicL1Fees**](docs/DynamicL1FeesApi.md#dynamicl1fees) | **Get** /thorchain/dynamic_l1_fees | 
+*DynamicL1FeesApi* | [**DynamicL1FeesByThorname**](docs/DynamicL1FeesApi.md#dynamicl1feesbythorname) | **Get** /thorchain/dynamic_l1_fees/{thorname} | 
+*DynamicL1FeesApi* | [**DynamicL1FeesCurrent**](docs/DynamicL1FeesApi.md#dynamicl1feescurrent) | **Get** /thorchain/dynamic_l1_fees_current | 
 *ExportApi* | [**Export**](docs/ExportApi.md#export) | **Get** /thorchain/export | 
 *HealthApi* | [**Ping**](docs/HealthApi.md#ping) | **Get** /thorchain/ping | 
 *InvariantsApi* | [**Invariant**](docs/InvariantsApi.md#invariant) | **Get** /thorchain/invariant/{invariant} | 
@@ -193,6 +196,13 @@ Class | Method | HTTP request | Description
  - [ContractInfoResponse](docs/ContractInfoResponse.md)
  - [ContractInfosResponse](docs/ContractInfosResponse.md)
  - [DerivedPool](docs/DerivedPool.md)
+ - [DynamicL1FeeCurrentEntry](docs/DynamicL1FeeCurrentEntry.md)
+ - [DynamicL1FeeEntry](docs/DynamicL1FeeEntry.md)
+ - [DynamicL1FeeHistoryEntry](docs/DynamicL1FeeHistoryEntry.md)
+ - [DynamicL1FeePairDetail](docs/DynamicL1FeePairDetail.md)
+ - [DynamicL1FeesByThornameResponse](docs/DynamicL1FeesByThornameResponse.md)
+ - [DynamicL1FeesCurrentResponse](docs/DynamicL1FeesCurrentResponse.md)
+ - [DynamicL1FeesResponse](docs/DynamicL1FeesResponse.md)
  - [InboundAddress](docs/InboundAddress.md)
  - [InboundConfirmationCountedStage](docs/InboundConfirmationCountedStage.md)
  - [InboundFinalisedStage](docs/InboundFinalisedStage.md)

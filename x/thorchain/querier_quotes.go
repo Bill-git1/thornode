@@ -617,11 +617,17 @@ func (qs queryServer) queryQuoteLimit(ctx cosmos.Context, req *types.QueryQuoteL
 		}
 	}
 
+	// parse affiliate params
+	affiliates, affiliateBps, totalBps, err := parseMultipleAffiliateParams(ctx, qs.mgr, req.Affiliate, req.AffiliateBps)
+	if err != nil {
+		return nil, fmt.Errorf("bad affiliate params: %w", err)
+	}
+
 	swp := StreamingSwap{
 		Interval: uint64(customTTL),
 		Deposit:  amount,
 	}
-	maxSwapQuantity, err := getMaxSwapQuantity(ctx, qs.mgr, fromAsset, toAsset, swp)
+	maxSwapQuantity, err := getMaxSwapQuantity(ctx, qs.mgr, fromAsset, toAsset, swp, affiliates, affiliateBps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate max streaming swap quantity: %w", err)
 	}
@@ -629,12 +635,6 @@ func (qs queryServer) queryQuoteLimit(ctx cosmos.Context, req *types.QueryQuoteL
 	// cap the streaming quantity to the max swap quantity
 	if streamingQuantity > maxSwapQuantity {
 		streamingQuantity = maxSwapQuantity
-	}
-
-	// parse affiliate params
-	affiliates, affiliateBps, totalBps, err := parseMultipleAffiliateParams(ctx, qs.mgr, req.Affiliate, req.AffiliateBps)
-	if err != nil {
-		return nil, fmt.Errorf("bad affiliate params: %w", err)
 	}
 
 	// parse refund address
@@ -796,11 +796,18 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 			return nil, fmt.Errorf("bad streaming quantity amount: %w", err)
 		}
 	}
+	// Parse affiliate params up front so getMaxSwapQuantity can honor any
+	// dynamic-fee floor the affiliate has earned for this pair.
+	affiliates, affiliateBps, totalBps, err := parseMultipleAffiliateParams(ctx, qs.mgr, req.Affiliate, req.AffiliateBps)
+	if err != nil {
+		return nil, fmt.Errorf("bad affiliate params: %w", err)
+	}
+
 	swp := StreamingSwap{
 		Interval: streamingInterval,
 		Deposit:  amount,
 	}
-	maxSwapQuantity, err := getMaxSwapQuantity(ctx, qs.mgr, fromAsset, toAsset, swp)
+	maxSwapQuantity, err := getMaxSwapQuantity(ctx, qs.mgr, fromAsset, toAsset, swp, affiliates, affiliateBps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate max streaming swap quantity: %w", err)
 	}
@@ -909,12 +916,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		if err != nil {
 			return nil, fmt.Errorf("bad refund address: %w", err)
 		}
-	}
-
-	// parse affiliate params
-	affiliates, affiliateBps, totalBps, err := parseMultipleAffiliateParams(ctx, qs.mgr, req.Affiliate, req.AffiliateBps)
-	if err != nil {
-		return nil, fmt.Errorf("bad affiliate params: %w", err)
 	}
 
 	// check if the amount is less than the minimum swap amount

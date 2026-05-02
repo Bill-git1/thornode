@@ -190,6 +190,13 @@ const (
 	StrictBondLiquidityRatio
 	SwapOutDexAggregationDisabled
 	P2PGateDisabled
+	L1DynamicFeeEnabled
+	L1DynamicFeeEpochBlocks
+	L1DynamicFeeFloorBPS
+	L1DynamicFeeCeilingBPS
+	L1DynamicFeeStepBPS
+	L1DynamicFeeDeadbandBPS
+	L1DynamicFeeWindowEpochs
 )
 
 // ConstantValues define methods used to get constant values

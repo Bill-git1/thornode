@@ -935,6 +935,42 @@ func (k KVStoreDummy) SetVolume(_ cosmos.Context, _ Volume) error {
 	return nil
 }
 
+// KeeperDynamicFee
+func (k KVStoreDummy) GetDynamicFeeRecord(_ cosmos.Context, _, _, _ string) (DynamicFeeRecord, error) {
+	return DynamicFeeRecord{}, kaboom
+}
+func (k KVStoreDummy) SetDynamicFeeRecord(_ cosmos.Context, _ DynamicFeeRecord) error { return kaboom }
+func (k KVStoreDummy) DeleteDynamicFeeRecord(_ cosmos.Context, _, _, _ string) error  { return kaboom }
+func (k KVStoreDummy) GetDynamicFeeRecordIterator(_ cosmos.Context) cosmos.Iterator   { return nil }
+func (k KVStoreDummy) GetDynamicFeeRecordIteratorForThorname(_ cosmos.Context, _ string) cosmos.Iterator {
+	return nil
+}
+
+func (k KVStoreDummy) GetDynamicFeeAccumulator(_ cosmos.Context, _, _, _ string) (DynamicFeeAccumulator, error) {
+	return DynamicFeeAccumulator{}, kaboom
+}
+
+func (k KVStoreDummy) SetDynamicFeeAccumulator(_ cosmos.Context, _ DynamicFeeAccumulator) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) DeleteDynamicFeeAccumulator(_ cosmos.Context, _, _, _ string) error {
+	return kaboom
+}
+func (k KVStoreDummy) GetDynamicFeeAccumulatorIterator(_ cosmos.Context) cosmos.Iterator { return nil }
+func (k KVStoreDummy) DeleteAllDynamicFeeStateForThorname(_ cosmos.Context, _ string) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) GetRemovedDynamicFeeWhitelistThornames(_ cosmos.Context) []string {
+	return nil
+}
+
+func (k KVStoreDummy) GetLastObservedDynamicFeeEpochBlocks(_ cosmos.Context) (int64, error) {
+	return 0, kaboom
+}
+func (k KVStoreDummy) SetLastObservedDynamicFeeEpochBlocks(_ cosmos.Context, _ int64) {}
+
 // a mock cosmos.Iterator implementation for testing purposes
 type DummyIterator struct {
 	cosmos.Iterator

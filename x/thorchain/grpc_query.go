@@ -733,3 +733,27 @@ func (s *queryServer) ContractInfos(c context.Context, req *types.QueryContractI
 	ctx := s.unwrapSdkContext(c)
 	return s.queryContractInfos(ctx, req)
 }
+
+func (s *queryServer) DynamicL1Fees(c context.Context, req *types.QueryDynamicL1FeesRequest) (*types.QueryDynamicL1FeesResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryDynamicL1Fees(ctx, req)
+}
+
+func (s *queryServer) DynamicL1FeesByThorname(c context.Context, req *types.QueryDynamicL1FeesByThornameRequest) (*types.QueryDynamicL1FeesByThornameResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryDynamicL1FeesByThorname(ctx, req)
+}
+
+func (s *queryServer) DynamicL1FeesCurrent(c context.Context, req *types.QueryDynamicL1FeesCurrentRequest) (*types.QueryDynamicL1FeesCurrentResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryDynamicL1FeesCurrent(ctx, req)
+}

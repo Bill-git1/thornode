@@ -142,6 +142,8 @@ func DefaultGenesisState() GenesisState {
 		RunePool:                NewRUNEPool(),
 		AffiliateCollectors:     []AffiliateFeeCollector{},
 		PolReserveDeposits:      make([]POLReserveDeposit, 0),
+		DynamicFeeRecords:       make([]types.DynamicFeeRecord, 0),
+		DynamicFeeAccumulators:  make([]types.DynamicFeeAccumulator, 0),
 	}
 }
 
@@ -341,6 +343,28 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		if err := keeper.SetTCYStaker(ctx, item); err != nil {
 			panic(err)
 		}
+	}
+
+	// Restore dynamic-fee state. Without this, a chain restart or genesis
+	// import resets sealed DynamicFeeRecord histories (losing the
+	// controller's direction signal), drops any in-flight accumulator
+	// volume from the pre-export epoch, and forgets the last-observed
+	// epoch-blocks value — causing the first post-import EndBlock to
+	// treat a governance epoch-length change as a first observation and
+	// skip the rebase that keeps LastActiveEpoch comparable under the
+	// new scale.
+	for _, rec := range data.DynamicFeeRecords {
+		if err := keeper.SetDynamicFeeRecord(ctx, rec); err != nil {
+			panic(err)
+		}
+	}
+	for _, acc := range data.DynamicFeeAccumulators {
+		if err := keeper.SetDynamicFeeAccumulator(ctx, acc); err != nil {
+			panic(err)
+		}
+	}
+	if data.LastObservedDynamicFeeEpochBlocks > 0 {
+		keeper.SetLastObservedDynamicFeeEpochBlocks(ctx, data.LastObservedDynamicFeeEpochBlocks)
 	}
 
 	reserveAddr, _ := keeper.GetModuleAddress(ReserveName)
@@ -778,38 +802,64 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		panic(err)
 	}
 
+	dynamicFeeRecords := make([]types.DynamicFeeRecord, 0)
+	iterDFRec := k.GetDynamicFeeRecordIterator(ctx)
+	defer iterDFRec.Close()
+	for ; iterDFRec.Valid(); iterDFRec.Next() {
+		var rec types.DynamicFeeRecord
+		k.Cdc().MustUnmarshal(iterDFRec.Value(), &rec)
+		dynamicFeeRecords = append(dynamicFeeRecords, rec)
+	}
+
+	dynamicFeeAccumulators := make([]types.DynamicFeeAccumulator, 0)
+	iterDFAcc := k.GetDynamicFeeAccumulatorIterator(ctx)
+	defer iterDFAcc.Close()
+	for ; iterDFAcc.Valid(); iterDFAcc.Next() {
+		var acc types.DynamicFeeAccumulator
+		k.Cdc().MustUnmarshal(iterDFAcc.Value(), &acc)
+		dynamicFeeAccumulators = append(dynamicFeeAccumulators, acc)
+	}
+
+	lastObservedDynamicFeeEpochBlocks, err := k.GetLastObservedDynamicFeeEpochBlocks(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	return GenesisState{
-		Pools:                   pools,
-		LiquidityProviders:      liquidityProviders,
-		ObservedTxInVoters:      observedTxInVoters,
-		TxOuts:                  outs,
-		NodeAccounts:            nodeAccounts,
-		BondProviders:           bps,
-		Vaults:                  vaults,
-		ReferenceMemos:          memos,
-		LastSignedHeight:        lastSignedHeight,
-		LastChainHeights:        lastChainHeights,
-		Network:                 network,
-		OutboundFeeWithheldRune: outboundFeeWithheldRune,
-		OutboundFeeSpentRune:    outboundFeeSpentRune,
-		POL:                     pol,
-		AdvSwapQueueItems:       swapMsgs,
-		SwapQueueItems:          swapQ,
-		StreamingSwaps:          streamSwaps,
-		NetworkFees:             networkFees,
-		ChainContracts:          chainContracts,
-		THORNames:               names,
-		Mimirs:                  mimirs,
-		NodeMimirs:              nodeMimirs,
-		SwapperClout:            clouts,
-		TradeAccounts:           tradeAccts,
-		TradeUnits:              tradeUnits,
-		SecuredAssets:           securedAssets,
-		RuneProviders:           runeProviders,
-		RunePool:                runePool,
-		AffiliateCollectors:     affiliateCollectors,
-		TcyClaimers:             tcyClaimers,
-		TcyStakers:              tcyStakers,
-		PolReserveDeposits:      polReserveDeposits,
+		Pools:                             pools,
+		LiquidityProviders:                liquidityProviders,
+		ObservedTxInVoters:                observedTxInVoters,
+		TxOuts:                            outs,
+		NodeAccounts:                      nodeAccounts,
+		BondProviders:                     bps,
+		Vaults:                            vaults,
+		ReferenceMemos:                    memos,
+		LastSignedHeight:                  lastSignedHeight,
+		LastChainHeights:                  lastChainHeights,
+		Network:                           network,
+		OutboundFeeWithheldRune:           outboundFeeWithheldRune,
+		OutboundFeeSpentRune:              outboundFeeSpentRune,
+		POL:                               pol,
+		AdvSwapQueueItems:                 swapMsgs,
+		SwapQueueItems:                    swapQ,
+		StreamingSwaps:                    streamSwaps,
+		NetworkFees:                       networkFees,
+		ChainContracts:                    chainContracts,
+		THORNames:                         names,
+		Mimirs:                            mimirs,
+		NodeMimirs:                        nodeMimirs,
+		SwapperClout:                      clouts,
+		TradeAccounts:                     tradeAccts,
+		TradeUnits:                        tradeUnits,
+		SecuredAssets:                     securedAssets,
+		RuneProviders:                     runeProviders,
+		RunePool:                          runePool,
+		AffiliateCollectors:               affiliateCollectors,
+		TcyClaimers:                       tcyClaimers,
+		TcyStakers:                        tcyStakers,
+		PolReserveDeposits:                polReserveDeposits,
+		DynamicFeeRecords:                 dynamicFeeRecords,
+		DynamicFeeAccumulators:            dynamicFeeAccumulators,
+		LastObservedDynamicFeeEpochBlocks: lastObservedDynamicFeeEpochBlocks,
 	}
 }

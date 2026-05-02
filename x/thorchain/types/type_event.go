@@ -63,6 +63,7 @@ const (
 	FailedOutboundRecoveryEventType = "failed_outbound_recovery"
 	VaultOverSolvencyEventType      = "vault_over_solvency"
 	POLReserveDeployEventType       = "pol_reserve_deploy"
+	DynamicL1FeeUpdateEventType     = "dynamic_l1_fee_update"
 )
 
 // PoolMods a list of pool modifications

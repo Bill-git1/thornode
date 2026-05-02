@@ -431,6 +431,15 @@ func (vm *SwapQueueAdv) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools) {
 }
 
 func (vm *SwapQueueAdv) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, msg MsgSwap) (uint64, error) {
+	// Pull affiliate context off the memo so sub-swap sizing respects any
+	// dynamic-fee floor the affiliate has earned for this pair.
+	var swapAffiliates []string
+	var swapAffiliateBps []cosmos.Uint
+	if parsed, parseErr := ParseMemoWithTHORNames(ctx, vm.k, msg.Tx.Memo); parseErr == nil {
+		swapAffiliates = parsed.GetAffiliates()
+		swapAffiliateBps = parsed.GetAffiliatesBasisPoints()
+	}
+
 	// collect pools involved in this swap
 	minSwapSize := cosmos.ZeroUint()
 	stableSwap := isStableToStable(ctx, vm.k, sourceAsset, targetAsset)
@@ -452,8 +461,20 @@ func (vm *SwapQueueAdv) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sour
 			sourceAssetPool = pool
 		}
 
+		// Dynamic fee records are keyed per executed leg, not per end-to-end
+		// L1->L1 route. Double swaps therefore need BTC->RUNE / RUNE->ETH style
+		// lookups here, matching both execution-time fee application and crediting.
+		legSource, legTarget := sourceAsset, targetAsset
+		if !sourceAsset.IsRune() && !targetAsset.IsRune() {
+			if i == 0 {
+				legSource, legTarget = sourceAsset, common.RuneAsset()
+			} else {
+				legSource, legTarget = common.RuneAsset(), targetAsset
+			}
+		}
+
 		// get the configured min slip for this asset
-		minSlip := getMinSlipBps(ctx, vm.k, asset, stableSwap)
+		minSlip := getMinSlipBps(ctx, vm.k, asset, stableSwap, swapAffiliates, swapAffiliateBps, legSource, legTarget, mgr.DynamicFeeMgr())
 		if minSlip.IsZero() {
 			continue
 		}
