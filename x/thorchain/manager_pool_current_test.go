@@ -110,7 +110,7 @@ func (s *PoolMgrSuite) TestEnableNextPool(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(pool.IsEmpty(), Equals, false)
 	c.Check(pool.Status, Equals, PoolStaged)
-	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(30*common.One))
+	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(40*common.One))
 }
 
 func (s *PoolMgrSuite) TestCyclePoolsSkipsDerivedPools(c *C) {

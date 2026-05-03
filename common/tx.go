@@ -42,8 +42,8 @@ func NewTxID(hash string) (TxID, error) {
 	switch len(hash) {
 	case 64:
 		// do nothing
-	case 66: // ETH check
-		if !strings.HasPrefix(hash, "0x") {
+	case 66: // ETH/Substrate 0x-prefixed check
+		if !strings.EqualFold(hash[:2], "0x") {
 			err := fmt.Errorf("txid error: must be 66 characters (got %d)", len(hash))
 			return TxID(""), err
 		}
@@ -152,6 +152,11 @@ func (tx Tx) String() string {
 	return fmt.Sprintf("%s: %s ==> %s (Memo: %s) %s (gas: %s)", tx.ID, tx.FromAddress, tx.ToAddress, tx.Memo, tx.Coins, tx.Gas)
 }
 
+// ObservedSender returns explicit sender availability information for the tx.
+func (tx Tx) ObservedSender() ObservedSenderInfo {
+	return ResolveObservedSender(tx.Chain, tx.FromAddress)
+}
+
 // IsEmpty check whether the ID field is empty or not
 func (tx Tx) IsEmpty() bool {
 	return tx.ID.IsEmpty()
@@ -223,6 +228,9 @@ func (tx Tx) Valid() error {
 	}
 	if tx.Chain.IsEmpty() {
 		return errors.New("chain cannot be empty")
+	}
+	if IsXMRUnknownSenderAddress(tx.FromAddress) && !tx.Chain.Equals(XMRChain) {
+		return errors.New("xmr unknown sender marker is only valid on XMR chain")
 	}
 	if len(tx.Coins) == 0 {
 		return errors.New("must have at least 1 coin")

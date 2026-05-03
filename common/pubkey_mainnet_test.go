@@ -71,5 +71,15 @@ func (s *PubKeyTestSuite) TestPubKeyGetAddress(c *C) {
 		addrSOL, err := pkEddsa.GetAddress(SOLChain)
 		c.Assert(err, IsNil)
 		c.Assert(addrSOL.String(), Equals, d.addrSOL.mainnet)
+
+		_, err = pk.GetAddress(XMRChain)
+		c.Assert(err, NotNil)
+
+		addrXMR, err := pkEddsa.GetAddress(XMRChain)
+		c.Assert(err, IsNil)
+		c.Assert(addrXMR.IsChain(XMRChain), Equals, true)
+		c.Assert(addrXMR.GetNetwork(XMRChain), Equals, MainNet)
+		c.Assert(len(addrXMR.String()), Equals, 97)
+		c.Assert(addrXMR.String()[:1], Equals, "C")
 	}
 }

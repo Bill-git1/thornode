@@ -38,6 +38,11 @@ func (s TxSuite) TestTxID(c *C) {
 			IsValid: true,
 			ToUpper: true,
 		}, {
+			// EVM/Substrate uppercased 0X (re-parsed from state)
+			Id:      "0X14A17D8B6BD66E23F64DCFBEDD6E2249AD9F25DDA9E2645EB0D1E9FA552BC35D",
+			IsValid: true,
+			ToUpper: true,
+		}, {
 			// SOL (87 chars, base58 is case-sensitive so must NOT be uppercased)
 			Id:      "28BRBs5NKV2BaGkKcCxX7PorxbLtiZyGmDP3zt9ChsJaNGS51Eqop8JGKSMh66R93YFXYfec7yp5mHfxnqqo1WtE",
 			IsValid: true,
@@ -107,6 +112,24 @@ func (s TxSuite) TestTx(c *C) {
 	c.Assert(tx.Coins, HasLen, 1)
 	c.Check(tx.Coins[0].Equals(NewCoin(ETHAsset, cosmos.NewUint(5*One))), Equals, true)
 	c.Check(tx.Memo, Equals, "hello memo")
+}
+
+func (s TxSuite) TestTxRejectsXMRUnknownSenderOutsideXMR(c *C) {
+	xmrAddr, err := NewAddress(XMRUnknownSenderAddress("tx-hash-a", "4abcd"))
+	c.Assert(err, IsNil)
+	txID, err := NewTxID("0xb41cf456e942f3430681298c503def54b79a96e3373ef9d44ea314d7eae41952")
+	c.Assert(err, IsNil)
+	tx := NewTx(
+		txID,
+		xmrAddr,
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Coins{NewCoin(ETHAsset, cosmos.NewUint(One))},
+		Gas{NewCoin(ETHAsset, cosmos.NewUint(10000))},
+		"hello memo",
+	)
+	c.Assert(tx.Valid(), ErrorMatches, "xmr unknown sender marker is only valid on XMR chain")
+	tx.Chain = XMRChain
+	c.Assert(tx.Valid(), IsNil)
 }
 
 func (s TxSuite) TestEqualsExIgnoreGas(c *C) {

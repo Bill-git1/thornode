@@ -9,6 +9,8 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
+const MaxXMRSpentOutputRefs = 32
+
 // ObservedTxs a list of ObservedTx
 type ObservedTxs []ObservedTx
 
@@ -39,6 +41,42 @@ func (m *ObservedTx) Valid() error {
 	}
 	if m.FinaliseHeight <= 0 {
 		return errors.New("finalise block height can't be zero")
+	}
+	if err := ValidateSpentOutputRefs(m.Tx.Chain, m.Tx.ID, m.SpentOutputRefs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateSpentOutputRefs(chain Chain, spendTxHash TxID, refs []OutputRef) error {
+	if len(refs) == 0 {
+		return nil
+	}
+	if !chain.Equals(XMRChain) {
+		return errors.New("spent output refs are only valid for XMR observed txs")
+	}
+	if len(refs) > MaxXMRSpentOutputRefs {
+		return fmt.Errorf("spent output refs exceeds max %d", MaxXMRSpentOutputRefs)
+	}
+	seen := make(map[string]struct{}, len(refs))
+	for _, ref := range refs {
+		if strings.TrimSpace(ref.TxHash) == "" {
+			return errors.New("spent output ref tx hash cannot be empty")
+		}
+		if strings.TrimSpace(ref.KeyImage) == "" {
+			return errors.New("spent output ref key image cannot be empty")
+		}
+		if strings.TrimSpace(ref.SpendTxHash) == "" {
+			return errors.New("spent output ref spend tx hash cannot be empty")
+		}
+		if !TxID(ref.SpendTxHash).Equals(spendTxHash) {
+			return fmt.Errorf("spent output ref spend tx hash %s does not match observed tx %s", ref.SpendTxHash, spendTxHash)
+		}
+		key := spentOutputRefIdentity(ref)
+		if _, ok := seen[key]; ok {
+			return fmt.Errorf("duplicate spent output ref: %s", key)
+		}
+		seen[key] = struct{}{}
 	}
 	return nil
 }
@@ -78,7 +116,33 @@ func (m ObservedTx) Equals(tx2 ObservedTx) bool {
 	if !m.AggregatorTargetLimit.Equal(*tx2.AggregatorTargetLimit) {
 		return false
 	}
+	if !m.HasEquivalentSpentOutputRefs(tx2) {
+		return false
+	}
 	return true
+}
+
+func (m ObservedTx) HasEquivalentSpentOutputRefs(tx2 ObservedTx) bool {
+	if !m.Tx.Chain.Equals(XMRChain) && !tx2.Tx.Chain.Equals(XMRChain) {
+		return true
+	}
+	return spentOutputRefsEqual(m.SpentOutputRefs, tx2.SpentOutputRefs)
+}
+
+func (m ObservedTx) EqualsConsensus(tx2 ObservedTx) bool {
+	return m.ObservedPubKey.Equals(tx2.ObservedPubKey) &&
+		m.Tx.EqualsEx(tx2.Tx) &&
+		m.HasEquivalentSpentOutputRefs(tx2)
+}
+
+func (m ObservedTx) EqualsConsensusIgnoreGas(tx2 ObservedTx) bool {
+	return m.ObservedPubKey.Equals(tx2.ObservedPubKey) &&
+		m.Tx.EqualsExIgnoreGas(tx2.Tx) &&
+		m.HasEquivalentSpentOutputRefs(tx2)
+}
+
+func (m ObservedTx) AttestationUniqueHash() string {
+	return observedTxSpentRefsUniqueHash(m.Tx.Hash(m.BlockHeight), m.Tx.Chain, m.SpentOutputRefs)
 }
 
 // IsFinal indicates whether ObserveTx is final.

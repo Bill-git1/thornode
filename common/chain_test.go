@@ -4,6 +4,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	dogchaincfg "github.com/eager7/dogd/chaincfg"
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	. "gopkg.in/check.v1"
 )
 
@@ -29,6 +30,8 @@ func (s ChainSuite) TestChain(c *C) {
 
 	algo := ETHChain.GetSigningAlgo()
 	c.Assert(algo, Equals, SigningAlgoSecp256k1)
+	c.Assert(SOLChain.GetSigningAlgo(), Equals, SigningAlgoEd25519)
+	c.Assert(XMRChain.GetSigningAlgo(), Equals, SigningAlgoEd25519)
 
 	c.Assert(BTCChain.GetGasAsset(), Equals, BTCAsset)
 	c.Assert(ETHChain.GetGasAsset(), Equals, ETHAsset)
@@ -38,6 +41,7 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(GAIAChain.GetGasAsset(), Equals, ATOMAsset)
 	c.Assert(NOBLEChain.GetGasAsset(), Equals, USDCAsset)
 	c.Assert(TRONChain.GetGasAsset(), Equals, TRXAsset)
+	c.Assert(XMRChain.GetGasAsset(), Equals, XMRAsset)
 	c.Assert(EmptyChain.GetGasAsset(), Equals, EmptyAsset)
 
 	c.Assert(BTCChain.AddressPrefix(MockNet), Equals, chaincfg.RegressionNetParams.Bech32HRPSegwit)
@@ -51,6 +55,9 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(DOGEChain.AddressPrefix(MockNet), Equals, dogchaincfg.RegressionNetParams.Bech32HRPSegwit)
 	c.Assert(DOGEChain.AddressPrefix(MainNet), Equals, dogchaincfg.MainNetParams.Bech32HRPSegwit)
 	c.Assert(DOGEChain.AddressPrefix(StageNet), Equals, dogchaincfg.MainNetParams.Bech32HRPSegwit)
+	c.Assert(XMRChain.AddressPrefix(MockNet), Equals, "4")
+	c.Assert(XMRChain.AddressPrefix(MainNet), Equals, "4")
+	c.Assert(XMRChain.AddressPrefix(StageNet), Equals, "4")
 
 	// Noble chain tests
 	c.Assert(NOBLEChain.AddressPrefix(MockNet), Equals, "noble")
@@ -80,4 +87,64 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(tronGasUnits, Equals, "sun")
 	c.Assert(TRONChain.GetGasAssetDecimal(), Equals, int64(6))
 	c.Assert(TRONChain.ApproximateBlockMilliseconds(), Equals, int64(3000))
+
+	// TAO chain tests
+	c.Assert(TAOChain.GetGasAsset(), Equals, TAOAsset)
+	c.Assert(TAOChain.GetSigningAlgo(), Equals, SigningAlgoEd25519)
+	c.Assert(TAOChain.AddressPrefix(MockNet), Equals, "5")
+	c.Assert(TAOChain.AddressPrefix(MainNet), Equals, "5")
+	taoGasUnits, taoGasPerOne := TAOChain.GetGasUnits()
+	c.Assert(taoGasUnits, Equals, "rao")
+	c.Assert(taoGasPerOne.Uint64(), Equals, uint64(1e9))
+	c.Assert(TAOChain.GetGasAssetDecimal(), Equals, int64(9))
+	c.Assert(TAOChain.ApproximateBlockMilliseconds(), Equals, int64(12000))
+	c.Assert(TAOChain.DustThreshold().Uint64(), Equals, uint64(100_000))
+	c.Assert(TAOChain.InboundNotes(), Not(Equals), "")
+
+	// DOT chain tests
+	c.Assert(DOTChain.GetGasAsset(), Equals, DOTAsset)
+	c.Assert(DOTChain.GetSigningAlgo(), Equals, SigningAlgoEd25519)
+	c.Assert(DOTChain.AddressPrefix(MockNet), Equals, "5")
+	c.Assert(DOTChain.AddressPrefix(MainNet), Equals, "1")
+	c.Assert(DOTChain.AddressPrefix(StageNet), Equals, "1")
+
+	// XMR chain tests
+	xmrGasUnits, _ := XMRChain.GetGasUnits()
+	c.Assert(xmrGasUnits, Equals, "piconero")
+	c.Assert(XMRChain.GetGasAssetDecimal(), Equals, int64(8))
+	c.Assert(XMRChain.ApproximateBlockMilliseconds(), Equals, int64(120000))
+}
+
+// NativeGasToThorCoinCeil rounds up when the gas asset has more decimals
+// than THORChain (1e8) and any sub-1e8 native precision would otherwise
+// be silently dropped. Exercise both the exact-amount path (no ceil)
+// and the lossy path (+1 thor unit) on DOT (1e10 planck) and TAO (1e9 rao).
+func (s ChainSuite) TestNativeGasToThorCoinCeil(c *C) {
+	// DOT: 1e10 planck per DOT, 1e8 thor units per DOT, so 100 planck = 1 thor unit.
+	c.Assert(DOTChain.NativeGasToThorCoinCeil(cosmos.NewUint(100)).Amount.Uint64(),
+		Equals, uint64(1)) // exact: no ceil
+	c.Assert(DOTChain.NativeGasToThorCoinCeil(cosmos.NewUint(105)).Amount.Uint64(),
+		Equals, uint64(2)) // 5 planck dropped → +1
+	c.Assert(DOTChain.NativeGasToThorCoinCeil(cosmos.NewUint(199)).Amount.Uint64(),
+		Equals, uint64(2)) // 99 planck dropped → +1
+	c.Assert(DOTChain.NativeGasToThorCoinCeil(cosmos.NewUint(0)).Amount.Uint64(),
+		Equals, uint64(0)) // zero stays zero
+	c.Assert(DOTChain.NativeGasToThorCoinCeil(cosmos.NewUint(100)).Decimals,
+		Equals, int64(10))
+
+	// TAO: 1e9 rao per TAO, 1e8 thor units per TAO, so 10 rao = 1 thor unit.
+	c.Assert(TAOChain.NativeGasToThorCoinCeil(cosmos.NewUint(10)).Amount.Uint64(),
+		Equals, uint64(1))
+	c.Assert(TAOChain.NativeGasToThorCoinCeil(cosmos.NewUint(15)).Amount.Uint64(),
+		Equals, uint64(2))
+	c.Assert(TAOChain.NativeGasToThorCoinCeil(cosmos.NewUint(19)).Amount.Uint64(),
+		Equals, uint64(2))
+	c.Assert(TAOChain.NativeGasToThorCoinCeil(cosmos.NewUint(0)).Amount.Uint64(),
+		Equals, uint64(0))
+	c.Assert(TAOChain.NativeGasToThorCoinCeil(cosmos.NewUint(10)).Decimals,
+		Equals, int64(9))
+
+	// Chains with decimal <= 8 take the no-ceil path.
+	c.Assert(BTCChain.NativeGasToThorCoinCeil(cosmos.NewUint(50_000_000)).Amount.Uint64(),
+		Equals, BTCChain.NativeGasToThorCoin(cosmos.NewUint(50_000_000)).Amount.Uint64())
 }

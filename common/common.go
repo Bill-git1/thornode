@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/blang/semver"
 )
@@ -15,9 +17,100 @@ func (o *ObservedTx) IsValid() bool {
 	return o != nil
 }
 
-// GetSignablePayload returns the data that is signed for verification
+// GetSignablePayload returns the data that is signed for verification.
+// When spent output refs are present (XMR outbound), they are appended
+// to the signed payload so all attestors commit to the same set.
 func (o *ObservedTx) GetSignablePayload() ([]byte, error) {
-	return o.Tx.Marshal()
+	txBz, err := o.Tx.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	if len(o.SpentOutputRefs) == 0 {
+		return txBz, nil
+	}
+
+	buf := make([]byte, 0, len(txBz)+len(o.SpentOutputRefs)*128)
+	buf = append(buf, txBz...)
+	for _, ref := range normalizeSpentOutputRefs(o.SpentOutputRefs) {
+		refBz, marshalErr := ref.Marshal()
+		if marshalErr != nil {
+			return nil, marshalErr
+		}
+		buf = append(buf, refBz...)
+	}
+	return buf, nil
+}
+
+// normalizeSpentOutputRefs returns a sorted copy of refs with the three
+// hex-encoded string fields lowercased and trimmed. Two attestors observing
+// the same XMR refs in different case must produce identical signed bytes;
+// canonicalising here means GetSignablePayload's `ref.Marshal()` always
+// sees the same form regardless of how bifrost surfaced the input.
+func normalizeSpentOutputRefs(refs []OutputRef) []OutputRef {
+	sorted := make([]OutputRef, len(refs))
+	for i, ref := range refs {
+		sorted[i] = OutputRef{
+			TxHash:      strings.ToLower(strings.TrimSpace(ref.TxHash)),
+			OutputIndex: ref.OutputIndex,
+			KeyImage:    strings.ToLower(strings.TrimSpace(ref.KeyImage)),
+			SpendTxHash: strings.ToLower(strings.TrimSpace(ref.SpendTxHash)),
+		}
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return spentOutputRefIdentity(sorted[i]) < spentOutputRefIdentity(sorted[j])
+	})
+	return sorted
+}
+
+func spentOutputRefIdentity(ref OutputRef) string {
+	return fmt.Sprintf(
+		"%s:%d:%s:%s",
+		strings.ToLower(strings.TrimSpace(ref.TxHash)),
+		ref.OutputIndex,
+		strings.ToLower(strings.TrimSpace(ref.KeyImage)),
+		strings.ToLower(strings.TrimSpace(ref.SpendTxHash)),
+	)
+}
+
+// SpentOutputRefIdentity returns the canonical identity for an XMR spent-output reference.
+func SpentOutputRefIdentity(ref OutputRef) string {
+	return spentOutputRefIdentity(ref)
+}
+
+func spentOutputRefsEqual(lhs, rhs []OutputRef) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+	if len(lhs) == 0 {
+		return true
+	}
+	lhs = normalizeSpentOutputRefs(lhs)
+	rhs = normalizeSpentOutputRefs(rhs)
+	for i := range lhs {
+		if spentOutputRefIdentity(lhs[i]) != spentOutputRefIdentity(rhs[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func spentOutputRefsIdentity(refs []OutputRef) string {
+	if len(refs) == 0 {
+		return ""
+	}
+	var buf bytes.Buffer
+	for _, ref := range normalizeSpentOutputRefs(refs) {
+		buf.WriteString(spentOutputRefIdentity(ref))
+		buf.WriteByte('|')
+	}
+	return buf.String()
+}
+
+func observedTxSpentRefsUniqueHash(base string, chain Chain, refs []OutputRef) string {
+	if !chain.Equals(XMRChain) || len(refs) == 0 {
+		return base
+	}
+	return fmt.Sprintf("%X", sha256.Sum256([]byte(base+"|"+spentOutputRefsIdentity(refs))))
 }
 
 // Equals compares two Attestation and returns true iff they are equal
@@ -310,7 +403,7 @@ func (a *AttestTx) GetAttestation() *Attestation {
 }
 
 func (a *AttestTx) GetSignablePayload() ([]byte, error) {
-	return a.ObsTx.Tx.Marshal()
+	return a.ObsTx.GetSignablePayload()
 }
 
 // Implement AttestMessage for AttestNetworkFee

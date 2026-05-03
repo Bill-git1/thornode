@@ -57,6 +57,7 @@ func export(out io.Writer, path string, routine int, failExportInvariants bool) 
 	appState, _ := export["app_state"].(map[string]any)
 	thorchain, _ := appState["thorchain"].(map[string]any)
 	delete(thorchain, "store_version")
+	deleteEmptySpentOutputRefs(thorchain)
 
 	// ignore node account version for comparison
 	nodeAccounts, _ := thorchain["node_accounts"].([]interface{})
@@ -145,6 +146,7 @@ func exportBlocks(out io.Writer, path string) error {
 		blocks = append(blocks, block)
 		f.Close()
 	}
+	deleteEmptyBlockSpentOutputRefs(blocks)
 
 	// check whether existing blocks export exists
 	_, err = os.Stat(blocksPath)
@@ -301,6 +303,11 @@ func checkExportChanges(out io.Writer, newExport map[string]any, path string) er
 	if err != nil {
 		localLog.Err(err).Msg("failed to decode existing export")
 	}
+	if appState, ok := oldExport["app_state"].(map[string]any); ok {
+		if thorchain, ok := appState["thorchain"].(map[string]any); ok {
+			deleteEmptySpentOutputRefs(thorchain)
+		}
+	}
 
 	// compare exports
 	log.Debug().Msg("Comparing exports")
@@ -333,6 +340,8 @@ func checkBlocksChanges(out io.Writer, newBlocks []openapi.BlockResponse, path s
 	if err != nil {
 		localLog.Err(err).Msg("failed to decode existing blocks")
 	}
+	deleteEmptyBlockSpentOutputRefs(oldBlocks)
+	deleteEmptyBlockSpentOutputRefs(newBlocks)
 
 	// compare blocks
 	diff := cmp.Diff(oldBlocks, newBlocks)
@@ -343,4 +352,36 @@ func checkBlocksChanges(out io.Writer, newBlocks []openapi.BlockResponse, path s
 
 	localLog.Info().Msg("Blocks export matches expected")
 	return nil
+}
+
+func deleteEmptyBlockSpentOutputRefs(blocks []openapi.BlockResponse) {
+	for i := range blocks {
+		for j := range blocks[i].Txs {
+			deleteEmptySpentOutputRefs(blocks[i].Txs[j].Tx)
+		}
+	}
+}
+
+func deleteEmptySpentOutputRefs(value any) {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		if refs, ok := v["spent_output_refs"]; ok && isEmptyJSONList(refs) {
+			delete(v, "spent_output_refs")
+		}
+		for _, child := range v {
+			deleteEmptySpentOutputRefs(child)
+		}
+	case []interface{}:
+		for _, child := range v {
+			deleteEmptySpentOutputRefs(child)
+		}
+	}
+}
+
+func isEmptyJSONList(value any) bool {
+	if value == nil {
+		return true
+	}
+	list, ok := value.([]interface{})
+	return ok && len(list) == 0
 }

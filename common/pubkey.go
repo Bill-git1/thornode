@@ -28,6 +28,7 @@ import (
 
 	adacommon "github.com/blinklabs-io/gouroboros/ledger/common"
 	xrpkm "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/xrp/keymanager"
+	"gitlab.com/thorchain/thornode/v3/common/crypto/ss58"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -226,6 +227,21 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 
 		// Encode the public key to base58 to get the Solana address
 		addressString = base58.Encode(pubBz)
+	case TAOChain, DOTChain:
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, p.String())
+		if err != nil {
+			return NoAddress, err
+		}
+
+		pubBz := pk.Bytes()
+		if len(pubBz) != 32 {
+			return NoAddress, fmt.Errorf("invalid pubkey length %d", len(pubBz))
+		}
+
+		addressString, err = ss58.Encode(chain.SS58Prefix(), pubBz)
+		if err != nil {
+			return NoAddress, fmt.Errorf("fail to SS58 encode address: %w", err)
+		}
 	case TRONChain:
 		pub, err := p.Secp256K1()
 		if err != nil {
@@ -244,6 +260,15 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 		checksum := sha256sum(sha256sum(addr))
 
 		addressString = base58.Encode(append(addr, checksum[:4]...))
+	case XMRChain:
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, p.String())
+		if err != nil {
+			return NoAddress, err
+		}
+		addressString, err = deriveXMRAddressFromSpendPubKey(pk.Bytes(), chainNetwork)
+		if err != nil {
+			return NoAddress, fmt.Errorf("fail to derive monero address from pubkey: %w", err)
+		}
 	case ZECChain:
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, p.String())
 		if err != nil {

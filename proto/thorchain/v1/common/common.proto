@@ -82,6 +82,15 @@ enum Status {
   reverted = 2;
 }
 
+message OutputRef {
+  option (gogoproto.stringer) = true;
+
+  string tx_hash = 1;
+  uint32 output_index = 2;
+  string key_image = 3;
+  string spend_tx_hash = 4;
+}
+
 message ObservedTx {
   Tx tx = 1 [ (gogoproto.nullable) = false ];
   Status status = 2;
@@ -97,6 +106,7 @@ message ObservedTx {
     (gogoproto.customtype) = "cosmossdk.io/math.Uint",
     (gogoproto.nullable) = true
   ];
+  repeated OutputRef spent_output_refs = 12 [ (gogoproto.nullable) = false ];
 }
 
 message Attestation {

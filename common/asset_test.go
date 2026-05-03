@@ -102,6 +102,16 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Check(asset.String(), Equals, "NOBLE.USDC")
 	c.Check(asset.IsGasAsset(), Equals, true) // USDC is gas asset for Noble
 
+	// XMR test
+	asset, err = NewAsset("xmr.xmr")
+	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
+	c.Check(asset.Chain.Equals(XMRChain), Equals, true)
+	c.Check(asset.Equals(XMRAsset), Equals, true)
+	c.Check(asset.IsRune(), Equals, false)
+	c.Check(asset.IsEmpty(), Equals, false)
+	c.Check(asset.String(), Equals, "XMR.XMR")
+
 	// btc/btc
 	asset, err = NewAsset("btc/btc")
 	c.Check(err, IsNil)
@@ -143,6 +153,10 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BTC.BTC")
+	asset, err = NewAssetWithShortCodes(semver.MustParse("999.0.0"), "m")
+	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
+	c.Check(asset.String(), Equals, "XMR.XMR")
 	asset, err = NewAssetWithShortCodes(semver.MustParse("999.0.0"), "BLAH.BLAH")
 	c.Assert(err, IsNil)
 	c.Check(asset.Valid(), IsNil)

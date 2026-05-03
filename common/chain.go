@@ -30,9 +30,12 @@ const (
 	XRPChain   = Chain("XRP")
 	SOLChain   = Chain("SOL")
 	ZECChain   = Chain("ZEC")
+	XMRChain   = Chain("XMR")
 	POLChain   = Chain("POL")
 	SUIChain   = Chain("SUI")
 	ADAChain   = Chain("ADA")
+	TAOChain   = Chain("TAO")
+	DOTChain   = Chain("DOT")
 
 	SigningAlgoSecp256k1 = SigningAlgo("secp256k1")
 	SigningAlgoEd25519   = SigningAlgo("ed25519")
@@ -54,7 +57,10 @@ var AllChains = [...]Chain{
 	XRPChain,
 	SOLChain,
 	ZECChain,
+	XMRChain,
 	POLChain,
+	TAOChain,
+	DOTChain,
 }
 
 type SigningAlgo string
@@ -94,6 +100,16 @@ func (c Chain) Equals(c2 Chain) bool {
 	return strings.EqualFold(c.String(), c2.String())
 }
 
+func (c Chain) OneOf(chains ...Chain) bool {
+	for _, chain := range chains {
+		if chain.Equals(c) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (c Chain) IsTHORChain() bool {
 	return c.Equals(THORChain)
 }
@@ -110,6 +126,13 @@ func GetEVMChains() []Chain {
 	return []Chain{ETHChain, AVAXChain, BSCChain, BASEChain, POLChain}
 }
 
+// GetSubstrateChains returns all "Substrate" chains connected to THORChain
+// "Substrate" is defined, in thornode's context, as a chain that:
+// - uses the generic "substrate" client
+func GetSubstrateChains() []Chain {
+	return []Chain{DOTChain, TAOChain}
+}
+
 // GetUTXOChains returns all "UTXO" chains connected to THORChain.
 func GetUTXOChains() []Chain {
 	return []Chain{BTCChain, LTCChain, BCHChain, DOGEChain, ZECChain}
@@ -122,6 +145,18 @@ func (c Chain) IsEVM() bool {
 	evmChains := GetEVMChains()
 	for _, evm := range evmChains {
 		if c.Equals(evm) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsSubstrate returns true if given chain is an Substrate chain.
+// See working definition of a "Substrate" chain in the
+// `GetSubstrateChains` function description
+func (c Chain) IsSubstrate() bool {
+	for _, chain := range GetSubstrateChains() {
+		if c.Equals(chain) {
 			return true
 		}
 	}
@@ -153,7 +188,7 @@ func (c Chain) String() string {
 // GetSigningAlgo get the signing algorithm for the given chain
 func (c Chain) GetSigningAlgo() SigningAlgo {
 	switch c {
-	case SOLChain, SUIChain, ADAChain:
+	case SOLChain, SUIChain, TAOChain, DOTChain, ADAChain, XMRChain:
 		return SigningAlgoEd25519
 	default:
 		return SigningAlgoSecp256k1
@@ -192,12 +227,18 @@ func (c Chain) GetGasAsset() Asset {
 		return XRPAsset
 	case SOLChain:
 		return SOLAsset
+	case TAOChain:
+		return TAOAsset
 	case ZECChain:
 		return ZECAsset
+	case XMRChain:
+		return XMRAsset
 	case POLChain:
 		return POLAsset
 	case SUIChain:
 		return SUIAsset
+	case DOTChain:
+		return DOTAsset
 	case ADAChain:
 		return ADAAsset
 	default:
@@ -234,6 +275,12 @@ func (c Chain) GetGasUnits() (gasRateUnits string, gasRateUnitsPerOne cosmos.Uin
 		return "mist", cosmos.NewUint(1e9)
 	case ADAChain:
 		return "lovelace", cosmos.NewUint(1e6)
+	case TAOChain:
+		return "rao", cosmos.NewUint(1e9)
+	case DOTChain:
+		return "planck", cosmos.NewUint(1e10)
+	case XMRChain:
+		return "piconero", cosmos.NewUint(1e12)
 	default:
 		return "", cosmos.OneUint() // Avoid any divide-by-zero.
 	}
@@ -251,17 +298,46 @@ func (c Chain) ThorchainToNativeGas(thorchain cosmos.Uint) cosmos.Uint {
 	return thorchain.Mul(gasRateUnitsPerOne).QuoUint64(One)
 }
 
-// GetGasAssetDecimal returns decimals for the gas asset of the given chain. Currently
-// Gaia is 1e6 and all others are 1e8. If an external chain's gas asset is larger than
-// 1e8, just return cosmos.DefaultCoinDecimals.
+// NativeGasToThorCoin converts native gas units to Coin with THORChain units (1e8).
+func (c Chain) NativeGasToThorCoin(native cosmos.Uint) Coin {
+	coin := NewCoin(c.GetGasAsset(), c.NativeGasToThorchain(native))
+	coin.Decimals = c.GetGasAssetDecimal()
+	return coin
+}
+
+// NativeGasToThorCoinCeil converts native gas units to Coin with THORChain
+// units (1e8).
+//
+// For chains whose gas asset has more decimals than THORChain,
+// floor-division in NativeGasToThorCoin can drop sub-1e8 precision.
+// In this case we add 1 unit to avoid under-reporting which could
+// mis-state vault solvency and risk failed broadcasts.
+func (c Chain) NativeGasToThorCoinCeil(native cosmos.Uint) Coin {
+	coin := c.NativeGasToThorCoin(native)
+
+	if c.GetGasAssetDecimal() > THORChainDecimals {
+		_, gasRateUnitsPerOne := c.GetGasUnits()
+		amount := coin.Amount.Mul(gasRateUnitsPerOne).QuoUint64(One)
+		if native.GT(amount) {
+			coin.Amount = coin.Amount.Add(cosmos.OneUint())
+		}
+	}
+
+	return coin
+}
+
+// GetGasAssetDecimal returns the precision THORNode uses when storing gas-asset amounts.
+// External chains are normalized to 1e8 unless they use fewer decimals natively.
 func (c Chain) GetGasAssetDecimal() int64 {
 	switch c {
 	case GAIAChain, NOBLEChain, TRONChain, ADAChain:
 		return 6
 	case XRPChain:
 		return 6
-	case SOLChain, SUIChain:
+	case SOLChain, SUIChain, TAOChain:
 		return 9
+	case DOTChain:
+		return 10
 	default:
 		return cosmos.DefaultCoinDecimals
 	}
@@ -270,6 +346,21 @@ func (c Chain) GetGasAssetDecimal() int64 {
 // IsValidAddress make sure the address is correct for the chain
 // And this also make sure mocknet doesn't use mainnet address vice versa
 func (c Chain) IsValidAddress(addr Address) bool {
+	if c.Equals(XMRChain) {
+		if !IsValidXMRAddress(addr.String()) {
+			return false
+		}
+		if info, ok := xmrAddressInfoFromString(addr.String()); ok && info.isFeatured {
+			if !isSupportedFeaturedNetworkByte(info.networkByte) {
+				return false
+			}
+		}
+		network := addr.GetNetwork(XMRChain)
+		if CurrentChainNetwork == MockNet {
+			return network == MockNet
+		}
+		return network != MockNet
+	}
 	network := CurrentChainNetwork
 	prefix := c.AddressPrefix(network)
 	return strings.HasPrefix(addr.String(), prefix)
@@ -279,6 +370,15 @@ func (c Chain) IsValidAddress(addr Address) bool {
 func (c Chain) AddressPrefix(cn ChainNetwork) string {
 	if c.IsEVM() {
 		return "0x"
+	}
+	if c.Equals(TAOChain) {
+		return "5" // SS58 prefix 42 addresses start with "5"
+	}
+	if c.Equals(DOTChain) {
+		if cn == MockNet {
+			return "5" // mocknet uses SS58 prefix 42 (shared with TAO)
+		}
+		return "1" // SS58 prefix 0 addresses start with "1"
 	}
 	switch cn {
 	case MockNet:
@@ -300,6 +400,8 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 			return "tm"
 		case ADAChain:
 			return "addr_test1"
+		case XMRChain:
+			return "4"
 		}
 	case MainNet, StageNet, ChainNet:
 		switch c {
@@ -319,6 +421,8 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 			return "t1"
 		case ADAChain:
 			return "addr1"
+		case XMRChain:
+			return "4"
 		}
 	}
 	return ""
@@ -362,12 +466,18 @@ func (c Chain) DustThreshold() cosmos.Uint {
 		return cosmos.NewUint(One) // 1 XRP
 	case SOLChain:
 		return cosmos.NewUint(100_000) // 0.001 SOL
+	case TAOChain:
+		return cosmos.NewUint(100_000) // 0.001 TAO
 	case TRONChain:
 		return cosmos.NewUint(10_000_000)
 	case SUIChain:
 		return cosmos.NewUint(1_000_000)
+	case DOTChain:
+		return cosmos.NewUint(2_000_000) // 0.02 DOT
 	case ADAChain:
 		return cosmos.NewUint(10_000_000)
+	case XMRChain:
+		return cosmos.NewUint(10_000)
 	default:
 		return cosmos.ZeroUint()
 	}
@@ -426,8 +536,40 @@ func (c Chain) DefaultCoinbase() float64 {
 		return 10000
 	case ZECChain:
 		return 1.5625
+	case XMRChain:
+		return 0.6
 	default:
 		return 0
+	}
+}
+
+// SS58Prefix returns the SS58 prefix for Substrate chains
+func (c Chain) SS58Prefix() byte {
+	// All local mocknet dev networks are using prefix: 42
+	if CurrentChainNetwork == MockNet {
+		return 42
+	}
+
+	switch c {
+	case TAOChain:
+		return 42
+	case DOTChain:
+		return 0
+	default:
+		return 0
+	}
+}
+
+func (c Chain) ExistentialDeposit() cosmos.Uint {
+	switch c {
+	case XRPChain:
+		return c.DustThreshold()
+	case DOTChain:
+		return cosmos.NewUint(One) // 1 DOT
+	case TAOChain:
+		return cosmos.NewUint(50) // 0.0000005 TAO
+	default:
+		return cosmos.ZeroUint()
 	}
 }
 
@@ -461,8 +603,14 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 		return 1_500
 	case SOLChain:
 		return 400
+	case TAOChain:
+		return 12_000
+	case DOTChain:
+		return 6_000
 	case ZECChain:
 		return 75_000
+	case XMRChain:
+		return 120_000
 	case POLChain:
 		return 2_000
 	case SUIChain:
@@ -488,6 +636,10 @@ func (c Chain) InboundNotes() string {
 		return "Broadcast a MsgDeposit to the THORChain network with the appropriate memo. Do not use multi-in, multi-out transactions."
 	case XRPChain:
 		return "Transfer the inbound_address the asset with the memo. Only a single memo is supported and only MemoData is used."
+	case TAOChain, DOTChain:
+		return "Transfer the asset to the inbound_address using Balances::transfer_keep_alive or transfer_allow_death. Include the memo as a System.remark call in a batch_all extrinsic. Do not use transfer_all."
+	case XMRChain:
+		return "Transfer the inbound_address the asset with the memo in tx extra. Do not batch unrelated transfers into one transaction."
 	default:
 		return ""
 	}

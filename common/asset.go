@@ -41,12 +41,19 @@ var (
 	SOLAsset = Asset{Chain: SOLChain, Symbol: "SOL", Ticker: "SOL", Synth: false}
 	// ZECAsset ZEC
 	ZECAsset = Asset{Chain: ZECChain, Symbol: "ZEC", Ticker: "ZEC", Synth: false}
+	// XMRAsset XMR
+	XMRAsset = Asset{Chain: XMRChain, Symbol: "XMR", Ticker: "XMR", Synth: false}
 	// POLAsset POL
 	POLAsset = Asset{Chain: POLChain, Symbol: "POL", Ticker: "POL", Synth: false}
 	// SUIAsset SUI
 	SUIAsset = Asset{Chain: SUIChain, Symbol: "SUI", Ticker: "SUI", Synth: false}
 	// ADAAsset ADA
 	ADAAsset = Asset{Chain: ADAChain, Symbol: "ADA", Ticker: "ADA", Synth: false}
+	// TAOAsset TAO
+	TAOAsset = Asset{Chain: TAOChain, Symbol: "TAO", Ticker: "TAO", Synth: false}
+	// DOTAsset DOT
+	DOTAsset = Asset{Chain: DOTChain, Symbol: "DOT", Ticker: "DOT", Synth: false}
+
 	// RuneNative RUNE on thorchain
 	RuneNative = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
 	TCY        = Asset{Chain: THORChain, Symbol: "TCY", Ticker: "TCY", Synth: false}
@@ -133,10 +140,13 @@ func NewAssetWithShortCodesV3_1_0(input string) (Asset, error) {
 	shorts[BaseETHAsset.ShortCode()] = BaseETHAsset.String()
 	shorts[TRXAsset.ShortCode()] = TRXAsset.String()
 	shorts[XRPAsset.ShortCode()] = XRPAsset.String()
+	shorts[XMRAsset.ShortCode()] = XMRAsset.String()
 	shorts[POLAsset.ShortCode()] = POLAsset.String()
 	shorts[SUIAsset.ShortCode()] = SUIAsset.String()
 	shorts[ADAAsset.ShortCode()] = ADAAsset.String()
 	shorts[ZECAsset.ShortCode()] = ZECAsset.String()
+	shorts[TAOAsset.ShortCode()] = TAOAsset.String()
+	shorts[DOTAsset.ShortCode()] = DOTAsset.String()
 
 	long, ok := shorts[input]
 	if ok {
@@ -171,6 +181,16 @@ func (a Asset) Valid() error {
 // Equals determinate whether two assets are equivalent
 func (a Asset) Equals(a2 Asset) bool {
 	return a.Chain.Equals(a2.Chain) && a.Symbol.Equals(a2.Symbol) && a.Ticker.Equals(a2.Ticker) && a.Synth == a2.Synth && a.Trade == a2.Trade && a.Secured == a2.Secured
+}
+
+func (a Asset) OneOf(assets ...Asset) bool {
+	for _, asset := range assets {
+		if a.Equals(asset) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (a Asset) GetChain() Chain {
@@ -339,15 +359,20 @@ func (a Asset) ShortCode() string {
 		return "x"
 	case "SOL.SOL":
 		return "o"
+	case "TAO.TAO":
+		return "ta"
 	case "ZEC.ZEC":
 		return "z"
+	case "XMR.XMR":
+		return "m"
 	case "POL.POL":
 		return "p"
 	case "SUI.SUI":
 		return "u"
+	case "DOT.DOT":
+		return "do"
 	case "ADA.ADA":
 		return "ad"
-
 	default:
 		return ""
 	}
