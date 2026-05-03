@@ -225,6 +225,7 @@
       "observed_tx_out_voters": null,
       "outbound_fee_spent_rune": [],
       "outbound_fee_withheld_rune": [],
+      "pol_reserve_deposits": [],
       "pools": null,
       "reference_memos": [],
       "reserve_contributors": null,
@@ -274,8 +275,7 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ],
-      "pol_reserve_deposits": []
+      ]
     },
     "upgrade": {},
     "wasm": {

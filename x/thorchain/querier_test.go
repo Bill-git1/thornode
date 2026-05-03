@@ -1291,6 +1291,21 @@ func (s *QuerierSuite) TestQuerySwap(c *C) {
 	err = s.mgr.Keeper().SetPool(s.ctx, poolETH)
 	c.Assert(err, IsNil)
 
+	s.mgr.Keeper().SetMimir(s.ctx, "EnableAdvSwapQueue", 1)
+	s.mgr.Keeper().SetMimir(s.ctx, "L1SlipMinBps", 1)
+	rapidDestination := GetRandomTHORAddress().String()
+	rapidQuote, err := s.queryServer.QuoteSwap(s.ctx, &types.QueryQuoteSwapRequest{
+		FromAsset:         common.BTCAsset.String(),
+		ToAsset:           common.RuneNative.String(),
+		Amount:            "100000000",
+		StreamingInterval: "0",
+		StreamingQuantity: "0",
+		Destination:       rapidDestination,
+	})
+	c.Assert(err, IsNil)
+	c.Assert(rapidQuote.MaxStreamingQuantity > 1, Equals, true)
+	c.Assert(rapidQuote.Memo, Equals, fmt.Sprintf("=:r:%s:0/0/%d", rapidDestination, rapidQuote.MaxStreamingQuantity))
+
 	var addressBTC, addressTHOR string
 
 	if common.CurrentChainNetwork == common.MockNet {

@@ -311,6 +311,7 @@
           "asset": "BTC.BTC"
         }
       ],
+      "pol_reserve_deposits": [],
       "pools": [
         {
           "LP_units": "124999268595",
@@ -393,8 +394,7 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ],
-      "pol_reserve_deposits": []
+      ]
     },
     "upgrade": {},
     "wasm": {

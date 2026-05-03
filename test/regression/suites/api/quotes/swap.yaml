@@ -794,7 +794,7 @@ params:
   affiliate_bps: 100/50/40
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:e:{{ addr_eth_fox }}::xx/yy/zz:100/50/40"
+  - .memo == "=:e:{{ addr_eth_fox }}:0/0/2:xx/yy/zz:100/50/40" # Rapid swap memo quote response.
   - .fees.affiliate == "195632"
 ---
 type: check
@@ -807,7 +807,7 @@ params:
   affiliate_bps: 0
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:e:{{ addr_eth_fox }}::xx:0"
+  - .memo == "=:e:{{ addr_eth_fox }}:0/0/2:xx:0" # Rapid swap memo quote response.
 ---
 ########################################################################################
 # Trade Asset swap quote with affiliate
@@ -910,7 +910,7 @@ params:
   amount: 1000000000
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:ETH.USDC:{{ addr_eth_fox }}" # Should use shortened form, not full contract address
+  - .memo == "=:ETH.USDC:{{ addr_eth_fox }}:0/0/196" # Should use shortened form, not full contract address
 ---
 ########################################################################################
 # Test insufficient funds, return error with recommended_min_amount_in

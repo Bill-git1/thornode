@@ -1012,13 +1012,19 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	// Quote rapid/auto streaming only when the advanced queue is enabled.
 	// In legacy mode, interval=0 is still a non-streaming swap.
 	shouldQuoteStreaming := streamingInterval > 0 || qs.mgr.Keeper().AdvSwapQueueEnabled(ctx)
+	autoStreamingQuantity := shouldQuoteStreaming && streamingQuantity == 0
 
 	// if we're using a streaming swap, calculate emit amount by a sub-swap amount instead
 	// of the full amount, then multiply the result by the swap count
-	if shouldQuoteStreaming && streamingQuantity == 0 {
+	if autoStreamingQuantity {
 		streamingQuantity = maxSwapQuantity
 	}
 	if shouldQuoteStreaming && streamingQuantity > 0 {
+		if autoStreamingQuantity && streamingInterval == 0 && streamingQuantity > 1 {
+			memo.StreamQuantity = streamingQuantity
+			memoString = memo.ShortString()
+			msg.Tx.Memo = memoString
+		}
 		msg.TradeTarget = msg.TradeTarget.QuoUint64(streamingQuantity)
 		// simulate the swap
 		var streamRes *types.QueryQuoteSwapResponse

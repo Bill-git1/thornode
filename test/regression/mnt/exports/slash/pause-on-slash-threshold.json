@@ -405,6 +405,7 @@
           "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
         }
       ],
+      "pol_reserve_deposits": [],
       "pools": [
         {
           "LP_units": "100000000000",
@@ -570,8 +571,7 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ],
-      "pol_reserve_deposits": []
+      ]
     },
     "upgrade": {},
     "wasm": {

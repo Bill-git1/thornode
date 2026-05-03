@@ -394,6 +394,7 @@
           "asset": "GAIA.NAMI"
         }
       ],
+      "pol_reserve_deposits": [],
       "pools": [
         {
           "LP_units": "200000000",
@@ -513,8 +514,7 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ],
-      "pol_reserve_deposits": []
+      ]
     },
     "upgrade": {},
     "wasm": {

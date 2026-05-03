@@ -371,6 +371,7 @@
           "asset": "ETH.ETH"
         }
       ],
+      "pol_reserve_deposits": [],
       "pools": [
         {
           "LP_units": "133333333333",
@@ -481,8 +482,7 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ],
-      "pol_reserve_deposits": []
+      ]
     },
     "upgrade": {},
     "wasm": {

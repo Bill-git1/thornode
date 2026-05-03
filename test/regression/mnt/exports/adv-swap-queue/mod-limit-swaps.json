@@ -235,7 +235,7 @@
               }
             ],
             "id": "0000000000000000000000000000000000000000000000000000000000000001",
-            "memo": "=<:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:500000000000000000",
+            "memo": "=\u003c:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:500000000000000000",
             "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
           },
           "version": 1
@@ -266,7 +266,7 @@
             "from_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
             "gas": null,
             "id": "33F61E5132E5C07FEA1CE5CC2098906EA2D5CD3B85316EC8FE7D94620424EB11",
-            "memo": "=<:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:8998438",
+            "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:8998438",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
           },
           "version": 1
@@ -297,7 +297,7 @@
             "from_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
             "gas": null,
             "id": "4E6778568B1B7C44E547C0E5D3A5471906138CF596CA2CDB01FAEBF6B99F80E5",
-            "memo": "=<:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:15000000",
+            "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:15000000",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
           },
           "version": 1
@@ -328,7 +328,7 @@
             "from_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
             "gas": null,
             "id": "6D08A8EF72B70000E64389BD0204ED05A0060104021D3D35A4C9257F4EFD3B0B",
-            "memo": "=<:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:5000000",
+            "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:5000000",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
           },
           "version": 1
@@ -359,7 +359,7 @@
             "from_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
             "gas": null,
             "id": "F866EEEE0263E4EAE18F9EA396BF12D253430B6056A4FAD34976A81D57B24833",
-            "memo": "=<:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:15000000",
+            "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:15000000",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
           },
           "version": 1
@@ -461,6 +461,7 @@
           "asset": "BTC.BTC"
         }
       ],
+      "pol_reserve_deposits": [],
       "pools": [
         {
           "LP_units": "100000000000",
@@ -537,8 +538,7 @@
           "status": "ActiveVault",
           "type": "AsgardVault"
         }
-      ],
-      "pol_reserve_deposits": []
+      ]
     },
     "upgrade": {},
     "wasm": {
