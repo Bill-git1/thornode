@@ -3,6 +3,7 @@ package thorchain
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -112,28 +113,50 @@ func (s *SlasherImpl) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, 
 	}
 
 	doubleBlockSignSlashPoints := s.keeper.GetConfigInt64(ctx, constants.DoubleBlockSignSlashPoints)
+
+	// First search active validators, then fall back to all validators with bond
+	// to handle churned-out validators whose evidence arrives after churn.
+	var nodeAddress cosmos.AccAddress
 	for _, pair := range validatorAddresses {
-		if addr.String() != pair.validatorAddress.String() {
-			continue
+		if addr.String() == pair.validatorAddress.String() {
+			nodeAddress = pair.nodeAddress
+			break
 		}
-
-		na, err := s.keeper.GetNodeAccount(ctx, pair.nodeAddress)
+	}
+	if nodeAddress.Empty() {
+		allValidators, err := s.keeper.ListValidatorsWithBond(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("fail to list validators with bond: %w", err)
 		}
-
-		slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
-			telemetry.NewLabel("address", na.NodeAddress.String()),
-			telemetry.NewLabel("reason", "double_block_sign"),
-		}))
-		if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, doubleBlockSignSlashPoints); err != nil {
-			ctx.Logger().Error("fail to increase node account slash point", "error", err, "address", na.NodeAddress.String())
+		for _, na := range allValidators {
+			pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+			if err != nil {
+				continue
+			}
+			if addr.String() == pk.Address().String() {
+				nodeAddress = na.NodeAddress
+				break
+			}
 		}
-
-		return s.keeper.SetNodeAccount(ctx, na)
+	}
+	if nodeAddress.Empty() {
+		return fmt.Errorf("could not find node account with validator address: %s", addr)
 	}
 
-	return fmt.Errorf("could not find active node account with validator address: %s", addr)
+	na, err := s.keeper.GetNodeAccount(ctx, nodeAddress)
+	if err != nil {
+		return err
+	}
+
+	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
+		telemetry.NewLabel("address", na.NodeAddress.String()),
+		telemetry.NewLabel("reason", "double_block_sign"),
+	}))
+	if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, doubleBlockSignSlashPoints); err != nil {
+		return fmt.Errorf("fail to increase node account slash point: %w", err)
+	}
+
+	return s.keeper.SetNodeAccount(ctx, na)
 }
 
 // HandleSuccessfulSign - decrement missing blocks from a validator for signing a block
@@ -552,6 +575,10 @@ func (s *SlasherImpl) getOriginalSwapDetails(ctx cosmos.Context, mgr Manager, in
 		return ObservedTx{}, SwapMemo{}, fmt.Errorf("could not cast to SwapMemo")
 	}
 
+	if len(voter.Tx.Tx.Coins) == 0 {
+		return ObservedTx{}, SwapMemo{}, fmt.Errorf("voter tx has no coins")
+	}
+
 	return voter.Tx, swapMemo, nil
 }
 
@@ -677,7 +704,7 @@ func (s *SlasherImpl) queueRecoverySwap(
 }
 
 // sendFailedSwapReverseSwap creates a reverse swap to refund the original sender when a swap outbound fails
-func (s *SlasherImpl) sendFailedSwapReverseSwap(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, originalTx ObservedTx, swapMemo SwapMemo) error {
+func (s *SlasherImpl) sendFailedSwapReverseSwap(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, originalTx ObservedTx, swapMemo SwapMemo, inboundHash common.TxID) error {
 	ctx.Logger().Info("attempting reverse swap for failed swap outbound", "hash", toi.InHash, "coin", toi.Coin)
 
 	// Determine destination address: use custom refund address if specified, otherwise original sender
@@ -697,7 +724,7 @@ func (s *SlasherImpl) sendFailedSwapReverseSwap(ctx cosmos.Context, mgr Manager,
 	// Queue reverse swap to original asset
 	targetAsset := originalTx.Tx.Coins[0].Asset
 	memo := fmt.Sprintf("=:%s:%s", targetAsset, destination)
-	return s.queueRecoverySwap(ctx, mgr, toi, vault, toi.InHash, targetAsset, destination, memo, "reverse_swap")
+	return s.queueRecoverySwap(ctx, mgr, toi, vault, inboundHash, targetAsset, destination, memo, "reverse_swap")
 }
 
 // sendFailedOutboundToTreasury creates a swap to convert failed outbound assets to RUNE
@@ -741,7 +768,7 @@ func (s *SlasherImpl) sendFailedOutboundToTreasury(ctx cosmos.Context, mgr Manag
 			"original_asset", originalTx.Tx.Coins[0].Asset,
 			"failed_asset", toi.Coin.Asset)
 
-		reverseErr := s.sendFailedSwapReverseSwap(ctx, mgr, toi, vault, originalTx, swapMemo)
+		reverseErr := s.sendFailedSwapReverseSwap(ctx, mgr, toi, vault, originalTx, swapMemo, inboundHash)
 		if reverseErr == nil {
 			// Reverse swap succeeded
 			return nil
@@ -949,14 +976,22 @@ func (s *SlasherImpl) updatePoolFromSlash(ctx cosmos.Context, pool types.Pool, s
 		ctx.Logger().Error("fail to save pool for slash", "asset", pool.Asset, "error", err)
 		return
 	}
+	stolenAmtInt64 := int64(math.MaxInt64)
+	if stolenAsset.Amount.Uint64() <= uint64(math.MaxInt64) {
+		stolenAmtInt64 = int64(stolenAsset.Amount.Uint64())
+	}
+	creditAmtInt64 := int64(math.MaxInt64)
+	if runeCreditAmt.Uint64() <= uint64(math.MaxInt64) {
+		creditAmtInt64 = int64(runeCreditAmt.Uint64())
+	}
 	poolSlashAmt := []PoolAmt{
 		{
 			Asset:  pool.Asset,
-			Amount: 0 - int64(stolenAsset.Amount.Uint64()),
+			Amount: 0 - stolenAmtInt64,
 		},
 		{
 			Asset:  common.RuneAsset(),
-			Amount: int64(runeCreditAmt.Uint64()),
+			Amount: creditAmtInt64,
 		},
 	}
 	eventSlash := NewEventSlash(pool.Asset, poolSlashAmt)
@@ -993,14 +1028,8 @@ func (s *SlasherImpl) needsNewVault(ctx cosmos.Context, mgr Manager, vault Vault
 				continue
 			}
 
-			for _, tx := range voter.Txs {
-				if !tx.Tx.ID.Equals(hash) {
-					continue
-				}
-				for _, signer := range tx.Signers {
-					// Uniquely record each signer for this outbound hash.
-					signers[signer] = true
-				}
+			for _, signer := range tx1.Signers {
+				signers[signer] = true
 			}
 		}
 		if len(signers) > 0 {
