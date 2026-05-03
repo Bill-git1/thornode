@@ -100,11 +100,7 @@ func setupTestGossip(t *testing.T) (*AttestationGossip, *MockHost, *MockKeys, *M
 		},
 	}
 
-	bridge := &MockThorchainBridge{
-		getKeysignPartyFunc: func(pubKey common.PubKey) (common.PubKeys, error) {
-			return common.PubKeys{pubKey, pubkey2, pubkey3}, nil
-		},
-	}
+	bridge := &MockThorchainBridge{}
 
 	eventClient := NewMockEventClient()
 
@@ -124,16 +120,15 @@ func setupTestGossip(t *testing.T) (*AttestationGossip, *MockHost, *MockKeys, *M
 
 	// Create the attestation gossip directly without calling NewAttestationGossip
 	ag := &AttestationGossip{
-		logger:               getTestLogger(t),
-		host:                 host,
-		privKey:              privKey,
-		pubKey:               privKey.PubKey().Bytes(),
-		grpcClient:           grpcClient,
-		config:               cfg,
-		bridge:               bridge,
-		eventClient:          eventClient,
-		cachedKeySignParties: make(map[common.PubKey]cachedKeySignParty),
-		batcher:              batcher,
+		logger:      getTestLogger(t),
+		host:        host,
+		privKey:     privKey,
+		pubKey:      privKey.PubKey().Bytes(),
+		grpcClient:  grpcClient,
+		config:      cfg,
+		bridge:      bridge,
+		eventClient: eventClient,
+		batcher:     batcher,
 
 		observedTxs: make(map[txKey]*AttestationState[*common.ObservedTx]),
 		networkFees: make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
@@ -221,69 +216,6 @@ func TestActiveValidatorCount(t *testing.T) {
 	assert.True(t, ag.isActiveValidator(peer1))
 	assert.True(t, ag.isActiveValidator(peer2))
 	assert.False(t, ag.isActiveValidator(peer3))
-}
-
-// TestGetKeysignParty tests retrieving and caching the keysign party
-func TestGetKeysignParty(t *testing.T) {
-	ag, _, _, _, bridge, _ := setupTestGossip(t)
-
-	t.Run("returns cached value if available", func(t *testing.T) {
-		pubKey := common.PubKey("pubkey1")
-
-		// First call should go to the bridge
-		callCount := 0
-		bridge.getKeysignPartyFunc = func(key common.PubKey) (common.PubKeys, error) {
-			callCount++
-			return common.PubKeys{pubKey, "pubkey2", "pubkey3"}, nil
-		}
-
-		result1, err := ag.getKeysignParty(pubKey)
-		require.NoError(t, err)
-		assert.Equal(t, 1, callCount)
-		assert.Len(t, result1, 3)
-
-		// Second call should use cache
-		result2, err := ag.getKeysignParty(pubKey)
-		require.NoError(t, err)
-		assert.Equal(t, 1, callCount) // Still 1, not incremented
-		assert.Len(t, result2, 3)
-	})
-
-	t.Run("cache expires after TTL", func(t *testing.T) {
-		pubKey := common.PubKey("expiring-key")
-
-		callCount := 0
-		bridge.getKeysignPartyFunc = func(key common.PubKey) (common.PubKeys, error) {
-			callCount++
-			return common.PubKeys{pubKey, "pubkey2", "pubkey3"}, nil
-		}
-
-		// First call - should hit the bridge
-		_, err := ag.getKeysignParty(pubKey)
-		require.NoError(t, err)
-		assert.Equal(t, 1, callCount)
-
-		// Manually expire the cache entry by setting the time in the past
-		ag.cachedKeySignMu.Lock()
-		cached := ag.cachedKeySignParties[pubKey]
-		cached.lastUpdated = time.Now().Add(-2 * cachedKeysignPartyTTL)
-		ag.cachedKeySignParties[pubKey] = cached
-		ag.cachedKeySignMu.Unlock()
-
-		// Now simulate the pruning that would happen in the Start method
-		ag.cachedKeySignMu.Lock()
-		for pk, cached := range ag.cachedKeySignParties {
-			if time.Since(cached.lastUpdated) > cachedKeysignPartyTTL {
-				delete(ag.cachedKeySignParties, pk)
-			}
-		}
-		ag.cachedKeySignMu.Unlock()
-
-		// Next call should hit the bridge again
-		_, err = ag.getKeysignParty(pubKey)
-		require.NoError(t, err)
-		assert.Equal(t, 2, callCount)
-	})
 }
 
 // TestAttestObservedTx tests attesting to an observed transaction
@@ -387,7 +319,7 @@ func TestAttestObservedTx(t *testing.T) {
 
 // TestHandleObservedTxAttestation tests handling an observed transaction attestation
 func TestHandleObservedTxAttestation(t *testing.T) {
-	ag, _, _, grpcClient, bridge, _ := setupTestGossip(t)
+	ag, _, _, grpcClient, _, _ := setupTestGossip(t)
 
 	// Override verifySignature for testing
 	origVerifySignature := verifySignature
@@ -408,7 +340,7 @@ func TestHandleObservedTxAttestation(t *testing.T) {
 				ID:    "tx-quorum",
 				Chain: common.BSCChain,
 			},
-			ObservedPubKey: "pubkey1", // Important for keysign party lookup
+			ObservedPubKey: "pubkey1",
 		}
 
 		pub1, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, privKey1.PubKey())
@@ -417,11 +349,6 @@ func TestHandleObservedTxAttestation(t *testing.T) {
 		require.NoError(t, err)
 		pub3, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, privKey3.PubKey())
 		require.NoError(t, err)
-
-		// Set up keysign party mock
-		bridge.getKeysignPartyFunc = func(pubKey common.PubKey) (common.PubKeys, error) {
-			return common.PubKeys{"pubkey1", "pubkey2", "pubkey3", "pubkey4"}, nil
-		}
 
 		// Set up GRPC client mock to capture the sent tx
 		var sentTxs []*common.QuorumTx

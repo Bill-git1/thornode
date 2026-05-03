@@ -50,8 +50,6 @@ func (s *ThorchainSuite) SetUpTest(c *C) {
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/status/status.json")
 		case strings.HasPrefix(req.RequestURI, KeysignEndpoint):
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/keysign/template.json")
-		case strings.HasPrefix(req.RequestURI, "/thorchain/vaults") && strings.HasSuffix(req.RequestURI, "/signers"):
-			httpTestHandler(c, rw, "../../test/fixtures/endpoints/tss/keysign_party.json")
 		case strings.HasPrefix(req.RequestURI, AsgardVault):
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/vaults/asgard.json")
 		case strings.HasPrefix(req.RequestURI, PubKeysEndpoint):
@@ -246,13 +244,6 @@ func (s *ThorchainSuite) TestEnsureNodeWhitelisted_Fail(c *C) {
 	s.nodeAccountFixture = "../../test/fixtures/endpoints/nodeaccount/disabled.json"
 	err := s.bridge.EnsureNodeWhitelisted()
 	c.Assert(err, NotNil)
-}
-
-func (s *ThorchainSuite) TestGetKeysignParty(c *C) {
-	pubKey := stypes.GetRandomPubKey()
-	pubKeys, err := s.bridge.GetKeysignParty(pubKey)
-	c.Assert(err, IsNil)
-	c.Assert(pubKeys, HasLen, 3)
 }
 
 func (s *ThorchainSuite) TestIsCatchingUp(c *C) {

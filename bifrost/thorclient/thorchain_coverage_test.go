@@ -65,8 +65,6 @@ func (s *CoverageSuite) SetUpTest(c *C) {
 			httpTestHandler(c, rw, s.vaultFixture)
 		case strings.HasPrefix(req.RequestURI, AsgardVault):
 			httpTestHandler(c, rw, s.vaultFixture)
-		case strings.HasPrefix(req.RequestURI, "/thorchain/vaults") && strings.HasSuffix(req.RequestURI, "/signers"):
-			httpTestHandler(c, rw, "../../test/fixtures/endpoints/tss/keysign_party.json")
 		case strings.HasPrefix(req.RequestURI, PubKeysEndpoint):
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/vaults/pubKeys.json")
 		case strings.HasPrefix(req.RequestURI, PoolsEndpoint):
@@ -1311,19 +1309,6 @@ func (s *CoverageSuite) TestGetNetworkFee_UnmarshalError(c *C) {
 
 	s.bridge.cfg.ChainHost = badServer.Listener.Addr().String()
 	_, _, err := s.bridge.GetNetworkFee(common.ETHChain)
-	c.Assert(err, NotNil)
-}
-
-func (s *CoverageSuite) TestGetKeysignParty_GetError(c *C) {
-	errServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		rw.WriteHeader(http.StatusBadRequest)
-		_, _ = rw.Write([]byte("bad request"))
-	}))
-	defer errServer.Close()
-
-	s.bridge.cfg.ChainHost = errServer.Listener.Addr().String()
-	s.bridge.httpClient.RetryMax = 0
-	_, err := s.bridge.GetKeysignParty(stypes.GetRandomPubKey())
 	c.Assert(err, NotNil)
 }
 

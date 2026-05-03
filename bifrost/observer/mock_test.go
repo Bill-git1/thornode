@@ -224,11 +224,6 @@ func (m *MockGRPCClient) SendQuorumPriceFeedBatch(ctx context.Context, batch *co
 
 type MockThorchainBridge struct {
 	thorclient.ThorchainBridge
-	getKeysignPartyFunc func(pubKey common.PubKey) (common.PubKeys, error)
-}
-
-func (m *MockThorchainBridge) GetKeysignParty(pubKey common.PubKey) (common.PubKeys, error) {
-	return m.getKeysignPartyFunc(pubKey)
 }
 
 func (m *MockThorchainBridge) GetMimir(key string) (int64, error) {
@@ -351,10 +346,6 @@ func (m *MockThorchainBridge2) GetMimir(key string) (int64, error) {
 		return m.getMimirFunc(key)
 	}
 	return 0, nil
-}
-
-func (m *MockThorchainBridge2) GetKeysignParty(pubKey common.PubKey) (common.PubKeys, error) {
-	return nil, nil
 }
 
 // Define a custom pipe that implements the stream interface

@@ -326,7 +326,7 @@ func TestAttestableItemImplementation(t *testing.T) {
 
 // TestRefactoredHandlersIntegration tests the refactored handlers integration
 func TestRefactoredHandlersIntegration(t *testing.T) {
-	ag, _, _, grpcClient, bridge, _ := setupTestGossip(t)
+	ag, _, _, grpcClient, _, _ := setupTestGossip(t)
 
 	// Override verifySignature for testing
 	origVerifySignature := verifySignature
@@ -351,11 +351,6 @@ func TestRefactoredHandlersIntegration(t *testing.T) {
 
 		// Set active validators
 		ag.setActiveValidators([]common.PubKey{common.PubKey(pub1), common.PubKey(pub2), common.PubKey(pub3)})
-
-		// Setup bridge mock
-		bridge.getKeysignPartyFunc = func(pubKey common.PubKey) (common.PubKeys, error) {
-			return common.PubKeys{"pubkey1", "pubkey2", "pubkey3", "pubkey4"}, nil
-		}
 
 		// Track sent messages for each type
 		var sentTxs []*common.QuorumTx

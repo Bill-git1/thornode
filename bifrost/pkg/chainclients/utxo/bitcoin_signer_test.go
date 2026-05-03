@@ -97,17 +97,13 @@ func (s *BitcoinSignerSuite) SetUpTest(c *C) {
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if req.RequestURI == "/thorchain/vaults/tthorpub1addwnpepqwznsrgk2t5vn2cszr6ku6zned6tqxknugzw3vhdcjza284d7djp5rql6vn/signers" { // nolint
-			_, err := rw.Write([]byte("[]"))
-			c.Assert(err, IsNil)
-		} else if strings.HasPrefix(req.RequestURI, "/thorchain/vaults") && strings.HasSuffix(req.RequestURI, "/signers") {
-			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/tss/keysign_party.json")
-		} else if req.RequestURI == thorclient.LastBlockEndpoint {
+		switch {
+		case req.RequestURI == thorclient.LastBlockEndpoint:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/lastblock/btc.json")
-		} else if req.RequestURI == thorclient.ChainVersionEndpoint {
+		case req.RequestURI == thorclient.ChainVersionEndpoint:
 			_, err := rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
 			c.Assert(err, IsNil)
-		} else {
+		default:
 			r := struct {
 				Method string `json:"method"`
 			}{}

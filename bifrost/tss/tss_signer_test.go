@@ -73,9 +73,6 @@ func (m *mockBridgeForKeysign) GetKeygenStdTx(common.PubKey, []byte, []byte, []s
 	return nil, nil
 }
 
-func (m *mockBridgeForKeysign) GetKeysignParty(common.PubKey) (common.PubKeys, error) {
-	return nil, nil
-}
 func (m *mockBridgeForKeysign) GetMimir(string) (int64, error)                { return 0, nil }
 func (m *mockBridgeForKeysign) GetMimirWithRef(string, string) (int64, error) { return 0, nil }
 func (m *mockBridgeForKeysign) GetInboundOutbound(common.ObservedTxs) (common.ObservedTxs, common.ObservedTxs, error) {

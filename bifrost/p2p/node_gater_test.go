@@ -127,9 +127,6 @@ func (m *MockThorchainBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1
 	return nil, nil
 }
 
-func (m *MockThorchainBridge) GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error) {
-	return nil, nil
-}
 func (m *MockThorchainBridge) GetMimirWithRef(template, ref string) (int64, error) { return 0, nil }
 func (m *MockThorchainBridge) GetInboundOutbound(txIns common.ObservedTxs) (common.ObservedTxs, common.ObservedTxs, error) {
 	return nil, nil, nil

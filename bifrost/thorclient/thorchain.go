@@ -45,7 +45,6 @@ const (
 	LastBlockEndpoint           = "/thorchain/lastblock"
 	NodeAccountEndpoint         = "/thorchain/node"
 	NodeAccountsEndpoint        = "/thorchain/nodes"
-	SignerMembershipEndpoint    = "/thorchain/vaults/%s/signers"
 	StatusEndpoint              = "/status"
 	VaultEndpoint               = "/thorchain/vault/%s"
 	AsgardVault                 = "/thorchain/vaults/asgard"
@@ -88,7 +87,6 @@ type ThorchainBridge interface {
 	GetContractAddress() ([]PubKeyContractAddressPair, error)
 	GetErrataMsg(txID common.TxID, chain common.Chain) sdk.Msg
 	GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []stypes.Blame, inputPks common.PubKeys, keygenType stypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte) (sdk.Msg, error)
-	GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error)
 	GetMimir(key string) (int64, error)
 	GetMimirWithRef(template, ref string) (int64, error)
 	GetInboundOutbound(txIns common.ObservedTxs) (common.ObservedTxs, common.ObservedTxs, error)
@@ -472,20 +470,6 @@ func (b *thorchainBridge) FetchNodeStatus() (stypes.NodeStatus, error) {
 		return stypes.NodeStatus_Unknown, fmt.Errorf("failed to get node status: %w", err)
 	}
 	return na.Status, nil
-}
-
-// GetKeysignParty call into thorchain to get the node accounts that should be join together to sign the message
-func (b *thorchainBridge) GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error) {
-	p := fmt.Sprintf(SignerMembershipEndpoint, vaultPubKey.String())
-	result, _, err := b.getWithPath(p)
-	if err != nil {
-		return common.PubKeys{}, fmt.Errorf("fail to get key sign party from thorchain: %w", err)
-	}
-	var keys common.PubKeys
-	if err = json.Unmarshal(result, &keys); err != nil {
-		return common.PubKeys{}, fmt.Errorf("fail to unmarshal result to pubkeys:%w", err)
-	}
-	return keys, nil
 }
 
 // IsCatchingUp returns bool for if thorchain is catching up to the rest of the
