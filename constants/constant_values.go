@@ -128,6 +128,7 @@ const (
 	TradeAccountsDepositEnabled
 	SecuredAssetSlipMinBps
 	StableSlipMinBps
+	WasmArbSlipMinBps
 	EVMDisableContractWhitelist
 	OperationalVotesMin
 	RUNEPoolEnabled
@@ -171,6 +172,7 @@ const (
 	ModifyLimitSwapMaxIterations
 	POLReserveSystemIncomeBps
 	POLReserveMaxDeployment
+	WasmArbContract
 
 	// These are the implicitly-0 Constants undisplayed in the API endpoint (no explicit value set).
 	ArtificialRagnarokBlockHeight

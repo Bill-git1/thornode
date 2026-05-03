@@ -1730,23 +1730,47 @@ func (s *HelperSuite) TestGetMinSlipBpsStableOverride(c *C) {
 	k.SetMimir(ctx, "L1SlipMinBps", 10)
 
 	// Without stable override, should return L1 min bps
-	result := getMinSlipBps(ctx, k, busd, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	result := getMinSlipBps(ctx, k, common.NoAddress, busd, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
 	c.Assert(result.Uint64(), Equals, uint64(10))
 
 	// With stable override but StableSlipMinBps=0, should fall through to L1
-	result = getMinSlipBps(ctx, k, busd, true, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	result = getMinSlipBps(ctx, k, common.NoAddress, busd, true, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
 	c.Assert(result.Uint64(), Equals, uint64(10))
 
 	// Set StableSlipMinBps to 3
 	k.SetMimir(ctx, "StableSlipMinBps", 3)
 
 	// With stable override and non-zero StableSlipMinBps, should return stable value
-	result = getMinSlipBps(ctx, k, busd, true, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	result = getMinSlipBps(ctx, k, common.NoAddress, busd, true, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
 	c.Assert(result.Uint64(), Equals, uint64(3))
 
 	// Without stable override, should still return L1 value
-	result = getMinSlipBps(ctx, k, busd, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	result = getMinSlipBps(ctx, k, common.NoAddress, busd, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
 	c.Assert(result.Uint64(), Equals, uint64(10))
+}
+
+func (s *HelperSuite) TestGetMinSlipBpsWasmArbContract(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+
+	busd, _ := common.NewAsset("ETH.BUSD-BD1")
+	k.SetMimir(ctx, "L1SlipMinBps", 25)
+
+	wasmArbAddr, err := common.NewAddress("thor1n5a08r0zvmqca39ka2tgwlkjy9ugalutk7fjpzptfppqcccnat2ska5t4g")
+	c.Assert(err, IsNil)
+
+	// Default WasmArbSlipMinBps should be 10
+	result := getMinSlipBps(ctx, k, wasmArbAddr, busd, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	c.Assert(result.Uint64(), Equals, uint64(10))
+
+	// Operational mimir override should take effect
+	k.SetMimir(ctx, "WasmArbSlipMinBps", 7)
+	result = getMinSlipBps(ctx, k, wasmArbAddr, busd, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	c.Assert(result.Uint64(), Equals, uint64(7))
+
+	// Non-arb addresses still use the asset-class min slip
+	result = getMinSlipBps(ctx, k, common.NoAddress, common.Asset{}, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	c.Assert(result.Uint64(), Equals, uint64(25))
 }
 
 // TestGetMinSlipBpsDynamicOverridesStable verifies that an active dynamic fee
@@ -1785,20 +1809,20 @@ func (s *HelperSuite) TestGetMinSlipBpsDynamicOverridesStable(c *C) {
 	affBps := []cosmos.Uint{cosmos.NewUint(100)}
 
 	// stableOverride=true, dynamic record present → dynamic wins (25) over stable (3).
-	result := getMinSlipBps(ctx, k, btc, true, affiliates, affBps, btc, common.RuneAsset(), dfm)
+	result := getMinSlipBps(ctx, k, common.NoAddress, btc, true, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(25))
 
 	// stableOverride=false, dynamic record present → dynamic wins (25) over L1 default (10).
-	result = getMinSlipBps(ctx, k, btc, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
+	result = getMinSlipBps(ctx, k, common.NoAddress, btc, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(25))
 
 	// Clear dynamic record → stable override should now apply (3).
 	c.Assert(k.DeleteDynamicFeeRecord(ctx, "mytn", pairA, pairB), IsNil)
-	result = getMinSlipBps(ctx, k, btc, true, affiliates, affBps, btc, common.RuneAsset(), dfm)
+	result = getMinSlipBps(ctx, k, common.NoAddress, btc, true, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(3))
 
 	// No dynamic record, no stable override → L1 default (10).
-	result = getMinSlipBps(ctx, k, btc, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
+	result = getMinSlipBps(ctx, k, common.NoAddress, btc, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(10))
 }
 
@@ -1851,12 +1875,12 @@ func (s *HelperSuite) TestGetMinSlipBpsNonL1IgnoresDynamic(c *C) {
 
 	// For each non-L1 asset, a non-nil dfm with affiliates must still produce
 	// the asset-type mimir value (not the dynamic 77 bps).
-	result := getMinSlipBps(ctx, k, synthBTC, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
+	result := getMinSlipBps(ctx, k, common.NoAddress, synthBTC, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(20))
 
-	result = getMinSlipBps(ctx, k, tradeBTC, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
+	result = getMinSlipBps(ctx, k, common.NoAddress, tradeBTC, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(30))
 
-	result = getMinSlipBps(ctx, k, derivedBTC, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
+	result = getMinSlipBps(ctx, k, common.NoAddress, derivedBTC, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(40))
 }

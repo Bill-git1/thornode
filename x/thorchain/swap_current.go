@@ -344,7 +344,7 @@ func (s *SwapperImpl) swapOne(ctx cosmos.Context,
 	swapEvt.PoolSlip = swapSlipBps
 
 	// the non-RUNE asset is used to determine which min slip to use
-	minSlipBps := getMinSlipBps(ctx, mgr.Keeper(), minSlipAsset, stableOverride, affiliates, affiliateBps, source, target, mgr.DynamicFeeMgr())
+	minSlipBps := getMinSlipBps(ctx, mgr.Keeper(), tx.FromAddress, minSlipAsset, stableOverride, affiliates, affiliateBps, source, target, mgr.DynamicFeeMgr())
 
 	var (
 		emitAssets   cosmos.Uint

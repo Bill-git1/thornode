@@ -474,7 +474,7 @@ func (vm *SwapQueueAdv) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sour
 		}
 
 		// get the configured min slip for this asset
-		minSlip := getMinSlipBps(ctx, vm.k, asset, stableSwap, swapAffiliates, swapAffiliateBps, legSource, legTarget, mgr.DynamicFeeMgr())
+		minSlip := getMinSlipBps(ctx, vm.k, common.NoAddress, asset, stableSwap, swapAffiliates, swapAffiliateBps, legSource, legTarget, mgr.DynamicFeeMgr())
 		if minSlip.IsZero() {
 			continue
 		}

@@ -125,6 +125,7 @@ func NewConstantValue() *ConstantVals {
 			SynthSlipMinBps:                     0,                  // Minimum synth asset swap fee in basis points
 			DerivedSlipMinBps:                   0,                  // Minimum derived asset swap fee in basis points
 			StableSlipMinBps:                    0,                  // Minimum swap fee in basis points for stable-to-stable swaps
+			WasmArbSlipMinBps:                   10,                 // Minimum swap fee in basis points for swaps originating from WasmArbContract
 			SlipMinBpsMax:                       100,                // Maximum slip min bps for all asset types
 			RUNEPoolEnabled:                     0,                  // enable/disable RUNE Pool
 			RUNEPoolDepositMaturityBlocks:       14400 * 90,         // blocks from last deposit to allow withdraw
@@ -175,6 +176,7 @@ func NewConstantValue() *ConstantVals {
 			MarketingFundAddress: "thor1usj8cqjmjea32csxn5fma96ffeulln40gyrahn", // marketing fund address for ADR 21
 			OverSolvencyAddress:  "thor1lhufh0mwasa0lk9udppdegmvnkgqt08f0m9p5g", // over-solvency sweep destination address
 			RequiredPriceFeeds:   "ATOM,AVAX,BCH,BNB,BTC,DOGE,ETH,LTC,RUNE,SOL,TRX,USDC,USDT,XRP,ZEC",
+			WasmArbContract:      "thor1n5a08r0zvmqca39ka2tgwlkjy9ugalutk7fjpzptfppqcccnat2ska5t4g", // deployed instance of https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-thorchain-swap
 		},
 	}
 }

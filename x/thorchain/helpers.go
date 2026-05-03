@@ -218,7 +218,7 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 		// Honor any dynamic floor for this thorname/pair so sub-swaps sized
 		// below the dynamic minimum aren't carved out here only to be charged
 		// the floor at swap time.
-		minSlip := getMinSlipBps(ctx, mgr.Keeper(), asset, stableSwap, affiliates, affiliateBps, legSource, legTarget, mgr.DynamicFeeMgr())
+		minSlip := getMinSlipBps(ctx, mgr.Keeper(), common.NoAddress, asset, stableSwap, affiliates, affiliateBps, legSource, legTarget, mgr.DynamicFeeMgr())
 		if minSlip.IsZero() {
 			continue
 		}
@@ -314,6 +314,7 @@ func isStableToStable(ctx cosmos.Context, k keeper.Keeper, source, target common
 func getMinSlipBps(
 	ctx cosmos.Context,
 	k keeper.Keeper,
+	from common.Address,
 	asset common.Asset,
 	stableOverride bool,
 	affiliates []string,
@@ -321,6 +322,17 @@ func getMinSlipBps(
 	sourceAsset, targetAsset common.Asset,
 	dynamicFeeMgr DynamicFeeManager,
 ) cosmos.Uint {
+	wasmArbContract := k.GetConstants().GetStringValue(constants.WasmArbContract)
+	if !from.IsEmpty() && !asset.IsEmpty() && wasmArbContract != "" && strings.EqualFold(from.String(), wasmArbContract) {
+		return cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.WasmArbSlipMinBps))
+	}
+	if !from.IsEmpty() && !asset.IsEmpty() && wasmArbContract != "" {
+		wasmArbAddr, err := common.NewAddress(wasmArbContract)
+		if err == nil && from.Equals(wasmArbAddr) {
+			return cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.WasmArbSlipMinBps))
+		}
+	}
+
 	var ref constants.ConstantName
 	switch {
 	case asset.IsSyntheticAsset():

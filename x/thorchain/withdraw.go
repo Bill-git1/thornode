@@ -230,7 +230,7 @@ func calculateWithdraw(ctx cosmos.Context, keeper keeper.Keeper, poolAsset commo
 	}
 
 	swapSlipBps := swapper.CalcSwapSlip(X, x)
-	minSlipBps := getMinSlipBps(ctx, keeper, poolAsset, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
+	minSlipBps := getMinSlipBps(ctx, keeper, common.NoAddress, poolAsset, false, nil, nil, common.EmptyAsset, common.EmptyAsset, nil)
 	// Being for a non-Savers asymmetric liquidity action, MinSlipBps should always be for an L1 swap.
 	y, liqFee, _ := swapper.GetSwapCalc(X, x, Y, swapSlipBps, minSlipBps)
 	outputAmount := y.Add(yAdd)
