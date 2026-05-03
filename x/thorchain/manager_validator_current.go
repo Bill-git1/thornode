@@ -333,6 +333,7 @@ func (vm *ValidatorMgr) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Validat
 		retiring, err = vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
 		if err != nil {
 			ctx.Logger().Error("fail to get retiring vaults", "error", err)
+			return nil
 		}
 
 		if len(retiring) == 0 { // wait until all funds are migrated before starting ragnarok
@@ -645,10 +646,16 @@ func (vm *ValidatorMgr) processRagnarok(ctx cosmos.Context, mgr Manager) error {
 
 	if ragnarokHeight == 0 {
 		ragnarokHeight = ctx.BlockHeight()
-		vm.k.SetRagnarokBlockHeight(ctx, ragnarokHeight)
-		if err = vm.distributeBondReward(ctx, mgr); err != nil {
+		// Use CacheContext for atomicity: distributeBondReward commits each
+		// node payout independently, so a partial failure would otherwise leave
+		// some nodes paid while ragnarokHeight remains 0, causing duplicate
+		// payouts on retry.
+		cacheCtx, commit := ctx.CacheContext()
+		if err = vm.distributeBondReward(cacheCtx, mgr); err != nil {
 			return fmt.Errorf("when ragnarok triggered, fail to give all active node bond reward %w", err)
 		}
+		vm.k.SetRagnarokBlockHeight(cacheCtx, ragnarokHeight)
+		commit()
 		return nil
 	}
 
@@ -663,7 +670,7 @@ func (vm *ValidatorMgr) processRagnarok(ctx cosmos.Context, mgr Manager) error {
 	}
 	if !position.IsEmpty() {
 		if err = vm.ragnarokPools(ctx, nth, mgr); err != nil {
-			ctx.Logger().Error("fail to ragnarok pools", "error", err)
+			return fmt.Errorf("fail to ragnarok pools: %w", err)
 		}
 		return nil
 	}
@@ -687,8 +694,7 @@ func (vm *ValidatorMgr) processRagnarok(ctx cosmos.Context, mgr Manager) error {
 
 	nth++ // increment by 1
 	ctx.Logger().Info("starting next ragnarok iteration", "iteration", nth)
-	err = vm.ragnarokProtocolStage2(ctx, nth, mgr)
-	if err != nil {
+	if err = vm.ragnarokProtocolStage2(ctx, nth, mgr); err != nil {
 		ctx.Logger().Error("fail to execute ragnarok protocol step 2", "error", err)
 		return err
 	}
@@ -722,17 +728,22 @@ func (vm *ValidatorMgr) ragnarokProtocolStage2(ctx cosmos.Context, nth int64, mg
 	// 1) THORNode will refund the validator's bond
 	// 2) return all fund to liquidity providers
 
+	// Use CacheContext for atomicity: if ragnarokPools fails after ragnarokBond
+	// succeeds, all state changes are discarded to prevent partial mutations.
+	cacheCtx, commit := ctx.CacheContext()
+
 	// refund bonders
-	if err := vm.ragnarokBond(ctx, nth, mgr); err != nil {
+	if err := vm.ragnarokBond(cacheCtx, nth, mgr); err != nil {
 		return fmt.Errorf("fail to ragnarok bond: %w", err)
 	}
 
 	// refund liquidity providers. This is last to ensure there is likely gas for the
 	// returning bond and reserve
-	if err := vm.ragnarokPools(ctx, nth, mgr); err != nil {
+	if err := vm.ragnarokPools(cacheCtx, nth, mgr); err != nil {
 		return fmt.Errorf("fail to ragnarok pools: %w", err)
 	}
 
+	commit()
 	return nil
 }
 
@@ -765,9 +776,12 @@ func (vm *ValidatorMgr) distributeBondReward(ctx cosmos.Context, mgr Manager) er
 	}
 
 	for _, item := range active {
-		if err := vm.payNodeAccountBondAward(ctx, lastChurnHeight, item, network.BondRewardRune, totalEffectiveBond, bondHardCap, mgr); err != nil {
+		cacheCtx, commit := ctx.CacheContext()
+		if err := vm.payNodeAccountBondAward(cacheCtx, lastChurnHeight, item, network.BondRewardRune, totalEffectiveBond, bondHardCap, mgr); err != nil {
 			resultErr = errors.Join(resultErr, err)
 			ctx.Logger().Error("fail to pay node account bond award", "node address", item.NodeAddress.String(), "error", err)
+		} else {
+			commit()
 		}
 	}
 	return resultErr
@@ -791,46 +805,76 @@ func (vm *ValidatorMgr) ragnarokBond(ctx cosmos.Context, nth int64, mgr Manager)
 			continue
 		}
 
-		if nth >= 9 { // cap at 10
+		if nth > 10 { // cap at 10
 			nth = 10
 		}
 		amt := na.Bond.MulUint64(uint64(nth)).QuoUint64(10)
 
-		// refund bond
-		txOutItem := TxOutItem{
-			Chain:      common.RuneAsset().Chain,
-			ToAddress:  na.BondAddress,
-			InHash:     common.BlankTxID,
-			Coin:       common.NewCoin(common.RuneAsset(), amt),
-			Memo:       NewRagnarokMemo(ctx.BlockHeight()).String(),
-			ModuleName: BondName,
-		}
-		ok, err := vm.txOutStore.TryAddTxOutItem(ctx, mgr, txOutItem, cosmos.ZeroUint())
+		bp, err := vm.k.GetBondProviders(ctx, na.NodeAddress)
 		if err != nil {
-			if !errors.Is(err, ErrNotEnoughToPayFee) {
-				return err
-			}
-			ok = true
+			return fmt.Errorf("fail to get bond providers(%s): %w", na.NodeAddress, err)
 		}
-		if !ok {
+		if err := passiveBackfill(ctx, mgr, na, &bp); err != nil {
+			return err
+		}
+		bp.Adjust(na.Bond)
+
+		// refund bond proportionally to each bond provider
+		totalRefunded := cosmos.ZeroUint()
+		for _, provider := range bp.Providers {
+			if provider.Bond.IsZero() || provider.BondAddress.Empty() {
+				continue
+			}
+			providerAmt := common.GetSafeShare(provider.Bond, na.Bond, amt)
+			if providerAmt.IsZero() {
+				continue
+			}
+
+			txOutItem := TxOutItem{
+				Chain:      common.RuneAsset().Chain,
+				ToAddress:  common.Address(provider.BondAddress.String()),
+				InHash:     common.BlankTxID,
+				Coin:       common.NewCoin(common.RuneAsset(), providerAmt),
+				Memo:       NewRagnarokMemo(ctx.BlockHeight()).String(),
+				ModuleName: BondName,
+			}
+			ok, err := vm.txOutStore.TryAddTxOutItem(ctx, mgr, txOutItem, cosmos.ZeroUint())
+			if err != nil {
+				if !errors.Is(err, ErrNotEnoughToPayFee) {
+					return err
+				}
+				ctx.Logger().Error("not enough to pay fee during ragnarok bond refund, proceeding best effort", "provider", provider.BondAddress, "node", na.NodeAddress)
+			}
+			if !ok && err == nil {
+				continue
+			}
+
+			// add a pending ragnarok transaction
+			pending, err := vm.k.GetRagnarokPending(ctx)
+			if err != nil {
+				return fmt.Errorf("fail to get ragnarok pending: %w", err)
+			}
+			vm.k.SetRagnarokPending(ctx, pending+1)
+
+			bp.Unbond(providerAmt, provider.BondAddress)
+			totalRefunded = totalRefunded.Add(providerAmt)
+
+			bondEvent := NewEventBond(providerAmt, BondCost, common.Tx{}, &nas[i], provider.BondAddress)
+			if err := mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
+				return fmt.Errorf("fail to emit bond event: %w", err)
+			}
+		}
+
+		if totalRefunded.IsZero() {
 			continue
 		}
 
-		// add a pending rangarok transaction
-		pending, err := vm.k.GetRagnarokPending(ctx)
-		if err != nil {
-			return fmt.Errorf("fail to get ragnarok pending: %w", err)
-		}
-		vm.k.SetRagnarokPending(ctx, pending+1)
-
-		na.Bond = common.SafeSub(na.Bond, amt)
+		na.Bond = common.SafeSub(na.Bond, totalRefunded)
 		if err := vm.k.SetNodeAccount(ctx, na); err != nil {
 			return err
 		}
-
-		bondEvent := NewEventBond(amt, BondCost, common.Tx{}, &nas[i], nil)
-		if err := mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
-			return fmt.Errorf("fail to emit bond event: %w", err)
+		if err := vm.k.SetBondProviders(ctx, bp); err != nil {
+			return fmt.Errorf("fail to save bond providers(%s): %w", na.NodeAddress, err)
 		}
 	}
 
