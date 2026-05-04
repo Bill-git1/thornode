@@ -424,7 +424,10 @@ func (vm *NetworkMgr) calculateWeightedMeanSlip(ctx cosmos.Context, asset common
 			}
 
 			value := ProtoInt64{}
-			mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &value)
+			if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &value); err != nil {
+				ctx.Logger().Error("fail to unmarshal swap slip snapshot", "key", string(key), "error", err)
+				continue
+			}
 			slip := value.GetValue()
 			if slip <= 0 {
 				mgr.Keeper().DeleteKey(ctx, key)
