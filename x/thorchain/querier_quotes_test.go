@@ -1,7 +1,11 @@
 package thorchain
 
 import (
+	"strings"
+	"time"
+
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 	. "gopkg.in/check.v1"
 )
 
@@ -207,4 +211,34 @@ func (s *QuotesSuite) TestRapidStreamingSwapCalculation(c *C) {
 	// For now, we've verified the calculation logic works correctly
 	rapidSwapMax := mgr.Keeper().GetConfigInt64(ctx, constants.AdvSwapQueueRapidSwapMax)
 	c.Assert(rapidSwapMax, Equals, int64(5))
+}
+
+// TestQuoteLimitStaleState verifies that queryQuoteLimit rejects requests when
+// the node's latest block is older than the configured MaxLag, preventing
+// callers from receiving stale vault addresses (e.g. retiring vaults).
+func (s *QuotesSuite) TestQuoteLimitStaleState(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	qs := queryServer{mgr: mgr}
+
+	// Provide all required parameters so validation passes and we reach the stale check.
+	req := &types.QueryQuoteLimitRequest{
+		FromAsset:   "BTC.BTC",
+		ToAsset:     "ETH.ETH",
+		Amount:      "100000",
+		Destination: "0x1234567890123456789012345678901234567890",
+		TargetOut:   "50000",
+	}
+
+	// Stale node: block time is far in the past — must be rejected.
+	staleCtx := ctx.WithBlockTime(time.Unix(1, 0))
+	_, err := qs.queryQuoteLimit(staleCtx, req)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "refusing quote on node with stale state")
+
+	// Fresh node: block time is current — stale-state error must NOT be returned
+	// (the request may still fail due to missing pools, but not due to stale state).
+	_, err = qs.queryQuoteLimit(ctx, req)
+	if err != nil {
+		c.Assert(strings.Contains(err.Error(), "stale state"), Equals, false)
+	}
 }

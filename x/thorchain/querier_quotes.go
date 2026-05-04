@@ -563,6 +563,12 @@ func (qs queryServer) queryQuoteLimit(ctx cosmos.Context, req *types.QueryQuoteL
 		return nil, fmt.Errorf("missing target_out parameter")
 	}
 
+	// error if latest block is older than max lag (node is not at tip)
+	isWasm, _ := ctx.Value(constants.CtxWASMQuery).(bool)
+	if !isWasm && ctx.BlockTime().Before(time.Now().Add(-config.GetThornode().API.Quote.MaxLag)) {
+		return nil, fmt.Errorf("refusing quote on node with stale state")
+	}
+
 	// parse assets
 	fromAsset, err := common.NewAsset(req.FromAsset)
 	if err != nil {
