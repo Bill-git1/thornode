@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -475,10 +474,14 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp2
 	var keysharesEddsa []byte
 	var err error
 	if s.cfg.Signer.BackupKeyshares {
+		seedPhrase, seedErr := common.GetSignerSeedPhrase()
+		if seedErr != nil {
+			s.logger.Error().Err(seedErr).Msg("fail to get signer seed phrase")
+		}
 		if !poolPk.IsEmpty() {
 			keyshares, err = tss.EncryptKeyshares(
 				filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPk)),
-				os.Getenv("SIGNER_SEED_PHRASE"),
+				seedPhrase,
 			)
 			if err != nil {
 				s.logger.Error().Err(err).Msg("fail to encrypt secp256k1 keyshares")
@@ -487,7 +490,7 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp2
 		if !poolPubKeyEddsa.IsEmpty() {
 			keysharesEddsa, err = tss.EncryptKeyshares(
 				filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPubKeyEddsa)),
-				os.Getenv("SIGNER_SEED_PHRASE"),
+				seedPhrase,
 			)
 			if err != nil {
 				s.logger.Error().Err(err).Msg("fail to encrypt eddsa keyshares")

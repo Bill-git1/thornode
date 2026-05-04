@@ -119,7 +119,10 @@ finish:
 	}
 	defer f.Close()
 
-	seedPhrase := os.Getenv("SIGNER_SEED_PHRASE")
+	seedPhrase, err := common.GetSignerSeedPhrase()
+	if err != nil {
+		return fmt.Errorf("failed to get signer seed phrase: %w", err)
+	}
 
 	// decrypt and decompress into place
 	var decrypted []byte
