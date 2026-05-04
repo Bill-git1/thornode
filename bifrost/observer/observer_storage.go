@@ -34,16 +34,20 @@ func NewObserverStorage(path string, opts config.LevelDBOptions) (*ObserverStora
 	return &ObserverStorage{db: ldb}, nil
 }
 
-// createTxKey creates a unique key for a TxIn based on prefix, chain, mempool, blockheight
+// createTxKey creates a unique key for a TxIn based on chain, finalization height, and future-observation mode.
 func (s *ObserverStorage) createTxKey(txIn *types.TxIn, finalizeHeight int64) string {
 	if finalizeHeight == 0 && len(txIn.TxArray) > 0 {
 		finalizeHeight = txIn.TxArray[0].BlockHeight + txIn.ConfirmationRequired
 	}
 
-	return fmt.Sprintf("%s%s:%d",
+	key := fmt.Sprintf("%s%s:%d",
 		OnDeckTxKeyPrefix,
 		txIn.Chain.String(),
 		finalizeHeight)
+	if txIn.AllowFutureObservation {
+		key += ":future"
+	}
+	return key
 }
 
 func (s *ObserverStorage) MigrateLegacy() ([]*types.TxIn, error) {

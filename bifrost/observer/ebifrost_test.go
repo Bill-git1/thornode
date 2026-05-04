@@ -289,7 +289,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	)
 
 	// First validator observes and attests the transaction
-	err := attestationGossips[0].AttestObservedTx(ctx, &testTx, true)
+	err := attestationGossips[0].AttestObservedTx(ctx, &testTx, true, false)
 	c.Assert(err, IsNil)
 
 	logger.Info().Msg("First validator attested")
@@ -331,7 +331,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 
 	// Have the rest of the validators attest
 	for i := 1; i < len(validatorKeys); i++ {
-		err := attestationGossips[i].AttestObservedTx(ctx, &testTx, true)
+		err := attestationGossips[i].AttestObservedTx(ctx, &testTx, true, false)
 		c.Assert(err, IsNil)
 	}
 

@@ -130,7 +130,7 @@ type AttestationGossip struct {
 	activeVals map[peer.ID]bool // active val peer IDs
 	avMu       sync.Mutex
 
-	observerHandleObservedTxCommitted func(tx common.ObservedTx)
+	observerHandleObservedTxCommitted func(tx common.ObservedTx, allowFutureObservation bool)
 
 	batcher *AttestationBatcher
 
@@ -324,7 +324,7 @@ func (s *AttestationGossip) handleQuorumTxCommitted(en *ebifrost.EventNotificati
 			if bytes.Equal(att.PubKey, s.pubKey) {
 				// we have attested to this tx, and it has been committed to the chain.
 				s.logger.Debug().Msg("our attestation is in the quorum tx, passing to observer to remove from ondeck")
-				s.observerHandleObservedTxCommitted(qtx.ObsTx)
+				s.observerHandleObservedTxCommitted(qtx.ObsTx, qtx.AllowFutureObservation)
 				break
 			}
 		}

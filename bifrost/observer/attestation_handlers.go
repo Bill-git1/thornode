@@ -14,7 +14,7 @@ import (
 )
 
 // AttestObservedTx creates and broadcasts an attestation for an observed transaction
-func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.ObservedTx, inbound bool) error {
+func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.ObservedTx, inbound, allowFutureObservation bool) error {
 	if !s.isActiveValidator(s.host.ID()) {
 		return fmt.Errorf("skipping attest observed tx: not active")
 	}
@@ -30,8 +30,9 @@ func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.
 	}
 
 	msg := common.AttestTx{
-		ObsTx:   *obsTx,
-		Inbound: inbound,
+		ObsTx:                  *obsTx,
+		Inbound:                inbound,
+		AllowFutureObservation: allowFutureObservation,
 		Attestation: &common.Attestation{
 			PubKey:    s.pubKey,
 			Signature: signature,

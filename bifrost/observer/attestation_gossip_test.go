@@ -289,7 +289,7 @@ func TestAttestObservedTx(t *testing.T) {
 		}
 
 		// Test the function
-		err := ag.AttestObservedTx(context.Background(), tx, true)
+		err := ag.AttestObservedTx(context.Background(), tx, true, false)
 		require.NoError(t, err)
 
 		// Wait a bit for all operations to complete
@@ -300,12 +300,11 @@ func TestAttestObservedTx(t *testing.T) {
 		defer ag.mu.Unlock()
 
 		key := txKey{
-			Chain:                  tx.Tx.Chain,
-			ID:                     tx.Tx.ID,
-			UniqueHash:             tx.Tx.Hash(0),
-			AllowFutureObservation: false,
-			Finalized:              tx.IsFinal(),
-			Inbound:                true,
+			Chain:      tx.Tx.Chain,
+			ID:         tx.Tx.ID,
+			UniqueHash: tx.Tx.Hash(0),
+			Finalized:  tx.IsFinal(),
+			Inbound:    true,
 		}
 
 		state, exists := ag.observedTxs[key]
@@ -315,6 +314,48 @@ func TestAttestObservedTx(t *testing.T) {
 			assert.Equal(t, 1, state.AttestationCount(), "Should have one attestation")
 		}
 	})
+}
+
+func TestAttestObservedTxPropagatesAllowFutureObservation(t *testing.T) {
+	ag, _, _, grpcClient, _, _ := setupTestGossip(t)
+
+	ag.avMu.Lock()
+	ag.activeVals = map[peer.ID]bool{ag.host.ID(): true}
+	ag.avMu.Unlock()
+
+	tx := &common.ObservedTx{
+		Tx: common.Tx{
+			ID:    "future-observation-tx",
+			Chain: common.BTCChain,
+		},
+	}
+
+	var sentTx *common.QuorumTx
+	grpcClient.sendQuorumTxFunc = func(ctx context.Context, quorumTx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error) {
+		sentTx = quorumTx
+		return &ebifrost.SendQuorumTxResult{}, nil
+	}
+
+	err := ag.AttestObservedTx(context.Background(), tx, false, true)
+	require.NoError(t, err)
+
+	key := txKey{
+		Chain:                  tx.Tx.Chain,
+		ID:                     tx.Tx.ID,
+		UniqueHash:             tx.Tx.Hash(0),
+		AllowFutureObservation: true,
+		Finalized:              tx.IsFinal(),
+		Inbound:                false,
+	}
+
+	ag.mu.Lock()
+	_, exists := ag.observedTxs[key]
+	ag.mu.Unlock()
+
+	assert.True(t, exists, "future observation should use a distinct attestation key")
+	require.NotNil(t, sentTx)
+	assert.True(t, sentTx.AllowFutureObservation)
+	assert.False(t, sentTx.Inbound)
 }
 
 // TestHandleObservedTxAttestation tests handling an observed transaction attestation
@@ -340,7 +381,7 @@ func TestHandleObservedTxAttestation(t *testing.T) {
 				ID:    "tx-quorum",
 				Chain: common.BSCChain,
 			},
-			ObservedPubKey: "pubkey1",
+			ObservedPubKey: "pubkey1", // Important for keysign party lookup
 		}
 
 		pub1, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, privKey1.PubKey())
@@ -413,12 +454,11 @@ func TestHandleObservedTxAttestation(t *testing.T) {
 		defer ag.mu.Unlock()
 
 		key := txKey{
-			Chain:                  tx.Tx.Chain,
-			ID:                     tx.Tx.ID,
-			UniqueHash:             tx.Tx.Hash(0),
-			AllowFutureObservation: false,
-			Finalized:              tx.IsFinal(),
-			Inbound:                true,
+			Chain:      tx.Tx.Chain,
+			ID:         tx.Tx.ID,
+			UniqueHash: tx.Tx.Hash(0),
+			Finalized:  tx.IsFinal(),
+			Inbound:    true,
 		}
 
 		state, exists := ag.observedTxs[key]
@@ -689,7 +729,7 @@ func TestSendLateAttestations(t *testing.T) {
 		state.mu.Lock()
 		if state.ShouldSendLate(ag.config.MinTimeBetweenAttestations) {
 			// Send late attestations
-			ag.sendObservedTxAttestationsToThornode(context.Background(), *obsTx, state, k.Inbound, false, false)
+			ag.sendObservedTxAttestationsToThornode(context.Background(), *obsTx, state, k.Inbound, k.AllowFutureObservation, false)
 		}
 		state.mu.Unlock()
 	}
@@ -727,9 +767,11 @@ func TestHandleQuorumTxCommited(t *testing.T) {
 		// Set up observer handler
 		handlerCalled := false
 		var handledTx common.ObservedTx
-		ag.observerHandleObservedTxCommitted = func(tx common.ObservedTx) {
+		var handledAllowFuture bool
+		ag.observerHandleObservedTxCommitted = func(tx common.ObservedTx, allowFutureObservation bool) {
 			handlerCalled = true
 			handledTx = tx
+			handledAllowFuture = allowFutureObservation
 		}
 
 		// Create a test tx with our attestation
@@ -741,7 +783,8 @@ func TestHandleQuorumTxCommited(t *testing.T) {
 		}
 
 		quorumTx := common.QuorumTx{
-			ObsTx: tx,
+			ObsTx:                  tx,
+			AllowFutureObservation: true,
 			Attestations: []*common.Attestation{
 				{
 					PubKey:    ag.pubKey,
@@ -761,12 +804,13 @@ func TestHandleQuorumTxCommited(t *testing.T) {
 		// Verify handler was called
 		assert.True(t, handlerCalled)
 		assert.Equal(t, tx, handledTx)
+		assert.True(t, handledAllowFuture)
 	})
 
 	t.Run("doesn't call handler if our attestation is not in tx", func(t *testing.T) {
 		// Set up observer handler
 		handlerCalled := false
-		ag.observerHandleObservedTxCommitted = func(tx common.ObservedTx) {
+		ag.observerHandleObservedTxCommitted = func(tx common.ObservedTx, allowFutureObservation bool) {
 			handlerCalled = true
 		}
 

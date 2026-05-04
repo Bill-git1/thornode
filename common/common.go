@@ -297,6 +297,9 @@ func (qtx *QuorumTx) Equals(other *QuorumTx) bool {
 	if qtx.Inbound != other.Inbound {
 		return false
 	}
+	if qtx.AllowFutureObservation != other.AllowFutureObservation {
+		return false
+	}
 	return qtx.ObsTx.Equals(other.ObsTx)
 }
 

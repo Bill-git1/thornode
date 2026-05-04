@@ -170,10 +170,10 @@ func TestObserverRoundTrip(t *testing.T) {
 		})
 
 		for _, inb := range inbound {
-			obs.handleObservedTxCommitted(inb)
+			obs.handleObservedTxCommitted(inb, false)
 		}
 		for _, outb := range outbound {
-			obs.handleObservedTxCommitted(outb)
+			obs.handleObservedTxCommitted(outb, false)
 		}
 	}
 
@@ -202,10 +202,10 @@ func TestObserverRoundTrip(t *testing.T) {
 		})
 
 		for _, inb := range inbound {
-			obs.handleObservedTxCommitted(inb)
+			obs.handleObservedTxCommitted(inb, false)
 		}
 		for _, outb := range outbound {
-			obs.handleObservedTxCommitted(outb)
+			obs.handleObservedTxCommitted(outb, false)
 		}
 	}
 

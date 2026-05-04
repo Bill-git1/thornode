@@ -606,7 +606,7 @@ func (s *ObserveExtraSuite) TestHandleObservedTxCommittedNotInDeck(c *C) {
 		BlockHeight:    100,
 		FinaliseHeight: 100,
 	}
-	obs.handleObservedTxCommitted(observedTx) // should not panic
+	obs.handleObservedTxCommitted(observedTx, false) // should not panic
 }
 
 // ---------------------------------------------------------------------------
@@ -1807,7 +1807,7 @@ func (s *ObserveExtraSuite) TestAttestObservedTx(c *C) {
 		FinaliseHeight: 100,
 	}
 
-	err := ag.AttestObservedTx(context.Background(), obsTx, true)
+	err := ag.AttestObservedTx(context.Background(), obsTx, true, false)
 	c.Assert(err, IsNil)
 
 	// Verify the attestation was added locally
@@ -1830,7 +1830,7 @@ func (s *ObserveExtraSuite) TestAttestObservedTxNotActive(c *C) {
 		},
 	}
 
-	err := ag.AttestObservedTx(context.Background(), obsTx, true)
+	err := ag.AttestObservedTx(context.Background(), obsTx, true, false)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "skipping attest observed tx: not active")
 }
@@ -1944,7 +1944,7 @@ func (s *ObserveExtraSuite) TestAttestErrataRemovesObservedTx(c *C) {
 		BlockHeight:    100,
 		FinaliseHeight: 100,
 	}
-	err := ag.AttestObservedTx(context.Background(), obsTx, true)
+	err := ag.AttestObservedTx(context.Background(), obsTx, true, false)
 	c.Assert(err, IsNil)
 
 	ag.mu.Lock()

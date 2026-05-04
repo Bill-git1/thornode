@@ -273,6 +273,61 @@ func TestSendAttestationsToThornode(t *testing.T) {
 	assert.False(t, state.lastAttestationsSent.IsZero())
 }
 
+func TestHandleObservedTxAttestationSeparatesFutureObservation(t *testing.T) {
+	ag, _, _, _, _, _ := setupTestGossip(t)
+
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error {
+		return nil
+	}
+
+	obsTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    "same-observed-tx",
+			Chain: common.BTCChain,
+		},
+	}
+
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:                  obsTx,
+		Inbound:                false,
+		AllowFutureObservation: true,
+		Attestation: &common.Attestation{
+			PubKey:    []byte("pubkey-future"),
+			Signature: []byte("sig-future"),
+		},
+	})
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:                  obsTx,
+		Inbound:                false,
+		AllowFutureObservation: false,
+		Attestation: &common.Attestation{
+			PubKey:    []byte("pubkey-normal"),
+			Signature: []byte("sig-normal"),
+		},
+	})
+
+	futureKey := txKey{
+		Chain:                  obsTx.Tx.Chain,
+		ID:                     obsTx.Tx.ID,
+		UniqueHash:             obsTx.Tx.Hash(obsTx.BlockHeight),
+		AllowFutureObservation: true,
+		Finalized:              obsTx.IsFinal(),
+		Inbound:                false,
+	}
+	normalKey := futureKey
+	normalKey.AllowFutureObservation = false
+
+	ag.mu.Lock()
+	defer ag.mu.Unlock()
+
+	require.Contains(t, ag.observedTxs, futureKey)
+	require.Contains(t, ag.observedTxs, normalKey)
+	assert.Equal(t, 1, ag.observedTxs[futureKey].AttestationCount())
+	assert.Equal(t, 1, ag.observedTxs[normalKey].AttestationCount())
+}
+
 // TestAttestableItemImplementation tests the AttestableItem interface implementation for all types
 func TestAttestableItemImplementation(t *testing.T) {
 	t.Run("common.Tx implements AttestableItem", func(t *testing.T) {
@@ -489,12 +544,11 @@ func TestRefactoredHandlersIntegration(t *testing.T) {
 
 		// Check observed tx state
 		k := txKey{
-			Chain:                  tx.Tx.Chain,
-			ID:                     tx.Tx.ID,
-			UniqueHash:             tx.Tx.Hash(0),
-			AllowFutureObservation: false,
-			Finalized:              tx.IsFinal(),
-			Inbound:                true,
+			Chain:      tx.Tx.Chain,
+			ID:         tx.Tx.ID,
+			UniqueHash: tx.Tx.Hash(0),
+			Finalized:  tx.IsFinal(),
+			Inbound:    true,
 		}
 		txState, exists := ag.observedTxs[k]
 		assert.True(t, exists, "TX should exist in observed txs map")

@@ -449,7 +449,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			ObservedPubKey: vault1,
 		}
 
-		observer.handleObservedTxCommitted(observedTxMempool)
+		observer.handleObservedTxCommitted(observedTxMempool, false)
 
 		// Transaction should still exist but be marked as CommittedUnFinalised
 		assertTxExists(observer, key, txID.String())
@@ -492,7 +492,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			ObservedPubKey: vault1,
 		}
 
-		observer.handleObservedTxCommitted(observedTxBlock)
+		observer.handleObservedTxCommitted(observedTxBlock, false)
 
 		// Should still exist (not finalized yet)
 		assertTxExists(observer, key, txID.String())
@@ -512,7 +512,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			ObservedPubKey: vault1,
 		}
 
-		observer.handleObservedTxCommitted(observedTxFinal)
+		observer.handleObservedTxCommitted(observedTxFinal, false)
 
 		// Verify transaction is removed after finalization
 		assertTxFinalized(observer, key, txID.String())
@@ -572,7 +572,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			ObservedPubKey: vault1,
 		}
 
-		observer.handleObservedTxCommitted(observedTxNonFinal)
+		observer.handleObservedTxCommitted(observedTxNonFinal, false)
 
 		// Transaction should still exist but be marked as CommittedUnFinalised
 		assertTxExists(observer, key, txID.String())
@@ -592,7 +592,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			ObservedPubKey: vault1,
 		}
 
-		observer.handleObservedTxCommitted(observedTxFinal)
+		observer.handleObservedTxCommitted(observedTxFinal, false)
 
 		// Verify transaction is removed after finalization
 		assertTxFinalized(observer, key, txID.String())
@@ -651,7 +651,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			ObservedPubKey: vault1,
 		}
 
-		observer.handleObservedTxCommitted(observedTx)
+		observer.handleObservedTxCommitted(observedTx, false)
 
 		// Simulate final observation in Thorchain (already final since BlockHeight == FinaliseHeight)
 		// observe from both vaults
@@ -669,7 +669,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			ObservedPubKey: vault2,
 		}
 
-		observer.handleObservedTxCommitted(observedTx)
+		observer.handleObservedTxCommitted(observedTx, false)
 
 		// Verify transaction is removed immediately after finalization
 		assertTxFinalized(observer, key, txID.String())

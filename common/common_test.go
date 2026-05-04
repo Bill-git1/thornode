@@ -28,3 +28,16 @@ func (s CommonSuite) TestGetSafeShare(c *C) {
 	share := GetSafeShare(part, total, alloc)
 	c.Assert(share.Equal(cosmos.NewUint(50000000)), Equals, true)
 }
+
+func (s CommonSuite) TestQuorumTxEqualsIncludesAllowFutureObservation(c *C) {
+	tx := ObservedTx{
+		Tx: Tx{
+			ID:    "tx1",
+			Chain: BTCChain,
+		},
+	}
+	qtx := &QuorumTx{ObsTx: tx, Inbound: false}
+	futureQtx := &QuorumTx{ObsTx: tx, Inbound: false, AllowFutureObservation: true}
+
+	c.Assert(qtx.Equals(futureQtx), Equals, false)
+}
