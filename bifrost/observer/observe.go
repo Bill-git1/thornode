@@ -789,7 +789,7 @@ func (o *Observer) processSolvencyQueue(ctx context.Context) {
 			if !more {
 				return
 			}
-			if solvencyItem.Chain.IsEmpty() || solvencyItem.Coins.IsEmpty() || solvencyItem.PubKey.IsEmpty() {
+			if solvencyItem.Chain.IsEmpty() || solvencyItem.PubKey.IsEmpty() {
 				continue
 			}
 			o.logger.Debug().Msgf("solvency:%+v", solvencyItem)

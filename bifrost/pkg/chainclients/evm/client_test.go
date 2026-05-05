@@ -560,6 +560,56 @@ func (s *EVMSuite) TestGetAccount(c *C) {
 	c.Assert(b, NotNil)
 }
 
+func (s *EVMSuite) TestGetVaultBalancesUsesVaultCoins(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewEVMClient(s.thorKeys, config.BifrostChainConfiguration{
+		ChainID: common.AVAXChain,
+		RPCHost: "http://" + s.server.Listener.Addr().String(),
+		BlockScanner: config.BifrostBlockScannerConfiguration{
+			ChainID:            common.AVAXChain,
+			StartBlockHeight:   1,
+			HTTPRequestTimeout: time.Second,
+		},
+	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(e, NotNil)
+
+	// Node-local token metadata must not affect the solvency coin set.
+	c.Assert(e.evmScanner.tokenManager.SaveTokenMeta("RAZE", "0x5EAA69B29F99C84FE5DE8200340B4E9B4AB38EAC", 18), IsNil)
+	c.Assert(e.evmScanner.tokenManager.SaveTokenMeta("FLIP", "0x826180541412D574CF1336D22C0C0A287822678A", 18), IsNil)
+
+	tkn, err := common.NewAsset("AVAX.TKN-0X333C3310824B7C685133F2BEDB2CA4B8B4DF633D")
+	c.Assert(err, IsNil)
+	usdc, err := common.NewAsset("AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E")
+	c.Assert(err, IsNil)
+	vault := types2.Vault{
+		Coins: common.NewCoins(
+			common.NewCoin(usdc, cosmos.NewUint(1)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
+			common.NewCoin(common.AVAXAsset, cosmos.NewUint(1)),
+			common.NewCoin(tkn, cosmos.NewUint(1)),
+			common.NewCoin(usdc, cosmos.NewUint(2)),
+		),
+	}
+
+	coins, err := e.GetVaultBalances(
+		"0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da",
+		nil,
+		"0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25",
+		vault,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(coins, HasLen, 3)
+	c.Assert(coins[0].Asset.Equals(common.AVAXAsset), Equals, true)
+	c.Assert(coins[0].Amount.Uint64(), Equals, uint64(10*common.One))
+	c.Assert(coins[1].Asset.Equals(tkn), Equals, true)
+	c.Assert(coins[1].Amount.IsZero(), Equals, true)
+	c.Assert(coins[2].Asset.Equals(usdc), Equals, true)
+	c.Assert(coins[2].Amount.IsZero(), Equals, true)
+}
+
 func (s *EVMSuite) TestSignEVMTx(c *C) {
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)

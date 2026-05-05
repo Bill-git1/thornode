@@ -473,6 +473,56 @@ func (s *EthereumSuite) TestGetAccount(c *C) {
 	c.Assert(b, NotNil)
 }
 
+func (s *EthereumSuite) TestGetVaultBalancesUsesVaultCoins(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewClient(s.thorKeys, config.BifrostChainConfiguration{
+		RPCHost: "http://" + s.server.Listener.Addr().String(),
+		BlockScanner: config.BifrostBlockScannerConfiguration{
+			StartBlockHeight:   1,
+			HTTPRequestTimeout: time.Second,
+		},
+		ChainID: common.ETHChain,
+	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(e, NotNil)
+	e.ethScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+
+	// Node-local token metadata must not affect the solvency coin set.
+	c.Assert(e.ethScanner.tokens.SaveTokenMeta("RAZE", "0x5EAA69B29F99C84FE5DE8200340B4E9B4AB38EAC", 18), IsNil)
+	c.Assert(e.ethScanner.tokens.SaveTokenMeta("FLIP", "0x826180541412D574CF1336D22C0C0A287822678A", 18), IsNil)
+
+	tkn, err := common.NewAsset("ETH.TKN-0X3B7FA4DD21C6F9BA3CA375217EAD7CAB9D6BF483")
+	c.Assert(err, IsNil)
+	usdc, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	c.Assert(err, IsNil)
+	vault := types2.Vault{
+		Coins: common.NewCoins(
+			common.NewCoin(usdc, cosmos.NewUint(1)),
+			common.NewCoin(common.BTCAsset, cosmos.NewUint(1)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
+			common.NewCoin(tkn, cosmos.NewUint(1)),
+			common.NewCoin(usdc, cosmos.NewUint(2)),
+		),
+	}
+
+	coins, err := e.GetVaultBalances(
+		"0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da",
+		nil,
+		"0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44",
+		vault,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(coins, HasLen, 3)
+	c.Assert(coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+	c.Assert(coins[0].Amount.Uint64(), Equals, uint64(10*common.One))
+	c.Assert(coins[1].Asset.Equals(tkn), Equals, true)
+	c.Assert(coins[1].Amount.IsZero(), Equals, true)
+	c.Assert(coins[2].Asset.Equals(usdc), Equals, true)
+	c.Assert(coins[2].Amount.IsZero(), Equals, true)
+}
+
 func (s *EthereumSuite) TestSignETHTx(c *C) {
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -43,6 +44,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/aggregators"
 	mem "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 const (
@@ -1148,6 +1150,42 @@ func (c *Client) GetBalances(addr string, height *big.Int, contractAddr string) 
 	return coins.Distinct(), nil
 }
 
+// GetVaultBalances gets balances for the chain assets tracked by the given
+// THORChain vault. This is used for solvency reports so every node signs the
+// same asset set instead of relying on node-local token metadata discovery.
+func (c *Client) GetVaultBalances(addr string, height *big.Int, contractAddr string, vault types.Vault) (common.Coins, error) {
+	assets := make([]common.Asset, 0, len(vault.Coins))
+	seen := make(map[string]struct{}, len(vault.Coins))
+	for _, coin := range vault.Coins {
+		if !coin.Asset.Chain.Equals(c.cfg.ChainID) {
+			continue
+		}
+		key := coin.Asset.String()
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		assets = append(assets, coin.Asset)
+	}
+	sort.Slice(assets, func(i, j int) bool {
+		return assets[i].String() < assets[j].String()
+	})
+
+	coins := make(common.Coins, 0, len(assets))
+	for _, asset := range assets {
+		tokenAddr := getTokenAddressFromAsset(asset)
+		balance, err := c.GetBalance(addr, tokenAddr, height, contractAddr)
+		if err != nil {
+			c.logger.Err(err).Msgf("fail to get balance for token:%s", tokenAddr)
+			continue
+		}
+		bal := c.ethScanner.convertAmount(tokenAddr, balance)
+		coins = append(coins, common.NewCoin(asset, bal))
+	}
+
+	return coins, nil
+}
+
 // GetAccount gets account by address in eth client
 func (c *Client) GetAccount(pk common.PubKey, height *big.Int) (common.Account, error) {
 	addr := c.GetAddress(pk)
@@ -1157,6 +1195,23 @@ func (c *Client) GetAccount(pk common.PubKey, height *big.Int) (common.Account, 
 	}
 	contractAddr := c.getSmartContractAddr(pk)
 	coins, err := c.GetBalances(addr, height, contractAddr.String())
+	if err != nil {
+		return common.Account{}, err
+	}
+	account := common.NewAccount(int64(nonce), 0, coins, false)
+	return account, nil
+}
+
+// GetVaultAccount gets account balances for exactly the assets tracked by the
+// THORChain vault. Zero balances are intentionally retained for solvency.
+func (c *Client) GetVaultAccount(vault types.Vault, height *big.Int) (common.Account, error) {
+	addr := c.GetAddress(vault.PubKey)
+	nonce, err := c.GetNonce(addr)
+	if err != nil {
+		return common.Account{}, err
+	}
+	contractAddr := c.getSmartContractAddr(vault.PubKey)
+	coins, err := c.GetVaultBalances(addr, height, contractAddr.String(), vault)
 	if err != nil {
 		return common.Account{}, err
 	}
@@ -1385,7 +1440,7 @@ func (c *Client) ReportSolvency(ethBlockHeight int64) error {
 	processedVaults := 0
 	for i := range chainVaults {
 		var acct common.Account
-		acct, err = c.GetAccount(chainVaults[i].PubKey, new(big.Int).SetInt64(ethBlockHeight))
+		acct, err = c.GetVaultAccount(chainVaults[i], new(big.Int).SetInt64(ethBlockHeight))
 		if err != nil {
 			c.logger.Err(err).Msgf("fail to get account balance")
 			continue
