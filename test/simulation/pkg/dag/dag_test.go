@@ -2,6 +2,7 @@ package dag
 
 import (
 	rand "math/rand/v2"
+	"strings"
 	"testing"
 
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
@@ -14,7 +15,13 @@ type DAGSuite struct{}
 
 var _ = Suite(&DAGSuite{})
 
-func (s *DAGSuite) TestExecute(c *C, rng *rand.Rand) {
+func testRNG() *rand.Rand {
+	return rand.New(rand.NewChaCha8([32]byte{}))
+}
+
+func (s *DAGSuite) TestExecute(c *C) {
+	rng := testRNG()
+
 	// bump count once on each operation
 	count := 0
 	op := func(config *OpConfig) OpResult {
@@ -46,7 +53,12 @@ func (s *DAGSuite) TestExecute(c *C, rng *rand.Rand) {
 	child3.Children[grandchild3] = true
 
 	// execute
-	Execute(nil, root, 1, rng)
+	cfg := &OpConfig{
+		Users: []*User{
+			NewUser(strings.Repeat("dog ", 23)+"fossil", nil),
+		},
+	}
+	Execute(cfg, root, 1, rng)
 
 	// should have executed op 6 times
 	c.Assert(count, Equals, 6)

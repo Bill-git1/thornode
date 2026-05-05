@@ -101,14 +101,23 @@ func (a *Actor) Parents() map[*Actor]bool {
 	return a.parents
 }
 
-// WalkDepthFirst will walk the actor tree depth first and execute the provided function
-// on each actor. If the function returns false, the walk will stop.
+// WalkDepthFirst will walk the actor DAG depth first and execute the provided function
+// on each actor. If the function returns false, the actor's children will be skipped.
 func (a *Actor) WalkDepthFirst(f func(*Actor) bool) (cont bool) {
+	return a.walkDepthFirst(f, map[*Actor]bool{})
+}
+
+func (a *Actor) walkDepthFirst(f func(*Actor) bool, seen map[*Actor]bool) (cont bool) {
+	if seen[a] {
+		return true
+	}
+	seen[a] = true
+
 	if !f(a) {
 		return false
 	}
 	for child := range a.Children {
-		child.WalkDepthFirst(f)
+		child.walkDepthFirst(f, seen)
 	}
 	return true
 }

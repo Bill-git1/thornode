@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/rivo/tview"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -76,6 +78,14 @@ func init() {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func main() {
+	// start pprof server
+	go func() {
+		log.Info().Msg("starting pprof server on :6061")
+		if err := http.ListenAndServe(":6061", nil); err != nil {
+			log.Fatal().Err(err).Msg("pprof server failed")
+		}
+	}()
+
 	// prompt to filter run stages if connected to a terminal
 	enabledStages := map[string]bool{}
 	stages := []cli.Option{

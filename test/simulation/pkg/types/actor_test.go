@@ -14,7 +14,12 @@ type ActorSuite struct{}
 
 var _ = Suite(&ActorSuite{})
 
-func (s *ActorSuite) TestInit(c *C, rng *rand.Rand) {
+func testRNG() *rand.Rand {
+	return rand.New(rand.NewChaCha8([32]byte{}))
+}
+
+func (s *ActorSuite) TestInit(c *C) {
+	rng := testRNG()
 	root := NewActor("root", rng)
 	child1 := NewActor("child1", rng)
 	child2 := NewActor("child2", rng)
@@ -37,7 +42,8 @@ func (s *ActorSuite) TestInit(c *C, rng *rand.Rand) {
 	c.Assert(grandchild2.parents, DeepEquals, map[*Actor]bool{child2: true})
 }
 
-func (s *ActorSuite) TestWalkDepthFirst(c *C, rng *rand.Rand) {
+func (s *ActorSuite) TestWalkDepthFirst(c *C) {
+	rng := testRNG()
 	root := NewActor("root", rng)
 	child1 := NewActor("child1", rng)
 	child2 := NewActor("child2", rng)
@@ -67,7 +73,8 @@ func (s *ActorSuite) TestWalkDepthFirst(c *C, rng *rand.Rand) {
 	c.Assert(visited, DeepEquals, expected)
 }
 
-func (s *ActorSuite) TestWalkDepthFirstFail(c *C, rng *rand.Rand) {
+func (s *ActorSuite) TestWalkDepthFirstFail(c *C) {
+	rng := testRNG()
 	opFail := func(config *OpConfig) OpResult {
 		return OpResult{Continue: false, Finish: true, Error: errors.New("foo")}
 	}
@@ -105,4 +112,39 @@ func (s *ActorSuite) TestWalkDepthFirstFail(c *C, rng *rand.Rand) {
 		"grandchild3": true,
 	}
 	c.Assert(visited, DeepEquals, expected)
+}
+
+func (s *ActorSuite) TestWalkDepthFirstVisitsDAGNodeOnce(c *C) {
+	rng := testRNG()
+	root := NewActor("root", rng)
+	parent1 := NewActor("parent1", rng)
+	parent2 := NewActor("parent2", rng)
+	shared := NewActor("shared", rng)
+	child := NewActor("child", rng)
+
+	root.Children[parent1] = true
+	root.Children[parent2] = true
+	parent1.Children[shared] = true
+	parent2.Children[shared] = true
+	shared.Children[child] = true
+
+	root.InitRoot()
+
+	visits := map[string]int{}
+	cont := root.WalkDepthFirst(func(a *Actor) bool {
+		visits[a.Name]++
+		return true
+	})
+
+	expected := map[string]int{
+		"root":    1,
+		"parent1": 1,
+		"parent2": 1,
+		"shared":  1,
+		"child":   1,
+	}
+	c.Assert(cont, Equals, true)
+	c.Assert(visits, DeepEquals, expected)
+	c.Assert(shared.parents, DeepEquals, map[*Actor]bool{parent1: true, parent2: true})
+	c.Assert(child.parents, DeepEquals, map[*Actor]bool{shared: true})
 }
