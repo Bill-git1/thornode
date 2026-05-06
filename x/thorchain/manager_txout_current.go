@@ -462,6 +462,24 @@ func (tos *TxOutStorage) selectFallbackVault(ctx cosmos.Context, toi TxOutItem, 
 	return bestVault
 }
 
+func (tos *TxOutStorage) emitInsufficientAvailableBalanceSecurityEvent(ctx cosmos.Context, toi TxOutItem, maxGasCoin common.Coin) {
+	if toi.MaxGas.IsEmpty() && !maxGasCoin.IsEmpty() {
+		toi.MaxGas = common.Gas{maxGasCoin}
+	}
+	etx := common.Tx{
+		ID:        toi.InHash,
+		Chain:     toi.Chain,
+		ToAddress: toi.ToAddress,
+		Coins:     common.Coins{toi.Coin},
+		Gas:       toi.MaxGas,
+		Memo:      toi.Memo,
+	}
+	event := NewEventSecurity(etx, "outbound scheduled with insufficient available vault balance")
+	if err := tos.eventMgr.EmitEvent(ctx, event); err != nil {
+		ctx.Logger().Error("failed to emit security event", "error", err)
+	}
+}
+
 func (tos *TxOutStorage) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmount cosmos.Uint, maxGasCoin common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
 	var outputs []TxOutItem
 
@@ -598,6 +616,7 @@ func (tos *TxOutStorage) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmo
 				toi.VaultPubKey = fallbackVault.PubKey
 				toi.VaultPubKeyEddsa = fallbackVault.PubKeyEddsa
 				outputs = append(outputs, toi)
+				tos.emitInsufficientAvailableBalanceSecurityEvent(ctx, toi, maxGasCoin)
 				toi.Coin.Amount = cosmos.ZeroUint()
 			}
 		} else {
@@ -619,6 +638,7 @@ func (tos *TxOutStorage) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAmo
 				"original_amount", outputs[smallestIdx].Coin.Amount.String(),
 				"remainder", toi.Coin.Amount.String())
 			outputs[smallestIdx].Coin.Amount = outputs[smallestIdx].Coin.Amount.Add(toi.Coin.Amount)
+			tos.emitInsufficientAvailableBalanceSecurityEvent(ctx, outputs[smallestIdx], maxGasCoin)
 			toi.Coin.Amount = cosmos.ZeroUint()
 		}
 	}

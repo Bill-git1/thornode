@@ -7,11 +7,37 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	ttypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type TxOutStoreSuite struct{}
 
 var _ = Suite(&TxOutStoreSuite{})
+
+type recordingEventMgr struct {
+	*DummyEventMgr
+	events []EmitEventItem
+}
+
+func newRecordingEventMgr() *recordingEventMgr {
+	return &recordingEventMgr{DummyEventMgr: NewDummyEventMgr()}
+}
+
+func (m *recordingEventMgr) EmitEvent(ctx cosmos.Context, evt EmitEventItem) error {
+	m.events = append(m.events, evt)
+	return nil
+}
+
+func (m *recordingEventMgr) securityEvents() []*ttypes.EventSecurity {
+	events := make([]*ttypes.EventSecurity, 0)
+	for _, evt := range m.events {
+		securityEvent, ok := evt.(*ttypes.EventSecurity)
+		if ok {
+			events = append(events, securityEvent)
+		}
+	}
+	return events
+}
 
 func (s TxOutStoreSuite) TestTakeAffiliateFee(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, true)
@@ -1472,7 +1498,8 @@ func (s TxOutStoreSuite) TestDiscoverOutboundsFallbackVault(c *C) {
 	// The unit tests above verify selectFallbackVault works correctly,
 	// and this test verifies that DiscoverOutbounds calls it when no outputs are created.
 
-	txOutStore := newTxOutStorage(w.keeper, w.mgr.GetConstants(), w.mgr.EventMgr(), w.mgr.GasMgr())
+	eventMgr := newRecordingEventMgr()
+	txOutStore := newTxOutStorage(w.keeper, w.mgr.GetConstants(), eventMgr, w.mgr.GasMgr())
 
 	// Create a TxOutItem for testing
 	toi := TxOutItem{
@@ -1499,6 +1526,9 @@ func (s TxOutStoreSuite) TestDiscoverOutboundsFallbackVault(c *C) {
 	c.Assert(outputs[0].VaultPubKey.Equals(vault.PubKey), Equals, true, Commentf("Expected output to use original vault"))
 	// The remaining should be zero because the entire amount was assigned to the fallback vault
 	c.Assert(remaining.IsZero(), Equals, true, Commentf("Expected zero remaining, got %s", remaining.String()))
+	securityEvents := eventMgr.securityEvents()
+	c.Assert(securityEvents, HasLen, 1)
+	c.Assert(securityEvents[0].Msg, Equals, "outbound scheduled with insufficient available vault balance")
 }
 
 func (s TxOutStoreSuite) TestDiscoverOutboundsRemainderAddedToSmallestOutput(c *C) {
@@ -1523,7 +1553,8 @@ func (s TxOutStoreSuite) TestDiscoverOutboundsRemainderAddedToSmallestOutput(c *
 	}
 	c.Assert(mgr.Keeper().SetVault(ctx, vault2), IsNil)
 
-	txOutStore := newTxOutStorage(mgr.Keeper(), mgr.GetConstants(), mgr.EventMgr(), mgr.GasMgr())
+	eventMgr := newRecordingEventMgr()
+	txOutStore := newTxOutStorage(mgr.Keeper(), mgr.GetConstants(), eventMgr, mgr.GasMgr())
 
 	// Request more ETH than both vaults combined have
 	// Total available: 30 + 50 = 80 ETH, requesting 100 ETH
@@ -1576,4 +1607,7 @@ func (s TxOutStoreSuite) TestDiscoverOutboundsRemainderAddedToSmallestOutput(c *
 
 	// Remaining should be zero since we added the remainder to the smallest output
 	c.Assert(remaining.IsZero(), Equals, true, Commentf("Expected zero remaining, got %s", remaining.String()))
+	securityEvents := eventMgr.securityEvents()
+	c.Assert(securityEvents, HasLen, 1)
+	c.Assert(securityEvents[0].Msg, Equals, "outbound scheduled with insufficient available vault balance")
 }

@@ -163,16 +163,6 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 		ctx.Logger().Error("fail to exclude pending outbound from vault, assuming insolvent", "error", err)
 		return true
 	}
-	// Build a map of original vault coin amounts so we can detect SafeSub clamping.
-	// When pending outbounds exceed the vault balance, SafeSub clamps to zero and
-	// the adjusted coin is empty. In that case, fall back to the original vault amount
-	// so the solvency check can still detect theft.
-	originalAmounts := make(map[string]cosmos.Uint)
-	for _, c := range vault.Coins {
-		if c.Asset.Chain.Equals(chain) && !c.IsEmpty() {
-			originalAmounts[c.Asset.String()] = c.Amount
-		}
-	}
 	// Get the permitted solvency gap in RUNE (converted from USD)
 	permittedGapInRune := mgr.Keeper().DollarConfigInRune(ctx, constants.PermittedSolvencyGapUSD)
 	// Use the coin in vault as baseline , wallet can have more coins than vault
@@ -180,22 +170,14 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 		if !c.Asset.Chain.Equals(chain) {
 			continue
 		}
-		// If adjusted amount is zero but original was non-zero, pending outbounds
-		// exceeded the vault balance. Use the original amount as a fallback so that
-		// insolvency (e.g. wallet drained to zero) is not silently bypassed.
 		if c.IsEmpty() {
-			origAmount, ok := originalAmounts[c.Asset.String()]
-			if !ok || origAmount.IsZero() {
-				continue
-			}
-			ctx.Logger().Info("pending outbounds exceed vault balance, using original for solvency check", "asset", c.Asset.String(), "original", origAmount.String())
-			c.Amount = origAmount
+			// Pending outbounds can fully cover, or intentionally over-cover,
+			// the vault balance while outbound recovery handles the liability.
+			continue
 		}
 		walletCoin := coins.GetCoin(c.Asset)
 
 		// Compute the gap between vault and wallet balances.
-		// When walletCoin is absent (IsEmpty), the full vault amount is the gap,
-		// which then goes through the same RUNE-value threshold check as partial gaps.
 		gap := cosmos.ZeroUint()
 		if walletCoin.IsEmpty() {
 			gap = c.Amount
