@@ -1418,3 +1418,207 @@ var mainnetSlashRefunds12to13 = []struct {
 	{"thor1zgmsl5g25mfrtyuyrgdxh7r35wyyreh3p89jgq", 65809638},
 	{"thor1zmp5dkczl96tqlj0d5qaptyg4frqt5rqt3dpwz", 25173086},
 }
+
+// mainnetSlashRefunds14to15 contains the per-provider bond deltas at slash
+// block 26,001,464 (tx 1DFE09ABE8D8DD11BA55BD6B499AC1EF91FA0B5CA83D492AB12C08AC89C2B54D)
+// where the retiring DOGE asgard double-broadcast a migration outbound,
+// triggering a 200% bond slash across the 19 vault members. The slash was
+// later absorbed by each member's BondProviders proportionally via bp.Adjust()
+// during subsequent reward distributions.
+//
+// Source: tci nodes bond-diff --long --heights 26001464 --no-node --no-operator --provider
+//
+// Refunds are sent directly from Reserve to each provider's address (matching
+// the established pattern of Migrate4to5 / 5to6 / 12to13). na.Bond is left as-is;
+// providers can re-bond if they choose. This avoids the NodeOperatorFee skim
+// that would occur if we restored na.Bond and let bp.Adjust() redistribute on
+// the next reward cycle (some slashed nodes will churn out and unbond by the
+// time this runs, and others will have changed provider distribution since
+// the time of the slash).
+//
+// NOTE on the rujira-brune liquid bond aggregator
+// (thor1enhmz57mpn4umspa8hqgqwwqpe02q4hpqmqr0k2zftxr8fu3nxmqjy3tqx): unlike
+// the autobond contract excluded from Migrate12to13, brune's state.allocate
+// reads its own on-chain RUNE bank balance via deps.querier.query_balance
+// and treats it as part of NAV. The unsolicited send from this migration
+// will be picked up the next time Swap() triggers allocate(), and the
+// resulting surplus is streamed to brune stakers via stake_contract over
+// revenue_smear (1 week). Verified against silvermind/rujira branch
+// brune/v1.0.1, contracts/rujira-brune/src/state.rs:106-176. The contract
+// already holds ~38,877 RUNE in its bank balance — bank sends to it succeed
+// at the protocol level. Therefore the row is included.
+//
+// Total: 52,017,460,416,933 base units (520,174.60416933 RUNE) across 127 providers.
+var mainnetSlashRefunds14to15Total uint64 = 52017460416933
+
+var mainnetSlashRefunds14to15 = []struct {
+	address string
+	amount  uint64
+}{
+	{"thor10cxwtu5z3vwkl54uypas0sgusvzmmtmrmqw9pm", 55470085317},
+	{"thor10guhjpr9w3u5kq2nxuzrqm47d9yrm60kerf99q", 29614559107},
+	{"thor10nev8r4xv67jgpg05w5fgamhagt5e0cwwylfma", 27482136122},
+	{"thor120vexx8hq06d5nc38e5up9m92jc6hflaum6dfu", 319781440178},
+	{"thor1224jdtz8fvq6nt65g8ff23nslzpv372q4ghxff", 5652438079131},
+	{"thor1260z3ezrjps5whus45rt8kjzz3n8p8dccrrldx", 97671875556},
+	{"thor12c7q60lsh84rurcx52awatnu49ygyqhsjpgt9q", 3024729762},
+	{"thor12pauwymcs9jsa0xxk6gdj2yycclqluqkve49q5", 82964434382},
+	{"thor12pcpv29fmj3rqqjefy9eu6q080xhr6f37edmxf", 3226357662},
+	{"thor12pvaukh88f4fjxx4q76dzsamnpuk3pnwus7wgd", 55871336241},
+	{"thor12rtakf762ez8wad2ljz80hx3475ajqmdm6vxyu", 227071479678},
+	{"thor12swpcch3nuc8g3mz00v57fd8ys2uph6s0lzvz2", 412314870659},
+	{"thor12zg77pdpluzyu9cnj429r6etrk25myk2xlzxn5", 359278302762},
+	{"thor132243hqt4uv5zpkls98dk662nn73067wha2ech", 78591780295},
+	{"thor13hapk9r6r5gvddtvnt6uu8w0aymjuq7pnq49wq", 354336659605},
+	{"thor13nsa9gc8svlnqpxdns64dwq5zlvhhhwq8j3cus", 128447147413},
+	{"thor13nuhnmkx0zddwu4z0u4d0au9rzkmknc7tsdk46", 13683},
+	{"thor13xlp4yrlwp2a8k462z0287ft3swjxz8zlf3ms5", 1350191},
+	{"thor142s5raq6jtes359hmy8jte9r34lj8gqs5dx5uk", 3248803497042},
+	{"thor1456ja57j5wasf23mhgjpskq8mwhxzxejplh0z5", 2661101533216},
+	{"thor14n5k9vw259xue689evpp5h7vlmwz9r4j6vxz2m", 271465877906},
+	{"thor14x9q0dvrelvl0ulneq4aea2sl7yp7v7vvgg77w", 93133400683},
+	{"thor15930gld787mvxz8cq2y0pqa9lh6d4npmyq2rny", 24963258841},
+	{"thor15cfg979ye9m9v4pcrjyju6t9y7raz8uv38mw4c", 215194556},
+	{"thor1692vpzvunjqn5hj82g28r925e4t6lec482zrhh", 945560566350},
+	{"thor169wy974lr2c8gsesgv4jjf7z6czgge5pfa75l6", 53606111},
+	{"thor16hw3da67jrctj6cjn9lrz4vwrwtap73um2m2p7", 920122357},
+	{"thor16sa3k77lffrdqm854djjr9lgzv777sadrhpgtt", 35072296},
+	{"thor16vffnjwskg9l5wd0s23mz35klz60jyrfmfuy5e", 2720811180643},
+	{"thor16vhalust5987hltgm2dpv843t5r5ctqekm8dlf", 88454801315},
+	{"thor16wjfedsp5tnqqaw9nd465nmyfgwjml68nr7eqv", 22437002204},
+	{"thor170kk2ww8cra7la9lf4czwhhp3lld5xpp94ujsn", 149051320265},
+	{"thor17g3u6jh0tp5ey42mfq500ek22nn43g6kn7wprd", 3634733618},
+	{"thor17tks5j9ads2v878vfw40lgw3vda4ru99gydxlg", 687231757878},
+	{"thor17vngul7c990n0umzj8qjjf5exng6xxpte0pqx8", 60423031029},
+	{"thor18uquyh2nl9chgxe63erhf68e0v9mwwwwqv9g3l", 11098},
+	{"thor18zg6y8ylus8n3tpzu5xxge3yyquj03vylstrl3", 2839811226233},
+	{"thor19c70xjhlgal42hq4mm5xem7nx5x36eyk4pwatz", 1435713427},
+	{"thor19upsdjennvn7fp3r6dc06gx29gh3ut6nxu6qkn", 31992606369},
+	{"thor19z79krl30geqvjsgt8laycapxgsy3j30rpqcr2", 212015570621},
+	{"thor1a9xxp66632zgf57gm84f67mwyr8q4atcl6f3ky", 161408833654},
+	{"thor1agzav5292wy7apzl7lywhdna858dgdd63ult2w", 15226266647},
+	{"thor1apk9rtnhvzs8p55426gvm3f688jzz2gff8czfu", 2206210158195},
+	{"thor1ay9fa7rp8nsh63qnjzh2fdft93643258usp29r", 101805298478},
+	{"thor1ayysyz3rz5stve7mfvcslvaek76upwet0vkgj9", 18633727452},
+	{"thor1c0huztdqx5y39mdpz5x9uy5cfga0k3ghd0we2y", 120329431296},
+	{"thor1c20a2h0c66yrefw7dx90dfz8k4hanlylshh4pw", 80997425210},
+	{"thor1c3mxxtjksx8l7c3sjuzjelsdw34qsfj5vnzcp9", 608704103531},
+	{"thor1chfgr7hw88thn8s9sj59260mmjwpl65t0jxtd7", 40859171861},
+	{"thor1cqtk4gy47rq265dnjh8zzjnkl7jfmvu8w3p09q", 80477644201},
+	{"thor1cups30hy0e54l8mrwux7707r7quk2syzhlk7w5", 19545225884},
+	{"thor1d2pe9ep5d3ectgqdjjmhv7ne95hrhy8nv9jhn9", 16761425733},
+	{"thor1d87pflneuugjd9wr0m6anl9tkyqc0xrwhx334x", 26626166248},
+	{"thor1dk9y6ys5eqrcnut9z3ygjsa4al6flvcgxl8x2l", 5305212897},
+	{"thor1dpc3jzxg0jwp5q4rzk0xp334stuas2t47vncc0", 1584347174},
+	{"thor1drm88nvzn8qclrddac876ectt548cscgukm62d", 129312},
+	{"thor1ea4se3lufe7jaydls255dfhyw3th90zhqyzntk", 284990424559},
+	{"thor1enhmz57mpn4umspa8hqgqwwqpe02q4hpqmqr0k2zftxr8fu3nxmqjy3tqx", 997528921771},
+	{"thor1f47wux64gfn7m68jusqxke3k2scmqrtatyzl24", 69236426688},
+	{"thor1f8zgw59dt9tzhyu620fpdgs5s7hte7vy3lefqr", 16927827217},
+	{"thor1fhuute7lqd9c8d5lezh6ghmnjx6q2wgnf68xe2", 18904561014},
+	{"thor1flrs4nkhjhg0yz4hsqmwfn7tm9zuj8qa2z2jcq", 34682542921},
+	{"thor1fpyaj39rdlc5f80kulq55tqlvku4t66gq5pvqk", 4806088757093},
+	{"thor1fwya3q0lvr4fufqhn5x94p4cuyvsejwqg9wk94", 1122366767217},
+	{"thor1gq936peael6u22pxkaawcvuf4y8555j0yusae9", 3098221884},
+	{"thor1gvuxn2d9wh7fpet36lq75k7rjz4zwrxytudarv", 42903450278},
+	{"thor1h4rdr7y2mxr9f7mrnl40kx7s8wjx99kk0nfu0r", 339031691823},
+	{"thor1hj3ts525ehk9e64thckl89lc5pfw6g0p6kh6uc", 31793976624},
+	{"thor1huu8tecxyjv5lat8d7ujqwyq4zm38cqmex5305", 71059187149},
+	{"thor1hxrydan0eypp5eutah2dt63swnqwzuvc0elgmd", 946131165325},
+	{"thor1hz5fnu7dpc33u0eu2689rzdl0rlm6fj68xmuz0", 168422888},
+	{"thor1j37a9k5uezn7d3965kw0qnj3da6jh9q0qwvxhu", 1231864734},
+	{"thor1jnnep660vqjkkyjxguw84sstvawew25cs6dw5x", 2824740015984},
+	{"thor1ju6gqug04986pr8m8a7jgyurg95z995pcdvwkw", 3056961585389},
+	{"thor1k43xjy4s98d6kaw2q9p2xljgeqnqvquqrse5wf", 64654859444},
+	{"thor1kqn5vjvv4tmk9pfecve8tjhm77jnk6sv2y4dve", 15805},
+	{"thor1kwvp4z2dqsqwy42ah4a83gnw8ww9nqwawq93zr", 229903552464},
+	{"thor1l9y2x4kmz24e6utz49xkzxgcfruwddwsyffzgc", 12132444950},
+	{"thor1lxnrvguwcsw4hqehu33vrr6784tgv28gsdc34l", 54399351836},
+	{"thor1m0h0zqslyn3va6fqq34xputpnhdwad4u285mkr", 610943005861},
+	{"thor1mesm8v6w6p4x4j5qyrdmn02y0qe5uy9h52hl76", 62406062871},
+	{"thor1mpdccj4wr88v2jw28cw2cqluqqcrkux6n45n2m", 24277265},
+	{"thor1mx4vxr2wc404mxmqdnugl7hkt2xx576q2t4j60", 44686544664},
+	{"thor1n0cxg33alsh88zqwjq35dx2xujkzezxu24rs6h", 79877943035},
+	{"thor1n4vn336ws9jz75428ds9tw8hxhmwpa2zc2lzlh", 114593543481},
+	{"thor1n9gcud325e25ywe9sycwwh6pqgalq03e5mj7dg", 848675698},
+	{"thor1nydv7ut2advcsr7sfqj7zt77nk6f2h8zyp87r8", 300478},
+	{"thor1p8y207hu3r6rz56u4urecdx6mcg6q6dvnthamy", 175334448187},
+	{"thor1pclal2930tl5wvkvsmhhnjmg262tw47slpzzc3", 69808635},
+	{"thor1q0zjmlacrm44h0ru5t8t0jn2lm7vfy4x6fznem", 98996269565},
+	{"thor1qjqw6gn72eprm7lsvh45257e7ppcggk5gx3zyv", 200173717327},
+	{"thor1qmag2ln8htpqpkg263pcs0spxdcjjthznz77wh", 27501631027},
+	{"thor1r4vjqhkwhhy25kjy7y96lkl4gcrm4u5tsp5894", 35516964056},
+	{"thor1re8p22sff6gz5xx7dkkemw7fxu44leqaf5a08p", 3275434},
+	{"thor1rgecczkvgpw233t2caxd6ucv457dsasf6p9yt7", 7144323040},
+	{"thor1rl8xfsq9p22tkm539r3394xsyuzjd579xmuy7h", 686022175261},
+	{"thor1s2czferyfpc3m72u0crx9ngt97q590h8qu9zfl", 52897635218},
+	{"thor1s7w78use8jq3eeyjlhpx4v7kkgc5xm7feqc294", 2989582618960},
+	{"thor1smwz0hxflsx2haqs7fqyjpdpg94d4ml2c7rs70", 131732968195},
+	{"thor1sqeyv6mydu28ahr82p2en39tex0e4q2cf0vur9", 713711365554},
+	{"thor1sun0lz9a295lt4sxwx4ptz7u5jpal2e6eepyt0", 9034345261},
+	{"thor1t0wc9j6jsut6g4chhzxp5ledqd3wx53thxq73l", 813667},
+	{"thor1tfm4q8u57qzsznpvh02s8j483aga63cl02k6jt", 43383975},
+	{"thor1tgekmwjh7qkewmny9ssdx5sqlt2myz6zfyu49z", 23540710},
+	{"thor1thc237kme006k5qey0mys07x855atz0690hrh7", 34521446333},
+	{"thor1tl96h6xy56snwh7w5zp5agd02swkywxpeg7ksu", 1747749798551},
+	{"thor1tumaj3y4l6q425d8kg0yjppljyuxv5prp2rtjs", 16350125885},
+	{"thor1twp6pat08q8ye3j7cyzmz729mlcmjmcxs4quw8", 33517289418},
+	{"thor1u4nel2t7q50mcteugkpvvm6kx8gyyvsqx4sk3t", 72681343884},
+	{"thor1unrtm2agxlkrv6jfzse469petlqty99y9tfdmg", 3024729288},
+	{"thor1upuw8yvg96uf4nd6jfuq9s25284dzr45kyzarc", 172940578},
+	{"thor1uwpshu52te8n36mk8hfy3ejjr64jma2s6wsmfq", 17055751},
+	{"thor1uzq9cvjrpvmky2d04ku3xplpz9p276904g3rhc", 498970129593},
+	{"thor1v02x3dww72jwqz8seux9jka8z08e8nq84y3vtg", 96713527720},
+	{"thor1vwuyfwk85a247ett40j7uwk3k0s8cm5qaxevwl", 562615595982},
+	{"thor1wmrse405fdq8yk3xa5alxnfw6yjndk3mvn87dp", 2375234},
+	{"thor1wu42unqwrs6f9743fr06ax6xt55es62y6wmwe3", 78590793736},
+	{"thor1x5c4pyr2d0te563rjpyp7lxhdl2ze5whfmz0q9", 379033318930},
+	{"thor1x8smkm7lpp3ga8sxwsz5nf6y8wradpugyh66wd", 130918969292},
+	{"thor1xhhgzvjrpgs3pcear84cfthq5ntgsyrtuedza4", 155190747986},
+	{"thor1xp3q07akccpd7dukns8l9wy6e4ty47az7cseg6", 128212286083},
+	{"thor1xq4fqrehxn7507rsaj65gd7tqp78ta2kzc9rjg", 138549039822},
+	{"thor1yes8zxhq4p3r5rp9vt6rk9fdxqf2mnm43apumu", 1074553792483},
+	{"thor1yl8ue97n5dtjcj072ynnsxdp6wwzmwwehcuz83", 122663032067},
+	{"thor1ys4eqwefvhj0n5ycs83gjuvnjup3vwscrm5u7l", 32263577445},
+	{"thor1yu8gpu53rglz0rzsrmyxmgrrjfm05kcs7hyqu0", 3425477},
+	{"thor1z5y0ufnv356f3mhs42twek96ec7l2pdp63vsxg", 185427113338},
+}
+
+// mainnetVaultClampFixes14to15 — phantom credit reconciliation on retiring
+// asgard ETH vaults caused by SafeSub clamping in vault.SubFunds during
+// outbound observation when the vault was already drained. Three confirmed
+// clamping events; deduct exact amounts from each vault's vault.Coins[ETH.ETH].
+//
+// Verified via per-block reconciliation across all active+retiring asgard
+// vaults — no other asset/vault is affected.
+//
+//	#1 vtxv 25,864,952  REFUND of 0xf0dfc7fc...  152.629571 ETH (15,262,957,100)
+//	   refund tx: 0x95dbc7251853826df43b914755abbf26715d9d9cc1ee36f17a34bfd14baa92dc
+//	#2 pysp 25,862,037  REFUND of 0xd7c7a3b7...   43.927900 ETH ( 4,392,790,000)
+//	   refund tx: 0xd7b648ca421d3f7e32683450838b990c75797f1bc75c7f409d6e28a6f72f4f2b
+//	#3 pysp 25,862,059  OUT    of 0x9db9787e...   73.870200 ETH ( 7,387,020,000)
+//	   out tx:    0xdc8bd8d3350363e22f967af8cefcae20731fd6c3a763ca5a3698e8cf84c74f21
+//
+// Total reconciliation: 270.427671 ETH (152.629571 vtxv + 117.798100 pysp).
+//
+// NOTE on amount #3: an independent diff scan reported pysp's dc8bd8…
+// clamping at 86.870200 ETH using vault.Coins at consensus_height−1. Asaf's
+// measurement (73.870200 ETH) — used here — was taken at a slightly earlier
+// in-block value and matches the documented gap. The 13 ETH delta is likely
+// an intermediate same-block debit; Asaf's value is the more rigorous post-
+// clamp ledger correction.
+//
+// Per @ursa9r's verification of the live insolvency gap (vault.Coins[ETH] vs.
+// on-chain ETH balance) the per-vault deductions are bumped to fully clear the
+// dust residual:
+//
+//	vtxv: vault 44,121,988,925 − on-chain 28,859,024,982 = 15,262,963,943 (+6,843)
+//	pysp: vault 11,900,321,082 − on-chain    120,503,076 = 11,779,818,006 (+8,006)
+//
+// pysp's two clamping events are coalesced into a single row whose amount
+// equals the actual measured gap; the individual event hashes remain in the
+// header comment above for traceability.
+var mainnetVaultClampFixes14to15 = []vaultClampFix{
+	{"thorpub1addwnpepq072srp46fp0fgzwkk8cv53n3z4lckzw5s6rxx4u0g805pu6uqp7u5dvtxv", 15262963943},
+	{"thorpub1addwnpepqgdfhpqtkzvj2shhumkad49rd89te6ff5rchd2lq0kt3e2dw9ty8qazpysp", 11779818006},
+}

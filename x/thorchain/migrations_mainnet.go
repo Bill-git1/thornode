@@ -466,3 +466,132 @@ func (m Migrator) Migrate13to14(ctx sdk.Context) error {
 	// ADR-023: Burn ~87% of Reserve and reduce MaxRuneSupply to 360M.
 	return m.BurnReserveAndReduceMaxSupply(ctx)
 }
+
+// Migrate14to15 migrates from version 14 to 15.
+//
+// Recovers state from the DOGE asgard migration double-broadcast at block
+// 26,001,464 (slash tx 1DFE09ABE8D8DD11BA55BD6B499AC1EF91FA0B5CA83D492AB12C08AC89C2B54D)
+// where the retiring vault transmitted the same migration outbound twice,
+// draining 122,221,658,117,429 sats and triggering a 200% bond slash on the
+// 19 vault members. The slash was later absorbed by each member's bond
+// providers proportionally via bp.Adjust() during subsequent reward
+// distributions.
+//
+// Four corrections, in order:
+//
+//  1. Reverse the pool slash event: pool.BalanceAsset += 122,221,658,117,429,
+//     pool.BalanceRune -= 26,008,730,208,467. A strict-subtract guards against
+//     pool drift between the slash block and the migration block — if the
+//     pool's RUNE depth dropped below the credited amount (e.g. via LP
+//     activity), the migration aborts cleanly rather than silently clamping.
+//  2. Move 26,008,730,208,467 RUNE from Asgard back to Reserve, undoing the
+//     bond->asgard transfer that backed the (now-reversed) pool credit.
+//  3. Refund the slash directly from Reserve to each provider's wallet, using
+//     the pre-computed bond deltas in mainnetSlashRefunds14to15. Per-row sends
+//     log-and-continue on failure (matches Migrate4to5 / 5to6 / 12to13). na.Bond
+//     is intentionally NOT touched: some slashed nodes will have churned out
+//     and unbonded by the time this runs, and others will have a different
+//     provider distribution than at slash time. Crediting na.Bond would also
+//     trigger a NodeOperatorFee skim on the next bp.Adjust() since providers
+//     have already absorbed the slash.
+//  4. Reconcile phantom credit on two retiring asgard ETH vaults caused by
+//     SafeSub clamping in vault.SubFunds during outbound observation when the
+//     vault was already drained. See fixVaultClamps_v3_18_0 and
+//     mainnetVaultClampFixes14to15 for details. Pre-flight check skips any
+//     entry that would clamp again (loud error logged) — better to leave the
+//     phantom credit in place than halt the upgrade.
+//
+// Net coin movement: Asgard -26B, Reserve 0 (in +26B from Asgard, out -52B to
+// providers, was +26B from original slash), providers' wallets +52B total.
+// ETH vault Coins reduced by 270.427671 ETH across two retiring vaults (no
+// module/account movement — purely a vault.Coins ledger correction).
+func (m Migrator) Migrate14to15(ctx sdk.Context) error {
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	const (
+		stolenDogeSats   = uint64(122_221_658_117_429)
+		runeCreditedSats = uint64(26_008_730_208_467)
+		asgardToReserve  = uint64(26_008_730_208_467)
+	)
+
+	// Step 1: reverse pool slash event.
+	pool, err := m.mgr.Keeper().GetPool(ctx, common.DOGEAsset)
+	if err != nil {
+		return fmt.Errorf("fail to get DOGE pool: %w", err)
+	}
+	if pool.IsEmpty() {
+		return fmt.Errorf("DOGE pool is empty, cannot reverse slash")
+	}
+	runeCredit := cosmos.NewUint(runeCreditedSats)
+	if pool.BalanceRune.LT(runeCredit) {
+		return fmt.Errorf(
+			"DOGE pool BalanceRune (%s) below expected slash credit (%d); "+
+				"pool drifted between slash and migration — investigate before retrying",
+			pool.BalanceRune.String(), runeCreditedSats,
+		)
+	}
+	pool.BalanceAsset = pool.BalanceAsset.Add(cosmos.NewUint(stolenDogeSats))
+	pool.BalanceRune = pool.BalanceRune.Sub(runeCredit)
+	if err := m.mgr.Keeper().SetPool(ctx, pool); err != nil {
+		return fmt.Errorf("fail to save DOGE pool: %w", err)
+	}
+	poolSlashAmt := []PoolAmt{
+		{Asset: common.DOGEAsset, Amount: int64(stolenDogeSats)},
+		{Asset: common.RuneAsset(), Amount: -int64(runeCreditedSats)},
+	}
+	if err := m.mgr.EventMgr().EmitEvent(ctx, NewEventSlash(common.DOGEAsset, poolSlashAmt)); err != nil {
+		ctx.Logger().Error("fail to emit pool reversal event", "error", err)
+	}
+
+	// Step 2: Asgard -> Reserve.
+	asgardCoin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(asgardToReserve))
+	if err := m.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(asgardCoin)); err != nil {
+		return fmt.Errorf("fail to move asgard->reserve: %w", err)
+	}
+
+	// Step 3: Reserve -> per-provider direct refund.
+	// Pre-flight Reserve balance check (matches Migrate5to6 / 12to13).
+	totalRefundAmount := cosmos.NewUint(mainnetSlashRefunds14to15Total)
+	reserveBalance := m.mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
+	if reserveBalance.LT(totalRefundAmount) {
+		return fmt.Errorf("insufficient reserve balance for migration: have %s, need %s",
+			reserveBalance.String(), totalRefundAmount.String())
+	}
+	ctx.Logger().Info("Reserve balance validation passed",
+		"reserve_balance", reserveBalance.String(),
+		"required_amount", totalRefundAmount.String())
+
+	for _, refund := range mainnetSlashRefunds14to15 {
+		recipient, err := cosmos.AccAddressFromBech32(refund.address)
+		if err != nil {
+			ctx.Logger().Error("error parsing address in store migration",
+				"error", err,
+				"address", refund.address)
+			continue
+		}
+		amount := cosmos.NewUint(refund.amount)
+		refundCoins := common.NewCoins(common.NewCoin(common.RuneAsset(), amount))
+		if err := m.mgr.Keeper().SendFromModuleToAccount(ctx, ReserveName, recipient, refundCoins); err != nil {
+			ctx.Logger().Error("fail to store migration transfer RUNE from Reserve to recipient",
+				"error", err,
+				"recipient", recipient.String(),
+				"address", refund.address,
+				"amount", amount.String())
+		} else {
+			ctx.Logger().Debug("successfully transferred bond slash refund",
+				"recipient", recipient.String(),
+				"amount", amount.String())
+		}
+	}
+
+	// Step 4: reconcile phantom credit on retiring asgard ETH vaults from
+	// SafeSub clamping in vault.SubFunds during outbound observation.
+	// Failures inside this routine are logged and skipped per-row; we do
+	// not return an error from this step so the migration as a whole still
+	// completes the prior 3 steps.
+	fixVaultClamps_v3_18_0(ctx, m.mgr, mainnetVaultClampFixes14to15)
+
+	return nil
+}

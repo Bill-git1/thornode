@@ -95,3 +95,127 @@ func (s *MigrationCommonSuite) TestBurnReserveAndReduceMaxSupply(c *C) {
 	c.Assert(postBurnSupply.LTE(cosmos.NewUint(uint64(maxSupplyMimir))), Equals, true,
 		Commentf("total supply (%s) should be <= MaxRuneSupply (%d)", postBurnSupply.String(), maxSupplyMimir))
 }
+
+// makeClampFixVault returns a saved vault with a single ETH coin balance and
+// the given pubkey. Used by the fixVaultClamps_v3_18_0 tests.
+func makeClampFixVault(c *C, ctx cosmos.Context, mgr *Mgrs, pubKey common.PubKey, ethAmount cosmos.Uint) Vault {
+	v := GetRandomVault()
+	v.PubKey = pubKey
+	v.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, ethAmount))
+	c.Assert(mgr.Keeper().SetVault(ctx, v), IsNil)
+	return v
+}
+
+func (s *MigrationCommonSuite) TestFixVaultClamps_v3_18_0_HappyPath(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Three random pubkeys (the production vaults won't exist on mocknet,
+	// and the data table is keyed to mainnet bech32 — for the test we pass
+	// a custom fixes slice keyed to vaults we actually save here).
+	pk1 := GetRandomPubKey()
+	pk2 := GetRandomPubKey()
+	pk3 := GetRandomPubKey()
+
+	const headroom uint64 = 1_000_000_000
+	const a1 uint64 = 15262957100
+	const a2 uint64 = 4392790000
+	const a3 uint64 = 7387020000
+
+	v1 := makeClampFixVault(c, ctx, mgr, pk1, cosmos.NewUint(a1+headroom))
+	v2 := makeClampFixVault(c, ctx, mgr, pk2, cosmos.NewUint(a2+headroom))
+	v3 := makeClampFixVault(c, ctx, mgr, pk3, cosmos.NewUint(a3+headroom))
+
+	fixes := []vaultClampFix{
+		{pubKey: pk1.String(), amount: a1},
+		{pubKey: pk2.String(), amount: a2},
+		{pubKey: pk3.String(), amount: a3},
+	}
+	fixVaultClamps_v3_18_0(ctx, mgr, fixes)
+
+	// Each vault's ETH balance should be exactly headroom after the fix.
+	for _, pk := range []common.PubKey{v1.PubKey, v2.PubKey, v3.PubKey} {
+		got, err := mgr.Keeper().GetVault(ctx, pk)
+		c.Assert(err, IsNil)
+		c.Assert(got.GetCoin(common.ETHAsset).Amount.Uint64(), Equals, headroom,
+			Commentf("vault %s: expected %d after fix, got %s", pk.String(), headroom, got.GetCoin(common.ETHAsset).Amount.String()))
+	}
+}
+
+func (s *MigrationCommonSuite) TestFixVaultClamps_v3_18_0_PreFlightSkip(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Vault has insufficient ETH for the fix — pre-flight should skip and
+	// leave the vault state unchanged.
+	pk := GetRandomPubKey()
+	const fixAmt uint64 = 15262957100
+	const beforeAmt uint64 = 5_000_000_000 // < fixAmt, would clamp again
+
+	makeClampFixVault(c, ctx, mgr, pk, cosmos.NewUint(beforeAmt))
+
+	fixes := []vaultClampFix{
+		{pubKey: pk.String(), amount: fixAmt},
+	}
+	fixVaultClamps_v3_18_0(ctx, mgr, fixes)
+
+	// Vault state must be unchanged.
+	got, err := mgr.Keeper().GetVault(ctx, pk)
+	c.Assert(err, IsNil)
+	c.Assert(got.GetCoin(common.ETHAsset).Amount.Uint64(), Equals, beforeAmt,
+		Commentf("vault %s: expected unchanged %d, got %s", pk.String(), beforeAmt, got.GetCoin(common.ETHAsset).Amount.String()))
+}
+
+func (s *MigrationCommonSuite) TestFixVaultClamps_v3_18_0_Mixed(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// One vault has enough; the other doesn't. The first should be debited,
+	// the second untouched, and the loop must continue past the skip.
+	pkOK := GetRandomPubKey()
+	pkSkip := GetRandomPubKey()
+
+	const fixA uint64 = 4392790000
+	const fixB uint64 = 7387020000
+	const headroom uint64 = 1_000_000_000
+
+	makeClampFixVault(c, ctx, mgr, pkOK, cosmos.NewUint(fixA+headroom))
+	const skipBefore uint64 = 1_000 // way below fixB
+	makeClampFixVault(c, ctx, mgr, pkSkip, cosmos.NewUint(skipBefore))
+
+	fixes := []vaultClampFix{
+		{pubKey: pkSkip.String(), amount: fixB}, // skip first to prove loop continues
+		{pubKey: pkOK.String(), amount: fixA},
+	}
+	fixVaultClamps_v3_18_0(ctx, mgr, fixes)
+
+	gotOK, err := mgr.Keeper().GetVault(ctx, pkOK)
+	c.Assert(err, IsNil)
+	c.Assert(gotOK.GetCoin(common.ETHAsset).Amount.Uint64(), Equals, headroom,
+		Commentf("OK vault: expected %d, got %s", headroom, gotOK.GetCoin(common.ETHAsset).Amount.String()))
+
+	gotSkip, err := mgr.Keeper().GetVault(ctx, pkSkip)
+	c.Assert(err, IsNil)
+	c.Assert(gotSkip.GetCoin(common.ETHAsset).Amount.Uint64(), Equals, skipBefore,
+		Commentf("Skipped vault: expected unchanged %d, got %s", skipBefore, gotSkip.GetCoin(common.ETHAsset).Amount.String()))
+}
+
+func (s *MigrationCommonSuite) TestFixVaultClamps_v3_18_0_RetiringVaultStillReachable(c *C) {
+	// Confirm GetVault returns the vault regardless of status — the
+	// production vaults may have transitioned to InactiveVault by 3.18.0.
+	ctx, mgr := setupManagerForTest(c)
+
+	pk := GetRandomPubKey()
+	const fixAmt uint64 = 4392790000
+	const headroom uint64 = 1_000_000_000
+
+	v := GetRandomVault()
+	v.PubKey = pk
+	v.Status = InactiveVault
+	v.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(fixAmt+headroom)))
+	c.Assert(mgr.Keeper().SetVault(ctx, v), IsNil)
+
+	fixes := []vaultClampFix{{pubKey: pk.String(), amount: fixAmt}}
+	fixVaultClamps_v3_18_0(ctx, mgr, fixes)
+
+	got, err := mgr.Keeper().GetVault(ctx, pk)
+	c.Assert(err, IsNil)
+	c.Assert(got.GetCoin(common.ETHAsset).Amount.Uint64(), Equals, headroom)
+}

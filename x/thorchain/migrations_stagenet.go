@@ -178,3 +178,9 @@ func (m Migrator) Migrate13to14(ctx sdk.Context) error {
 	// ADR-023: Burn ~87% of Reserve and reduce MaxRuneSupply to 360M.
 	return m.BurnReserveAndReduceMaxSupply(ctx)
 }
+
+// Migrate14to15 migrates from version 14 to 15.
+// No-op on stagenet — the DOGE slash recovery only applies to mainnet state.
+func (m Migrator) Migrate14to15(_ sdk.Context) error {
+	return nil
+}

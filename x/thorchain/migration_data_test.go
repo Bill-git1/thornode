@@ -115,3 +115,110 @@ func (s MigrationDataSuite) TestVerifyTotal12to13(c *C) {
 		addresses[refund.address] = true
 	}
 }
+
+func (s MigrationDataSuite) TestVerifyTotal14to15(c *C) {
+	// verify total — sum of provider bond deltas at slash block 26,001,464.
+	// $ tci nodes bond-diff --long --heights 26001464 --no-node --no-operator --provider
+	// total diff => -520,174.60416933 (= 52,017,460,416,933 base units)
+	sum := uint64(0)
+	for _, refund := range mainnetSlashRefunds14to15 {
+		sum += refund.amount
+	}
+	c.Assert(sum, Equals, mainnetSlashRefunds14to15Total)
+	c.Assert(mainnetSlashRefunds14to15Total, Equals, uint64(52017460416933))
+
+	// 127 providers across the 19 slashed vault members. The rujira-brune
+	// liquid bond aggregator (thor1enhmz...) is included; verified that it
+	// reads bank balance via state.allocate(), so the unsolicited send is
+	// recognized as NAV and streamed to brune stakers via stake_contract.
+	c.Assert(len(mainnetSlashRefunds14to15), Equals, 127)
+
+	// verify no duplicates
+	addresses := make(map[string]bool)
+	for _, refund := range mainnetSlashRefunds14to15 {
+		c.Assert(addresses[refund.address], Equals, false)
+		addresses[refund.address] = true
+	}
+}
+
+func (s MigrationDataSuite) TestMigrate14to15AddressValidation(c *C) {
+	// Exercise the same parse path the migration uses at runtime, namely
+	// cosmos.AccAddressFromBech32 with the mainnet "thor" prefix and
+	// VerifyAddressFormat. We can't call AccAddressFromBech32 directly here
+	// because tests run under -tags=mocknet, where the configured prefix is
+	// "tthor"; replicate its checks against a hardcoded "thor" instead.
+	//
+	// One provider is a 64-char wasm contract address (32-byte payload, the
+	// rujira-brune liquid bond aggregator) and the rest are 43-char account
+	// addresses, so a length assertion from prior tests doesn't apply.
+	for i, refund := range mainnetSlashRefunds14to15 {
+		bz, err := cosmos.GetFromBech32(refund.address, "thor")
+		c.Assert(err, IsNil, Commentf("GetFromBech32 failed at index %d: %s", i, refund.address))
+
+		err = cosmos.VerifyAddressFormat(bz)
+		c.Assert(err, IsNil, Commentf("VerifyAddressFormat failed at index %d: %s", i, refund.address))
+
+		c.Assert(refund.amount > 0, Equals, true, Commentf("Amount at index %d should be positive: %d", i, refund.amount))
+	}
+}
+
+func (s MigrationDataSuite) TestVerifyVaultClampFixes14to15(c *C) {
+	// Verify the three (vault, amount) clamping reconciliations match the
+	// documented values exactly. Re-stated here to make a typo in the data
+	// table fail the build.
+	// Per @ursa9r's gap verification: pysp's two clamping events are coalesced
+	// into a single row whose amount equals the actual on-chain insolvency gap
+	// (vault.Coins[ETH] − ETH bank balance), so the table is 2 rows not 3.
+	c.Assert(len(mainnetVaultClampFixes14to15), Equals, 2)
+
+	const (
+		vtxv = "thorpub1addwnpepq072srp46fp0fgzwkk8cv53n3z4lckzw5s6rxx4u0g805pu6uqp7u5dvtxv"
+		pysp = "thorpub1addwnpepqgdfhpqtkzvj2shhumkad49rd89te6ff5rchd2lq0kt3e2dw9ty8qazpysp"
+	)
+
+	// vtxv: gap 44,121,988,925 − 28,859,024,982 = 15,262,963,943
+	c.Assert(mainnetVaultClampFixes14to15[0].pubKey, Equals, vtxv)
+	c.Assert(mainnetVaultClampFixes14to15[0].amount, Equals, uint64(15262963943))
+	// pysp: gap 11,900,321,082 −    120,503,076 = 11,779,818,006 (coalesced)
+	c.Assert(mainnetVaultClampFixes14to15[1].pubKey, Equals, pysp)
+	c.Assert(mainnetVaultClampFixes14to15[1].amount, Equals, uint64(11779818006))
+
+	// Per-vault and grand totals (1e8 base units of ETH).
+	const (
+		totalVtxv uint64 = 15262963943           // 152.62963943 ETH
+		totalPysp uint64 = 11779818006           // 117.79818006 ETH
+		grand     uint64 = totalVtxv + totalPysp // 270.42781949 ETH
+	)
+	c.Assert(grand, Equals, uint64(27042781949))
+
+	// Verify computed sums from the table match the constants above.
+	var sumVtxv, sumPysp, sum uint64
+	for _, fix := range mainnetVaultClampFixes14to15 {
+		sum += fix.amount
+		switch fix.pubKey {
+		case vtxv:
+			sumVtxv += fix.amount
+		case pysp:
+			sumPysp += fix.amount
+		default:
+			c.Fatalf("unexpected pubkey in clamp fix table: %s", fix.pubKey)
+		}
+	}
+	c.Assert(sumVtxv, Equals, totalVtxv)
+	c.Assert(sumPysp, Equals, totalPysp)
+	c.Assert(sum, Equals, grand)
+}
+
+func (s MigrationDataSuite) TestVaultClampFixes14to15PubKeyValidation(c *C) {
+	// Vault pubkeys are encoded with the *pubkey* bech32 prefix (`thorpub`).
+	// We can't call common.NewPubKey here because the test runs under
+	// `-tags=mocknet` where the bech32 prefix is `tthorpub`; the production
+	// data uses the mainnet prefix and will only be parsed under the mainnet
+	// build (where Migrate14to15 is invoked). This test asserts shape only.
+	const expectedLen = len("thorpub1addwnpepq072srp46fp0fgzwkk8cv53n3z4lckzw5s6rxx4u0g805pu6uqp7u5dvtxv")
+	for i, fix := range mainnetVaultClampFixes14to15 {
+		c.Assert(fix.pubKey[:7], Equals, "thorpub", Commentf("PubKey at index %d does not have thorpub prefix: %s", i, fix.pubKey))
+		c.Assert(len(fix.pubKey), Equals, expectedLen, Commentf("PubKey at index %d has incorrect length: %s", i, fix.pubKey))
+		c.Assert(fix.amount > 0, Equals, true, Commentf("Amount at index %d should be positive: %d", i, fix.amount))
+	}
+}
