@@ -1279,3 +1279,244 @@ func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionRequiresFinalityParity(
 	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(vaultBalanceBefore), Equals, true,
 		Commentf("vault balance should be unchanged when non-final re-observations are rejected"))
 }
+
+// TestDetectVaultSubFundsClampHalts asserts that an outbound observation whose
+// coin amount exceeds the vault's tracked balance halts signing + trading on
+// the affected chain. The clamp itself is preserved by SubFunds, but the
+// divergence must be surfaced rather than silently swallowed.
+func (s *HandlerObservedTxHelpersSuite) TestDetectVaultSubFundsClampHalts(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(1234)
+	k := mgr.Keeper()
+
+	vault := GetRandomVault()
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	// Observed outbound debits 100 ETH but the vault only tracks 10 ETH.
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:abc",
+	}, ctx.BlockHeight(), vault.PubKey, ctx.BlockHeight())
+
+	// Sanity: chain should not be halted before the call.
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning <= 0, Equals, true)
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading <= 0, Equals, true)
+
+	detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Coins)
+
+	haltSigning, err = k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning, Equals, ctx.BlockHeight(),
+		Commentf("HaltSigningETH should be set to current block height when a clamp is detected"))
+	haltTrading, err = k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading, Equals, ctx.BlockHeight(),
+		Commentf("HaltETHTrading should be set to current block height when a clamp is detected"))
+}
+
+// TestDetectVaultSubFundsClampNoOpWhenSolvent ensures the helper is a no-op
+// when the vault has sufficient balance to cover the observed outbound — the
+// normal happy path that should NOT halt the chain.
+func (s *HandlerObservedTxHelpersSuite) TestDetectVaultSubFundsClampNoOpWhenSolvent(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(1234)
+	k := mgr.Keeper()
+
+	vault := GetRandomVault()
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))),
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:abc",
+	}, ctx.BlockHeight(), vault.PubKey, ctx.BlockHeight())
+
+	detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Coins)
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning <= 0, Equals, true,
+		Commentf("HaltSigningETH should remain unset when vault has sufficient balance"))
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading <= 0, Equals, true,
+		Commentf("HaltETHTrading should remain unset when vault has sufficient balance"))
+}
+
+// TestDetectVaultSubFundsClampHaltsOnGasDebit asserts the helper also catches
+// the same clamp pattern when the slashed-vault gas debit would silently
+// underflow the vault's gas reserve.
+func (s *HandlerObservedTxHelpersSuite) TestDetectVaultSubFundsClampHaltsOnGasDebit(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(2222)
+	k := mgr.Keeper()
+
+	vault := GetRandomVault()
+	// Vault has only 100 wei of ETH for gas — far less than the observed gas spend.
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100))))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	gas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))} // 1e8 wei
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
+		Gas:         gas,
+		Memo:        "OUT:abc",
+	}, ctx.BlockHeight(), vault.PubKey, ctx.BlockHeight())
+
+	// Pass the gas coins explicitly — this is the call shape used by the
+	// vault-slash branch of handleObservedTxOutQuorum.
+	detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Gas.ToCoins())
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning, Equals, ctx.BlockHeight(),
+		Commentf("HaltSigningETH should be set when gas-debit would clamp"))
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading, Equals, ctx.BlockHeight(),
+		Commentf("HaltETHTrading should be set when gas-debit would clamp"))
+}
+
+// TestDetectVaultSubFundsClampPreservesManualHalt asserts that existing
+// manual indefinite halts (mimir == 1) on either HaltSigning<Chain> or
+// Halt<Chain>Trading are NOT downgraded to the current block height. Without
+// this guard, a regular halt-height write would later be auto-unhalted, which
+// is exactly what the manual-halt sentinel is meant to prevent.
+func (s *HandlerObservedTxHelpersSuite) TestDetectVaultSubFundsClampPreservesManualHalt(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(1234)
+	k := mgr.Keeper()
+
+	vault := GetRandomVault()
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	// Operator has set the manual indefinite-halt sentinels.
+	k.SetMimir(ctx, "HaltSigningETH", 1)
+	k.SetMimir(ctx, "HaltETHTrading", 1)
+
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:abc",
+	}, ctx.BlockHeight(), vault.PubKey, ctx.BlockHeight())
+
+	detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Coins)
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning, Equals, int64(1),
+		Commentf("HaltSigningETH manual indefinite halt must be preserved across clamp detection"))
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading, Equals, int64(1),
+		Commentf("HaltETHTrading manual indefinite halt must be preserved across clamp detection"))
+}
+
+// TestDetectVaultSubFundsClampOverridesFutureHalt asserts that a future-
+// scheduled halt is overwritten with ctx.BlockHeight() when a clamp is
+// detected. Per Ursa's MR feedback: a clamp is a present-time divergence,
+// so triggering the halt now (rather than waiting for the scheduled height)
+// is the right call. Differs from processSolvencyAttestation, which preserves
+// future halts because it can also unhalt.
+func (s *HandlerObservedTxHelpersSuite) TestDetectVaultSubFundsClampOverridesFutureHalt(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(1234)
+	k := mgr.Keeper()
+
+	vault := GetRandomVault()
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	// Halts scheduled 1000 blocks in the future.
+	futureHalt := ctx.BlockHeight() + 1000
+	k.SetMimir(ctx, "HaltSigningETH", futureHalt)
+	k.SetMimir(ctx, "HaltETHTrading", futureHalt)
+
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:abc",
+	}, ctx.BlockHeight(), vault.PubKey, ctx.BlockHeight())
+
+	detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Coins)
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning, Equals, ctx.BlockHeight(),
+		Commentf("HaltSigningETH future halt must be overwritten with current block height"))
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading, Equals, ctx.BlockHeight(),
+		Commentf("HaltETHTrading future halt must be overwritten with current block height"))
+}
+
+// TestDetectVaultSubFundsClampSumsDuplicateCoins asserts that multiple coin
+// entries for the same asset are summed before comparing against the vault
+// balance. Per Ursa's MR feedback: tx.Tx.Coins should normally have one entry
+// per asset, but if duplicates ever appear the SUM of amounts must be the
+// thing compared, not each entry independently.
+func (s *HandlerObservedTxHelpersSuite) TestDetectVaultSubFundsClampSumsDuplicateCoins(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(3333)
+	k := mgr.Keeper()
+
+	vault := GetRandomVault()
+	// Vault holds 50 ETH.
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	// Two coin entries of 30 ETH each — neither alone exceeds 50, but the
+	// sum (60) does. A naive per-entry comparison would miss this clamp.
+	coins := common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(30*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(30*common.One)),
+	}
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       coins,
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:abc",
+	}, ctx.BlockHeight(), vault.PubKey, ctx.BlockHeight())
+
+	detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, coins)
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning, Equals, ctx.BlockHeight(),
+		Commentf("clamp must fire when summed-by-asset amount exceeds vault balance"))
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading, Equals, ctx.BlockHeight(),
+		Commentf("clamp must fire when summed-by-asset amount exceeds vault balance"))
+}

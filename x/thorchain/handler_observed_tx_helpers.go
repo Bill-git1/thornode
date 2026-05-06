@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -673,6 +674,11 @@ func handleObservedTxOutQuorum(
 		if err := mgr.Slasher().SlashVault(slashCtx, tx.ObservedPubKey, toSlash, mgr); err != nil {
 			ctx.Logger().Error("fail to slash account for sending extra fund", "error", err)
 		}
+		// Detect SafeSub clamping on the inbound-memo slash debit. The same
+		// silent-drop pattern applies: bifrost reports the vault sent toSlash,
+		// but if TC's tracked balance is below that, SafeSub clamps to zero and
+		// the divergence becomes phantom credit on the vault.
+		detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, toSlash)
 		vault.SubFunds(toSlash)
 		if err := k.SetVault(ctx, vault); err != nil {
 			ctx.Logger().Error("fail to save vault", "error", err)
@@ -756,6 +762,9 @@ func handleObservedTxOutQuorum(
 	} else {
 		// if the vault was slashed we skipped the gas manager above and deduct gas directly
 		if vaultSlash {
+			// Detect SafeSub clamping on the gas debit: the same silent-drop bug
+			// applies here when a slashed vault has insufficient gas reserve.
+			detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Gas.ToCoins())
 			vault.SubFunds(tx.Tx.Gas.ToCoins())
 		}
 
@@ -764,6 +773,13 @@ func handleObservedTxOutQuorum(
 		if !tx.Tx.FromAddress.Equals(tx.Tx.ToAddress) {
 			// skip deducting funds for outbound fake gas
 			if !isOutboundFakeGasTx(tx) {
+				// Detect SafeSub clamping: an outbound observation should never debit
+				// more than the vault's tracked balance. When this happens, an earlier
+				// debit has been silently dropped (the L1 sent the funds, but TC could
+				// not fully account for it) and the vault now carries phantom credit.
+				// This indicates a real solvency divergence — halt the chain and emit
+				// a security event so operators can investigate before further damage.
+				detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Coins)
 				vault.SubFunds(tx.Tx.Coins)
 			}
 			vault.OutboundTxCount++
@@ -802,6 +818,88 @@ func handleObservedTxOutQuorum(
 	ctx.Logger().Info("tx out processed", "chain", tx.Tx.Chain, "id", tx.Tx.ID, "finalized", tx.IsFinal())
 
 	return nil
+}
+
+// detectVaultSubFundsClamp inspects coins about to be debited from a vault and
+// surfaces the case where vault.SubFunds would silently clamp at zero because
+// the recorded balance is below the requested debit.
+//
+// When this happens, an earlier debit on the same vault was silently dropped:
+// the L1 actually sent the full amount, but TC's ledger now carries phantom
+// credit equal to (debit_amount − available_balance). Apply the clamp (the
+// next vault.SubFunds call) to keep state consistent across nodes, but emit a
+// security event and halt signing + trading on the affected chain so the
+// drift surfaces immediately instead of accumulating undetected.
+//
+// The halt targets HaltSigning<Chain> and Halt<Chain>Trading rather than the
+// chain-scanner halt SolvencyHalt<Chain>Chain. Bifrost continues observing the
+// chain (avoiding scanner backlog on high-volume chains) while TC stops
+// processing new outbounds and trades against the affected asset until an
+// operator investigates and unhalts.
+//
+// The caller passes the coins about to be debited explicitly (rather than
+// always reading tx.Tx.Coins) so that both the gas-debit path (when the vault
+// is slashed) and the main coin-debit path are covered.
+//
+// `coins` is expected to be L1-native to the chain that produced the
+// observation — bifrost-side validation rejects observations whose coins
+// reference an off-chain asset before quorum, so coin.Asset.GetChain() is
+// trusted to map to the correct halt mimir keys here.
+func detectVaultSubFundsClamp(ctx cosmos.Context, mgr Manager, k keeper.Keeper, vault Vault, tx common.ObservedTx, coins common.Coins) {
+	// Aggregate by asset before comparing against vault balance. tx.Tx.Coins
+	// should only ever have one entry per asset in practice, but if duplicates
+	// ever appear (or the gas-coin path passes a list with the same asset
+	// twice), comparing each entry independently would miss the case where
+	// the SUM exceeds the vault balance even though no single entry does.
+	aggregated := common.Coins{}.Add(coins...)
+
+	for _, coin := range aggregated {
+		available := vault.GetCoin(coin.Asset).Amount
+		if !coin.Amount.GT(available) {
+			continue
+		}
+		missed := coin.Amount.Sub(available)
+
+		msg := fmt.Sprintf(
+			"vault sub_funds clamp: vault=%s asset=%s requested=%s available=%s missed=%s tx=%s",
+			vault.PubKey, coin.Asset, coin.Amount, available, missed, tx.Tx.ID,
+		)
+		ctx.Logger().Error(msg)
+
+		if err := mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
+			ctx.Logger().Error("fail to emit vault clamp security event", "error", err)
+		}
+
+		chain := coin.Asset.GetChain()
+		setHaltMimirIfNotPreserved(ctx, k, mgr, fmt.Sprintf(constants.MimirTemplateHaltSigning, chain))
+		setHaltMimirIfNotPreserved(ctx, k, mgr, fmt.Sprintf(constants.MimirTemplateHaltTrading, chain))
+	}
+}
+
+// setHaltMimirIfNotPreserved writes ctx.BlockHeight() to a halt mimir unless
+// the operator has set the indefinite-manual sentinel (1), in which case the
+// halt is preserved. A halt scheduled for a future block is overwritten:
+// the clamp detection signals a present-time divergence that warrants halting
+// now rather than waiting for the scheduled height.
+//
+// Differs from processSolvencyAttestation's guard, which preserves future
+// halts because it can also unhalt — overwriting there would let a future
+// halt be unhalted by an earlier solvent attestation. This function only
+// sets, never unhalts, so future halts are safe to overwrite.
+func setHaltMimirIfNotPreserved(ctx cosmos.Context, k keeper.Keeper, mgr Manager, key string) {
+	haltVal, err := k.GetMimir(ctx, key)
+	if err != nil {
+		ctx.Logger().Error("fail to get mimir", "key", key, "error", err)
+	}
+	// Preserve manual indefinite halt; same-block dedupe avoids duplicate events.
+	if haltVal == 1 || haltVal == ctx.BlockHeight() {
+		return
+	}
+	k.SetMimir(ctx, key, ctx.BlockHeight())
+	ev := NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(ctx.BlockHeight(), 10))
+	if err := mgr.EventMgr().EmitEvent(ctx, ev); err != nil {
+		ctx.Logger().Error("fail to emit set_mimir event for vault clamp", "key", key, "error", err)
+	}
 }
 
 // matchedOutbound holds a matching TxOutItem with its height and hash for sorting

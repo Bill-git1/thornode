@@ -511,6 +511,10 @@ func addGasFees(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
 	if err != nil {
 		return err
 	}
+	// Detect SafeSub clamping on the gas debit before it happens silently.
+	// This covers both the cancel/approval tx path and the main non-slash
+	// outbound gas path that go through addGasFees.
+	detectVaultSubFundsClamp(ctx, mgr, mgr.Keeper(), vault, tx, tx.Tx.Gas.ToCoins())
 	vault.SubFunds(tx.Tx.Gas.ToCoins())
 	if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
 		return err

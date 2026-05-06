@@ -360,6 +360,53 @@ func (s *HelperSuite) TestAddGasFees(c *C) {
 	}
 }
 
+// TestAddGasFeesClampDetection asserts that addGasFees runs the clamp detector
+// before vault.SubFunds, so silent gas-debit clamps on the cancel/approval and
+// non-slash outbound paths trigger HaltSigning + HaltTrading just like the
+// vault-slash branch already does.
+func (s *HelperSuite) TestAddGasFeesClampDetection(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(4444)
+	k := mgr.Keeper()
+
+	// Vault has 100 wei of ETH — far less than the gas the observed tx claims.
+	vault := GetRandomVault()
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100))))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	// Pool needed by addGasFees' downstream gas-manager bookkeeping.
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	tx := ObservedTx{
+		Tx: common.Tx{
+			ID:          GetRandomTxHash(),
+			Chain:       common.ETHChain,
+			FromAddress: GetRandomETHAddress(),
+			ToAddress:   GetRandomETHAddress(),
+			Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
+			Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
+		},
+		ObservedPubKey: vault.PubKey,
+		BlockHeight:    ctx.BlockHeight(),
+	}
+
+	c.Assert(addGasFees(ctx, mgr, tx), IsNil)
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning, Equals, ctx.BlockHeight(),
+		Commentf("HaltSigningETH should fire when addGasFees would clamp"))
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading, Equals, ctx.BlockHeight(),
+		Commentf("HaltETHTrading should fire when addGasFees would clamp"))
+}
+
 func (s *HelperSuite) TestEmitPoolStageCostEvent(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	emitPoolBalanceChangedEvent(ctx,
