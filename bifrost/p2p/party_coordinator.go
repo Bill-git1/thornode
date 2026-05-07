@@ -439,6 +439,9 @@ func (pc *PartyCoordinator) JoinPartyWithLeader(msgID string, blockHeight int64,
 	if err != nil {
 		return nil, "", err
 	}
+	if len(peerIDs) == 1 && peerIDs[0] == pc.host.ID() && threshold <= 0 {
+		return peerIDs, leader, nil
+	}
 
 	peerGroup, err := pc.createJoinPartyGroups(msgID, leaderID, peerIDs, threshold)
 	if err != nil {

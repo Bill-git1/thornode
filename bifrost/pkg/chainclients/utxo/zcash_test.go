@@ -216,6 +216,37 @@ func (s *ZcashSuite) TestGetMemo(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(memo, Equals, "swap:eth.0xc54c1512696F3EA7956bd9aD410818eEcADCFfff:0xc54c1512696F3EA7956bd9aD410818eEcADCFfff:10000000000")
 
+	// zcashd reports the synthetic segwit-style memo continuation outputs as nonstandard.
+	tx = btcjson.TxRawResult{
+		Vin: []btcjson.Vin{{}}, // dummy, otherwise treated as shielded tx
+		Vout: []btcjson.Vout{
+			{
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Asm:  "OP_RETURN 3d3a584d522e584d523a34383346367171436967504c5a6d3470425a424a32324a57596d386a56557847523357525674557143706236694c39624566486171476f4a5a436e4c546e46567a533968515e",
+					Type: "nulldata",
+					Hex:  "6a4c503d3a584d522e584d523a34383346367171436967504c5a6d3470425a424a32324a57596d386a56557847523357525674557143706236694c39624566486171476f4a5a436e4c546e46567a533968515e",
+				},
+			},
+			{
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Asm:  "0 4e6a5658644a69336855784d776d507250446b52",
+					Type: "nonstandard",
+					Hex:  "00144e6a5658644a69336855784d776d507250446b52",
+				},
+			},
+			{
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Asm:  "0 61756b4471310000000000000000000000000000",
+					Type: "nonstandard",
+					Hex:  "001461756b4471310000000000000000000000000000",
+				},
+			},
+		},
+	}
+	memo, err = s.client.getMemo(&tx)
+	c.Assert(err, IsNil)
+	c.Assert(memo, Equals, "=:XMR.XMR:483F6qqCigPLZm4pBZBJ22JWYm8jVUxGR3WRVtUqCpb6iL9bEfHaqGoJZCnLTnFVzS9hQNjVXdJi3hUxMwmPrPDkRaukDq1")
+
 	// OP_RETURN exactly 80 chars
 	tx = btcjson.TxRawResult{
 		Vin: []btcjson.Vin{{}}, // dummy, otherwise treated as shielded tx

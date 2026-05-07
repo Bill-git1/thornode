@@ -43,7 +43,7 @@ var _ = Suite(&UnstuckTestSuite{})
 func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	s.m = GetMetricForTest(c)
 	c.Assert(s.m, NotNil)
-	types2.SetupConfigForTest()
+	setupMocknetThorConfig()
 	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	cfg := config.BifrostClientConfiguration{
@@ -310,6 +310,7 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	c.Assert(e, NotNil)
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	pubkeyMgr.AddPubKey(e.kw.GetPubKey(), false, common.SigningAlgoSecp256k1)
 	pubkey := e.kw.GetPubKey().String()
 
 	txID1 := types2.GetRandomTxHash().String()

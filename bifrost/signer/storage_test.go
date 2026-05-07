@@ -5,6 +5,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
@@ -38,7 +39,8 @@ func (s *StorageSuite) TestStorage(c *C) {
 	c.Assert(store.Remove(item), IsNil)
 	c.Check(store.Has(item.Key()), Equals, false)
 
-	pk := common.PubKey("tthorpub1addwnpepqfup3y8p0egd7ml7vrnlxgl3wvnp89mpn0tjpj0p2nm2gh0n9hlrvrtylay")
+	pk, err := common.NewPubKey(pubkeymanager.MockPubkey)
+	c.Assert(err, IsNil)
 
 	spent := NewTxOutStoreItem(10, types.TxOutItem{Chain: common.ETHChain, VaultPubKey: pk, Memo: "spent"}, 0)
 	spent.Status = TxSpent
@@ -54,8 +56,12 @@ func (s *StorageSuite) TestStorage(c *C) {
 	items = store.List()
 	c.Assert(items, HasLen, 4)
 	c.Check(items[0].TxOutItem.Memo, Equals, "boo")
-	c.Check(items[1].TxOutItem.Memo, Equals, "bar", Commentf("%s", items[1].TxOutItem.Memo))
-	c.Check(items[2].TxOutItem.Memo, Equals, "foo", Commentf("%s", items[2].TxOutItem.Memo))
+	midMemos := map[string]bool{
+		items[1].TxOutItem.Memo: true,
+		items[2].TxOutItem.Memo: true,
+	}
+	c.Check(midMemos["bar"], Equals, true, Commentf("%s,%s", items[1].TxOutItem.Memo, items[2].TxOutItem.Memo))
+	c.Check(midMemos["foo"], Equals, true, Commentf("%s,%s", items[1].TxOutItem.Memo, items[2].TxOutItem.Memo))
 	c.Check(items[3].TxOutItem.Memo, Equals, "baz")
 
 	ordered := store.OrderedLists()

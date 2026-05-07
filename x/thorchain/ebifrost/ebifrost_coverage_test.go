@@ -810,6 +810,62 @@ func TestInjectCacheProcessForProposal(t *testing.T) {
 	require.Len(t, logged, 2)
 }
 
+func TestInjectCacheProcessForProposalHoldsReadLockWhileEncoding(t *testing.T) {
+	cache := NewInjectCache[string]()
+	cache.Add("item1")
+
+	encodingStarted := make(chan struct{})
+	releaseEncoding := make(chan struct{})
+	encodingDone := make(chan struct{})
+
+	go func() {
+		defer close(encodingDone)
+		_ = cache.ProcessForProposal(
+			func(s string) (sdk.Msg, error) {
+				return nil, nil
+			},
+			func(msg sdk.Msg) ([]byte, error) {
+				close(encodingStarted)
+				<-releaseEncoding
+				return []byte("txbytes"), nil
+			},
+			func(s string, logger log.Logger) {},
+			log.NewNopLogger(),
+		)
+	}()
+
+	select {
+	case <-encodingStarted:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for proposal encoding to start")
+	}
+
+	addDone := make(chan struct{})
+	go func() {
+		cache.Add("item2")
+		close(addDone)
+	}()
+
+	select {
+	case <-addDone:
+		t.Fatal("cache write completed while proposal encoding was still in progress")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	close(releaseEncoding)
+
+	select {
+	case <-encodingDone:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for proposal encoding to finish")
+	}
+	select {
+	case <-addDone:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for cache write after proposal encoding finished")
+	}
+}
+
 func TestInjectCacheProcessForProposalMsgError(t *testing.T) {
 	cache := NewInjectCache[string]()
 	cache.Add("item1")

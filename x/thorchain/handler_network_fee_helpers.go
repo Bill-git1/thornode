@@ -74,5 +74,11 @@ func processNetworkFeeAttestation(
 		return ErrInternal(err, "fail to save network fee")
 	}
 
+	if nf.Height > 0 {
+		if err := mgr.Keeper().SetLastChainHeight(ctx, nf.Chain, nf.Height); err != nil {
+			ctx.Logger().Error("fail to set last chain height from network fee", "chain", nf.Chain, "height", nf.Height, "error", err)
+		}
+	}
+
 	return nil
 }

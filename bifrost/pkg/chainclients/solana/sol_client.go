@@ -564,31 +564,12 @@ func (c *SOLClient) CreateTx(tx stypes.TxOutItem, memoForParsing string) (types.
 		return solTx, fmt.Errorf("fail to create to public key: %w", err)
 	}
 
-	accountKeys := []types.PublicKey{vaultPubKey, toPubkey, types.SystemProgramID, types.MemoProgramID}
-
-	// Memo instruction
-	// Program index is 3 (referencing accountKeys) for the memo program
-	// Account index is 0 for the vault/signer
-	memoInstruction := types.NewCompiledInstruction(3, []int{0}, []byte(tx.Memo))
-
 	solValue := convertToLamports(tx.Coins[0].Amount)
 	if solValue.Int64() == 0 {
 		return solTx, errors.New("sol value is zero")
 	}
-	// Transfer instruction
-	// Program index is 2 (referencing accountKeys) for the system program
-	// Account index is 0 for the vault/signer
-	// Account index is 1 for the recipient
-	transferInstruction := types.NewCompiledTransferInstruction(2, 0, 1, solValue.Uint64())
 
-	header := types.MessageHeader{
-		NumRequireSignatures:        1,
-		NumReadonlySignedAccounts:   0,
-		NumReadonlyUnsignedAccounts: 2,
-	}
-
-	message := types.NewMessage(header, accountKeys, recentBlockhash, []types.CompiledInstruction{memoInstruction, transferInstruction})
-	return types.NewTransaction(message), nil
+	return types.NewTransferTransaction(vaultPubKey, toPubkey, tx.Coins[0].Amount.Uint64(), tx.Memo, recentBlockhash), nil
 }
 
 // --------------------------------- sign ---------------------------------

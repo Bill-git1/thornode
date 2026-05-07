@@ -2,12 +2,14 @@ package tron
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"math/big"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -275,6 +277,147 @@ func (s *TronTestSuite) TestSignAndBroadcastTx(c *C) {
 	c.Assert(err, IsNil)
 	// tx id returned by api/test-tron/broadcasttransaction.json
 	c.Assert(txId, Equals, "77ddfa7093cc5f745c0d3a54abb89ef070f983343c05e0f89e5a52f3e5401299")
+}
+
+func (s *TronTestSuite) TestSignTxReSignsWhenCachedBroadcastIsMissingFromChain(c *C) {
+	coins := []common.Coin{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(150_000_000_000),
+		Decimals: 6,
+	}}
+
+	gas := common.Gas{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(1_100_000),
+		Decimals: 6,
+	}}
+
+	txOutItem := types.TxOutItem{
+		Chain:       common.TRONChain,
+		ToAddress:   "TU6nEM4GTca2L5AuDTnY1qp1rkQ2t8NxvM",
+		VaultPubKey: s.client.localKeyManager.Pubkey(),
+		Coins:       coins,
+		MaxGas:      gas,
+		GasRate:     1,
+	}
+
+	err := s.client.signerCacheManager.SetSigned(
+		txOutItem.CacheHash(),
+		txOutItem.CacheVault(s.client.GetChain()),
+		"missing-txid",
+	)
+	c.Assert(err, IsNil)
+
+	signed, _, _, err := s.client.SignTx(txOutItem, 1)
+	c.Assert(err, IsNil)
+	c.Assert(signed, NotNil)
+}
+
+func (s *TronTestSuite) TestSignTxSkipsWhenCachedBroadcastStillExistsOnChain(c *C) {
+	coins := []common.Coin{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(150_000_000_000),
+		Decimals: 6,
+	}}
+
+	gas := common.Gas{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(1_100_000),
+		Decimals: 6,
+	}}
+
+	txOutItem := types.TxOutItem{
+		Chain:       common.TRONChain,
+		ToAddress:   "TU6nEM4GTca2L5AuDTnY1qp1rkQ2t8NxvM",
+		VaultPubKey: s.client.localKeyManager.Pubkey(),
+		Coins:       coins,
+		MaxGas:      gas,
+		GasRate:     1,
+	}
+
+	err := s.client.signerCacheManager.SetSigned(
+		txOutItem.CacheHash(),
+		txOutItem.CacheVault(s.client.GetChain()),
+		"77ddfa7093cc5f745c0d3a54abb89ef070f983343c05e0f89e5a52f3e5401299",
+	)
+	c.Assert(err, IsNil)
+
+	signed, checkpoint, txIn, err := s.client.SignTx(txOutItem, 1)
+	c.Assert(err, IsNil)
+	c.Assert(signed, IsNil)
+	c.Assert(checkpoint, IsNil)
+	c.Assert(txIn, IsNil)
+}
+
+func (s *TronTestSuite) TestSignTxReSignsWhenCachedBroadcastIsUnconfirmedAfterExpiration(c *C) {
+	coins := []common.Coin{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(150_000_000_000),
+		Decimals: 6,
+	}}
+
+	gas := common.Gas{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(1_100_000),
+		Decimals: 6,
+	}}
+
+	txOutItem := types.TxOutItem{
+		Chain:       common.TRONChain,
+		ToAddress:   "TU6nEM4GTca2L5AuDTnY1qp1rkQ2t8NxvM",
+		VaultPubKey: s.client.localKeyManager.Pubkey(),
+		Coins:       coins,
+		MaxGas:      gas,
+		GasRate:     1,
+	}
+
+	err := s.client.signerCacheManager.SetSigned(
+		txOutItem.CacheHash(),
+		txOutItem.CacheVault(s.client.GetChain()),
+		"deadbeef9034d95770d5704c9898e3414780c5fcbe282350080db8c4cef3e729",
+	)
+	c.Assert(err, IsNil)
+
+	signed, _, _, err := s.client.SignTx(txOutItem, 1)
+	c.Assert(err, IsNil)
+	c.Assert(signed, NotNil)
+}
+
+func (s *TronTestSuite) TestSignTxUsesOriginalMemoForMemolessOutbounds(c *C) {
+	coins := []common.Coin{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(150_000_000_100),
+		Decimals: 6,
+	}}
+
+	gas := common.Gas{{
+		Asset:    common.TRXAsset,
+		Amount:   cosmos.NewUint(1_100_000),
+		Decimals: 6,
+	}}
+
+	outboundMemo := "OUT:" + strings.Repeat("A", 64)
+	txOutItem := types.TxOutItem{
+		Chain:        common.TRONChain,
+		ToAddress:    "TU6nEM4GTca2L5AuDTnY1qp1rkQ2t8NxvM",
+		VaultPubKey:  s.client.localKeyManager.Pubkey(),
+		Coins:        coins,
+		Memo:         "",
+		OriginalMemo: outboundMemo,
+		MaxGas:       gas,
+		GasRate:      1,
+	}
+
+	signed, _, obs, err := s.client.SignTx(txOutItem, 1)
+	c.Assert(err, IsNil)
+	c.Assert(signed, NotNil)
+	c.Assert(obs, NotNil)
+	c.Assert(obs.Memo, Equals, outboundMemo)
+
+	var tx api.Transaction
+	err = json.Unmarshal(signed, &tx)
+	c.Assert(err, IsNil)
+	c.Assert(tx.RawData.Data, Equals, hex.EncodeToString([]byte(outboundMemo)))
 }
 
 func (s *TronTestSuite) TestShouldReportSolvency(c *C) {

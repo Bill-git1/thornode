@@ -157,21 +157,23 @@ func (qs queryServer) queryVault(ctx cosmos.Context, req *types.QueryVaultReques
 	}
 
 	resp := types.QueryVaultResponse{
-		BlockHeight:           v.BlockHeight,
-		PubKey:                v.PubKey.String(),
-		PubKeyEddsa:           v.PubKeyEddsa.String(),
-		Coins:                 v.Coins,
-		Type:                  v.Type.String(),
-		Status:                v.Status.String(),
-		StatusSince:           v.StatusSince,
-		Membership:            v.Membership,
-		Chains:                v.Chains,
-		InboundTxCount:        v.InboundTxCount,
-		OutboundTxCount:       v.OutboundTxCount,
-		PendingTxBlockHeights: v.PendingTxBlockHeights,
-		Routers:               castVaultRouters(v.Routers),
-		Addresses:             getVaultChainAddresses(ctx, v),
-		Frozen:                v.Frozen,
+		BlockHeight:            v.BlockHeight,
+		PubKey:                 v.PubKey.String(),
+		PubKeyEddsa:            v.PubKeyEddsa.String(),
+		PubKeyFrost:            v.PubKeyFrost.String(),
+		Coins:                  v.Coins,
+		Type:                   v.Type.String(),
+		Status:                 v.Status.String(),
+		StatusSince:            v.StatusSince,
+		Membership:             v.Membership,
+		Chains:                 v.Chains,
+		InboundTxCount:         v.InboundTxCount,
+		OutboundTxCount:        v.OutboundTxCount,
+		PendingTxBlockHeights:  v.PendingTxBlockHeights,
+		Routers:                castVaultRouters(v.Routers),
+		Addresses:              getVaultChainAddresses(ctx, v),
+		Frozen:                 v.Frozen,
+		VaultCreationHeightXmr: v.VaultCreationHeightXmr,
 	}
 	return &resp, nil
 }
@@ -193,21 +195,23 @@ func (qs queryServer) queryAsgardVaults(ctx cosmos.Context, _ *types.QueryAsgard
 		// Being in a RetiringVault blocks a node from unbonding, so display them even if having no funds.
 		if vault.HasFunds() || vault.Status == ActiveVault || vault.Status == RetiringVault {
 			vaultsWithFunds = append(vaultsWithFunds, &types.QueryVaultResponse{
-				BlockHeight:           vault.BlockHeight,
-				PubKey:                vault.PubKey.String(),
-				PubKeyEddsa:           vault.PubKeyEddsa.String(),
-				Coins:                 vault.Coins,
-				Type:                  vault.Type.String(),
-				Status:                vault.Status.String(),
-				StatusSince:           vault.StatusSince,
-				Membership:            vault.Membership,
-				Chains:                vault.Chains,
-				InboundTxCount:        vault.InboundTxCount,
-				OutboundTxCount:       vault.OutboundTxCount,
-				PendingTxBlockHeights: vault.PendingTxBlockHeights,
-				Routers:               castVaultRouters(vault.Routers),
-				Frozen:                vault.Frozen,
-				Addresses:             getVaultChainAddresses(ctx, vault),
+				BlockHeight:            vault.BlockHeight,
+				PubKey:                 vault.PubKey.String(),
+				PubKeyEddsa:            vault.PubKeyEddsa.String(),
+				PubKeyFrost:            vault.PubKeyFrost.String(),
+				Coins:                  vault.Coins,
+				Type:                   vault.Type.String(),
+				Status:                 vault.Status.String(),
+				StatusSince:            vault.StatusSince,
+				Membership:             vault.Membership,
+				Chains:                 vault.Chains,
+				InboundTxCount:         vault.InboundTxCount,
+				OutboundTxCount:        vault.OutboundTxCount,
+				PendingTxBlockHeights:  vault.PendingTxBlockHeights,
+				Routers:                castVaultRouters(vault.Routers),
+				Frozen:                 vault.Frozen,
+				Addresses:              getVaultChainAddresses(ctx, vault),
+				VaultCreationHeightXmr: vault.VaultCreationHeightXmr,
 			})
 		}
 	}
@@ -215,13 +219,34 @@ func (qs queryServer) queryAsgardVaults(ctx cosmos.Context, _ *types.QueryAsgard
 	return &types.QueryAsgardVaultsResponse{AsgardVaults: vaultsWithFunds}, nil
 }
 
+func (qs queryServer) queryXMRSpentOutputRefs(ctx cosmos.Context, req *types.QueryXMRSpentOutputRefsRequest) (*types.QueryXMRSpentOutputRefsResponse, error) {
+	if len(req.VaultPubKey) < 1 {
+		return nil, errors.New("missing vault_pub_key parameter")
+	}
+	pubkey, err := common.NewPubKey(req.VaultPubKey)
+	if err != nil {
+		return nil, fmt.Errorf("%s is invalid pubkey", req.VaultPubKey)
+	}
+	refs, err := qs.mgr.Keeper().GetXMRSpentOutputRefs(ctx, pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get xmr spent refs for vault(%s),err:%w", pubkey, err)
+	}
+	return &types.QueryXMRSpentOutputRefsResponse{SpentOutputRefs: castOutputRefs(refs)}, nil
+}
+
 func getVaultChainAddresses(ctx cosmos.Context, vault Vault) []*types.VaultAddress {
 	var result []*types.VaultAddress
 	allChains := append(vault.GetChains(), common.THORChain)
 	for _, c := range allChains.Distinct() {
-		if vault.PubKeyEddsa.IsEmpty() && c.GetSigningAlgo() != common.SigningAlgoEd25519 {
-			// this is an eddsa chain, but the vault doesn't have an eddsa pubkey, skip.
-			continue
+		if c.GetSigningAlgo() == common.SigningAlgoEd25519 {
+			if c == common.XMRChain {
+				if vault.PubKeyFrost.IsEmpty() {
+					continue
+				}
+			} else if vault.PubKeyEddsa.IsEmpty() {
+				// this is an eddsa chain, but the vault doesn't have an eddsa pubkey, skip.
+				continue
+			}
 		}
 		addr, err := vault.GetAddress(c)
 		if err != nil {
@@ -279,6 +304,7 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 				resp.Asgard = append(resp.Asgard, &types.VaultInfo{
 					PubKey:      vault.PubKey.String(),
 					PubKeyEddsa: vault.PubKeyEddsa.String(),
+					PubKeyFrost: vault.PubKeyFrost.String(),
 					Routers:     castVaultRouters(vault.Routers),
 					Membership:  vault.Membership,
 				})
@@ -303,6 +329,7 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 					resp.Inactive = append(resp.Inactive, &types.VaultInfo{
 						PubKey:      vault.PubKey.String(),
 						PubKeyEddsa: vault.PubKeyEddsa.String(),
+						PubKeyFrost: vault.PubKeyFrost.String(),
 						Routers:     castVaultRouters(vault.Routers),
 						Membership:  vault.Membership,
 					})
@@ -497,6 +524,10 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 		return nil, fmt.Errorf("fail to get retiring vaults: %w", err)
 	}
 	vaultsMigrating := (len(vaults) != 0)
+	xmrActiveVaultReady, err := getXMRActiveVaultReady(ctx, qs.mgr.Keeper())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get xmr active vault readiness: %w", err)
+	}
 
 	nodeAccounts, err := qs.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
@@ -541,9 +572,30 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 		RunePriceInTor:        dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper()).String(),
 		TorPriceInRune:        runePerDollarIgnoreHalt(ctx, qs.mgr.Keeper()).String(),
 		TorPriceHalted:        median.IsZero(),
+		XmrActiveVaultReady:   xmrActiveVaultReady,
 	}
 
 	return &result, nil
+}
+
+func getXMRActiveVaultReady(ctx cosmos.Context, k keeper.Keeper) (bool, error) {
+	activeVaults, err := k.GetAsgardVaultsByStatus(ctx, ActiveVault)
+	if err != nil {
+		return false, err
+	}
+	for _, vault := range activeVaults {
+		// "ready" should mean THORChain has observed an active XMR vault with a
+		// usable inbound address and actual XMR funds on the vault, not just that
+		// an active vault record exists for the chain.
+		if vault.GetCoin(common.XMRAsset).Amount.IsZero() {
+			continue
+		}
+		if _, addrErr := vault.GetAddress(common.XMRChain); addrErr != nil {
+			continue
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryInboundAddressesRequest) (*types.QueryInboundAddressesResponse, error) {
@@ -562,11 +614,11 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 		ctx.Logger().Error("keeper is nil, can't fulfill query")
 		return nil, errors.New("keeper is nil, can't fulfill query")
 	}
-	// select vault that is most secure
-	vault := k.GetMostSecure(ctx, active, signingTransactionPeriod)
-
-	chains := vault.GetChains()
-
+	chains := make(common.Chains, 0)
+	for _, vault := range active {
+		chains = append(chains, vault.GetChains()...)
+	}
+	chains = chains.Distinct()
 	if len(chains) == 0 {
 		chains = common.Chains{common.RuneAsset().Chain}
 	}
@@ -582,6 +634,15 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 		isChainTradingPaused := k.IsChainTradingHalted(ctx, chain)
 		isChainLpPaused := k.IsLPPaused(ctx, chain)
 
+		vault, err := selectActiveVaultForChain(ctx, k, active, chain, signingTransactionPeriod)
+		if err != nil {
+			if chain == common.XMRChain {
+				ctx.Logger().Info("skipping XMR inbound address until an active XMR-capable vault exists", "error", err)
+				continue
+			}
+			ctx.Logger().Error("fail to select active vault for chain", "chain", chain.String(), "error", err)
+			return nil, fmt.Errorf("fail to select active vault for chain %s: %w", chain, err)
+		}
 		vaultAddress, err := vault.GetAddress(chain)
 		if err != nil {
 			ctx.Logger().Error("fail to get address for chain", "error", err)
@@ -613,6 +674,11 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 			}
 		}
 
+		var viewKey string
+		if chain == common.XMRChain {
+			viewKey, _ = common.XMRViewKeyHex()
+		}
+
 		addr := types.QueryInboundAddressResponse{
 			Chain:                chain.String(),
 			PubKey:               pubKey.String(),
@@ -628,6 +694,7 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 			OutboundTxSize:       cosmos.NewUint(networkFeeInfo.TransactionSize).String(),
 			OutboundFee:          outboundFee.String(),
 			DustThreshold:        chain.DustThreshold().String(),
+			ViewKey:              viewKey,
 		}
 
 		resp = append(resp, &addr)
@@ -3423,7 +3490,19 @@ func castObservedTx(observedTx ObservedTx) types.QueryObservedTx {
 		Aggregator:            observedTx.Aggregator,
 		AggregatorTarget:      observedTx.AggregatorTarget,
 		AggregatorTargetLimit: observedTx.AggregatorTargetLimit,
+		SpentOutputRefs:       castOutputRefs(observedTx.SpentOutputRefs),
 	}
+}
+
+func castOutputRefs(refs []common.OutputRef) []*common.OutputRef {
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]*common.OutputRef, 0, len(refs))
+	for i := range refs {
+		out = append(out, &refs[i])
+	}
+	return out
 }
 
 func castVaultRouters(chainContracts []ChainContract) []*types.VaultRouter {

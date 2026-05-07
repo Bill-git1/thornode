@@ -1,6 +1,7 @@
 package gaia
 
 import (
+	"context"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -18,9 +19,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"google.golang.org/grpc"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
@@ -33,6 +37,95 @@ import (
 )
 
 func TestPackage(t *testing.T) { TestingT(t) }
+
+type mockTxServiceClient struct {
+	resp *txtypes.BroadcastTxResponse
+	err  error
+}
+
+func (m mockTxServiceClient) Simulate(context.Context, *txtypes.SimulateRequest, ...grpc.CallOption) (*txtypes.SimulateResponse, error) {
+	return nil, nil
+}
+
+func (m mockTxServiceClient) GetTx(context.Context, *txtypes.GetTxRequest, ...grpc.CallOption) (*txtypes.GetTxResponse, error) {
+	return nil, nil
+}
+
+func (m mockTxServiceClient) BroadcastTx(context.Context, *txtypes.BroadcastTxRequest, ...grpc.CallOption) (*txtypes.BroadcastTxResponse, error) {
+	return m.resp, m.err
+}
+
+func (m mockTxServiceClient) GetTxsEvent(context.Context, *txtypes.GetTxsEventRequest, ...grpc.CallOption) (*txtypes.GetTxsEventResponse, error) {
+	return nil, nil
+}
+
+func (m mockTxServiceClient) GetBlockWithTxs(context.Context, *txtypes.GetBlockWithTxsRequest, ...grpc.CallOption) (*txtypes.GetBlockWithTxsResponse, error) {
+	return nil, nil
+}
+
+func (m mockTxServiceClient) TxDecode(context.Context, *txtypes.TxDecodeRequest, ...grpc.CallOption) (*txtypes.TxDecodeResponse, error) {
+	return nil, nil
+}
+
+func (m mockTxServiceClient) TxEncode(context.Context, *txtypes.TxEncodeRequest, ...grpc.CallOption) (*txtypes.TxEncodeResponse, error) {
+	return nil, nil
+}
+
+func (m mockTxServiceClient) TxEncodeAmino(context.Context, *txtypes.TxEncodeAminoRequest, ...grpc.CallOption) (*txtypes.TxEncodeAminoResponse, error) {
+	return nil, nil
+}
+
+func (m mockTxServiceClient) TxDecodeAmino(context.Context, *txtypes.TxDecodeAminoRequest, ...grpc.CallOption) (*txtypes.TxDecodeAminoResponse, error) {
+	return nil, nil
+}
+
+func TestBroadcastTxAllowsWrongSequence(t *testing.T) {
+	t.Parallel()
+
+	client := CosmosClient{
+		txClient: mockTxServiceClient{
+			resp: &txtypes.BroadcastTxResponse{
+				TxResponse: &types.TxResponse{
+					Code:   errortypes.ErrWrongSequence.ABCICode(),
+					TxHash: "WRONGSEQ",
+				},
+			},
+		},
+		accts: NewCosmosMetaDataStore(),
+	}
+
+	txid, err := client.BroadcastTx(stypes.TxOutItem{}, []byte("signed"))
+	if err != nil {
+		t.Fatalf("expected wrong-sequence broadcast to be tolerated, got %v", err)
+	}
+	if txid != "WRONGSEQ" {
+		t.Fatalf("expected returned txid to be preserved, got %q", txid)
+	}
+}
+
+func TestBroadcastTxAllowsTxInMempoolCache(t *testing.T) {
+	t.Parallel()
+
+	client := CosmosClient{
+		txClient: mockTxServiceClient{
+			resp: &txtypes.BroadcastTxResponse{
+				TxResponse: &types.TxResponse{
+					Code:   errortypes.ErrTxInMempoolCache.ABCICode(),
+					TxHash: "INMEMPOOL",
+				},
+			},
+		},
+		accts: NewCosmosMetaDataStore(),
+	}
+
+	txid, err := client.BroadcastTx(stypes.TxOutItem{}, []byte("signed"))
+	if err != nil {
+		t.Fatalf("expected mempool-cache broadcast to be tolerated, got %v", err)
+	}
+	if txid != "INMEMPOOL" {
+		t.Fatalf("expected returned txid to be preserved, got %q", txid)
+	}
+}
 
 type CosmosTestSuite struct {
 	thordir  string

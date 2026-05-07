@@ -32,6 +32,19 @@ type Client struct {
 
 var _ LiteChainClient = &Client{}
 
+// Wait for finalized Solana confirmation so simulation actors do not proceed on
+// signatures that later disappear before Bifrost can observe the inbound.
+var (
+	// Mocknet Solana finalization can take materially longer on container-heavy
+	// local ARM setups. Keep the finalized commitment, but give setup and actor
+	// funding broadcasts more time before declaring the tx lost.
+	solanaBroadcastConfirmationAttempts     = 60
+	solanaBroadcastConfirmationPollInterval = time.Second
+	solanaBroadcastRebroadcastEvery         = 5
+	solanaAccountCommitment                 = "finalized"
+	solanaBroadcastConfirmationCommitment   = "finalized"
+)
+
 func NewConstructor(host string) LiteChainClientConstructor {
 	return func(chain common.Chain, keys *thorclient.Keys) (LiteChainClient, error) {
 		return NewClient(chain, host, keys)
@@ -86,10 +99,15 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 		}
 	}
 
-	lamportsBalance, err := c.rpc.GetBalance(address.String(), "finalized", 0)
+	lamportsBalance, err := c.rpc.GetBalance(address.String(), solanaAccountCommitment, 0)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get balance: %w", err)
 	}
+	tokenAccountLamports, err := c.rpc.GetOwnedTokenAccountLamports(address.String(), solanaAccountCommitment)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get owned token account lamports: %w", err)
+	}
+	lamportsBalance = lamportsBalance.Add(lamportsBalance, tokenAccountLamports)
 
 	// get amount
 	amount := cosmos.NewUintFromBigInt(lamportsBalance)
@@ -150,5 +168,35 @@ func (c *Client) BroadcastTx(signed []byte) (string, error) {
 		return "", fmt.Errorf("failed to broadcast tx: %w", err)
 	}
 
-	return txSig, nil
+	var lastErr error
+	for attempt := 1; attempt <= solanaBroadcastConfirmationAttempts; attempt++ {
+		tx, err := c.rpc.GetTransactionWithCommitment(txSig, solanaBroadcastConfirmationCommitment)
+		if err == nil && tx != nil && tx.Slot > 0 {
+			if tx.Meta.Err != nil {
+				return "", fmt.Errorf("broadcasted tx %s failed on solana node: %v", txSig, tx.Meta.Err)
+			}
+			return txSig, nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = fmt.Errorf("transaction %s not %s yet", txSig, solanaBroadcastConfirmationCommitment)
+		}
+
+		if attempt < solanaBroadcastConfirmationAttempts {
+			if solanaBroadcastRebroadcastEvery > 0 && attempt%solanaBroadcastRebroadcastEvery == 0 {
+				rebroadcastTxSig, err := c.rpc.BroadcastTx(base64Tx)
+				if err != nil {
+					lastErr = err
+				} else if rebroadcastTxSig != txSig {
+					return "", fmt.Errorf("rebroadcast returned different solana signature %s for tx %s", rebroadcastTxSig, txSig)
+				}
+			}
+			time.Sleep(solanaBroadcastConfirmationPollInterval)
+		}
+	}
+
+	waitDuration := time.Duration(solanaBroadcastConfirmationAttempts) * solanaBroadcastConfirmationPollInterval
+	return txSig, fmt.Errorf("broadcasted tx %s not confirmed on solana node after %s: %w", txSig, waitDuration, lastErr)
 }

@@ -443,6 +443,14 @@ func (s *queryServer) Vault(c context.Context, req *types.QueryVaultRequest) (*t
 	return s.queryVault(ctx, req)
 }
 
+func (s *queryServer) XMRSpentOutputRefs(c context.Context, req *types.QueryXMRSpentOutputRefsRequest) (*types.QueryXMRSpentOutputRefsResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryXMRSpentOutputRefs(ctx, req)
+}
+
 func (s *queryServer) AsgardVaults(c context.Context, req *types.QueryAsgardVaultsRequest) (*types.QueryAsgardVaultsResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

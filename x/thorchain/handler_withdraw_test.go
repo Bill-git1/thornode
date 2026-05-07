@@ -641,6 +641,8 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 	ctx, mgr := setupManagerForTest(c)
 	mgr.txOutStore = NewTxStoreDummy()
 	activeNodeAccount := GetRandomValidatorNode(NodeActive)
+	activeNodeAccount.Bond = cosmos.NewUint(10_000_000 * common.One)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, activeNodeAccount), IsNil)
 	runeAddr := GetRandomRUNEAddress()
 	avaxAddr, err := common.NewAddress("0x29d33FCD30240d55b9280362599d5066c1a2cf10")
 	c.Assert(err, IsNil)
@@ -683,13 +685,13 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 
 	pool, err = mgr.Keeper().GetPool(ctx, common.AVAXAsset)
 	c.Assert(err, IsNil)
-	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(2_199_049_46419930), Commentf("%d", pool.BalanceRune.Uint64()))
+	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(219_904_946_419_930), Commentf("%d", pool.BalanceRune.Uint64()))
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(2199430478930), Commentf("%d", pool.BalanceAsset.Uint64()))
 
 	lp, err := mgr.Keeper().GetLiquidityProvider(ctx, common.AVAXAsset.GetSyntheticAsset(), avaxAddr)
 	c.Assert(err, IsNil)
 	c.Check(lp.Units.IsZero(), Equals, false)
-	c.Check(lp.Units.Uint64(), Equals, uint64(99_54688254), Commentf("%d", lp.Units.Uint64()))
+	c.Check(lp.Units.Uint64(), Equals, uint64(9_954_688_254), Commentf("%d", lp.Units.Uint64()))
 
 	// nothing in the outbound queue
 	outbound, err := mgr.txOutStore.GetOutboundItems(ctx)
@@ -713,6 +715,6 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 	c.Assert(err, IsNil)
 	c.Assert(outbound, HasLen, 1)
 
-	expected := common.NewCoin(common.AVAXAsset, cosmos.NewUint(98_65235979))
+	expected := common.NewCoin(common.AVAXAsset, cosmos.NewUint(9_865_235_979))
 	c.Check(outbound[0].Coin.Equals(expected), Equals, true, Commentf("%s", outbound[0].Coin))
 }

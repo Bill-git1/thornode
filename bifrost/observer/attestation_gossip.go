@@ -87,6 +87,17 @@ type txKey struct {
 	Inbound                bool
 }
 
+func observedTxKey(obsTx common.ObservedTx, inbound, allowFutureObservation bool) txKey {
+	return txKey{
+		Chain:                  obsTx.Tx.Chain,
+		ID:                     obsTx.Tx.ID,
+		UniqueHash:             obsTx.AttestationUniqueHash(),
+		AllowFutureObservation: allowFutureObservation,
+		Finalized:              obsTx.IsFinal(),
+		Inbound:                inbound,
+	}
+}
+
 type KeysInterface interface {
 	GetPrivateKey() (*secp256k1.PrivKey, error)
 }
@@ -131,6 +142,8 @@ type AttestationGossip struct {
 	avMu       sync.Mutex
 
 	observerHandleObservedTxCommitted func(tx common.ObservedTx, allowFutureObservation bool)
+	observerApplySpentOutputRefs      func(tx common.ObservedTx)
+	applySpentRefsSem                 chan struct{}
 
 	batcher *AttestationBatcher
 
@@ -205,6 +218,9 @@ func NewAttestationGossip(
 		priceFeedsDelay: NewDelay(),
 
 		batcher: batcher,
+
+		// Bound concurrent sidecar mark-spent calls so a slow signer does not leak goroutines.
+		applySpentRefsSem: make(chan struct{}, 16),
 	}
 	batcher.setActiveValGetter(s.getActiveValidators)
 	// Register event handlers
@@ -290,6 +306,13 @@ func (s *AttestationGossip) activeValidatorCount() int {
 	return len(s.activeVals)
 }
 
+func (s *AttestationGossip) getKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error) {
+	if s.bridge == nil {
+		return nil, fmt.Errorf("thorchain bridge is nil")
+	}
+	return s.bridge.GetKeysignParty(vaultPubKey)
+}
+
 // Check if a public key belongs to an active validator
 func (s *AttestationGossip) isActiveValidator(p peer.ID) bool {
 	s.avMu.Lock()
@@ -306,6 +329,31 @@ func (s *AttestationGossip) getActiveValidators() map[peer.ID]bool {
 
 func (s *AttestationGossip) SetObserverHandleObservedTxCommitted(o *Observer) {
 	s.observerHandleObservedTxCommitted = o.handleObservedTxCommitted
+}
+
+func (s *AttestationGossip) SetObserverApplySpentOutputRefs(fn func(tx common.ObservedTx)) {
+	s.observerApplySpentOutputRefs = fn
+}
+
+func (s *AttestationGossip) applySpentRefsAsync(tx common.ObservedTx) {
+	if s.observerApplySpentOutputRefs == nil {
+		return
+	}
+	if s.applySpentRefsSem == nil {
+		go s.observerApplySpentOutputRefs(tx)
+		return
+	}
+	select {
+	case s.applySpentRefsSem <- struct{}{}:
+		go func() {
+			defer func() { <-s.applySpentRefsSem }()
+			s.observerApplySpentOutputRefs(tx)
+		}()
+	default:
+		s.logger.Warn().
+			Str("tx_id", tx.Tx.ID.String()).
+			Msg("apply spent refs queue full, dropping (will be caught by periodic catchup)")
+	}
 }
 
 // Handle a committed quorum transaction event
@@ -330,14 +378,15 @@ func (s *AttestationGossip) handleQuorumTxCommitted(en *ebifrost.EventNotificati
 		}
 	}
 
-	k := txKey{
-		Chain:                  qtx.ObsTx.Tx.Chain,
-		ID:                     qtx.ObsTx.Tx.ID,
-		UniqueHash:             qtx.ObsTx.Tx.Hash(qtx.ObsTx.BlockHeight),
-		AllowFutureObservation: qtx.AllowFutureObservation,
-		Inbound:                qtx.Inbound,
-		Finalized:              qtx.ObsTx.IsFinal(),
+	if s.observerApplySpentOutputRefs != nil &&
+		!qtx.Inbound &&
+		qtx.ObsTx.Tx.Chain.Equals(common.XMRChain) &&
+		len(qtx.ObsTx.SpentOutputRefs) > 0 &&
+		len(qtx.ObsTx.SpentOutputRefs) <= common.MaxXMRSpentOutputRefs {
+		s.applySpentRefsAsync(qtx.ObsTx)
 	}
+
+	k := observedTxKey(qtx.ObsTx, qtx.Inbound, qtx.AllowFutureObservation)
 
 	s.mu.Lock()
 	as, ok := s.observedTxs[k]

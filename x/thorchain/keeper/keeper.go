@@ -96,6 +96,7 @@ type Keeper interface {
 	KeeperTCYStaker
 	KeeperVolume
 	KeeperPOLReserve
+	KeeperXMRSpentOutputRefs
 	KeeperDynamicFee
 }
 
@@ -299,6 +300,11 @@ type KeeperVault interface {
 	GetPendingOutbounds(_ cosmos.Context, _ common.Asset) []TxOutItem
 	DeleteVault(ctx cosmos.Context, pk common.PubKey) error
 	RemoveFromAsgardIndex(ctx cosmos.Context, pubkey common.PubKey) error
+}
+
+type KeeperXMRSpentOutputRefs interface {
+	SetXMRSpentOutputRefs(ctx cosmos.Context, vaultPubKey common.PubKey, spendTxHash common.TxID, refs []common.OutputRef, observedHeight, finalisedHeight int64) error
+	GetXMRSpentOutputRefs(ctx cosmos.Context, vaultPubKey common.PubKey) ([]common.OutputRef, error)
 }
 
 type KeeperReserveContributors interface {

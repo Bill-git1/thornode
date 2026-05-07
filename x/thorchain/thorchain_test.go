@@ -117,8 +117,10 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	}), IsNil)
 	addresses := make([]cosmos.AccAddress, 4)
 	var existingValidators []string
+	minBond := consts.GetInt64Value(constants.MinimumBondInRune)
 	for i := 0; i <= 3; i++ {
 		na := GetRandomValidatorNode(NodeActive)
+		na.Bond = cosmos.NewUint(uint64(minBond))
 		addresses[i] = na.NodeAddress
 		na.SignerMembership = common.PubKeys{vault.PubKey}.Strings()
 		if i == 0 { // give the first node account slash points
@@ -138,6 +140,7 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 
 	// create new node account to rotate in
 	na := GetRandomValidatorNode(NodeReady)
+	na.Bond = cosmos.NewUint(uint64(minBond))
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
 
 	// trigger marking bad actors as well as a keygen
@@ -151,8 +154,20 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(keygenBlock.IsEmpty(), Equals, false)
 	expected := append(vault.Membership[1:], na.PubKeySet.Secp256k1.String()) // nolint
-	c.Assert(keygenBlock.Keygens, HasLen, 1)
-	keygen := keygenBlock.Keygens[0]
+	c.Assert(keygenBlock.Keygens, HasLen, 2)
+	var keygen, xmrKeygen Keygen
+	for _, candidate := range keygenBlock.Keygens {
+		switch candidate.Type {
+		case AsgardKeygen:
+			keygen = candidate
+		case XMRMonovaultKeygen:
+			xmrKeygen = candidate
+		}
+	}
+	c.Assert(keygen.IsEmpty(), Equals, false)
+	c.Assert(keygen.Type, Equals, AsgardKeygen)
+	c.Assert(xmrKeygen.IsEmpty(), Equals, false)
+	c.Assert(xmrKeygen.Type, Equals, XMRMonovaultKeygen)
 	// sort our slices so they are in the same order
 	sort.Slice(expected, func(i, j int) bool { return expected[i] < expected[j] })
 	sort.Slice(keygen.Members, func(i, j int) bool { return keygen.Members[i] < keygen.Members[j] })
@@ -161,12 +176,19 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 		c.Assert(expected[i], Equals, keygen.Members[i], Commentf("%d: %s <==> %s", i, expected[i], keygen.Members[i]))
 	}
 
+	xmrKeygenHeight := ctx.BlockHeight()
+	sort.Slice(xmrKeygen.Members, func(i, j int) bool { return xmrKeygen.Members[i] < xmrKeygen.Members[j] })
+	c.Assert(expected, HasLen, len(xmrKeygen.Members))
+	for i := range expected {
+		c.Assert(expected[i], Equals, xmrKeygen.Members[i], Commentf("xmr %d: %s <==> %s", i, expected[i], xmrKeygen.Members[i]))
+	}
+
 	// generate a tss keygen handler event
 	newVaultPk := GetRandomPubKey()
 	signer, err := common.PubKey(keygen.Members[0]).GetThorAddress()
 	c.Assert(err, IsNil)
 	keygenTime := int64(1024)
-	msg, err := NewMsgTssPoolV2(keygen.Members, newVaultPk, []byte("fakeSignature"), nil, AsgardKeygen, ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), signer, keygenTime, GetRandomPubKey(), nil)
+	msg, err := NewMsgTssPoolV2(keygen.Members, newVaultPk, nil, nil, AsgardKeygen, ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), signer, keygenTime, GetRandomPubKey(), nil, nil, common.EmptyPubKey)
 	c.Assert(err, IsNil)
 	tssHandler := NewTssHandler(mgr)
 
@@ -190,6 +212,46 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	_, err = tssHandler.Run(ctx, msg)
 	c.Assert(err, IsNil)
 
+	xmrKeygenBlock, err := mgr.Keeper().GetKeygenBlock(ctx, xmrKeygenHeight)
+	c.Assert(err, IsNil)
+	c.Assert(xmrKeygenBlock.Keygens, HasLen, 2)
+
+	xmrVaultPk := GetRandomPubKey()
+	xmrFrostPk := GetRandomEd25519PubKey()
+	observedMoneroHeight := int64(777)
+	validFrostBackup := make([]byte, 2048)
+	for i := range validFrostBackup {
+		validFrostBackup[i] = byte(i)
+	}
+	xmrMsg, err := NewMsgTssPoolV3(
+		keygen.Members,
+		xmrVaultPk,
+		nil,
+		nil,
+		XMRMonovaultKeygen,
+		xmrKeygenHeight,
+		nil,
+		xmrMonovaultChains().Strings(),
+		signer,
+		keygenTime,
+		common.EmptyPubKey,
+		nil,
+		validFrostBackup,
+		xmrFrostPk,
+		observedMoneroHeight,
+	)
+	c.Assert(err, IsNil)
+
+	xmrVoter := NewTssVoter(xmrMsg.ID, xmrMsg.PubKeys, xmrMsg.PoolPubKey, xmrMsg.PoolPubKeyEddsa)
+	xmrVoter.PoolPubKeyFrost = xmrFrostPk
+	xmrVoter.ObservedMoneroHeight = observedMoneroHeight
+	xmrVoter.Signers = signers
+	xmrVoter.Secp256K1Signatures = signatures
+	mgr.Keeper().SetTssVoter(ctx.WithBlockHeight(xmrKeygenHeight), xmrVoter)
+
+	_, err = tssHandler.Run(ctx.WithBlockHeight(xmrKeygenHeight), xmrMsg)
+	c.Assert(err, IsNil)
+
 	// check that we've rotated our vaults
 	vault1, err := mgr.Keeper().GetVault(ctx, vault.PubKey)
 	c.Assert(err, IsNil)
@@ -198,13 +260,26 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(vault2.Status, Equals, ActiveVault) // new vault should now be active
 	c.Assert(vault2.Membership, HasLen, 4)
+	xmrVault, err := mgr.Keeper().GetVault(ctx, xmrVaultPk)
+	c.Assert(err, IsNil)
+	c.Assert(xmrVault.Status, Equals, ActiveVault)
+	c.Assert(xmrVault.IsXMRMonovault(), Equals, true)
 
 	// check our validators get rotated appropriately
 	validators := valMgr.EndBlock(ctx, mgr)
 	nas, err := mgr.Keeper().ListActiveValidators(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(nas, HasLen, 4)
-	c.Assert(validators, HasLen, 2)
+	addedValidators, removedValidators := 0, 0
+	for _, validator := range validators {
+		if validator.Power == 0 {
+			removedValidators++
+			continue
+		}
+		addedValidators++
+	}
+	c.Assert(removedValidators, Equals, 1)
+	c.Assert(addedValidators >= 1, Equals, true)
 	// ensure that the first one is rotated out and the new one is rotated in
 	standby, err := mgr.Keeper().GetNodeAccount(ctx, addresses[0])
 	c.Assert(err, IsNil)

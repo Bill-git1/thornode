@@ -55,4 +55,7 @@ message QueryNetworkResponse {
   string tor_price_in_rune = 14 [ (gogoproto.jsontag) = "tor_price_in_rune" ];
   // indicator if all anchor chains are halted
   bool tor_price_halted = 17 [ (gogoproto.jsontag) = "tor_price_halted" ];
+  // indicates whether an active Asgard vault currently has spendable XMR funds
+  bool xmr_active_vault_ready = 18
+      [ (gogoproto.jsontag) = "xmr_active_vault_ready" ];
 }

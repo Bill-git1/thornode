@@ -75,6 +75,143 @@ func (s *MsgTssPoolSuite) TestMsgTssPool(c *C) {
 	err3 := msg3.ValidateBasic()
 	c.Assert(err3, NotNil)
 	c.Check(errors.Is(err3, se.ErrUnknownRequest), Equals, true)
+
+	xmrMonovaultPk := GetRandomPubKey()
+	xmrFrostPk := GetRandomEd25519PubKey()
+	xmrMember := []string{GetRandomPubKey().String()}
+	xmrSigner, err := common.PubKey(xmrMember[0]).GetThorAddress()
+	c.Assert(err, IsNil)
+	xmrMsg, err := NewMsgTssPoolV3(
+		xmrMember,
+		xmrMonovaultPk,
+		nil,
+		nil,
+		KeygenType_XMRMonovaultKeygen,
+		1,
+		nil,
+		common.Chains{common.RuneAsset().Chain, common.XMRChain}.Strings(),
+		xmrSigner,
+		keygenTime,
+		common.EmptyPubKey,
+		nil,
+		nil,
+		xmrFrostPk,
+		1024,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(xmrMsg.ValidateBasic(), IsNil)
+	xmrMsg.ObservedMoneroHeight = 0
+	c.Assert(xmrMsg.ValidateBasic(), NotNil)
+}
+
+func (s *MsgTssPoolSuite) TestXMRMsgTssPoolIDIncludesFrostKeyAndMoneroHeight(c *C) {
+	poolPk := GetRandomPubKey()
+	frostPk := GetRandomEd25519PubKey()
+	otherFrostPk := GetRandomEd25519PubKey()
+	member := []string{GetRandomPubKey().String()}
+	addr, err := common.PubKey(member[0]).GetThorAddress()
+	c.Assert(err, IsNil)
+
+	base, err := NewMsgTssPoolV3(
+		member,
+		poolPk,
+		nil,
+		nil,
+		KeygenType_XMRMonovaultKeygen,
+		1,
+		nil,
+		common.Chains{common.RuneAsset().Chain, common.XMRChain}.Strings(),
+		addr,
+		1024,
+		common.EmptyPubKey,
+		nil,
+		nil,
+		frostPk,
+		100,
+	)
+	c.Assert(err, IsNil)
+
+	changedFrost, err := NewMsgTssPoolV3(
+		member,
+		poolPk,
+		nil,
+		nil,
+		KeygenType_XMRMonovaultKeygen,
+		1,
+		nil,
+		common.Chains{common.RuneAsset().Chain, common.XMRChain}.Strings(),
+		addr,
+		1024,
+		common.EmptyPubKey,
+		nil,
+		nil,
+		otherFrostPk,
+		100,
+	)
+	c.Assert(err, IsNil)
+	c.Check(changedFrost.ID == base.ID, Equals, false)
+
+	changedHeight, err := NewMsgTssPoolV3(
+		member,
+		poolPk,
+		nil,
+		nil,
+		KeygenType_XMRMonovaultKeygen,
+		1,
+		nil,
+		common.Chains{common.RuneAsset().Chain, common.XMRChain}.Strings(),
+		addr,
+		1024,
+		common.EmptyPubKey,
+		nil,
+		nil,
+		frostPk,
+		101,
+	)
+	c.Assert(err, IsNil)
+	c.Check(changedHeight.ID == base.ID, Equals, false)
+}
+
+func (s *MsgTssPoolSuite) TestMsgTssPoolFrostKeysharesBackupValidation(c *C) {
+	poolPk := GetRandomPubKey()
+	frostPk := GetRandomEd25519PubKey()
+	member := []string{GetRandomPubKey().String()}
+	addr, err := common.PubKey(member[0]).GetThorAddress()
+	c.Assert(err, IsNil)
+
+	validBackup := make([]byte, 357)
+	for i := range validBackup {
+		validBackup[i] = byte(i)
+	}
+
+	msg, err := NewMsgTssPoolV3(
+		member,
+		poolPk,
+		nil,
+		nil,
+		KeygenType_XMRMonovaultKeygen,
+		1,
+		nil,
+		common.Chains{common.RuneAsset().Chain, common.XMRChain}.Strings(),
+		addr,
+		1024,
+		common.EmptyPubKey,
+		nil,
+		validBackup,
+		frostPk,
+		1024,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(msg.ValidateBasic(), IsNil)
+
+	msg.KeysharesBackupFrost = []byte("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
+	c.Assert(msg.ValidateBasic(), NotNil)
+
+	msg.KeysharesBackupFrost = []byte{1, 2, 3}
+	c.Assert(msg.ValidateBasic(), NotNil)
+
+	msg.KeysharesBackupFrost = make([]byte, 2048)
+	c.Assert(msg.ValidateBasic(), NotNil)
 }
 
 func (s *MsgTssPoolSuite) TestMsgTssPoolBlameNodesValidation(c *C) {

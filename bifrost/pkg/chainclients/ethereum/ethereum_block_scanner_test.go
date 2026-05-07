@@ -33,7 +33,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	tokenlist "gitlab.com/thorchain/thornode/v3/common/tokenlist"
 	"gitlab.com/thorchain/thornode/v3/config"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	types2 "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -48,7 +47,7 @@ type BlockScannerTestSuite struct {
 var _ = Suite(&BlockScannerTestSuite{})
 
 func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
-	thorchain.SetupConfigForTest()
+	setupMocknetThorConfig()
 	s.m = GetMetricForTest(c)
 	c.Assert(s.m, NotNil)
 	cfg := config.BifrostClientConfiguration{

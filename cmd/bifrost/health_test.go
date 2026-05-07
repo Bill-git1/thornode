@@ -70,6 +70,20 @@ func (mts *MockTssServer) KeySign(req keysign.Request) (keysign.Response, error)
 	return keysign.NewResponse(nil, common.Success, blame.Blame{}), nil
 }
 
+func (mts *MockTssServer) FrostKeySign(req tss.FrostKeySignRequest, sidecar tss.FrostSidecarClient) (tss.FrostKeySignResponse, error) {
+	if mts.failToKeySign {
+		return tss.FrostKeySignResponse{}, errors.New("you ask for it")
+	}
+	return tss.FrostKeySignResponse{Status: common.Success}, nil
+}
+
+func (mts *MockTssServer) FrostKeygen(req tss.FrostKeygenRequest, sidecar tss.FrostSidecarKeygenClient) (tss.FrostKeygenResponse, error) {
+	if mts.failToKeyGen {
+		return tss.FrostKeygenResponse{}, errors.New("you ask for it")
+	}
+	return tss.FrostKeygenResponse{Status: common.Success}, nil
+}
+
 type HealthServerTestSuite struct{}
 
 var _ = Suite(&HealthServerTestSuite{})

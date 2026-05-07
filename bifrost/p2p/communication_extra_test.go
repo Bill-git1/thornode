@@ -1,11 +1,16 @@
 package p2p
 
 import (
+	"context"
+	cryptorand "crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"testing"
 	"time"
 
+	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	maddr "github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
@@ -183,3 +188,70 @@ func (e *errConfig) GetBootstrapPeers() ([]maddr.Multiaddr, error) {
 func (e *errConfig) GetP2PPort() int       { return 7799 }
 func (e *errConfig) GetExternalIP() string { return "" }
 func (e *errConfig) GetRendezvous() string { return "test" }
+
+type mockPeerFinder struct {
+	info peer.AddrInfo
+	err  error
+}
+
+func (m mockPeerFinder) FindPeer(_ context.Context, _ peer.ID) (peer.AddrInfo, error) {
+	if m.err != nil {
+		return peer.AddrInfo{}, m.err
+	}
+	return m.info, nil
+}
+
+func TestConnectToOnePeerUsesDiscoveryWhenPeerstoreIsEmpty(t *testing.T) {
+	comm, err := NewCommunication(&Config{Port: 7800, RendezvousString: "discover"}, nil, nil)
+	assert.NoError(t, err)
+
+	privKey, err := base64.StdEncoding.DecodeString("6LABmWB4iXqkqOJ9H0YFEA2CSSx6bA7XAKGyI/TDtas=")
+	assert.NoError(t, err)
+	assert.NoError(t, comm.Start(privKey))
+	defer func() {
+		assert.NoError(t, comm.Stop())
+	}()
+
+	targetPriv, _, err := crypto.GenerateSecp256k1Key(cryptorand.Reader)
+	assert.NoError(t, err)
+	targetHost, err := libp2p.New(
+		context.Background(),
+		libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/7801"),
+		libp2p.Identity(targetPriv),
+	)
+	assert.NoError(t, err)
+	defer func() {
+		assert.NoError(t, targetHost.Close())
+	}()
+	targetHost.SetStreamHandler(TSSProtocolID, func(stream network.Stream) {
+		_ = stream.Close()
+	})
+
+	targetPeer := targetHost.ID()
+	assert.Empty(t, comm.host.Peerstore().Addrs(targetPeer))
+	comm.peerFinder = mockPeerFinder{
+		info: peer.AddrInfo{
+			ID:    targetPeer,
+			Addrs: targetHost.Addrs(),
+		},
+	}
+
+	stream, err := comm.connectToOnePeer(targetPeer)
+	assert.NoError(t, err)
+	assert.NotNil(t, stream)
+	if stream != nil {
+		assert.NoError(t, stream.Close())
+	}
+	assert.NotEmpty(t, comm.host.Peerstore().Addrs(targetPeer))
+}
+
+func TestBootstrapRetryAttemptsWaitsForNodeGaterRefresh(t *testing.T) {
+	comm := &Communication{}
+	assert.Equal(t, 5, comm.bootstrapRetryAttempts())
+
+	comm.nodeGater = NewNodeGater(nil, 60*time.Second)
+	assert.Equal(t, 14, comm.bootstrapRetryAttempts())
+
+	comm.nodeGater = NewNodeGater(nil, 10*time.Second)
+	assert.Equal(t, 5, comm.bootstrapRetryAttempts())
+}

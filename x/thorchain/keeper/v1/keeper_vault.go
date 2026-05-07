@@ -264,6 +264,11 @@ func (k KVStore) SetVault(ctx cosmos.Context, vault Vault) error {
 				return err
 			}
 		}
+		if !vault.PubKeyFrost.IsEmpty() {
+			if err := k.addAsgardFrostIndex(ctx, vault.PubKeyFrost, vault.PubKey); err != nil {
+				return err
+			}
+		}
 	}
 
 	k.setVault(ctx, k.GetKey(prefixVault, vault.PubKey.String()), vault)
@@ -272,13 +277,23 @@ func (k KVStore) SetVault(ctx cosmos.Context, vault Vault) error {
 
 // VaultExists check whether the given pubkey is associated with a vault
 func (k KVStore) VaultExists(ctx cosmos.Context, pk common.PubKey) bool {
+	if k.has(ctx, k.GetKey(prefixVault, pk.String())) {
+		return true
+	}
 	eddsaPubKey, err := k.getAsgardEDDSAIndex(ctx, pk)
 	if err != nil {
 		ctx.Logger().Error("fail to getAsgardEDDSAIndex", err)
 		return false
 	}
-
-	return k.has(ctx, k.GetKey(prefixVault, pk.String())) || !eddsaPubKey.IsEmpty()
+	if !eddsaPubKey.IsEmpty() {
+		return true
+	}
+	frostPubKey, err := k.getAsgardFrostIndex(ctx, pk)
+	if err != nil {
+		ctx.Logger().Error("fail to getAsgardFrostIndex", err)
+		return false
+	}
+	return !frostPubKey.IsEmpty()
 }
 
 // GetVault get Vault with the given pubkey from data store
@@ -289,13 +304,19 @@ func (k KVStore) GetVault(ctx cosmos.Context, pk common.PubKey) (Vault, error) {
 	}
 	ok, err := k.getVault(ctx, k.GetKey(prefixVault, pk.String()), &record)
 	if !ok {
-		// TODO: check for lookup by EDDSA pubkey
 		ecdsaPubKey, eddsaErr := k.getAsgardEDDSAIndex(ctx, pk)
 		if eddsaErr != nil {
 			return record, fmt.Errorf("unable to getAsgardEDDSAIndex for %s: %w", pk, kvTypes.ErrVaultNotFound)
 		}
 		if !ecdsaPubKey.IsEmpty() {
 			return k.GetVault(ctx, ecdsaPubKey)
+		}
+		frostPubKey, frostErr := k.getAsgardFrostIndex(ctx, pk)
+		if frostErr != nil {
+			return record, fmt.Errorf("unable to getAsgardFrostIndex for %s: %w", pk, kvTypes.ErrVaultNotFound)
+		}
+		if !frostPubKey.IsEmpty() {
+			return k.GetVault(ctx, frostPubKey)
 		}
 		return record, fmt.Errorf("vault with pubkey(%s) doesn't exist: %w", pk, kvTypes.ErrVaultNotFound)
 	}
@@ -364,6 +385,20 @@ func (k KVStore) addAsgardEDDSAIndex(ctx cosmos.Context, pubKeyEDDSA, pubkeyECDS
 func (k KVStore) getAsgardEDDSAIndex(ctx cosmos.Context, pubKeyEDDSA common.PubKey) (common.PubKey, error) {
 	record := make([]string, 0)
 	exists, err := k.getStrings(ctx, k.GetKey(prefixVaultAsgardEDDSAIndex, pubKeyEDDSA.String()), &record)
+	if err != nil || !exists {
+		return common.EmptyPubKey, err
+	}
+	return common.PubKey(record[0]), nil
+}
+
+func (k KVStore) addAsgardFrostIndex(ctx cosmos.Context, pubKeyFrost, pubkeyECDSA common.PubKey) error {
+	k.setStrings(ctx, k.GetKey(prefixVaultAsgardFrostIndex, pubKeyFrost.String()), []string{pubkeyECDSA.String()})
+	return nil
+}
+
+func (k KVStore) getAsgardFrostIndex(ctx cosmos.Context, pubKeyFrost common.PubKey) (common.PubKey, error) {
+	record := make([]string, 0)
+	exists, err := k.getStrings(ctx, k.GetKey(prefixVaultAsgardFrostIndex, pubKeyFrost.String()), &record)
 	if err != nil || !exists {
 		return common.EmptyPubKey, err
 	}

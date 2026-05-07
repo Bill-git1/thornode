@@ -31,7 +31,7 @@ func (k KVStoreDummy) DeleteKey(_ cosmos.Context, _ []byte)    {}
 func (k KVStoreDummy) CoinKeeper() bankkeeper.Keeper           { return bankkeeper.BaseKeeper{} }
 func (k KVStoreDummy) AccountKeeper() authkeeper.AccountKeeper { return authkeeper.AccountKeeper{} }
 func (k KVStoreDummy) Logger(ctx cosmos.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", ModuleName))
+	return ctx.Logger().With("module", "x/"+ModuleName)
 }
 
 func (k KVStoreDummy) GetVersion() semver.Version { return semver.MustParse("9999999.0.0") }
@@ -149,6 +149,14 @@ func (k KVStoreDummy) RagnarokAccount(ctx cosmos.Context, addr cosmos.AccAddress
 
 func (k KVStoreDummy) GetBalance(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Coins {
 	return nil
+}
+
+func (k KVStoreDummy) SetXMRSpentOutputRefs(_ cosmos.Context, _ common.PubKey, _ common.TxID, _ []common.OutputRef, _, _ int64) error {
+	return nil
+}
+
+func (k KVStoreDummy) GetXMRSpentOutputRefs(_ cosmos.Context, _ common.PubKey) ([]common.OutputRef, error) {
+	return nil, nil
 }
 
 func (k KVStoreDummy) GetBalanceOf(ctx cosmos.Context, addr cosmos.AccAddress, asset common.Asset) cosmos.Coin {

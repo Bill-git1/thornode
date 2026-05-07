@@ -338,6 +338,8 @@ func (c Chain) GetGasAssetDecimal() int64 {
 		return 9
 	case DOTChain:
 		return 10
+	case XMRChain:
+		return 12
 	default:
 		return cosmos.DefaultCoinDecimals
 	}

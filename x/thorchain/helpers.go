@@ -24,6 +24,46 @@ func isSimulationMode(ctx cosmos.Context) bool {
 	return ok && simulationMode
 }
 
+func txOutPubKeyMatchesObserved(chain common.Chain, observed common.PubKey, item TxOutItem) bool {
+	if observed.Equals(item.VaultPubKey) || observed.Equals(item.VaultPubKeyFrost) {
+		return true
+	}
+	if chain == common.XMRChain {
+		return false
+	}
+	return observed.Equals(item.VaultPubKeyEddsa)
+}
+
+func txOutVaultPubKeyEddsa(chain common.Chain, pubKey common.PubKey) common.PubKey {
+	if chain == common.XMRChain {
+		return common.EmptyPubKey
+	}
+	return pubKey
+}
+
+func txOutSourcePubKey(item TxOutItem) (common.PubKey, error) {
+	switch item.Chain.GetSigningAlgo() {
+	case common.SigningAlgoSecp256k1:
+		if item.VaultPubKey.IsEmpty() {
+			return common.EmptyPubKey, fmt.Errorf("vault pubkey is empty")
+		}
+		return item.VaultPubKey, nil
+	case common.SigningAlgoEd25519:
+		if item.Chain == common.XMRChain {
+			if item.VaultPubKeyFrost.IsEmpty() {
+				return common.EmptyPubKey, fmt.Errorf("vault pubkey frost is empty")
+			}
+			return item.VaultPubKeyFrost, nil
+		}
+		if item.VaultPubKeyEddsa.IsEmpty() {
+			return common.EmptyPubKey, fmt.Errorf("vault pubkey eddsa is empty")
+		}
+		return item.VaultPubKeyEddsa, nil
+	default:
+		return common.EmptyPubKey, fmt.Errorf("unknown signing algorithm: %s", item.Chain.GetSigningAlgo())
+	}
+}
+
 func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
 	// If THORNode recognize one of the coins, and therefore able to refund
 	// withholding fees, refund all coins.
@@ -49,6 +89,7 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 		// Only attempt an outbound if a fee can be taken from the coin.
 		if coin.IsRune() || !pool.BalanceRune.IsZero() {
 			toAddr := tx.Tx.FromAddress
+			usesSourceSender := true
 			memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), tx.Tx.Memo)
 			if err == nil && memo.IsType(TxSwap) && !memo.GetRefundAddress().IsEmpty() && !coin.Asset.GetChain().IsTHORChain() {
 				// If the memo specifies a refund address, send the refund to that address. If
@@ -56,6 +97,7 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				// default back to the sender address
 				if memo.GetRefundAddress().IsChain(coin.Asset.GetChain()) {
 					toAddr = memo.GetRefundAddress()
+					usesSourceSender = false
 				}
 			}
 
@@ -78,7 +120,8 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				Chain:                 coin.Asset.GetChain(),
 				ToAddress:             toAddr,
 				VaultPubKey:           vault.PubKey,
-				VaultPubKeyEddsa:      vault.PubKeyEddsa,
+				VaultPubKeyEddsa:      txOutVaultPubKeyEddsa(coin.Asset.GetChain(), vault.PubKeyEddsa),
+				VaultPubKeyFrost:      vault.PubKeyFrost,
 				Coin:                  coin,
 				Memo:                  NewRefundMemo(tx.Tx.ID).String(),
 				MaxGas:                []common.Coin{},
@@ -89,6 +132,14 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				Aggregator:            "",
 				AggregatorTargetAsset: "",
 				AggregatorTargetLimit: &cosmos.Uint{},
+			}
+
+			sender := tx.Tx.ObservedSender()
+			if coin.Asset.GetChain().Equals(common.XMRChain) && usesSourceSender && sender.RefundAddressRequired {
+				ctx.Logger().Info("skip xmr refund to unknown sender marker", "in_hash", tx.Tx.ID.String(), "coin", coin.String())
+				refundReason = fmt.Sprintf("%s; fail to refund (%s): unknown xmr sender and no explicit refund address", refundReason, toi.Coin.String())
+				unrefundableCoinCleanup(ctx, mgr, toi, "failed_refund_unknown_sender")
+				continue
 			}
 
 			success, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, toi, cosmos.ZeroUint())
@@ -149,12 +200,26 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 	// External coin, native coin which isn't RUNE, or native RUNE (not from the Reserve).
 	switch {
 	case !coin.Asset.IsNative():
-		// If unable to refund external-chain coins, add them to their pools
-		// (so they aren't left in the vaults with no reflection in the pools).
-		// Failed-refund external coins have earlier been established to have existing pools with non-zero BalanceRune.
-
-		ctx.Logger().Error("fail to refund non-native tx, leaving coins in vault", "toi.InHash", toi.InHash, "toi.Coin", toi.Coin)
-		return
+		// Add unrefundable external coins to their pool so the vault balance
+		// is correctly reflected in the pool accounting.  Failed-refund
+		// external coins have earlier been established to have existing pools
+		// with non-zero BalanceRune.
+		pool, poolErr := mgr.Keeper().GetPool(ctx, coin.Asset.GetLayer1Asset())
+		if poolErr != nil || pool.BalanceRune.IsZero() {
+			ctx.Logger().Error("fail to refund non-native tx, leaving coins in vault",
+				"toi.InHash", toi.InHash, "toi.Coin", toi.Coin, "pool_err", poolErr)
+			return
+		}
+		pool.BalanceAsset = pool.BalanceAsset.Add(coin.Amount)
+		if poolErr = mgr.Keeper().SetPool(ctx, pool); poolErr != nil {
+			ctx.Logger().Error("fail to add unrefundable coin to pool",
+				"error", poolErr, "toi.InHash", toi.InHash, "toi.Coin", toi.Coin)
+			return
+		}
+		donateEvt := NewEventDonate(coin.Asset.GetLayer1Asset(), tx)
+		if emitErr := mgr.EventMgr().EmitEvent(ctx, donateEvt); emitErr != nil {
+			ctx.Logger().Error("fail to emit donate event for unrefundable coin", "error", emitErr)
+		}
 	case sourceModuleName != ReserveName:
 		// If unable to refund THOR.RUNE, send it to the Reserve.
 		err := mgr.Keeper().SendFromModuleToModule(ctx, sourceModuleName, ReserveName, common.NewCoins(coin))
@@ -423,7 +488,7 @@ func refundBond(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cos
 		nodeAcc.UpdateStatus(NodeDisabled, ctx.BlockHeight())
 	}
 	if err := mgr.Keeper().SetNodeAccount(ctx, *nodeAcc); err != nil {
-		ctx.Logger().Error(fmt.Sprintf("fail to save node account(%s)", nodeAcc), "error", err)
+		ctx.Logger().Error("fail to save node account", "node_account", nodeAcc, "error", err)
 		return err
 	}
 	if err := mgr.Keeper().SetBondProviders(ctx, bp); err != nil {
@@ -486,7 +551,7 @@ func signedByActiveNodeAccount(ctx cosmos.Context, k keeper.Keeper, signer cosmo
 
 func wrapError(ctx cosmos.Context, err error, wrap string) error {
 	err = fmt.Errorf("%s: %w", wrap, err)
-	ctx.Logger().Error(err.Error())
+	ctx.Logger().Error(wrap, "error", err)
 	return multierror.Append(errInternal, err)
 }
 
@@ -1141,38 +1206,6 @@ func atTVLCap(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 	return false
 }
 
-// trunk-ignore(golangci-lint/unused): used by store helper
-func isActionsItemDangling(voter ObservedTxVoter, i int) bool {
-	if i < 0 || i > len(voter.Actions)-1 {
-		// No such Actions item exists in the voter.
-		return false
-	}
-
-	toi := voter.Actions[i]
-
-	// If any OutTxs item matches an Actions item, deem it to be not dangling.
-	for _, outboundTx := range voter.OutTxs {
-		// The comparison code is based on matchActionItem, as matchActionItem is unimportable.
-		// note: Coins.Contains will match amount as well
-		matchCoin := outboundTx.Coins.Contains(toi.Coin)
-		if !matchCoin && toi.Coin.Asset.Equals(toi.Chain.GetGasAsset()) {
-			asset := toi.Chain.GetGasAsset()
-			intendToSpend := toi.Coin.Amount.Add(toi.MaxGas.ToCoins().GetCoin(asset).Amount)
-			actualSpend := outboundTx.Coins.GetCoin(asset).Amount.Add(outboundTx.Gas.ToCoins().GetCoin(asset).Amount)
-			if intendToSpend.Equal(actualSpend) {
-				matchCoin = true
-			}
-		}
-		if strings.EqualFold(toi.Memo, outboundTx.Memo) &&
-			toi.ToAddress.Equals(outboundTx.ToAddress) &&
-			toi.Chain.Equals(outboundTx.Chain) &&
-			matchCoin {
-			return false
-		}
-	}
-	return true
-}
-
 func IsModuleAccAddress(keeper keeper.Keeper, accAddr cosmos.AccAddress) bool {
 	return accAddr.Equals(keeper.GetModuleAccAddress(AsgardName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(BondName)) ||
@@ -1271,7 +1304,10 @@ func settleSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason strin
 }
 
 func settleSwapCached(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason string) error {
-	// Schedule outbound for what was already swapped
+	// Schedule outbound for what was already swapped whenever settlement is the
+	// place materializing the final outbound. The advanced swap queue skips
+	// outbound creation during execution and relies on settlement to create the
+	// completed swap outbound, even after multiple sub-swaps have already run.
 	if !msg.State.Out.IsZero() {
 		// Parse memo to check if this is a savers add
 		memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), msg.Tx.Memo)

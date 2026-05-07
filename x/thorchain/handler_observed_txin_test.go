@@ -116,6 +116,50 @@ func (s *HandlerObservedTxInSuite) TestFailure(c *C) {
 	c.Check(items, HasLen, 1)
 }
 
+func (s *HandlerObservedTxInSuite) TestXMRRefundSkipsUnknownSenderWithoutExplicitRefundAddress(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+
+	keeper := &TestObservedTxInFailureKeeper{
+		pool: Pool{
+			Asset:        common.XMRAsset,
+			BalanceRune:  cosmos.NewUint(200),
+			BalanceAsset: cosmos.NewUint(300),
+		},
+	}
+	mgr := NewDummyMgrWithKeeper(keeper)
+
+	tx := NewObservedTx(GetRandomTx(), 12, GetRandomPubKey(), 12)
+	tx.Tx.Chain = common.XMRChain
+	tx.Tx.Coins = common.Coins{
+		common.NewCoin(common.XMRAsset, cosmos.NewUint(100)),
+	}
+	tx.Tx.Gas = common.Gas{
+		common.NewCoin(common.XMRAsset, cosmos.NewUint(1)),
+	}
+	tx.Tx.ToAddress = common.Address(common.XMRSeededDummyAddress('8', []byte("xmr-refund-vault")))
+	destination := common.Address(common.XMRSeededDummyAddress('8', []byte("xmr-refund-destination")))
+	tx.Tx.Memo = fmt.Sprintf("=:%s:%s", common.XMRAsset.String(), destination.String())
+	tx.Tx.FromAddress, _ = common.NewAddress(common.XMRUnknownSenderAddress(tx.Tx.ID.String(), tx.Tx.ToAddress.String()))
+
+	err := refundTx(ctx, tx, mgr, CodeInvalidMemo, "Invalid memo", "")
+	c.Assert(err, IsNil)
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Check(items, HasLen, 0)
+
+	tx.Tx.ID = GetRandomTxHash()
+	refundAddress := common.Address(common.XMRSeededDummyAddress('8', []byte("xmr-refund-address")))
+	tx.Tx.Memo = fmt.Sprintf("=:%s:%s/%s", common.XMRAsset.String(), destination.String(), refundAddress.String())
+	tx.Tx.FromAddress, _ = common.NewAddress(common.XMRUnknownSenderAddress(tx.Tx.ID.String(), tx.Tx.ToAddress.String()))
+
+	err = refundTx(ctx, tx, mgr, CodeInvalidMemo, "Invalid memo", "")
+	c.Assert(err, IsNil)
+	items, err = mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Check(items, HasLen, 1)
+	c.Check(items[0].ToAddress.Equals(refundAddress), Equals, true)
+}
+
 type TestObservedTxInHandleKeeper struct {
 	keeper.KVStoreDummy
 	nas                  NodeAccounts

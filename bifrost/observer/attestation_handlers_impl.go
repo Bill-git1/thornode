@@ -1,6 +1,7 @@
 package observer
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"time"
@@ -15,14 +16,7 @@ const priceFeedsUpdateDelay = time.Millisecond * 100
 func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx common.AttestTx) {
 	obsTx := tx.ObsTx
 
-	k := txKey{
-		Chain:                  obsTx.Tx.Chain,
-		ID:                     obsTx.Tx.ID,
-		UniqueHash:             obsTx.Tx.Hash(obsTx.BlockHeight),
-		AllowFutureObservation: tx.AllowFutureObservation,
-		Finalized:              obsTx.IsFinal(),
-		Inbound:                tx.Inbound,
-	}
+	k := observedTxKey(obsTx, tx.Inbound, tx.AllowFutureObservation)
 
 	s.mu.Lock()
 	state, ok := s.observedTxs[k]
@@ -38,13 +32,40 @@ func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx 
 
 	defer state.mu.Unlock()
 
+	attestationCountBefore := state.AttestationCount()
+
 	// Add the attestation
 	if err := state.AddAttestation(tx.Attestation); err != nil {
 		s.logger.Error().Err(err).Msg("fail to add attestation")
 		return
 	}
+	isNewAttestation := state.AttestationCount() > attestationCountBefore
 
-	total := s.activeValidatorCount()
+	// Import verified XMR outbound metadata into the local sidecar outside the
+	// lock. This does not add a local attestation; the scanner must later
+	// observe the sidecar-verified outbound before this node signs it.
+	var applySpentRefs *common.ObservedTx
+	isXMROutboundWithRefs := obsTx.Tx.Chain.Equals(common.XMRChain) && !tx.Inbound &&
+		len(obsTx.SpentOutputRefs) > 0 && len(obsTx.SpentOutputRefs) <= common.MaxXMRSpentOutputRefs
+	isLocalAttestation := tx.Attestation != nil && bytes.Equal(tx.Attestation.PubKey, s.pubKey)
+	if isXMROutboundWithRefs && isNewAttestation && isLocalAttestation && !state.spentRefsApplied {
+		state.spentRefsApplied = true
+		cp := obsTx
+		applySpentRefs = &cp
+	}
+
+	// Determine the number of validators needed for attestation
+	var total int
+	if k.AllowFutureObservation {
+		keysignParty, err := s.getKeysignParty(obsTx.ObservedPubKey)
+		if err != nil {
+			s.logger.Error().Err(err).Msg("fail to get key sign party")
+			return
+		}
+		total = len(keysignParty)
+	} else {
+		total = s.activeValidatorCount()
+	}
 
 	hasSuperMajority := types.HasSuperMajority(state.AttestationCount(), total)
 
@@ -56,6 +77,12 @@ func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx 
 	} else {
 		s.logger.Debug().Msgf("observed tx attestation received - %s, id: %s, inbound: %t, final: %t, quorum: %d/%d",
 			k.Chain, k.ID, k.Inbound, k.Finalized, state.AttestationCount(), total)
+	}
+
+	// Apply XMR spent output refs outside the lock to avoid holding the
+	// mutex during a blocking HTTP call to the sidecar.
+	if applySpentRefs != nil && s.observerApplySpentOutputRefs != nil {
+		s.applySpentRefsAsync(*applySpentRefs)
 	}
 }
 

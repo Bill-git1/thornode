@@ -167,6 +167,10 @@ func (m *ObservedTxVoter) GetTx(nodeAccounts NodeAccounts) *common.ObservedTx {
 	return &m.Tx
 }
 
+func sameConsensusObservation(lhs, rhs common.ObservedTx) bool {
+	return lhs.EqualsConsensus(rhs)
+}
+
 func (m *ObservedTxVoter) getConsensusTx(accounts NodeAccounts, final bool) common.ObservedTx {
 	for _, txFinal := range m.Txs {
 		voters := make(map[string]bool)
@@ -177,7 +181,7 @@ func (m *ObservedTxVoter) getConsensusTx(accounts NodeAccounts, final bool) comm
 			if txIn.IsFinal() != final {
 				continue
 			}
-			if !txFinal.Tx.EqualsEx(txIn.Tx) {
+			if !sameConsensusObservation(txFinal, txIn) {
 				continue
 			}
 			for _, signer := range txIn.GetSigners() {
@@ -230,7 +234,7 @@ func (m *ObservedTxVoter) GetConsensusSigners() []cosmos.AccAddress {
 		if tx.IsFinal() != final {
 			continue
 		}
-		if !tx.Tx.EqualsEx(m.Tx.Tx) {
+		if !sameConsensusObservation(tx, m.Tx) {
 			continue
 		}
 

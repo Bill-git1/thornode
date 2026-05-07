@@ -61,20 +61,25 @@ type TransactionResult struct {
 	Transaction RPCTxnData `json:"transaction"`
 }
 
-// GetTransaction makes a getTransaction RPC call using "finalized" commitment.
-func (s *SolRPC) GetTransaction(signature string) (*TransactionResult, error) {
-	return s.getTransaction(signature, "finalized")
+type GetSignatureStatusesResponse struct {
+	Jsonrpc string `json:"jsonrpc"`
+	Id      int    `json:"id"`
+	Result  struct {
+		Value []*SignatureStatusResult `json:"value"`
+	} `json:"result"`
+	Error *RPCError `json:"error"`
 }
 
-// GetTransactionConfirmed makes a getTransaction RPC call using "confirmed"
-// commitment, which resolves as soon as the transaction has been voted on by a
-// supermajority of the cluster — well before finalization (~0.4s vs ~13s).
-// Use this when you need to verify a just-broadcast transaction quickly.
-func (s *SolRPC) GetTransactionConfirmed(signature string) (*TransactionResult, error) {
-	return s.getTransaction(signature, "confirmed")
+type SignatureStatusResult struct {
+	Slot               uint64  `json:"slot"`
+	Confirmations      *uint64 `json:"confirmations"`
+	Err                any     `json:"err"`
+	ConfirmationStatus string  `json:"confirmationStatus"`
 }
 
-func (s *SolRPC) getTransaction(signature, commitment string) (*TransactionResult, error) {
+// GetTransactionWithCommitment makes a getTransaction RPC call to the Solana RPC
+// with the requested commitment level.
+func (s *SolRPC) GetTransactionWithCommitment(signature, commitment string) (*TransactionResult, error) {
 	params := []interface{}{
 		signature,
 		map[string]interface{}{
@@ -94,4 +99,44 @@ func (s *SolRPC) getTransaction(signature, commitment string) (*TransactionResul
 	}
 
 	return &response.Result, nil
+}
+
+// GetTransaction makes a getTransaction RPC call to the Solana RPC using
+// "finalized" commitment, which matches the production scanner behavior.
+func (s *SolRPC) GetTransaction(signature string) (*TransactionResult, error) {
+	return s.GetTransactionWithCommitment(signature, "finalized")
+}
+
+// GetTransactionConfirmed makes a getTransaction RPC call using "confirmed"
+// commitment, which resolves as soon as the transaction has been voted on by a
+// supermajority of the cluster — well before finalization (~0.4s vs ~13s).
+// Use this when you need to verify a just-broadcast transaction quickly.
+func (s *SolRPC) GetTransactionConfirmed(signature string) (*TransactionResult, error) {
+	return s.GetTransactionWithCommitment(signature, "confirmed")
+}
+
+// GetSignatureStatus checks whether the given signature is still known to the
+// cluster, even if getTransaction is temporarily returning null before the
+// transaction reaches confirmed/finalized visibility.
+func (s *SolRPC) GetSignatureStatus(signature string) (*SignatureStatusResult, error) {
+	params := []interface{}{
+		[]string{signature},
+		map[string]interface{}{
+			"searchTransactionHistory": true,
+		},
+	}
+
+	var response GetSignatureStatusesResponse
+	if err := s.post("getSignatureStatuses", params, &response); err != nil {
+		return nil, fmt.Errorf("failed to call getSignatureStatuses: %w", err)
+	}
+
+	if response.Error != nil && response.Error.Code != 0 {
+		return nil, fmt.Errorf("RPC Error %d: %s", response.Error.Code, response.Error.Message)
+	}
+	if len(response.Result.Value) == 0 || response.Result.Value[0] == nil {
+		return nil, nil
+	}
+
+	return response.Result.Value[0], nil
 }

@@ -77,7 +77,7 @@ func processTxInAttestation(
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
 		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.Tx.EqualsEx(tx.Tx) &&
+			voter.Tx.EqualsConsensus(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
@@ -104,7 +104,7 @@ func processTxInAttestation(
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
 		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.Tx.EqualsEx(tx.Tx) &&
+			voter.Tx.EqualsConsensus(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
@@ -284,7 +284,7 @@ func handleObservedTxInQuorum(
 	// construct msg from memo
 	m, txErr := processOneTxIn(ctx, k, voter.Tx, signer)
 	if txErr != nil {
-		ctx.Logger().Error("fail to process inbound tx", "error", txErr.Error(), "tx hash", tx.Tx.ID.String())
+		ctx.Logger().Error("fail to process inbound tx", "error", txErr, "tx hash", tx.Tx.ID.String())
 		if newErr := refundTx(ctx, tx, mgr, CodeInvalidMemo, txErr.Error(), ""); nil != newErr {
 			ctx.Logger().Error("fail to refund", "error", newErr)
 		}
@@ -437,7 +437,7 @@ func processTxOutAttestation(
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
 		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.Tx.EqualsEx(tx.Tx) &&
+			voter.Tx.EqualsConsensus(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
@@ -452,7 +452,7 @@ func processTxOutAttestation(
 		if voter.FinalisedHeight > 0 &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
 			!voter.Tx.Tx.Gas.Equals(tx.Tx.Gas) &&
-			voter.Tx.Tx.EqualsExIgnoreGas(tx.Tx) {
+			voter.Tx.EqualsConsensusIgnoreGas(tx) {
 			gasCorrectionSigners := countMatchingSigners(voter, tx, nas)
 			if HasSuperMajority(gasCorrectionSigners, len(nas)) {
 				correctOutboundGas(ctx, mgr, voter.Tx, tx)
@@ -480,7 +480,7 @@ func processTxOutAttestation(
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
 		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.Tx.EqualsEx(tx.Tx) &&
+			voter.Tx.EqualsConsensus(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
@@ -492,7 +492,7 @@ func processTxOutAttestation(
 		// Gas correction for re-org re-observations (non-finalized consensus path).
 		if voter.Height > 0 &&
 			!voter.Tx.Tx.Gas.Equals(tx.Tx.Gas) &&
-			voter.Tx.Tx.EqualsExIgnoreGas(tx.Tx) {
+			voter.Tx.EqualsConsensusIgnoreGas(tx) {
 			gasCorrectionSigners := countMatchingSigners(voter, tx, nas)
 			if HasSuperMajority(gasCorrectionSigners, len(nas)) {
 				correctOutboundGas(ctx, mgr, voter.Tx, tx)
@@ -515,7 +515,10 @@ func countMatchingSigners(voter ObservedTxVoter, tx ObservedTx, nas NodeAccounts
 		if otherTx.IsFinal() != tx.IsFinal() {
 			continue
 		}
-		if !otherTx.Tx.EqualsEx(tx.Tx) {
+		if !otherTx.ObservedPubKey.Equals(tx.ObservedPubKey) {
+			continue
+		}
+		if !otherTx.EqualsConsensus(tx) {
 			continue
 		}
 		for _, s := range otherTx.GetSigners() {
@@ -809,6 +812,11 @@ func handleObservedTxOutQuorum(
 			ctx.Logger().Error("fail to save vault", "error", err)
 		}
 	}
+	if len(tx.SpentOutputRefs) > 0 {
+		if err := k.SetXMRSpentOutputRefs(ctx, tx.ObservedPubKey, tx.Tx.ID, tx.SpentOutputRefs, tx.BlockHeight, ctx.BlockHeight()); err != nil {
+			ctx.Logger().Error("fail to save xmr spent output refs", "error", err)
+		}
+	}
 
 	// Mark voter as done AFTER all vault operations to prevent
 	// inconsistency if vault ops fail.
@@ -924,10 +932,14 @@ func findOriginalMemoForOutbound(ctx cosmos.Context, mgr Manager, tx common.Obse
 
 	k := mgr.Keeper()
 	signingTransPeriod := k.GetConfigInt64(ctx, constants.SigningTransactionPeriod)
+	searchPeriod := signingTransPeriod
+	if tx.Tx.Chain.Equals(common.XMRChain) {
+		searchPeriod = signingTransPeriod * xmrSigningPeriodMultiplier
+	}
 
 	// Search recent TxOut blocks for matching TxOutItem
 	// Use the same range logic as handler_common_outbound.go
-	earliestHeight := ctx.BlockHeight() - signingTransPeriod
+	earliestHeight := ctx.BlockHeight() - searchPeriod
 	if earliestHeight < 1 {
 		earliestHeight = 1
 	}
@@ -962,8 +974,7 @@ func findOriginalMemoForOutbound(ctx cosmos.Context, mgr Manager, tx common.Obse
 			if !item.ToAddress.Equals(tx.Tx.ToAddress) {
 				continue
 			}
-			// Check both regular and EdDSA vault pubkeys (same as handler_common_outbound.go)
-			if !item.VaultPubKey.Equals(tx.ObservedPubKey) && !item.VaultPubKeyEddsa.Equals(tx.ObservedPubKey) {
+			if !txOutPubKeyMatchesObserved(tx.Tx.Chain, tx.ObservedPubKey, item) {
 				continue
 			}
 			if !item.Coin.Asset.Equals(tx.Tx.Coins[0].Asset) {

@@ -652,6 +652,17 @@
         "type": "swap"
       },
       {
+        "chain": "THOR",
+        "coin": "53441005 BTC.BTC",
+        "from": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+        "id": "F409194110562EBBFBA69E53DD3F304F25A4C70117CDD680C77BB724FAC4209C",
+        "memo": "=:BTC.BTC:bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal:0/1/3",
+        "mode": "EndBlock",
+        "pool": "BTC.BTC",
+        "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "type": "donate"
+      },
+      {
         "chain": "BTC",
         "code": "131",
         "coin": "53441005 BTC.BTC",

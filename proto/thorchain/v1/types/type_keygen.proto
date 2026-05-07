@@ -11,6 +11,7 @@ import "gogoproto/gogo.proto";
 enum KeygenType {
   UnknownKeygen = 0;
   AsgardKeygen = 1;
+  XMRMonovaultKeygen = 2;
 }
 
 message Keygen {

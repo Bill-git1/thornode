@@ -100,6 +100,49 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	c.Check(err, IsNil)
 }
 
+func (s *BlockScannerTestSuite) TestPurgeFromHeightClearsScanPosAndBlockMeta(c *C) {
+	mss := NewMockScannerStorage()
+	_ = mss.SetScanPos(500)
+	_ = mss.SetBlockScanStatus(Block{Height: 100}, Processing)
+	_ = mss.SetBlockScanStatus(Block{Height: 200}, Processing)
+	_ = mss.SetBlockScanStatus(Block{Height: 300}, Processing)
+	_ = mss.SetBlockScanStatus(Block{Height: 400}, Processing)
+	_ = mss.SetBlockScanStatus(Block{Height: 500}, Processing)
+
+	removed, err := mss.PurgeFromHeight(300)
+	c.Assert(err, IsNil)
+	c.Check(removed, Equals, 3)
+
+	pos, err := mss.GetScanPos()
+	c.Assert(err, IsNil)
+	c.Check(pos, Equals, int64(300))
+
+	blocks, err := mss.GetBlocksForRetry(false)
+	c.Assert(err, IsNil)
+	for _, b := range blocks {
+		c.Check(b.Height < 300, Equals, true, Commentf("block at height %d should have been purged", b.Height))
+	}
+}
+
+func (s *BlockScannerTestSuite) TestStartBlockHeightOverridesPersistedPosition(c *C) {
+	mss := NewMockScannerStorage()
+	_ = mss.SetScanPos(9999)
+
+	cbs, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
+		StartBlockHeight: 5000,
+	}, mss, m, s.bridge, DummyFetcher{})
+	c.Assert(err, IsNil)
+	c.Assert(cbs, NotNil)
+
+	txsQueue := make(chan types.TxIn, 1)
+	feeQueue := make(chan common.NetworkFee, 1)
+	cbs.Start(txsQueue, feeQueue)
+
+	c.Check(cbs.previousBlock, Equals, int64(5000))
+
+	cbs.Stop()
+}
+
 const (
 	blockBadResult  = `{ "jsonrpc": "2.0", "id": "", "result": { "block_meta": { "block_id": { "hash": "D063E5F1562F93D46FD4F01CA24813DD60B919D1C39CC34EF1DBB0EA07D0F7F8"1EB49C7042E5622189EDD4FA" } } } }`
 	lastBlockResult = `[ { "chain": "ETH", "last_observed_in": 1, "last_signed_out": 1, "thorchain": 3 }]`

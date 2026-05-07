@@ -10,9 +10,7 @@ get_instances() {
   grep --no-filename -E -o "$PATTERN" "$@" || true
 }
 
-handlers=$(find x/thorchain/ -name "handler_*.go")
-
-for f in $handlers; do
+while IFS= read -r -d '' f; do
   if [[ $f == *"_test"* ]]; then
     continue
   fi
@@ -21,17 +19,15 @@ for f in $handlers; do
   fi
   base=${f%.*}
   archive="$base"_archive.go
-  files="$f"
+  files=("$f")
   if [[ -f $archive ]]; then
-    files+=" $archive"
+    files+=("$archive")
   fi
 
-  # trunk-ignore(shellcheck/SC2086): word split is desired behavior
-  validate_init=$(get_instances " validateV[0-9]+" $files)
+  validate_init=$(get_instances " validateV[0-9]+" "${files[@]}")
   validate_call=$(get_instances "\.validateV[0-9]+" "$f")
 
-  # trunk-ignore(shellcheck/SC2086): word split is desired behavior
-  handler_init=$(get_instances " handleV[0-9]+" $files)
+  handler_init=$(get_instances " handleV[0-9]+" "${files[@]}")
   handler_call=$(get_instances "\.handleV[0-9]+" "$f")
 
   missing=$(echo -e "$validate_init\n$validate_call\n$handler_init\n$handler_call" | sed -e 's/^.//g' | sort -n | uniq -u)
@@ -43,4 +39,4 @@ for f in $handlers; do
     exit 1
   fi
   echo "Handler: $f... OK"
-done
+done < <(find x/thorchain/ -name "handler_*.go" -print0)

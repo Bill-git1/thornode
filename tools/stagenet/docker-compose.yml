@@ -2,17 +2,15 @@
 # Config
 ########################################################################################
 
-# trunk-ignore-all(yamllint/empty-values)
-
 volumes:
-  genesis-thornode:
-  genesis-bifrost:
-  validator-1-thornode:
-  validator-1-bifrost:
-  validator-2-thornode:
-  validator-2-bifrost:
-  validator-3-thornode:
-  validator-3-bifrost:
+  genesis-thornode: {}
+  genesis-bifrost: {}
+  validator-1-thornode: {}
+  validator-1-bifrost: {}
+  validator-2-thornode: {}
+  validator-2-bifrost: {}
+  validator-3-thornode: {}
+  validator-3-bifrost: {}
 
 ########################################################################################
 # Services

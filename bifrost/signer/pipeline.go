@@ -2,6 +2,7 @@ package signer
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -136,6 +137,14 @@ func (p *pipeline) SpawnSignings(s pipelineSigner, bridge thorclient.ThorchainBr
 			itemsToSign = append(itemsToSign, item)
 		}
 	}
+
+	// sort deterministically so all nodes attempt the same outbound first
+	sort.Slice(itemsToSign, func(i, j int) bool {
+		if itemsToSign[i].Height != itemsToSign[j].Height {
+			return itemsToSign[i].Height < itemsToSign[j].Height
+		}
+		return itemsToSign[i].Index < itemsToSign[j].Index
+	})
 
 	// get the available capacities for each vault status
 	availableCapacities := make(map[types.VaultStatus]int)

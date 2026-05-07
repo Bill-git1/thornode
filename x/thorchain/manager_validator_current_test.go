@@ -26,9 +26,11 @@ func (vts *ValidatorMgrTestSuite) TestChurnWithChainHalt(c *C) {
 	mgr.K = k
 	networkMgr := newValidatorMgr(k, mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
 	c.Assert(networkMgr, NotNil)
+	minBond := constants.GetConstantValues(GetCurrentVersion()).GetInt64Value(constants.MinimumBondInRune)
 
 	// 1 standby node
 	standbyNode := GetRandomValidatorNode(NodeStandby)
+	standbyNode.Bond = cosmos.NewUint(uint64(minBond))
 	c.Assert(k.SetNodeAccount(ctx, standbyNode), IsNil)
 
 	// 1 vault with btc, created at block 1 (so lastChurnHeight=1)
@@ -37,6 +39,7 @@ func (vts *ValidatorMgrTestSuite) TestChurnWithChainHalt(c *C) {
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 
 	// Set block height to churn interval after vault creation (1 + 60 = 61)
+	mgr.Keeper().SetMimir(ctx, constants.ChurnInterval.String(), 60)
 	ctx = ctx.WithBlockHeight(61)
 
 	// set mimir to halt btc chain
@@ -461,6 +464,34 @@ func (vts *ValidatorMgrTestSuite) TestGetChangedNodes(c *C) {
 	c.Assert(removedNodes, HasLen, 1)
 }
 
+func (vts *ValidatorMgrTestSuite) TestGetChangedNodesDedupesSharedXMRMonovaultMembership(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(1)
+
+	mgr := NewDummyMgrWithKeeper(k)
+	networkMgr := newValidatorMgr(k, mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(networkMgr, NotNil)
+
+	readyNode := GetRandomValidatorNode(NodeReady)
+	readyNode.Bond = cosmos.NewUint(100)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, readyNode), IsNil)
+
+	regularVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	regularVault.Membership = append(regularVault.Membership, readyNode.PubKeySet.Secp256k1.String())
+	c.Assert(mgr.Keeper().SetVault(ctx, regularVault), IsNil)
+
+	xmrMonovault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), xmrMonovaultChains().Strings(), []ChainContract{})
+	xmrMonovault.PubKeyFrost = GetRandomEd25519PubKey()
+	xmrMonovault.Membership = append(xmrMonovault.Membership, readyNode.PubKeySet.Secp256k1.String())
+	c.Assert(mgr.Keeper().SetVault(ctx, xmrMonovault), IsNil)
+
+	newNodes, removedNodes, err := networkMgr.getChangedNodes(ctx, NodeAccounts{})
+	c.Assert(err, IsNil)
+	c.Assert(newNodes, HasLen, 1)
+	c.Assert(newNodes[0].NodeAddress.Equals(readyNode.NodeAddress), Equals, true)
+	c.Assert(removedNodes, HasLen, 0)
+}
+
 func (vts *ValidatorMgrTestSuite) TestSplitNext(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgr()
@@ -771,6 +802,7 @@ func (vts *ValidatorMgrTestSuite) TestFindNextVaultNodeAccountsMax(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	validatorMgr := newValidatorMgr(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
 	c.Assert(validatorMgr, NotNil)
+	minBond := constants.GetConstantValues(GetCurrentVersion()).GetInt64Value(constants.MinimumBondInRune)
 	// create active nodes
 	for i := 0; i < 12; i++ {
 		na := GetRandomValidatorNode(NodeActive)
@@ -782,6 +814,7 @@ func (vts *ValidatorMgrTestSuite) TestFindNextVaultNodeAccountsMax(c *C) {
 	// create standby nodes
 	for i := 0; i < 12; i++ {
 		na := GetRandomValidatorNode(NodeStandby)
+		na.Bond = cosmos.NewUint(uint64(minBond))
 		c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
 	}
 	err := validatorMgr.markReadyActors(ctx)
@@ -817,6 +850,48 @@ func (vts *ValidatorMgrTestSuite) TestFindNextVaultNodeAccountsBFT(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(rotate, Equals, false)
 	c.Assert(nasAfter, HasLen, 4, Commentf("%d", len(nasAfter)))
+}
+
+func (vts *ValidatorMgrTestSuite) TestChurnInnerSchedulesReplacementXMRKeygen(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+	networkDummy, ok := mgr.NetworkMgr().(*NetworkMgrDummy)
+	c.Assert(ok, Equals, true)
+	validatorMgr := newValidatorMgr(k, mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(validatorMgr, NotNil)
+	minBond := constants.GetConstantValues(GetCurrentVersion()).GetInt64Value(constants.MinimumBondInRune)
+
+	k.SetMimir(ctx, constants.DesiredValidatorSet.String(), 4)
+	k.SetMimir(ctx, constants.AsgardSize.String(), 10)
+
+	membership := make([]string, 0, 4)
+	for i := 0; i < 4; i++ {
+		na := GetRandomValidatorNode(NodeActive)
+		if i == 0 {
+			na.RequestedToLeave = true
+		}
+		c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+		membership = append(membership, na.PubKeySet.Secp256k1.String())
+	}
+
+	ready := GetRandomValidatorNode(NodeReady)
+	ready.Bond = cosmos.NewUint(uint64(minBond))
+	ready.Version = constants.SWVersion.String()
+	c.Assert(k.SetNodeAccount(ctx, ready), IsNil)
+
+	regular := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.THORChain, common.BTCChain}.Strings(), nil)
+	regular.Membership = append(regular.Membership, membership...)
+	c.Assert(k.SetVault(ctx, regular), IsNil)
+
+	xmr := NewVaultV2(1, ActiveVault, AsgardVault, GetRandomPubKey(), xmrMonovaultChains().Strings(), nil, GetRandomPubKey())
+	xmr.Membership = append(xmr.Membership, membership...)
+	xmr.PubKeyFrost = GetRandomEd25519PubKey()
+	c.Assert(k.SetVault(ctx, xmr), IsNil)
+
+	c.Assert(validatorMgr.churnInner(ctx), IsNil)
+	c.Assert(networkDummy.nas, HasLen, 4)
+	c.Assert(networkDummy.xmrNas, HasLen, 4)
+	c.Assert(networkDummy.xmrNas.Contains(ready), Equals, true)
 }
 
 func (vts *ValidatorMgrTestSuite) TestWeightedBondReward(c *C) {
@@ -992,6 +1067,7 @@ func (vts *ValidatorMgrTestSuite) TestMarkMissingActors(c *C) {
 	// Set MissingBlockChurnOut mimir
 	missingBlocksThreshold := int64(10)
 	mgr.Keeper().SetMimir(ctx, constants.MissingBlockChurnOut.String(), missingBlocksThreshold)
+	mgr.Keeper().SetMimir(ctx, constants.MaxMissingBlockChurnOut.String(), 2)
 
 	// Create active nodes with different missing blocks counts
 	activeNode1 := GetRandomValidatorNode(NodeActive)
@@ -1044,6 +1120,7 @@ func (vts *ValidatorMgrTestSuite) TestMarkMissingActors_EdgeCases(c *C) {
 	// Set MissingBlockChurnOut mimir to exactly match a node's missing blocks
 	missingBlocksThreshold := int64(10)
 	mgr.Keeper().SetMimir(ctx, constants.MissingBlockChurnOut.String(), missingBlocksThreshold)
+	mgr.Keeper().SetMimir(ctx, constants.MaxMissingBlockChurnOut.String(), 1)
 
 	// Create node with exactly the threshold number of missing blocks
 	activeNode := GetRandomValidatorNode(NodeActive)

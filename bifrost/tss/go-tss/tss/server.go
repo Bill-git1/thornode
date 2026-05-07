@@ -14,4 +14,6 @@ type Server interface {
 	Keygen(req keygen.Request) (keygen.Response, error)
 	KeygenAllAlgo(req keygen.Request) ([]keygen.Response, error)
 	KeySign(req keysign.Request) (keysign.Response, error)
+	FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarClient) (FrostKeySignResponse, error)
+	FrostKeygen(req FrostKeygenRequest, sidecar FrostSidecarKeygenClient) (FrostKeygenResponse, error)
 }

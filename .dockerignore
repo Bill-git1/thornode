@@ -16,6 +16,7 @@
 
 # AI / Tools
 .cache
+.codex-tmp
 .claude
 CLAUDE.md
 CLAUDE.local.md
@@ -33,11 +34,13 @@ ci
 chain
 midgard
 semgrep
+thornode
 
 # Source not needed for image
 app-layer
 proto
 scripts
+!scripts/check-env.sh
 
 # Test
 *.prof
@@ -50,6 +53,12 @@ tmp
 __pycache__
 **/evm/cache/*
 node_modules
+**/target
+
+# Local scratch / binaries
+thornode-image-original
+thornode-linux-arm64
+
 
 # Tools (exclude all, then re-include needed)
 tools

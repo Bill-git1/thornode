@@ -7,7 +7,6 @@ import (
 
 	"github.com/CosmWasm/wasmd/x/wasm/ioutils"
 	"github.com/cosmos/cosmos-sdk/types"
-	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	. "gopkg.in/check.v1"
 )
@@ -103,7 +102,7 @@ func (s WasmManagerSuite) TestMigrateCode(c *C) {
 	c.Assert(err, IsNil)
 
 	admin := GetRandomBech32Addr()
-	_, _, err = mgr.WasmManager().InstantiateContract(ctx,
+	contractAddr, _, err := mgr.WasmManager().InstantiateContract(ctx,
 		1,
 		admin,
 		admin,
@@ -114,7 +113,7 @@ func (s WasmManagerSuite) TestMigrateCode(c *C) {
 	c.Assert(err, IsNil)
 
 	_, err = mgr.WasmManager().MigrateContract(ctx,
-		cosmos.MustAccAddressFromBech32("tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"),
+		contractAddr,
 		admin,
 		2,
 		[]byte(`{}`),

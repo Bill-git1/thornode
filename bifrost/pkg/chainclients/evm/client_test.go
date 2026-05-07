@@ -86,7 +86,7 @@ func (s *EVMSuite) SetUpTest(c *C) {
 	s.mimirOverrides = nil
 	s.m = GetMetricForTest(c)
 	c.Assert(s.m, NotNil)
-	types2.SetupConfigForTest()
+	setupMocknetThorConfig()
 	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -632,8 +632,7 @@ func (s *EVMSuite) TestSignEVMTx(c *C) {
 	e.signingReady.Store(true) // Mark ready for tests that don't call Start()
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-	pubkeys := pubkeyMgr.GetPubKeys()
-	addr, err := pubkeys[len(pubkeys)-4].GetAddress(common.AVAXChain)
+	addr, err := e.localPubKey.GetAddress(common.AVAXChain)
 	c.Assert(err, IsNil)
 
 	// Not AVAX chain

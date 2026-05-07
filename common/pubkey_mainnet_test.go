@@ -79,7 +79,7 @@ func (s *PubKeyTestSuite) TestPubKeyGetAddress(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(addrXMR.IsChain(XMRChain), Equals, true)
 		c.Assert(addrXMR.GetNetwork(XMRChain), Equals, MainNet)
-		c.Assert(len(addrXMR.String()), Equals, 97)
-		c.Assert(addrXMR.String()[:1], Equals, "C")
+		c.Assert(len(addrXMR.String()), Equals, 95)
+		c.Assert(addrXMR.String()[:1], Equals, "4")
 	}
 }

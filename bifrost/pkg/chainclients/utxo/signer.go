@@ -82,25 +82,41 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
-		outputAddrStr = outputAddr.(dogutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
+		dogeAddr, ok := outputAddr.(dogutil.Address)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("decoded doge address has unexpected type %T", outputAddr)
+		}
+		outputAddrStr = dogeAddr.String()
 	case common.BCHChain:
 		outputAddr, err = bchutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBCH())
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
-		outputAddrStr = outputAddr.(bchutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
+		bchAddr, ok := outputAddr.(bchutil.Address)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("decoded bch address has unexpected type %T", outputAddr)
+		}
+		outputAddrStr = bchAddr.String()
 	case common.LTCChain:
 		outputAddr, err = ltctxscript.DecodeAddress(tx.ToAddress.String(), c.getChainCfgLTC())
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
-		outputAddrStr = outputAddr.(ltcutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
+		ltcAddr, ok := outputAddr.(ltcutil.Address)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("decoded ltc address has unexpected type %T", outputAddr)
+		}
+		outputAddrStr = ltcAddr.String()
 	case common.BTCChain:
 		outputAddr, err = btcutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBTC())
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
-		outputAddrStr = outputAddr.(btcutil.Address).String()
+		btcAddr, ok := outputAddr.(btcutil.Address)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("decoded btc address has unexpected type %T", outputAddr)
+		}
+		outputAddrStr = btcAddr.String()
 	case common.ZECChain:
 		outputAddr, err = zecutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgZEC().Name)
 		if err != nil {
@@ -226,28 +242,47 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		go func(i int, amount int64) {
 			defer wg.Done()
 
-			// trunk-ignore(golangci-lint/govet): shadow
-			var err error
+			var signErr error
 
 			// chain specific signing
 			switch c.cfg.ChainID {
 			case common.DOGEChain:
-				err = c.signUTXODOGE(stx.(*dogewire.MsgTx), tx, amount, sourceScript, i)
+				msgTx, ok := stx.(*dogewire.MsgTx)
+				if !ok {
+					signErr = fmt.Errorf("unexpected doge signing tx type %T", stx)
+					break
+				}
+				signErr = c.signUTXODOGE(msgTx, tx, amount, sourceScript, i)
 			case common.BCHChain:
-				err = c.signUTXOBCH(stx.(*bchwire.MsgTx), tx, amount, sourceScript, i)
+				msgTx, ok := stx.(*bchwire.MsgTx)
+				if !ok {
+					signErr = fmt.Errorf("unexpected bch signing tx type %T", stx)
+					break
+				}
+				signErr = c.signUTXOBCH(msgTx, tx, amount, sourceScript, i)
 			case common.LTCChain:
-				err = c.signUTXOLTC(stx.(*ltcwire.MsgTx), tx, amount, sourceScript, i)
+				msgTx, ok := stx.(*ltcwire.MsgTx)
+				if !ok {
+					signErr = fmt.Errorf("unexpected ltc signing tx type %T", stx)
+					break
+				}
+				signErr = c.signUTXOLTC(msgTx, tx, amount, sourceScript, i)
 			case common.BTCChain:
-				err = c.signUTXOBTC(stx.(*btcwire.MsgTx), tx, amount, sourceScript, i)
+				msgTx, ok := stx.(*btcwire.MsgTx)
+				if !ok {
+					signErr = fmt.Errorf("unexpected btc signing tx type %T", stx)
+					break
+				}
+				signErr = c.signUTXOBTC(msgTx, tx, amount, sourceScript, i)
 			case common.ZECChain:
-				err = c.signUTXOZEC(zecTx, tx, amount, sourceScript, i)
+				signErr = c.signUTXOZEC(zecTx, tx, amount, sourceScript, i)
 			default:
 				c.log.Fatal().Msg("unsupported chain")
 			}
 
-			if err != nil {
+			if signErr != nil {
 				mu.Lock()
-				utxoErr = multierror.Append(utxoErr, err)
+				utxoErr = multierror.Append(utxoErr, signErr)
 				mu.Unlock()
 			}
 		}(int(signing.idx), signing.amount)
@@ -261,13 +296,29 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	// convert back to wire tx
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
-		redeemTx = dogeToWire(stx.(*dogewire.MsgTx))
+		msgTx, ok := stx.(*dogewire.MsgTx)
+		if !ok {
+			return nil, checkpointBytes, nil, fmt.Errorf("unexpected doge signed tx type %T", stx)
+		}
+		redeemTx = dogeToWire(msgTx)
 	case common.BCHChain:
-		redeemTx = bchToWire(stx.(*bchwire.MsgTx))
+		msgTx, ok := stx.(*bchwire.MsgTx)
+		if !ok {
+			return nil, checkpointBytes, nil, fmt.Errorf("unexpected bch signed tx type %T", stx)
+		}
+		redeemTx = bchToWire(msgTx)
 	case common.LTCChain:
-		redeemTx = ltcToWire(stx.(*ltcwire.MsgTx))
+		msgTx, ok := stx.(*ltcwire.MsgTx)
+		if !ok {
+			return nil, checkpointBytes, nil, fmt.Errorf("unexpected ltc signed tx type %T", stx)
+		}
+		redeemTx = ltcToWire(msgTx)
 	case common.BTCChain:
-		redeemTx = btcToWire(stx.(*btcwire.MsgTx))
+		msgTx, ok := stx.(*btcwire.MsgTx)
+		if !ok {
+			return nil, checkpointBytes, nil, fmt.Errorf("unexpected btc signed tx type %T", stx)
+		}
+		redeemTx = btcToWire(msgTx)
 	case common.ZECChain:
 		// using zecTx directly, no need to convert back
 	default:
@@ -375,9 +426,8 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		bm = utxo.NewBlockMeta("", height, "")
 	}
 	defer func() {
-		// trunk-ignore(golangci-lint/govet): shadow
-		if err := c.temporalStorage.SaveBlockMeta(height, bm); err != nil {
-			c.log.Err(err).Msg("fail to save block metadata")
+		if saveErr := c.temporalStorage.SaveBlockMeta(height, bm); saveErr != nil {
+			c.log.Err(saveErr).Msg("fail to save block metadata")
 		}
 	}()
 

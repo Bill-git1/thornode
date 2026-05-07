@@ -95,6 +95,26 @@ func (api *TronApi) GetTransactionInfo(
 	return info, nil
 }
 
+func (api *TronApi) GetTransaction(
+	hash string,
+) (Transaction, error) {
+	params := map[string]any{
+		"value": hash,
+	}
+
+	data, err := api.post("gettransactionbyid", params)
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	var tx Transaction
+	if err = json.Unmarshal(data, &tx); err != nil {
+		return Transaction{}, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return tx, nil
+}
+
 func (api *TronApi) GetBalance(
 	address string,
 ) (uint64, error) {
@@ -149,6 +169,9 @@ func (api *TronApi) CreateTransaction(
 	err = json.Unmarshal(data, &tx)
 	if err != nil {
 		return tx, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	if tx.Err != "" {
+		return tx, fmt.Errorf("create transaction failed: %s", tx.Err)
 	}
 
 	return tx, nil

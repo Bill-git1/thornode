@@ -1,0 +1,67 @@
+flowchart TB
+  MAIN["Bifrost main()"]
+  LOAD["LoadChains()"]
+  BTC_CLIENT["UTXO Client (ChainID=BTC)\nNewClient()"]
+  OBS["Observer.Start()"]
+  SIGNER["Signer.Start()"]
+
+  MAIN --> LOAD --> BTC_CLIENT
+  MAIN --> OBS
+  MAIN --> SIGNER
+  OBS -->|"chain.Start(...)"| BTC_CLIENT
+  SIGNER -->|"getChain(BTC)"| BTC_CLIENT
+
+  subgraph INBOUND["Inbound Observation (BTC -> THORChain)"]
+    BS["BlockScanner.scanBlocks()/scanMempool()"]
+    FETCH["FetchTxs()/FetchMemPool()"]
+    REORG["processReorg()/reConfirmTx()"]
+    EXTRACT["extractTxs()/getTxIn()"]
+    PARSE["getSender() + getOutput() + getMemo()"]
+    QUEUE["globalTxsQueue"]
+    PROC["Observer.processTxIns()/processObservedTx()"]
+    FILTER["filterObservations()"]
+    CONF["GetConfirmationCount()/ConfirmationCountReady()"]
+    DECK["sendDeck()/sendToQuorumChecker()"]
+    ATTEST["AttestObservedTx()"]
+    COMMIT["THORChain commits observation"]
+    ONOBS["handleObservedTxCommitted() -> OnObservedTxIn()"]
+  end
+
+  BTC_CLIENT --> BS --> FETCH
+  FETCH --> REORG
+  FETCH --> EXTRACT --> PARSE --> QUEUE --> PROC --> FILTER --> CONF --> DECK --> ATTEST --> COMMIT --> ONOBS
+
+  subgraph OUTBOUND["Outbound Signing (THORChain -> BTC)"]
+    TXOUT["Signer processTxnOut()/processTransactions()"]
+    SAB["signAndBroadcast()"]
+    LOCK["GetVaultLock(vault)"]
+    SIGNTX["SignTx()"]
+    BUILD["buildTx()\ngetUtxoToSpend + estimateTxSize + MemoToScripts"]
+    SIGNVIN["signUTXOBTC() per input (goroutines)"]
+    LOCAL["Local key path\n(nodePrivKey)"]
+    TSS["TSS path\ntssSignableBTC.Sign() -> RemoteSign() + Verify()"]
+    VERIFY["txscript engine.Execute()"]
+    BROAD["BroadcastTx() -> sendrawtransaction"]
+    AUTOOBS["observer.ObserveSigned()"]
+  end
+
+  SIGNER --> TXOUT --> SAB --> LOCK --> SIGNTX --> BUILD --> SIGNVIN --> VERIFY --> BROAD --> AUTOOBS --> PROC
+  SIGNVIN --> LOCAL
+  SIGNVIN --> TSS
+
+  SCACHE["Signer Cache\nHasSigned()/SetSigned()"]
+  SIGNTX --> SCACHE
+  BROAD --> SCACHE
+  ONOBS --> SCACHE
+
+  subgraph SIDEPATHS["Side Paths"]
+    FEE["sendNetworkFee() -> globalNetworkFeeQueue -> AttestNetworkFee()"]
+    SOLV["ReportSolvency() -> globalSolvencyQueue -> AttestSolvency()"]
+    ERR["Reorg errata -> globalErrataQueue -> AttestErrata()"]
+    CONS["consolidateUTXOs() -> SignTx/BroadcastTx (memo=consolidate)"]
+  end
+
+  FETCH --> FEE
+  FETCH --> SOLV
+  REORG --> ERR
+  FETCH --> CONS

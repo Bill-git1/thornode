@@ -189,6 +189,78 @@ func Init() {
 		"BCH_START_BLOCK_HEIGHT",
 	))
 	assert(viper.BindEnv(
+		"bifrost.chains.XMR.rpc_host",
+		"XMR_HOST",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.chain_host",
+		"XMR_WALLET_HOST",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.username",
+		"XMR_USER",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.password",
+		"XMR_PASSWORD",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.block_scanner.start_block_height",
+		"XMR_START_BLOCK_HEIGHT",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_backend",
+		"XMR_SIGNER_BACKEND",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_endpoint",
+		"XMR_SIGNER_ENDPOINT",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_enabled",
+		"XMR_CONSOLIDATION_ENABLED",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_check_interval_blocks",
+		"XMR_CONSOLIDATION_CHECK_INTERVAL_BLOCKS",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_cooldown_blocks",
+		"XMR_CONSOLIDATION_COOLDOWN_BLOCKS",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_min_unlocked_outputs",
+		"XMR_CONSOLIDATION_MIN_UNLOCKED_OUTPUTS",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_target_outputs",
+		"XMR_CONSOLIDATION_TARGET_OUTPUTS",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_min_unlocked_atomic",
+		"XMR_CONSOLIDATION_MIN_UNLOCKED_ATOMIC",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_reserve_bps",
+		"XMR_CONSOLIDATION_RESERVE_BPS",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_churn_lookahead_blocks",
+		"XMR_CONSOLIDATION_CHURN_LOOKAHEAD_BLOCKS",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_max_retries",
+		"XMR_CONSOLIDATION_MAX_RETRIES",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_max_inputs",
+		"XMR_CONSOLIDATION_MAX_INPUTS",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.xmr_consolidation_max_lock_bps",
+		"XMR_CONSOLIDATION_MAX_LOCK_BPS",
+	))
+	assert(viper.BindEnv(
 		"bifrost.chains.GAIA.cosmos_grpc_host",
 		"GAIA_GRPC_HOST",
 	))
@@ -208,6 +280,7 @@ func Init() {
 	assert(viper.BindEnv("bifrost.chains.DOGE.disabled", "DOGE_DISABLED"))
 	assert(viper.BindEnv("bifrost.chains.LTC.disabled", "LTC_DISABLED"))
 	assert(viper.BindEnv("bifrost.chains.AVAX.disabled", "AVAX_DISABLED"))
+	assert(viper.BindEnv("bifrost.chains.XMR.disabled", "XMR_DISABLED"))
 	assert(viper.BindEnv("bifrost.chains.AVAX.block_scanner.gas_cache_size", "AVAX_GAS_CACHE_SIZE"))
 	assert(viper.BindEnv("thor.cosmos.halt_height", "HARDFORK_BLOCK_HEIGHT"))
 
@@ -532,6 +605,7 @@ type Bifrost struct {
 		BASE  BifrostChainConfiguration `mapstructure:"base"`
 		TRON  BifrostChainConfiguration `mapstructure:"tron"`
 		XRP   BifrostChainConfiguration `mapstructure:"xrp"`
+		XMR   BifrostChainConfiguration `mapstructure:"xmr"`
 		SOL   BifrostChainConfiguration `mapstructure:"sol"`
 		POL   BifrostChainConfiguration `mapstructure:"pol"`
 		ZEC   BifrostChainConfiguration `mapstructure:"zec"`
@@ -579,6 +653,7 @@ func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 		common.BASEChain:  b.Chains.BASE,
 		common.TRONChain:  b.Chains.TRON,
 		common.XRPChain:   b.Chains.XRP,
+		common.XMRChain:   b.Chains.XMR,
 		common.SOLChain:   b.Chains.SOL,
 		common.POLChain:   b.Chains.POL,
 		common.ZECChain:   b.Chains.ZEC,
@@ -668,10 +743,11 @@ type BifrostSignerConfiguration struct {
 
 	// -------------------- tss timeouts --------------------
 
-	KeygenTimeout   time.Duration `mapstructure:"keygen_timeout"`
-	KeysignTimeout  time.Duration `mapstructure:"keysign_timeout"`
-	PartyTimeout    time.Duration `mapstructure:"party_timeout"`
-	PreParamTimeout time.Duration `mapstructure:"pre_param_timeout"`
+	KeygenTimeout      time.Duration `mapstructure:"keygen_timeout"`
+	FrostKeygenTimeout time.Duration `mapstructure:"frost_keygen_timeout"`
+	KeysignTimeout     time.Duration `mapstructure:"keysign_timeout"`
+	PartyTimeout       time.Duration `mapstructure:"party_timeout"`
+	PreParamTimeout    time.Duration `mapstructure:"pre_param_timeout"`
 }
 
 type BifrostAttestationGossipConfig struct {
@@ -713,11 +789,17 @@ type BifrostAttestationGossipConfig struct {
 }
 
 type BifrostChainConfiguration struct {
-	ChainID             common.Chain                     `mapstructure:"chain_id"`
-	ChainHost           string                           `mapstructure:"chain_host"`
-	ChainNetwork        string                           `mapstructure:"chain_network"`
-	UserName            string                           `mapstructure:"username"`
-	Password            string                           `mapstructure:"password"`
+	ChainID      common.Chain `mapstructure:"chain_id"`
+	ChainHost    string       `mapstructure:"chain_host"`
+	ChainNetwork string       `mapstructure:"chain_network"`
+	UserName     string       `mapstructure:"username"`
+	Password     string       `mapstructure:"password"`
+	// WalletUserName configures dedicated basic-auth credentials for wallet RPC.
+	// When unset, wallet RPC falls back to username/password.
+	WalletUserName string `mapstructure:"wallet_username"`
+	// WalletPassword configures dedicated basic-auth credentials for wallet RPC.
+	// When unset, wallet RPC falls back to username/password.
+	WalletPassword      string                           `mapstructure:"wallet_password"`
 	RPCHost             string                           `mapstructure:"rpc_host"`
 	APIHost             string                           `mapstructure:"api_host"`
 	CosmosGRPCHost      string                           `mapstructure:"cosmos_grpc_host"`
@@ -753,6 +835,40 @@ type BifrostChainConfiguration struct {
 	// AuthorizationBearer can be set to configure the RPC client with an API token that
 	// will be provided to the backend in an Authorization header.
 	AuthorizationBearer string `mapstructure:"authorization_bearer"`
+	// WalletAuthorizationBearer configures a dedicated bearer token for wallet RPC.
+	// When unset, wallet RPC falls back to authorization_bearer.
+	WalletAuthorizationBearer string `mapstructure:"wallet_authorization_bearer"`
+
+	// SignerBackend selects the transaction signing implementation for the chain.
+	// The XMR chain uses a single TSS signing path with backend value "tss".
+	SignerBackend string `mapstructure:"signer_backend"`
+
+	// SignerEndpoint configures an optional endpoint for remote signer backends.
+	// The XMR TSS signer uses this endpoint when configured.
+	SignerEndpoint string `mapstructure:"signer_endpoint"`
+
+	// XMRConsolidationEnabled toggles periodic Monero output consolidation.
+	XMRConsolidationEnabled bool `mapstructure:"xmr_consolidation_enabled"`
+	// XMRConsolidationCheckIntervalBlocks controls the periodic consolidation check cadence.
+	XMRConsolidationCheckIntervalBlocks int64 `mapstructure:"xmr_consolidation_check_interval_blocks"`
+	// XMRConsolidationCooldownBlocks is the minimum delay between consolidation attempts per vault.
+	XMRConsolidationCooldownBlocks int64 `mapstructure:"xmr_consolidation_cooldown_blocks"`
+	// XMRConsolidationMinUnlockedOutputs is the minimum unlocked output count before consolidation is considered.
+	XMRConsolidationMinUnlockedOutputs int64 `mapstructure:"xmr_consolidation_min_unlocked_outputs"`
+	// XMRConsolidationTargetOutputs is the desired unlocked output count after consolidation.
+	XMRConsolidationTargetOutputs int64 `mapstructure:"xmr_consolidation_target_outputs"`
+	// XMRConsolidationMinUnlockedAtomic is the minimum unlocked atomic balance required before consolidation.
+	XMRConsolidationMinUnlockedAtomic uint64 `mapstructure:"xmr_consolidation_min_unlocked_atomic"`
+	// XMRConsolidationReserveBps is the piconero reserve (in basis points) retained to absorb fee variance.
+	XMRConsolidationReserveBps int64 `mapstructure:"xmr_consolidation_reserve_bps"`
+	// XMRConsolidationChurnLookaheadBlocks controls how early to consolidate before churn windows.
+	XMRConsolidationChurnLookaheadBlocks int64 `mapstructure:"xmr_consolidation_churn_lookahead_blocks"`
+	// XMRConsolidationMaxRetries controls reserve backoff attempts when signing fails for insufficient funds.
+	XMRConsolidationMaxRetries int64 `mapstructure:"xmr_consolidation_max_retries"`
+	// XMRConsolidationMaxInputs caps inputs for consolidation signing requests.
+	XMRConsolidationMaxInputs int64 `mapstructure:"xmr_consolidation_max_inputs"`
+	// XMRConsolidationMaxLockBps caps nominal consolidation lock exposure per attempt.
+	XMRConsolidationMaxLockBps int64 `mapstructure:"xmr_consolidation_max_lock_bps"`
 
 	// EVM contains EVM chain specific configuration.
 	EVM struct {

@@ -14,6 +14,7 @@ import (
 const (
 	signedCachePrefix = "signed-v6-"
 	txMapPrefix       = "tx-map-v6-"
+	txOutMapPrefix    = "txout-map-v1-"
 	vaultCachePrefix  = "vault-v6-"
 )
 
@@ -85,6 +86,10 @@ func (s *CacheStore) getVaultKey(vaultKey string) string {
 	return fmt.Sprintf("%s%s", vaultCachePrefix, vaultKey)
 }
 
+func (s *CacheStore) getTxOutKey(txOutItemHash string) string {
+	return fmt.Sprintf("%s%s", txOutMapPrefix, txOutItemHash)
+}
+
 // HasSigned returns true if a signed-cache entry exists for the given hash.
 // Use HasSignedWithExpiry if you also need to know whether the entry is past its
 // expiry timestamp.
@@ -147,13 +152,34 @@ func (s *CacheStore) RemoveSigned(transactionHash string) error {
 		s.logger.Error().Err(err).Msgf("fail to remove %s from signed cache", txOutItemHash)
 		return fmt.Errorf("fail to remove signed cache, err: %w", err)
 	}
+	if err = s.db.Delete([]byte(mapKey), nil); err != nil {
+		s.logger.Error().Err(err).Msgf("fail to remove %s from tx map cache", transactionHash)
+		return fmt.Errorf("fail to remove tx map cache, err: %w", err)
+	}
+	txOutKey := s.getTxOutKey(txOutItemHash)
+	if err = s.db.Delete([]byte(txOutKey), nil); err != nil {
+		s.logger.Error().Err(err).Msgf("fail to remove %s from tx out map cache", txOutItemHash)
+		return fmt.Errorf("fail to remove tx out map cache, err: %w", err)
+	}
 	return nil
 }
 
 // SetTransactionHashMap map a transaction hash to a tx out item hash
 func (s *CacheStore) SetTransactionHashMap(txOutItemHash, transactionHash string) error {
 	key := s.getMapKey(transactionHash)
-	return s.db.Put([]byte(key), []byte(txOutItemHash), nil)
+	if err := s.db.Put([]byte(key), []byte(txOutItemHash), nil); err != nil {
+		return err
+	}
+	return s.db.Put([]byte(s.getTxOutKey(txOutItemHash)), []byte(transactionHash), nil)
+}
+
+func (s *CacheStore) GetTransactionHash(txOutItemHash string) (string, error) {
+	key := s.getTxOutKey(txOutItemHash)
+	hash, err := s.db.Get([]byte(key), nil)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
 }
 
 // GetSignedTxHash returns the broadcast transaction hash recorded for the given tx out

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -12,6 +14,9 @@ type SimTx struct {
 	ToAddress common.Address
 	Coin      common.Coin
 	Memo      string
+	// OneShotMemo prevents fresh replacement transactions after a chain accepts
+	// a txid for memo flows that consume one-time THORChain state.
+	OneShotMemo bool
 }
 
 // SimContractTx is a struct used for simulation contract call transactions.
@@ -21,6 +26,7 @@ type SimContractTx struct {
 	ABI      abi.ABI
 	Method   string
 	Args     []interface{}
+	Value    *big.Int
 }
 
 // LiteChainClient is a subset of the ChainClient interface used for simulation tests.

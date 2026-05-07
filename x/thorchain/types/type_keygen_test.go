@@ -17,6 +17,12 @@ func (s *KeygenSuite) TestKengenType(c *C) {
 	var kt KeygenType
 	c.Check(json.Unmarshal(buf, &kt), IsNil)
 	c.Check(kt, Equals, asgardType)
+
+	xmrMonovaultType := KeygenType_XMRMonovaultKeygen
+	buf, err = json.Marshal(xmrMonovaultType)
+	c.Check(err, IsNil)
+	c.Check(json.Unmarshal(buf, &kt), IsNil)
+	c.Check(kt, Equals, xmrMonovaultType)
 }
 
 func (s *KeygenSuite) TestKeygen(c *C) {

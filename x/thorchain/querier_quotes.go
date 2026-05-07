@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -351,13 +352,20 @@ func convertThorchainAmountToWei(amt *big.Int) *big.Int {
 	return big.NewInt(0).Mul(amt, big.NewInt(common.One*100))
 }
 
+func quoteDefaultCoinbaseThorchain(chain common.Chain) sdkmath.Uint {
+	coinbase := chain.DefaultCoinbase()
+	if math.IsNaN(coinbase) || math.Signbit(coinbase) || math.Float64bits(coinbase) == 0 {
+		return sdkmath.ZeroUint()
+	}
+	return sdkmath.NewUint(uint64(math.Round(coinbase * common.One)))
+}
+
 func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain common.Chain, asset common.Asset) (address, router common.Address, confirmations int64, err error) {
 	// If inbound chain is THORChain there is no inbound address
 	if chain.IsTHORChain() {
 		address = common.NoAddress
 		router = common.NoAddress
 	} else {
-		// get the most secure vault for inbound
 		var active Vaults
 		active, err = mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
 		if err != nil {
@@ -365,7 +373,11 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 		}
 		constAccessor := mgr.GetConstants()
 		signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
-		vault := mgr.Keeper().GetMostSecure(ctx, active, signingTransactionPeriod)
+		var vault Vault
+		vault, err = selectActiveVaultForChain(ctx, mgr.Keeper(), active, chain, signingTransactionPeriod)
+		if err != nil {
+			return common.NoAddress, common.NoAddress, 0, err
+		}
 		address, err = vault.GetAddress(chain)
 		if err != nil {
 			return common.NoAddress, common.NoAddress, 0, err
@@ -386,12 +398,16 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 
 	// estimate the inbound confirmation count blocks: ceil(amount/coinbase * conf adjustment)
 	confMul, err := mgr.Keeper().GetMimirWithRef(ctx, constants.MimirTemplateConfMultiplierBasisPoints, chain.String())
-	if confMul < 0 || err != nil {
+	if confMul <= 0 || err != nil {
 		confMul = int64(constants.MaxBasisPts)
 	}
 	// analyze-ignore(float-comparison)
 	if chain.DefaultCoinbase() > 0 {
-		confValue := common.GetUncappedShare(cosmos.NewUint(uint64(confMul)), cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUint(uint64(chain.DefaultCoinbase())*common.One))
+		coinbaseThorchain := quoteDefaultCoinbaseThorchain(chain)
+		confValue := common.GetUncappedShare(cosmos.NewUint(uint64(confMul)), cosmos.NewUint(constants.MaxBasisPts), coinbaseThorchain)
+		if confValue.IsZero() {
+			confValue = coinbaseThorchain
+		}
 		confirmations = amount.Quo(confValue).BigInt().Int64()
 		if !amount.Mod(confValue).IsZero() {
 			confirmations++
@@ -953,6 +969,23 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		RefundAddress:         refundAddress,
 	}
 	memoString := memo.ShortString()
+	validateMemoLength := func(memo string) error {
+		if !sendMemo || fromAsset.IsNative() {
+			return nil
+		}
+
+		maxMemoLength := fromAsset.GetChain().MaxMemoLength()
+		if fromChain.IsUTXO() && req.Extended {
+			maxMemoLength = constants.MaxMemoSizeUtxoExtended
+		}
+		if len(memo) > maxMemoLength {
+			return fmt.Errorf("generated memo too long for source chain")
+		}
+		return nil
+	}
+	if memoErr := validateMemoLength(memoString); memoErr != nil {
+		return nil, memoErr
+	}
 
 	// if from asset is a trade asset, create fake balance
 	if fromAsset.IsTradeAsset() {
@@ -1082,16 +1115,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		memoString = memo.ShortString()
 	}
 
-	// shorten the memo if necessary
-	if !fromAsset.IsNative() && len(memoString) > fromAsset.GetChain().MaxMemoLength() {
-		// this is the shortest we can make it
-		maxMemoLength := fromAsset.GetChain().MaxMemoLength()
-		if fromChain.IsUTXO() && req.Extended {
-			maxMemoLength = constants.MaxMemoSizeUtxoExtended
-		}
-		if len(memoString) > maxMemoLength {
-			return nil, fmt.Errorf("generated memo too long for source chain")
-		}
+	if memoErr := validateMemoLength(memoString); memoErr != nil {
+		return nil, memoErr
 	}
 
 	maxQ := int64(maxSwapQuantity)

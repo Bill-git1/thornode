@@ -104,7 +104,7 @@ func (b *mockSignBridge) GetConfig() config.BifrostClientConfiguration {
 	return b.cfg
 }
 
-func (b *mockSignBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []ttypes.Blame, inputPks common.PubKeys, keygenType ttypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte) (cosmos.Msg, error) {
+func (b *mockSignBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []ttypes.Blame, inputPks common.PubKeys, keygenType ttypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte, frostExtras ...any) (cosmos.Msg, error) {
 	return b.keygenStdTxMsg, b.keygenStdTxErr
 }
 
@@ -122,7 +122,7 @@ type mockBroadcastRetryBridge struct {
 	broadcastFn    func() (common.TxID, error)
 }
 
-func (b *mockBroadcastRetryBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []ttypes.Blame, inputPks common.PubKeys, keygenType ttypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte) (cosmos.Msg, error) {
+func (b *mockBroadcastRetryBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []ttypes.Blame, inputPks common.PubKeys, keygenType ttypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte, frostExtras ...any) (cosmos.Msg, error) {
 	return b.keygenStdTxMsg, b.keygenStdTxErr
 }
 
@@ -220,6 +220,9 @@ func (s *SignCoverageSuite) TestShouldSign(c *C) {
 
 	// Should sign - eddsa pub key matches
 	c.Assert(sign.shouldSign(types.TxOutItem{VaultPubKeyEddsa: vaultPubKey}), Equals, true)
+
+	// Should sign - frost pub key matches
+	c.Assert(sign.shouldSign(types.TxOutItem{VaultPubKeyFrost: vaultPubKey}), Equals, true)
 }
 
 func (s *SignCoverageSuite) TestIsTssKeysign(c *C) {
@@ -2034,6 +2037,9 @@ func (s *SignCoverageSuite) TestSendKeygenToThorchain_Success(c *C) {
 		ttypes.KeygenType_AsgardKeygen,
 		500,
 		common.EmptyPubKey,
+		common.EmptyPubKey,
+		"",
+		0,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(bridge.broadcastCalls, Equals, 1)
@@ -2062,6 +2068,9 @@ func (s *SignCoverageSuite) TestSendKeygenToThorchain_GetKeygenStdTxError(c *C) 
 		ttypes.KeygenType_AsgardKeygen,
 		500,
 		common.EmptyPubKey,
+		common.EmptyPubKey,
+		"",
+		0,
 	)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Matches, ".*fail to get keygen id.*")
@@ -2098,6 +2107,9 @@ func (s *SignCoverageSuite) TestSendKeygenToThorchain_BroadcastFailThenSucceed(c
 		ttypes.KeygenType_AsgardKeygen,
 		500,
 		common.EmptyPubKey,
+		common.EmptyPubKey,
+		"",
+		0,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(callCount, Equals, 2) // failed once, succeeded on retry
@@ -2132,6 +2144,9 @@ func (s *SignCoverageSuite) TestSendKeygenToThorchain_WithChains(c *C) {
 		ttypes.KeygenType_AsgardKeygen,
 		500,
 		common.EmptyPubKey,
+		common.EmptyPubKey,
+		"",
+		0,
 	)
 	c.Assert(err, IsNil)
 }
@@ -2165,6 +2180,9 @@ func (s *SignCoverageSuite) TestSendKeygenToThorchain_WithBackupKeyshares(c *C) 
 		ttypes.KeygenType_AsgardKeygen,
 		500,
 		vaultPubKey,
+		common.EmptyPubKey,
+		"",
+		0,
 	)
 	c.Assert(err, IsNil)
 }

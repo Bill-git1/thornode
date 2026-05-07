@@ -28,6 +28,7 @@ cache/
 */artifacts/
 */cache/
 */dist/
+/xmr-frost-signer/target
 /.cache
 /.go
 /app/data

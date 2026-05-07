@@ -716,20 +716,20 @@ func (s *ExtraTestSuite) TestProcessOutboundTxInvalidVault(c *C) {
 // BroadcastTx mock
 // -------------------------------------------------------------------------------------
 
-type mockTxServiceClient struct {
+type extraMockTxServiceClient struct {
 	code uint32
 	err  error
 }
 
-func (m *mockTxServiceClient) Simulate(ctx context.Context, in *txtypes.SimulateRequest, opts ...grpc.CallOption) (*txtypes.SimulateResponse, error) {
+func (m *extraMockTxServiceClient) Simulate(ctx context.Context, in *txtypes.SimulateRequest, opts ...grpc.CallOption) (*txtypes.SimulateResponse, error) {
 	return nil, nil
 }
 
-func (m *mockTxServiceClient) GetTx(ctx context.Context, in *txtypes.GetTxRequest, opts ...grpc.CallOption) (*txtypes.GetTxResponse, error) {
+func (m *extraMockTxServiceClient) GetTx(ctx context.Context, in *txtypes.GetTxRequest, opts ...grpc.CallOption) (*txtypes.GetTxResponse, error) {
 	return nil, nil
 }
 
-func (m *mockTxServiceClient) BroadcastTx(ctx context.Context, in *txtypes.BroadcastTxRequest, opts ...grpc.CallOption) (*txtypes.BroadcastTxResponse, error) {
+func (m *extraMockTxServiceClient) BroadcastTx(ctx context.Context, in *txtypes.BroadcastTxRequest, opts ...grpc.CallOption) (*txtypes.BroadcastTxResponse, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -741,27 +741,27 @@ func (m *mockTxServiceClient) BroadcastTx(ctx context.Context, in *txtypes.Broad
 	}, nil
 }
 
-func (m *mockTxServiceClient) GetTxsEvent(ctx context.Context, in *txtypes.GetTxsEventRequest, opts ...grpc.CallOption) (*txtypes.GetTxsEventResponse, error) {
+func (m *extraMockTxServiceClient) GetTxsEvent(ctx context.Context, in *txtypes.GetTxsEventRequest, opts ...grpc.CallOption) (*txtypes.GetTxsEventResponse, error) {
 	return nil, nil
 }
 
-func (m *mockTxServiceClient) GetBlockWithTxs(ctx context.Context, in *txtypes.GetBlockWithTxsRequest, opts ...grpc.CallOption) (*txtypes.GetBlockWithTxsResponse, error) {
+func (m *extraMockTxServiceClient) GetBlockWithTxs(ctx context.Context, in *txtypes.GetBlockWithTxsRequest, opts ...grpc.CallOption) (*txtypes.GetBlockWithTxsResponse, error) {
 	return nil, nil
 }
 
-func (m *mockTxServiceClient) TxDecode(ctx context.Context, in *txtypes.TxDecodeRequest, opts ...grpc.CallOption) (*txtypes.TxDecodeResponse, error) {
+func (m *extraMockTxServiceClient) TxDecode(ctx context.Context, in *txtypes.TxDecodeRequest, opts ...grpc.CallOption) (*txtypes.TxDecodeResponse, error) {
 	return nil, nil
 }
 
-func (m *mockTxServiceClient) TxEncode(ctx context.Context, in *txtypes.TxEncodeRequest, opts ...grpc.CallOption) (*txtypes.TxEncodeResponse, error) {
+func (m *extraMockTxServiceClient) TxEncode(ctx context.Context, in *txtypes.TxEncodeRequest, opts ...grpc.CallOption) (*txtypes.TxEncodeResponse, error) {
 	return nil, nil
 }
 
-func (m *mockTxServiceClient) TxEncodeAmino(ctx context.Context, in *txtypes.TxEncodeAminoRequest, opts ...grpc.CallOption) (*txtypes.TxEncodeAminoResponse, error) {
+func (m *extraMockTxServiceClient) TxEncodeAmino(ctx context.Context, in *txtypes.TxEncodeAminoRequest, opts ...grpc.CallOption) (*txtypes.TxEncodeAminoResponse, error) {
 	return nil, nil
 }
 
-func (m *mockTxServiceClient) TxDecodeAmino(ctx context.Context, in *txtypes.TxDecodeAminoRequest, opts ...grpc.CallOption) (*txtypes.TxDecodeAminoResponse, error) {
+func (m *extraMockTxServiceClient) TxDecodeAmino(ctx context.Context, in *txtypes.TxDecodeAminoRequest, opts ...grpc.CallOption) (*txtypes.TxDecodeAminoResponse, error) {
 	return nil, nil
 }
 
@@ -776,7 +776,7 @@ func (s *ExtraTestSuite) TestBroadcastTx(c *C) {
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		accts:              NewCosmosMetaDataStore(),
 		signerCacheManager: signerCacheMgr,
-		txClient:           &mockTxServiceClient{code: 0},
+		txClient:           &extraMockTxServiceClient{code: 0},
 	}
 	cc.accts.Set(pk, CosmosMetadata{AccountNumber: 1, SeqNumber: 5, BlockHeight: 100})
 
@@ -794,7 +794,7 @@ func (s *ExtraTestSuite) TestBroadcastTxError(c *C) {
 	cc := CosmosClient{
 		cfg:      config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		accts:    NewCosmosMetaDataStore(),
-		txClient: &mockTxServiceClient{err: errors.New("network error")},
+		txClient: &extraMockTxServiceClient{err: errors.New("network error")},
 	}
 
 	_, err := cc.BroadcastTx(stypes.TxOutItem{}, []byte("txbytes"))
@@ -805,7 +805,7 @@ func (s *ExtraTestSuite) TestBroadcastTxFailCode(c *C) {
 	cc := CosmosClient{
 		cfg:      config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		accts:    NewCosmosMetaDataStore(),
-		txClient: &mockTxServiceClient{code: 999},
+		txClient: &extraMockTxServiceClient{code: 999},
 	}
 
 	_, err := cc.BroadcastTx(stypes.TxOutItem{}, []byte("txbytes"))
@@ -1652,7 +1652,7 @@ func (s *ExtraTestSuite) TestBroadcastTxSuccessCodeSetsSigner(c *C) {
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		accts:              NewCosmosMetaDataStore(),
 		signerCacheManager: signerCacheMgr,
-		txClient:           &mockTxServiceClient{code: 0}, // success code
+		txClient:           &extraMockTxServiceClient{code: 0}, // success code
 	}
 	cc.accts.Set(pk, CosmosMetadata{AccountNumber: 1, SeqNumber: 5, BlockHeight: 100})
 

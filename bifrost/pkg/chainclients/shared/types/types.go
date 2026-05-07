@@ -6,6 +6,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
+	ttypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // ChainClient is the interface for chain clients.
@@ -65,6 +66,35 @@ type ChainClient interface {
 
 	// RollbackBlockScanner rolls back the block scanner to re-observe recent blocks.
 	RollbackBlockScanner() error
+}
+
+// CustomKeygenRequest carries common keygen context for chain-specific hooks.
+type CustomKeygenRequest struct {
+	Members          []string
+	BlockHeight      int64
+	ThorchainVersion string
+	PoolPubKey       common.PubKey
+	PoolPubKeyEddsa  common.PubKey
+}
+
+// CustomKeygenResult carries the chain-specific outputs from a custom keygen
+// hook, including the finalized EdDSA pool pubkey when the chain derives it
+// from its own keygen transcript rather than reusing the generic THORChain one.
+type CustomKeygenResult struct {
+	Address              common.Address
+	PoolPubKeyEddsa      common.PubKey
+	PoolPubKeyFrost      common.PubKey
+	FrostKeyshareHex     string
+	ObservedMoneroHeight int64
+	Blame                []ttypes.Blame
+}
+
+// CustomKeygenChainClient is an optional extension for chains which require
+// chain-specific keygen state initialization during THORChain keygen.
+type CustomKeygenChainClient interface {
+	ChainClient
+	CustomKeygen() bool
+	Keygen(req CustomKeygenRequest) (CustomKeygenResult, error)
 }
 
 // SolvencyReporter reports the solvency of the chain at the given height.

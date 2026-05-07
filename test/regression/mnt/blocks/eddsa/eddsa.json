@@ -202,26 +202,26 @@
         "type": "swap"
       },
       {
-        "coins": "500 SOL.SOL",
+        "coins": "5000 SOL.SOL",
         "mode": "EndBlock",
-        "pool_deduct": "50100",
+        "pool_deduct": "501000",
         "tx_id": "30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
         "type": "fee"
       },
       {
-        "amount": "50100rune",
+        "amount": "501000rune",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "50100rune",
+        "amount": "501000rune",
         "mode": "EndBlock",
         "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_received"
       },
       {
-        "amount": "50100rune",
+        "amount": "501000rune",
         "mode": "EndBlock",
         "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -234,12 +234,12 @@
       },
       {
         "chain": "SOL",
-        "coin_amount": "997497",
+        "coin_amount": "992997",
         "coin_asset": "SOL.SOL",
         "coin_decimals": "0",
         "gas_rate": "1",
         "in_hash": "30021ACB49B6B5692D7F55B01E9FF90215D17E16E924D2878951156E8E3847E6",
-        "max_gas_amount_0": "500",
+        "max_gas_amount_0": "5000",
         "max_gas_asset_0": "SOL.SOL",
         "max_gas_decimals_0": "9",
         "memo": "",

@@ -94,29 +94,17 @@ func deriveXMRAddressFromSpendPubKey(spendPubKey []byte, chainNetwork ChainNetwo
 	if !isValidXMRPubKey(spendPubKey) {
 		return "", fmt.Errorf("invalid monero spend pubkey")
 	}
+	_ = chainNetwork
 
 	viewPubKey, err := deriveXMRViewPubKey()
 	if err != nil {
 		return "", err
 	}
 
-	if chainNetwork == MockNet || chainNetwork == ChainNet {
-		payload := make([]byte, 0, 1+32+32+4)
-		payload = append(payload, xmrPrimaryNetworkByte)
-		payload = append(payload, spendPubKey...)
-		payload = append(payload, viewPubKey[:]...)
-
-		checksum := eth.Keccak256(payload)
-		payload = append(payload, checksum[:4]...)
-
-		return xmrBase58Encode(payload)
-	}
-
-	payload := make([]byte, 0, 1+32+32+1+4)
-	payload = append(payload, xmrFeaturedMainnetNetworkByte)
+	payload := make([]byte, 0, 1+32+32+4)
+	payload = append(payload, xmrPrimaryNetworkByte)
 	payload = append(payload, spendPubKey...)
 	payload = append(payload, viewPubKey[:]...)
-	payload = xmrAppendVarint(payload, 0) // features: plain standard address
 
 	checksum := eth.Keccak256(payload)
 	payload = append(payload, checksum[:4]...)
@@ -526,6 +514,19 @@ func IsXMRFeaturedGuaranteedAddress(address string) bool {
 func IsXMRFeaturedAddress(address string) bool {
 	info, ok := xmrDecodeAddressInfo(address)
 	return ok && info.isFeatured
+}
+
+// IsSupportedXMRAddress returns true when address is structurally valid and
+// uses the Monero address variants THORChain supports for external recipients.
+func IsSupportedXMRAddress(address string) bool {
+	info, ok := xmrAddressInfoFromString(address)
+	if !ok {
+		return false
+	}
+	if info.isFeatured {
+		return false
+	}
+	return info.networkByte == xmrPrimaryNetworkByte || info.networkByte == xmrSubaddressNetworkByte
 }
 
 func isSupportedFeaturedNetworkByte(networkByte byte) bool {

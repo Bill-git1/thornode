@@ -41,6 +41,9 @@ func (m *MsgObservedTxIn) ValidateBasic() error {
 		if err := tx.Valid(); err != nil {
 			return cosmos.ErrUnknownRequest(err.Error())
 		}
+		if len(tx.SpentOutputRefs) > 0 {
+			return cosmos.ErrUnknownRequest("spent output refs are only valid for outbound observed transactions")
+		}
 		obAddr, err := tx.ObservedPubKey.GetAddress(tx.Tx.Coins[0].Asset.GetChain())
 		if err != nil {
 			return cosmos.ErrUnknownRequest(err.Error())

@@ -1,8 +1,14 @@
 package xrp
 
 import (
+	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"strings"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 
@@ -13,8 +19,10 @@ import (
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 
 	binarycodec "github.com/Peersyst/xrpl-go/binary-codec"
+	"github.com/Peersyst/xrpl-go/xrpl/hash"
 	"github.com/Peersyst/xrpl-go/xrpl/queries/account"
 	qcommon "github.com/Peersyst/xrpl-go/xrpl/queries/common"
+	txqueries "github.com/Peersyst/xrpl-go/xrpl/queries/transactions"
 	"github.com/Peersyst/xrpl-go/xrpl/rpc"
 	transactions "github.com/Peersyst/xrpl-go/xrpl/transaction"
 	txtypes "github.com/Peersyst/xrpl-go/xrpl/transaction/types"
@@ -23,6 +31,12 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 // XRP
 ////////////////////////////////////////////////////////////////////////////////////////
+
+const (
+	xrpRPCTimeout             = 10 * time.Second
+	xrpValidationPollInterval = time.Second
+	xrpValidationTimeout      = 90 * time.Second
+)
 
 type Client struct {
 	chain     common.Chain
@@ -49,9 +63,8 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	if err != nil {
 		return nil, fmt.Errorf("fail to create key manager: %w", err)
 	}
-	rpcConfig, err := rpc.NewClientConfig(host)
+	rpcConfig, err := rpc.NewClientConfig(host, rpc.WithHTTPClient(&http.Client{Timeout: xrpRPCTimeout}))
 	if err != nil {
-		fmt.Println("ERROR ERROR ERROR 5")
 		return nil, fmt.Errorf("unable to create rpc config for client, %w", err)
 	}
 	rpcClient := rpc.NewClient(rpcConfig)
@@ -81,6 +94,15 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	}
 	aiResp, err := c.rpcClient.GetAccountInfo(&aiReq)
 	if err != nil {
+		if isAccountNotFoundXRPError(err) {
+			return &common.Account{
+				Sequence:      0,
+				AccountNumber: 0,
+				Coins: common.NewCoins(
+					common.NewCoin(common.XRPAsset, sdkmath.ZeroUint()),
+				),
+			}, nil
+		}
 		return nil, err
 	}
 
@@ -161,10 +183,187 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 
 func (c *Client) BroadcastTx(signed []byte) (string, error) {
 	txBlob := hex.EncodeToString(signed)
-	resp, err := c.rpcClient.SubmitAndWait(txBlob, true)
+	tx, err := binarycodec.Decode(txBlob)
 	if err != nil {
 		return "", err
 	}
 
-	return resp.Hash.String(), nil
+	lastLedgerSequence, ok := tx["LastLedgerSequence"].(uint32)
+	if !ok {
+		return "", fmt.Errorf("xrp tx missing LastLedgerSequence: %T", tx["LastLedgerSequence"])
+	}
+
+	txHash, err := hash.SignTxBlob(txBlob)
+	if err != nil {
+		return "", err
+	}
+
+	if err := c.submitTx(txBlob, txHash, lastLedgerSequence); err != nil {
+		return "", err
+	}
+
+	if err := c.waitForValidation(txHash, lastLedgerSequence); err != nil {
+		return "", err
+	}
+
+	return txHash, nil
+}
+
+func (c *Client) submitTx(txBlob, txHash string, lastLedgerSequence uint32) error {
+	deadline := time.Now().Add(xrpValidationTimeout)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		resp, err := c.rpcClient.Submit(txBlob, true)
+		switch {
+		case err == nil && isAcceptedXRPSubmitResponse(resp):
+			return nil
+		case err == nil:
+			return fmt.Errorf(
+				"transaction failed to submit with engine result: %s (%s)",
+				resp.EngineResult,
+				resp.EngineResultMessage,
+			)
+		case isRetryableXRPError(err):
+			lastErr = err
+
+			txResp, txErr := c.getTx(txHash)
+			switch {
+			case txErr == nil && txResp != nil:
+				return nil
+			case txErr != nil && !isRetryableXRPError(txErr):
+				return txErr
+			case txErr != nil:
+				lastErr = txErr
+			}
+		default:
+			return err
+		}
+
+		currentLedger, err := c.rpcClient.GetLedgerIndex()
+		switch {
+		case err == nil && currentLedger.Int() > int(lastLedgerSequence):
+			if lastErr != nil {
+				return fmt.Errorf(
+					"transaction %s was not accepted before ledger %d: %w",
+					txHash,
+					lastLedgerSequence,
+					lastErr,
+				)
+			}
+			return fmt.Errorf("transaction %s was not accepted before ledger %d", txHash, lastLedgerSequence)
+		case err != nil && !isRetryableXRPError(err):
+			return err
+		case err != nil:
+			lastErr = err
+		}
+
+		time.Sleep(xrpValidationPollInterval)
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("timed out submitting XRP tx %s: %w", txHash, lastErr)
+	}
+
+	return fmt.Errorf("timed out submitting XRP tx %s", txHash)
+}
+
+func (c *Client) waitForValidation(txHash string, lastLedgerSequence uint32) error {
+	deadline := time.Now().Add(xrpValidationTimeout)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		txResp, err := c.getTx(txHash)
+		switch {
+		case err == nil && txResp.Validated:
+			return nil
+		case err == nil:
+			lastErr = fmt.Errorf("transaction %s not yet validated", txHash)
+		case isRetryableXRPError(err):
+			lastErr = err
+		default:
+			return err
+		}
+
+		currentLedger, err := c.rpcClient.GetLedgerIndex()
+		switch {
+		case err == nil && currentLedger.Int() > int(lastLedgerSequence):
+			if lastErr != nil {
+				return fmt.Errorf(
+					"transaction %s was not validated before ledger %d: %w",
+					txHash,
+					lastLedgerSequence,
+					lastErr,
+				)
+			}
+			return fmt.Errorf("transaction %s was not validated before ledger %d", txHash, lastLedgerSequence)
+		case err != nil && !isRetryableXRPError(err):
+			return err
+		case err != nil:
+			lastErr = err
+		}
+
+		time.Sleep(xrpValidationPollInterval)
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("timed out waiting for XRP tx %s validation: %w", txHash, lastErr)
+	}
+
+	return fmt.Errorf("timed out waiting for XRP tx %s validation", txHash)
+}
+
+func (c *Client) getTx(txHash string) (*txqueries.TxResponse, error) {
+	res, err := c.rpcClient.Request(&txqueries.TxRequest{Transaction: txHash})
+	if err != nil {
+		return nil, err
+	}
+
+	var txResp txqueries.TxResponse
+	if err := res.GetResult(&txResp); err != nil {
+		return nil, err
+	}
+
+	return &txResp, nil
+}
+
+func isAcceptedXRPSubmitResponse(resp *txqueries.SubmitResponse) bool {
+	if resp == nil {
+		return false
+	}
+
+	return resp.EngineResult == "tesSUCCESS" ||
+		resp.EngineResult == "tefPAST_SEQ" ||
+		resp.Queued
+}
+
+func isRetryableXRPError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+
+	errStr := strings.ToLower(err.Error())
+	return strings.Contains(errStr, "deadline exceeded") ||
+		strings.Contains(errStr, "client.timeout") ||
+		strings.Contains(errStr, "timeout") ||
+		strings.Contains(errStr, "txnnotfound") ||
+		strings.Contains(errStr, "transaction not found")
+}
+
+func isAccountNotFoundXRPError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := strings.ToLower(err.Error())
+	return strings.Contains(errStr, "actnotfound") ||
+		strings.Contains(errStr, "account not found")
 }

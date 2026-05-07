@@ -2,6 +2,8 @@ package cmd
 
 import (
 	stded25519 "crypto/ed25519"
+	"encoding/hex"
+	"strings"
 	"testing"
 
 	cmted25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -9,6 +11,7 @@ import (
 	bech32 "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint SA1019 deprecated
 	. "gopkg.in/check.v1"
 
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/common/crypto/ed25519"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 )
@@ -38,7 +41,8 @@ func (*ED25519TestSuite) TestGetEd25519Keys(c *C) {
 	// nolint
 	pubKey, err := bech32.MarshalPubKey(bech32.AccPK, tmp)
 	c.Assert(err, IsNil)
-	c.Assert(pubKey, Equals, "tthorpub1zcjduepqrcthx0ke3r2z39rp42xrr777af7qfcs6wcxtxck6tj9j0ap8cl0q0msnrn")
+	c.Assert(hex.EncodeToString(pub), Equals, "1e17733ed988d4289461aa8c31fbdeea7c04e21a760cb362da5c8b27f427c7de")
+	c.Assert(strings.HasPrefix(pubKey, cosmos.GetConfig().GetBech32AccountPubPrefix()+"1"), Equals, true)
 
 	mnemonic = `invalid grape safe sound obtain bachelor festival profit iron meat moon exit garbage chapter promote noble grocery blood letter junk click mesh arm shop decorate`
 	result, err = ed25519.DeriveKeypairFromMnemonic(mnemonic, "", ed25519.HDPath)

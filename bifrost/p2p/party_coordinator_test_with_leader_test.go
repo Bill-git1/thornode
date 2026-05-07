@@ -215,6 +215,27 @@ func TestNewPartyCoordinatorTimeOut(t *testing.T) {
 	wg.Wait()
 }
 
+func TestJoinPartyWithLeaderSinglePeerReturnsImmediately(t *testing.T) {
+	hosts := setupHosts(t, 1)
+	timeout := 2 * time.Second
+	coordinator := NewPartyCoordinator(hosts[0], timeout)
+	defer coordinator.Stop()
+
+	peers := []string{hosts[0].ID().String()}
+	msgID := conversion.RandStringBytesMask(64)
+	sigChan := make(chan string)
+
+	start := time.Now()
+	onlinePeers, leader, err := coordinator.JoinPartyWithLeader(msgID, 10, peers, 0, sigChan)
+	elapsed := time.Since(start)
+
+	assert.Nil(t, err)
+	assert.Equal(t, peers[0], leader)
+	assert.Len(t, onlinePeers, 1)
+	assert.Equal(t, hosts[0].ID(), onlinePeers[0])
+	assert.Less(t, elapsed, timeout/2)
+}
+
 func TestGetPeerIDs(t *testing.T) {
 	id1 := tnet.RandIdentityOrFatal(t)
 	mn := mocknet.New(context.Background())

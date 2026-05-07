@@ -11,6 +11,7 @@ import (
 
 type Transaction struct {
 	TxId       string   `json:"txID"`
+	Err        string   `json:"Error,omitempty"`
 	Ret        []Ret    `json:"ret,omitempty"`
 	RawData    RawData  `json:"raw_data"`
 	Signature  []string `json:"signature"`

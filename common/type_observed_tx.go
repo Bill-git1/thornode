@@ -81,6 +81,23 @@ func ValidateSpentOutputRefs(chain Chain, spendTxHash TxID, refs []OutputRef) er
 	return nil
 }
 
+// OutputRefsFromPointers converts pointer-based API refs into consensus refs.
+func OutputRefsFromPointers(refs []*OutputRef) []OutputRef {
+	if len(refs) == 0 {
+		return nil
+	}
+
+	outputRefs := make([]OutputRef, 0, len(refs))
+	for _, ref := range refs {
+		if ref == nil {
+			outputRefs = append(outputRefs, OutputRef{})
+			continue
+		}
+		outputRefs = append(outputRefs, *ref)
+	}
+	return outputRefs
+}
+
 // IsEmpty check whether the Tx is empty
 func (m *ObservedTx) IsEmpty() bool {
 	return m.Tx.IsEmpty()

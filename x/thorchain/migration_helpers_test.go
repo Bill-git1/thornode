@@ -8,6 +8,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	tcyclaimlist "gitlab.com/thorchain/thornode/v3/common/tcyclaimlist"
 )
 
 type MigrationHelpersTestSuite struct{}
@@ -19,6 +20,7 @@ func (MigrationHelpersTestSuite) TestUnsafeAddRefundOutbound(c *C) {
 
 	// add a vault
 	vault := GetRandomVault()
+	vault.PubKeyFrost = GetRandomEd25519PubKey()
 	vault.Coins = common.Coins{
 		// common.NewCoin(common.RuneAsset(), cosmos.NewUint(10000*common.One)),
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(10000*common.One)),
@@ -73,73 +75,75 @@ func (MigrationHelpersTestSuite) TestUnsafeAddRefundOutbound(c *C) {
 	c.Assert(items[0].InHash.Equals(inTxID), Equals, true)
 	c.Assert(items[0].ToAddress.Equals(ethAddr), Equals, true)
 	c.Assert(items[0].VaultPubKey.Equals(vault.PubKey), Equals, true)
+	c.Assert(items[0].VaultPubKeyEddsa.Equals(vault.PubKeyEddsa), Equals, true)
+	c.Assert(items[0].VaultPubKeyFrost.Equals(vault.PubKeyFrost), Equals, true)
 	c.Assert(items[0].Coin.Equals(coin), Equals, true)
 }
 
 func (MigrationHelpersTestSuite) TestGetTCYClaimsFromData(c *C) {
+	rawClaims := tcyclaimlist.GetTCYClaimsList()
 	claimer, err := getTCYClaimsFromData()
 	c.Assert(err, IsNil)
-	c.Assert(len(claimer), Equals, 4)
-	c.Assert(claimer[0].Amount.Equal(math.NewUint(1111111111111111111)), Equals, true)
-	c.Assert(claimer[0].Asset.Equals(common.AVAXAsset), Equals, true)
-	address, err := common.NewAddress("0x00112c24ebee9c96d177a3aa2ff55dcb93a53c80")
-	c.Assert(err, IsNil)
-	c.Assert(claimer[0].L1Address.Equals(address), Equals, true)
+	c.Assert(len(claimer), Equals, len(rawClaims))
 
-	c.Assert(claimer[1].Amount.Equal(math.NewUint(42047799234002)), Equals, true)
-	c.Assert(claimer[1].Asset.Equals(common.BTCAsset), Equals, true)
-	address, err = common.NewAddress("bc1qj937cw6xap470hg427p2kxl85u3ac3ps84hye3")
-	c.Assert(err, IsNil)
-	c.Assert(claimer[1].L1Address.Equals(address), Equals, true)
+	sampleIndexes := []int{0, len(rawClaims) / 2, len(rawClaims) - 1}
+	for _, idx := range sampleIndexes {
+		rawClaim := rawClaims[idx]
+		expectedAsset, err := common.NewAsset(rawClaim.Asset)
+		c.Assert(err, IsNil)
 
-	c.Assert(claimer[2].Amount.Equal(math.NewUint(1111)), Equals, true)
-	c.Assert(claimer[2].Asset.Equals(common.DOGEAsset), Equals, true)
-	address, err = common.NewAddress("tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff")
-	c.Assert(err, IsNil)
-	c.Assert(claimer[2].L1Address.Equals(address), Equals, true)
-
-	c.Assert(claimer[3].Amount.Equal(math.NewUint(1111)), Equals, true)
-	c.Assert(claimer[3].Asset.Equals(common.DOGEAsset), Equals, true)
-	address, err = common.NewAddress("tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff")
-	c.Assert(err, IsNil)
-	c.Assert(claimer[3].L1Address.Equals(address), Equals, true)
+		c.Assert(claimer[idx].Amount.Equal(math.NewUint(rawClaim.TCYClaim)), Equals, true)
+		c.Assert(claimer[idx].Asset.Equals(expectedAsset), Equals, true)
+		c.Assert(claimer[idx].L1Address.Equals(common.Address(rawClaim.Address)), Equals, true)
+	}
 }
 
 func (MigrationHelpersTestSuite) TestSetTCYClaims(c *C) {
 	ctx, mgr := setupManagerForTest(c)
+	type claimExpectation struct {
+		address common.Address
+		asset   common.Asset
+		amount  cosmos.Uint
+	}
 
-	address, err := common.NewAddress("0x00112c24ebee9c96d177a3aa2ff55dcb93a53c80")
-	c.Assert(err, IsNil)
-	_, err = mgr.Keeper().GetTCYClaimer(ctx, address, common.AVAXAsset)
-	c.Assert(err.Error(), Equals, fmt.Sprintf("TCYClaimer doesn't exist: %s", address.String()))
+	rawClaims := tcyclaimlist.GetTCYClaimsList()
+	expectations := make(map[string]claimExpectation)
+	sampleKeys := make([]string, 0, 3)
+	for _, rawClaim := range rawClaims {
+		asset, err := common.NewAsset(rawClaim.Asset)
+		c.Assert(err, IsNil)
 
-	address2, err := common.NewAddress("bc1qj937cw6xap470hg427p2kxl85u3ac3ps84hye3")
-	c.Assert(err, IsNil)
-	_, err = mgr.Keeper().GetTCYClaimer(ctx, address2, common.BTCAsset)
-	c.Assert(err.Error(), Equals, fmt.Sprintf("TCYClaimer doesn't exist: %s", address2.String()))
+		address := common.Address(rawClaim.Address)
+		key := fmt.Sprintf("%s|%s", address.String(), asset.String())
+		expectation, exists := expectations[key]
+		if !exists {
+			expectation = claimExpectation{
+				address: address,
+				asset:   asset,
+				amount:  cosmos.ZeroUint(),
+			}
+			if len(sampleKeys) < 3 {
+				sampleKeys = append(sampleKeys, key)
+			}
+		}
+		expectation.amount = expectation.amount.Add(cosmos.NewUint(rawClaim.TCYClaim))
+		expectations[key] = expectation
+	}
 
-	address3, err := common.NewAddress("tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff")
-	c.Assert(err, IsNil)
-	_, err = mgr.Keeper().GetTCYClaimer(ctx, address3, common.DOGEAsset)
-	c.Assert(err.Error(), Equals, fmt.Sprintf("TCYClaimer doesn't exist: %s", address3.String()))
+	for _, key := range sampleKeys {
+		expectation := expectations[key]
+		_, err := mgr.Keeper().GetTCYClaimer(ctx, expectation.address, expectation.asset)
+		c.Assert(err.Error(), Equals, fmt.Sprintf("TCYClaimer doesn't exist: %s", expectation.address.String()))
+	}
 
 	c.Assert(setTCYClaims(ctx, mgr), IsNil)
 
-	claimer, err := mgr.Keeper().GetTCYClaimer(ctx, address, common.AVAXAsset)
-	c.Assert(err, IsNil)
-	c.Assert(claimer.Amount.Equal(math.NewUint(1111111111111111111)), Equals, true)
-	c.Assert(claimer.Asset.Equals(common.AVAXAsset), Equals, true)
-	c.Assert(claimer.L1Address.Equals(address), Equals, true)
-
-	claimer, err = mgr.Keeper().GetTCYClaimer(ctx, address2, common.BTCAsset)
-	c.Assert(err, IsNil)
-	c.Assert(claimer.Amount.Equal(math.NewUint(42047799234002)), Equals, true)
-	c.Assert(claimer.Asset.Equals(common.BTCAsset), Equals, true)
-	c.Assert(claimer.L1Address.Equals(address2), Equals, true)
-
-	claimer, err = mgr.Keeper().GetTCYClaimer(ctx, address3, common.DOGEAsset)
-	c.Assert(err, IsNil)
-	c.Assert(claimer.Amount.Equal(math.NewUint(2222)), Equals, true)
-	c.Assert(claimer.Asset.Equals(common.DOGEAsset), Equals, true)
-	c.Assert(claimer.L1Address.Equals(address3), Equals, true)
+	for _, key := range sampleKeys {
+		expectation := expectations[key]
+		claimer, err := mgr.Keeper().GetTCYClaimer(ctx, expectation.address, expectation.asset)
+		c.Assert(err, IsNil)
+		c.Assert(claimer.Amount.Equal(expectation.amount), Equals, true)
+		c.Assert(claimer.Asset.Equals(expectation.asset), Equals, true)
+		c.Assert(claimer.L1Address.Equals(expectation.address), Equals, true)
+	}
 }

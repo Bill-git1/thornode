@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"cosmossdk.io/math"
@@ -29,9 +30,22 @@ type Client struct {
 	keys    *thorclient.Keys
 	privKey *ecdsa.PrivateKey
 	address common.Address
+	txMu    sync.Mutex
 }
 
 var _ LiteChainClient = &Client{}
+
+const (
+	tronAPITimeout                     = 10 * time.Second
+	tronCreateTransactionWarmupTimeout = 60 * time.Second
+)
+
+var (
+	tronBroadcastObservationTimeout      = 15 * time.Second
+	tronBroadcastObservationPollInterval = 250 * time.Millisecond
+	tronBroadcastRebroadcastInterval     = 3 * time.Second
+	tronBroadcastConfirmationGrace       = 5 * time.Second
+)
 
 func NewConstructor(host string) LiteChainClientConstructor {
 	return func(chain common.Chain, keys *thorclient.Keys) (LiteChainClient, error) {
@@ -68,7 +82,7 @@ func NewClient(
 
 	client := Client{
 		chain:   chain,
-		api:     api.NewTronApi(host, time.Second*2),
+		api:     api.NewTronApi(host, tronAPITimeout),
 		keys:    keys,
 		address: address,
 	}
@@ -117,14 +131,32 @@ func (c *Client) SignContractTx(_ SimContractTx) ([]byte, error) {
 }
 
 func (c *Client) SignTx(tx SimTx) ([]byte, error) {
-	tronTx, err := c.api.CreateTransaction(
-		c.address.String(),
-		tx.ToAddress.String(),
-		tx.Coin.Amount.Quo(math.NewUint(100)).Uint64(),
-		tx.Memo,
-	)
-	if err != nil {
-		return nil, err
+	c.txMu.Lock()
+	defer c.txMu.Unlock()
+
+	deadline := time.Now().Add(tronCreateTransactionWarmupTimeout)
+	var tronTx api.Transaction
+	var err error
+	for {
+		tronTx, err = c.api.CreateTransaction(
+			c.address.String(),
+			tx.ToAddress.String(),
+			tx.Coin.Amount.Quo(math.NewUint(100)).Uint64(),
+			tx.Memo,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if tronTx.TxId == "" && tronTx.RawDataHex != "" {
+			_ = tronTx.Rehash()
+		}
+		if tronTx.TxId != "" {
+			break
+		}
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("create transaction returned empty txID")
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	hash, err := hex.DecodeString(tronTx.TxId)
@@ -148,14 +180,110 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 }
 
 func (c *Client) BroadcastTx(signed []byte) (string, error) {
+	var signedTx api.Transaction
+	if err := json.Unmarshal(signed, &signedTx); err != nil {
+		return "", fmt.Errorf("failed to decode signed tx: %w", err)
+	}
+
 	response, err := c.api.BroadcastTransaction(signed)
 	if err != nil {
 		return "", err
 	}
 
-	if !response.Result {
-		return "", fmt.Errorf("failed to broadcast TRON transaction: %s - %s", response.Code, response.Message)
+	txID := response.TxId
+	if txID == "" {
+		txID = signedTx.TxId
 	}
 
-	return response.TxId, nil
+	if !response.Result {
+		if response.Code == "DUP_TRANSACTION_ERROR" && txID != "" {
+			if err := c.waitForConfirmedBroadcast(txID, signed, signedTx.RawData.Expiration); err != nil {
+				return txID, err
+			}
+			return txID, nil
+		}
+
+		if response.Message != "" {
+			return "", fmt.Errorf("failed to broadcast tx: %s - %s", response.Code, response.Message)
+		}
+		if response.Code != "" {
+			return "", fmt.Errorf("failed to broadcast tx: %s", response.Code)
+		}
+		return "", fmt.Errorf("failed to broadcast tx")
+	}
+
+	if txID == "" {
+		return "", fmt.Errorf("broadcast transaction returned empty txID")
+	}
+
+	if err := c.waitForConfirmedBroadcast(txID, signed, signedTx.RawData.Expiration); err != nil {
+		return txID, err
+	}
+
+	return txID, nil
+}
+
+func (c *Client) waitForConfirmedBroadcast(txID string, signed []byte, expirationMs int64) error {
+	deadline := time.Now().Add(tronBroadcastObservationTimeout)
+	if expirationMs > 0 {
+		expiration := time.UnixMilli(expirationMs).Add(tronBroadcastConfirmationGrace)
+		if expiration.After(deadline) {
+			deadline = expiration
+		}
+	}
+
+	var lastErr error
+	observed := false
+	lastBroadcast := time.Now()
+
+	for {
+		info, err := c.api.GetTransactionInfo(txID)
+		if err == nil && info.ID != "" && info.BlockNumber > 0 {
+			return nil
+		}
+		if err != nil {
+			lastErr = err
+		}
+
+		tx, err := c.api.GetTransaction(txID)
+		if err == nil && tx.TxId != "" {
+			observed = true
+		} else if err != nil {
+			lastErr = err
+		}
+
+		if time.Now().After(deadline) {
+			if lastErr != nil {
+				if observed {
+					return fmt.Errorf("broadcasted tx %s not confirmed on tron node: %w", txID, lastErr)
+				}
+				return fmt.Errorf("broadcasted tx %s not observed on tron node: %w", txID, lastErr)
+			}
+			if observed {
+				return fmt.Errorf("broadcasted tx %s not confirmed on tron node", txID)
+			}
+			return fmt.Errorf("broadcasted tx %s not observed on tron node", txID)
+		}
+
+		if time.Since(lastBroadcast) >= tronBroadcastRebroadcastInterval &&
+			(expirationMs == 0 || time.Now().Before(time.UnixMilli(expirationMs))) {
+			response, err := c.api.BroadcastTransaction(signed)
+			if err != nil {
+				lastErr = err
+			} else {
+				lastBroadcast = time.Now()
+				if !response.Result && response.Code != "DUP_TRANSACTION_ERROR" {
+					if response.Message != "" {
+						lastErr = fmt.Errorf("failed to rebroadcast tx %s: %s - %s", txID, response.Code, response.Message)
+					} else if response.Code != "" {
+						lastErr = fmt.Errorf("failed to rebroadcast tx %s: %s", txID, response.Code)
+					} else {
+						lastErr = fmt.Errorf("failed to rebroadcast tx %s", txID)
+					}
+				}
+			}
+		}
+
+		time.Sleep(tronBroadcastObservationPollInterval)
+	}
 }

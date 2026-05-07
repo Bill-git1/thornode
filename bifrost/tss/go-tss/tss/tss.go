@@ -227,3 +227,13 @@ func (t *TssServer) GetKnownPeers() []PeerInfo {
 	}
 	return infos
 }
+
+func (t *TssServer) persistPeerAddressBook() {
+	if t == nil || t.stateManager == nil || t.p2pCommunication == nil {
+		return
+	}
+	addresses := t.p2pCommunication.ExportPeerAddress()
+	if err := t.stateManager.SaveAddressBook(addresses); err != nil {
+		t.logger.Error().Err(err).Msg("fail to save the peer addresses")
+	}
+}

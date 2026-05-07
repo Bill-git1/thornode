@@ -150,6 +150,7 @@ func (s *AnteTestSuite) TestAnteHandleMessage(c *C) {
 		FromAddress: fromAddr.String(),
 		ToAddress:   toAddr.String(),
 	}
+	k.SetMimir(ctx, "BankSendEnabled", 1)
 	_, err = ad.anteHandleMessage(ctx, version, &bankSendMsg)
 	c.Assert(err, IsNil)
 

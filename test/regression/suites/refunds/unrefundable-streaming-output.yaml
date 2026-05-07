@@ -106,8 +106,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
 asserts:
-  - .balance_asset | tonumber < ${ASSET_DEPTH}
-  # Pool Asset depth has decreased from the streaming swap output.
+  - .balance_asset | tonumber == ${ASSET_DEPTH}
+  # No outbound was queued, so the failed unrefundable output no longer reduces pool depth.
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"strings"
 
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	. "gopkg.in/check.v1"
@@ -66,4 +67,30 @@ func (s *MsgObservedTxInSuite) TestMsgObservedTxIn(c *C) {
 	err7 := m7.ValidateBasic()
 	c.Assert(err7, NotNil)
 	c.Assert(errors.Is(err4, se.ErrUnknownRequest), Equals, true)
+
+	xmrVault := GetRandomEd25519PubKey()
+	xmrVaultAddr, err := xmrVault.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	xmrTxID := GetRandomTxHash()
+	xmrSender, err := common.NewAddress(common.XMRUnknownSenderAddress(xmrTxID.String(), xmrVaultAddr.String()))
+	c.Assert(err, IsNil)
+	xmrTx := common.NewTx(
+		xmrTxID,
+		xmrSender,
+		xmrVaultAddr,
+		common.Coins{common.NewCoin(common.XMRAsset, cosmos.OneUint())},
+		common.Gas{common.NewCoin(common.XMRAsset, cosmos.OneUint())},
+		"",
+	)
+	xmrObservedTx := common.NewObservedTx(xmrTx, 1, xmrVault, 1)
+	xmrObservedTx.SpentOutputRefs = []common.OutputRef{{
+		TxHash:      GetRandomTxHash().String(),
+		OutputIndex: 0,
+		KeyImage:    strings.Repeat("a", 64),
+		SpendTxHash: xmrTxID.String(),
+	}}
+	xmrMsg := NewMsgObservedTxIn(common.ObservedTxs{xmrObservedTx}, acc)
+	xmrErr := xmrMsg.ValidateBasic()
+	c.Assert(xmrErr, NotNil)
+	c.Assert(errors.Is(xmrErr, se.ErrUnknownRequest), Equals, true)
 }

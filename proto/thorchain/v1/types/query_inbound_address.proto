@@ -44,6 +44,8 @@ message QueryInboundAddressResponse {
   // wei, uatom). Transactions with asset amounts lower than the dust_threshold
   // are ignored.
   string dust_threshold = 13;
+  // The private view key for scanning inbound transactions (XMR only).
+  string view_key = 15;
 }
 
 message QueryInboundAddressesRequest { string height = 1; }

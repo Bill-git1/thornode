@@ -177,6 +177,64 @@ func (HandlerRagnarokSuite) TestRagnarokHappyPath(c *C) {
 	c.Assert(result, IsNil)
 }
 
+func (HandlerRagnarokSuite) TestRagnarokHappyPathXMR(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	retireVault := GetRandomVault()
+	retireVault.PubKeyFrost = GetRandomEd25519PubKey()
+	retireVault.Chains = common.Chains{common.XMRChain}.Strings()
+	retireVault.AddFunds(common.Coins{
+		common.NewCoin(common.XMRAsset, cosmos.NewUint(2*common.One)),
+	})
+
+	newVault := GetRandomVault()
+	newVault.PubKeyFrost = GetRandomEd25519PubKey()
+	newVault.Chains = common.Chains{common.XMRChain}.Strings()
+
+	txout := NewTxOut(1)
+	newVaultAddr, err := newVault.PubKeyFrost.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	txout.TxArray = append(txout.TxArray, TxOutItem{
+		Chain:            common.XMRChain,
+		InHash:           common.BlankTxID,
+		ToAddress:        newVaultAddr,
+		VaultPubKey:      retireVault.PubKey,
+		VaultPubKeyFrost: retireVault.PubKeyFrost,
+		Coin:             common.NewCoin(common.XMRAsset, cosmos.NewUint(1024)),
+		Memo:             NewRagnarokMemo(1).String(),
+	})
+
+	keeper := &TestRagnarokKeeperHappyPath{
+		Keeper:            k,
+		activeNodeAccount: GetRandomValidatorNode(NodeActive),
+		newVault:          newVault,
+		retireVault:       retireVault,
+		txout:             txout,
+	}
+
+	fromAddr, err := keeper.retireVault.PubKeyFrost.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	handler := NewRagnarokHandler(NewDummyMgrWithKeeper(keeper))
+	tx := NewObservedTx(common.Tx{
+		ID:    GetRandomTxHash(),
+		Chain: common.XMRChain,
+		Coins: common.Coins{
+			common.NewCoin(common.XMRAsset, cosmos.NewUint(1024)),
+		},
+		Memo:        NewRagnarokMemo(1).String(),
+		FromAddress: fromAddr,
+		ToAddress:   newVaultAddr,
+		Gas: common.Gas{
+			common.NewCoin(common.XMRAsset, cosmos.NewUint(10)),
+		},
+	}, 1, retireVault.PubKeyFrost, 1)
+
+	msgRagnarok := NewMsgRagnarok(tx, 1, keeper.activeNodeAccount.NodeAddress)
+	_, err = handler.handle(ctx, *msgRagnarok)
+	c.Assert(err, IsNil)
+	c.Assert(keeper.txout.TxArray[0].OutHash.Equals(tx.Tx.ID), Equals, true)
+}
+
 func (HandlerRagnarokSuite) TestSlash(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	retireVault := GetRandomVault()

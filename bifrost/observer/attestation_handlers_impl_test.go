@@ -580,3 +580,253 @@ func TestRefactoredHandlersIntegration(t *testing.T) {
 		}
 	})
 }
+
+// TestXMRNonSignerDoesNotBlindCoAttest verifies that a non-signing node does
+// not sign a peer-supplied XMR outbound observation it cannot prove locally.
+func TestXMRNonSignerDoesNotBlindCoAttest(t *testing.T) {
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error {
+		return nil
+	}
+
+	bridge.getKeysignPartyFunc = func(pubKey common.PubKey) (common.PubKeys, error) {
+		return common.PubKeys{"pubkey1", "pubkey2", "pubkey3"}, nil
+	}
+
+	obsTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    "xmr-outbound-tx-1",
+			Chain: common.XMRChain,
+			Coins: common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(500000000))),
+		},
+		ObservedPubKey: "thorpub1addwnpepqtest",
+		SpentOutputRefs: []common.OutputRef{
+			{TxHash: "aabb", OutputIndex: 0, KeyImage: "ki_aabb", SpendTxHash: "xmr-outbound-tx-1"},
+			{TxHash: "ccdd", OutputIndex: 1, KeyImage: "ki_ccdd", SpendTxHash: "xmr-outbound-tx-1"},
+		},
+	}
+
+	// Simulate a signing peer sending its attestation to the non-signer.
+	signerKey := secp256k1.GenPrivKey()
+	signBz, err := obsTx.GetSignablePayload()
+	require.NoError(t, err)
+	signerSig, err := signerKey.Sign(signBz)
+	require.NoError(t, err)
+
+	peerAttestation := common.AttestTx{
+		ObsTx:   obsTx,
+		Inbound: false,
+		Attestation: &common.Attestation{
+			PubKey:    signerKey.PubKey().Bytes(),
+			Signature: signerSig,
+		},
+	}
+
+	ag.handleObservedTxAttestation(context.Background(), peerAttestation)
+
+	time.Sleep(200 * time.Millisecond)
+
+	k := observedTxKey(obsTx, false, false)
+
+	ag.mu.Lock()
+	state, exists := ag.observedTxs[k]
+	ag.mu.Unlock()
+
+	require.True(t, exists, "attestation state should exist")
+
+	state.mu.Lock()
+	count := state.AttestationCount()
+	state.mu.Unlock()
+
+	assert.Equal(t, 1, count, "should only retain the peer attestation")
+}
+
+// TestXMRBlindCoAttestationSkipsNonXMR verifies that non-XMR observations do
+// not trigger any extra local attestation.
+func TestXMRBlindCoAttestationSkipsNonXMR(t *testing.T) {
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error {
+		return nil
+	}
+
+	bridge.getKeysignPartyFunc = func(pubKey common.PubKey) (common.PubKeys, error) {
+		return common.PubKeys{"pubkey1", "pubkey2", "pubkey3"}, nil
+	}
+
+	// BTC outbound — should NOT trigger co-attestation.
+	obsTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    "btc-outbound-tx-1",
+			Chain: common.BTCChain,
+			Coins: common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(100000))),
+		},
+		ObservedPubKey: "thorpub1addwnpepqtest",
+	}
+
+	signerKey := secp256k1.GenPrivKey()
+	signBz, err := obsTx.GetSignablePayload()
+	require.NoError(t, err)
+	signerSig, err := signerKey.Sign(signBz)
+	require.NoError(t, err)
+
+	peerAttestation := common.AttestTx{
+		ObsTx:   obsTx,
+		Inbound: false,
+		Attestation: &common.Attestation{
+			PubKey:    signerKey.PubKey().Bytes(),
+			Signature: signerSig,
+		},
+	}
+
+	ag.handleObservedTxAttestation(context.Background(), peerAttestation)
+	time.Sleep(200 * time.Millisecond)
+
+	k := observedTxKey(obsTx, false, false)
+
+	ag.mu.Lock()
+	state, exists := ag.observedTxs[k]
+	ag.mu.Unlock()
+
+	require.True(t, exists)
+
+	state.mu.Lock()
+	count := state.AttestationCount()
+	state.mu.Unlock()
+
+	assert.Equal(t, 1, count, "only the peer attestation — no co-attestation for non-XMR chains")
+}
+
+// TestXMRBlindCoAttestationIdempotent verifies that receiving the same XMR
+// outbound peer attestation twice does not add a local attestation.
+func TestXMRBlindCoAttestationIdempotent(t *testing.T) {
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error {
+		return nil
+	}
+
+	bridge.getKeysignPartyFunc = func(pubKey common.PubKey) (common.PubKeys, error) {
+		return common.PubKeys{"pubkey1", "pubkey2", "pubkey3"}, nil
+	}
+
+	obsTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    "xmr-outbound-dedup",
+			Chain: common.XMRChain,
+			Coins: common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(500000000))),
+		},
+		ObservedPubKey: "thorpub1addwnpepqtest",
+		SpentOutputRefs: []common.OutputRef{
+			{TxHash: "aabb", OutputIndex: 0, KeyImage: "ki_aabb", SpendTxHash: "xmr-outbound-dedup"},
+		},
+	}
+
+	signerKey := secp256k1.GenPrivKey()
+	signBz, err := obsTx.GetSignablePayload()
+	require.NoError(t, err)
+	signerSig, err := signerKey.Sign(signBz)
+	require.NoError(t, err)
+
+	peerAttestation := common.AttestTx{
+		ObsTx:   obsTx,
+		Inbound: false,
+		Attestation: &common.Attestation{
+			PubKey:    signerKey.PubKey().Bytes(),
+			Signature: signerSig,
+		},
+	}
+
+	// Send the same attestation twice.
+	ag.handleObservedTxAttestation(context.Background(), peerAttestation)
+	time.Sleep(200 * time.Millisecond)
+	ag.handleObservedTxAttestation(context.Background(), peerAttestation)
+	time.Sleep(200 * time.Millisecond)
+
+	k := observedTxKey(obsTx, false, false)
+
+	ag.mu.Lock()
+	state, exists := ag.observedTxs[k]
+	ag.mu.Unlock()
+
+	require.True(t, exists)
+
+	state.mu.Lock()
+	count := state.AttestationCount()
+	state.mu.Unlock()
+
+	assert.Equal(t, 1, count, "should only retain one peer attestation")
+}
+
+func TestXMRObservedTxAttestationsWithDifferentSpentRefsUseDifferentBuckets(t *testing.T) {
+	ag, _, _, _, _, _ := setupTestGossip(t)
+
+	baseTx := common.Tx{
+		ID:    "xmr-conflicting-refs",
+		Chain: common.XMRChain,
+		Coins: common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(500000000))),
+	}
+	obsTxA := common.ObservedTx{
+		Tx:             baseTx,
+		ObservedPubKey: "thorpub1addwnpepqtest",
+		SpentOutputRefs: []common.OutputRef{
+			{TxHash: "aaaa", OutputIndex: 0, KeyImage: "ki_aaaa", SpendTxHash: "xmr-conflicting-refs"},
+			{TxHash: "bbbb", OutputIndex: 1, KeyImage: "ki_bbbb", SpendTxHash: "xmr-conflicting-refs"},
+		},
+	}
+	obsTxB := common.ObservedTx{
+		Tx:             baseTx,
+		ObservedPubKey: "thorpub1addwnpepqtest",
+		SpentOutputRefs: []common.OutputRef{
+			{TxHash: "cccc", OutputIndex: 0, KeyImage: "ki_cccc", SpendTxHash: "xmr-conflicting-refs"},
+			{TxHash: "dddd", OutputIndex: 1, KeyImage: "ki_dddd", SpendTxHash: "xmr-conflicting-refs"},
+		},
+	}
+
+	signerKey := secp256k1.GenPrivKey()
+	signBzA, err := obsTxA.GetSignablePayload()
+	require.NoError(t, err)
+	sigA, err := signerKey.Sign(signBzA)
+	require.NoError(t, err)
+	signBzB, err := obsTxB.GetSignablePayload()
+	require.NoError(t, err)
+	sigB, err := signerKey.Sign(signBzB)
+	require.NoError(t, err)
+
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:   obsTxA,
+		Inbound: false,
+		Attestation: &common.Attestation{
+			PubKey:    signerKey.PubKey().Bytes(),
+			Signature: sigA,
+		},
+	})
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:   obsTxB,
+		Inbound: false,
+		Attestation: &common.Attestation{
+			PubKey:    signerKey.PubKey().Bytes(),
+			Signature: sigB,
+		},
+	})
+
+	ag.mu.Lock()
+	defer ag.mu.Unlock()
+
+	keyA := observedTxKey(obsTxA, false, false)
+	keyB := observedTxKey(obsTxB, false, false)
+	stateA, okA := ag.observedTxs[keyA]
+	stateB, okB := ag.observedTxs[keyB]
+	require.True(t, okA, "first spent-ref set should retain its own bucket")
+	require.True(t, okB, "second spent-ref set should retain its own bucket")
+	assert.NotEqual(t, keyA.UniqueHash, keyB.UniqueHash)
+	assert.Equal(t, 1, stateA.AttestationCount())
+	assert.Equal(t, 1, stateB.AttestationCount())
+}

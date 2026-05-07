@@ -116,8 +116,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"

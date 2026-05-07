@@ -296,8 +296,14 @@ func (c *InjectCache[T]) ProcessForProposal(
 ) [][]byte {
 	var injectTxs [][]byte
 
-	items := c.Get()
-	for _, item := range items {
+	// Cached quorum items are pointer-backed protobuf messages. Keep the read
+	// lock while encoding so a concurrent AddItem merge cannot mutate the same
+	// object between Size and Marshal and corrupt protobuf buffer sizing.
+	c.mu.RLockPriority()
+	defer c.mu.RUnlock()
+
+	for _, cacheItem := range c.items {
+		item := cacheItem.Item
 		msg, err := createMsg(item)
 		if err != nil {
 			logger.Error("Failed to create message", "error", err)

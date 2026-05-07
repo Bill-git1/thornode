@@ -55,11 +55,12 @@ const (
 	NodeTypeVault     = types.NodeType_TypeVault
 
 	// Bond type
-	BondPaid     = types.BondType_bond_paid
-	BondReturned = types.BondType_bond_returned
-	BondCost     = types.BondType_bond_cost
-	BondReward   = types.BondType_bond_reward
-	AsgardKeygen = types.KeygenType_AsgardKeygen
+	BondPaid           = types.BondType_bond_paid
+	BondReturned       = types.BondType_bond_returned
+	BondCost           = types.BondType_bond_cost
+	BondReward         = types.BondType_bond_reward
+	AsgardKeygen       = types.KeygenType_AsgardKeygen
+	XMRMonovaultKeygen = types.KeygenType_XMRMonovaultKeygen
 
 	// Bond type
 	AddPendingLiquidity      = types.PendingLiquidityType_add
@@ -124,6 +125,7 @@ var (
 	NewMsgDeposit                  = types.NewMsgDeposit
 	NewMsgTssPool                  = types.NewMsgTssPool
 	NewMsgTssPoolV2                = types.NewMsgTssPoolV2
+	NewMsgTssPoolV3                = types.NewMsgTssPoolV3
 	NewMsgTssKeysignFail           = types.NewMsgTssKeysignFail
 	NewMsgObservedTxIn             = types.NewMsgObservedTxIn
 	NewMsgObservedTxOut            = types.NewMsgObservedTxOut
@@ -240,6 +242,7 @@ var (
 	GetRandomBech32Addr            = types.GetRandomBech32Addr
 	GetRandomBech32ConsensusPubKey = types.GetRandomBech32ConsensusPubKey
 	GetRandomPubKey                = types.GetRandomPubKey
+	GetRandomEd25519PubKey         = types.GetRandomEd25519PubKey
 	GetRandomPubKeySet             = types.GetRandomPubKeySet
 	GetCurrentVersion              = types.GetCurrentVersion
 	SetupConfigForTest             = types.SetupConfigForTest

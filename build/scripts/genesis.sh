@@ -20,11 +20,11 @@ genesis_init() {
   VALIDATOR=$(thornode tendermint show-validator | thornode pubkey --bech cons)
   NODE_ADDRESS=$(echo "$SIGNER_PASSWD" | thornode keys show thorchain -a --keyring-backend file)
   NODE_PUB_KEY=$(echo "$SIGNER_PASSWD" | thornode keys show thorchain -p --keyring-backend file | thornode pubkey)
+  NODE_PUB_KEY_ED25519=$(printf "%s\n" "$SIGNER_SEED_PHRASE" | thornode ed25519)
   VERSION=$(fetch_version)
 
   NODE_IP_ADDRESS=${EXTERNAL_IP:=$(curl -s http://whatismyip.akamai.com)}
   add_node_account "$NODE_ADDRESS" "$VALIDATOR" "$NODE_PUB_KEY" "$VERSION" "$NODE_ADDRESS" "$NODE_PUB_KEY_ED25519" "$NODE_IP_ADDRESS"
-  add_account "$NODE_ADDRESS" rune 100000000000
 
   # disable default bank transfer, and opt to use our own custom one
   disable_bank_send
@@ -49,13 +49,19 @@ genesis_init() {
     # simulation master
     add_account tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g rune 100000000000000 # master
 
+    # When the bootstrap validator uses a prefunded mnemonic such as "dog", avoid
+    # appending a second bank/auth entry for the same address.
+    add_account_if_missing "$NODE_ADDRESS" rune 100000000000
+
     # mint to reserve for mocknet
     reserve 22000000000000000
 
     set_bond_module # set bond module balance for invariant
 
-    # deploy evm contracts
-    deploy_evm_contracts
+    # deploy evm contracts (skip if EVM chains are disabled)
+    if [ "${SKIP_EVM_DEPLOY:-false}" != "true" ]; then
+      deploy_evm_contracts || exit 1
+    fi
   fi
 
   if [ "$NET" = "stagenet" ]; then
@@ -64,6 +70,14 @@ genesis_init() {
       exit 1
     fi
     add_account "$FAUCET" rune 40000000000000000
+
+    for i in 1 2 3 4 5; do
+      eval "EXTRA=\$EXTRA_FUND_ACCOUNT_$i"
+      if [ -n "$EXTRA" ]; then
+        echo "Funding extra account: $EXTRA"
+        add_account "$EXTRA" rune 200000000000000
+      fi
+    done
 
     reserve 5000000000000000
 
@@ -78,9 +92,21 @@ genesis_init() {
     # 400M RUNE to faucet + 50M to reserve = 450M of 500M MaxRuneSupply
     add_account "$FAUCET" rune 40000000000000000
 
+    for i in 1 2 3 4 5; do
+      eval "EXTRA=\$EXTRA_FUND_ACCOUNT_$i"
+      if [ -n "$EXTRA" ]; then
+        echo "Funding extra account: $EXTRA"
+        add_account "$EXTRA" rune 200000000000000
+      fi
+    done
+
     reserve 5000000000000000
 
     set_bond_module # set bond module balance for invariant
+  fi
+
+  if [ "$NET" != "mocknet" ]; then
+    add_account_if_missing "$NODE_ADDRESS" rune 100000000000
   fi
 
   if [ -n "${ETH_CONTRACT+x}" ]; then

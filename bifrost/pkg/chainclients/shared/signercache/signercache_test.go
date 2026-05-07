@@ -49,6 +49,10 @@ func (m *mockStorageAccessor) SetTransactionHashMap(txOutItemHash, transactionHa
 	return m.setTransactionHashMapErr
 }
 
+func (m *mockStorageAccessor) GetTransactionHash(txOutItemHash string) (string, error) {
+	return "", nil
+}
+
 func (m *mockStorageAccessor) GetSignedTxHash(txOutItemHash string) (string, bool) {
 	return m.getSignedTxHashResult, m.getSignedTxHashOk
 }

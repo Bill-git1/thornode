@@ -2,6 +2,7 @@ package types
 
 import (
 	"strings"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -15,6 +16,11 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/common/crypto/ed25519"
 	"gitlab.com/thorchain/thornode/v3/config"
+)
+
+const (
+	chainClientStartupRetryAttempts = 30
+	chainClientStartupRetryDelay    = 2 * time.Second
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -89,7 +95,7 @@ func NewUser(mnemonic string, constructors map[common.Chain]LiteChainClientConst
 	// create chain clients
 	chainClients := make(map[common.Chain]LiteChainClient)
 	for chain := range constructors {
-		chainClients[chain], err = constructors[chain](chain, keys)
+		chainClients[chain], err = newChainClientWithRetry(chain, constructors[chain], keys)
 		if err != nil {
 			log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to create chain client")
 		}
@@ -167,4 +173,65 @@ func (u *User) Address(chain common.Chain) common.Address {
 		log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to get address")
 	}
 	return address
+}
+
+func newChainClientWithRetry(
+	chain common.Chain,
+	constructor LiteChainClientConstructor,
+	keys *thorclient.Keys,
+) (LiteChainClient, error) {
+	return newChainClientWithRetryAndSleep(chain, constructor, keys, time.Sleep)
+}
+
+func newChainClientWithRetryAndSleep(
+	chain common.Chain,
+	constructor LiteChainClientConstructor,
+	keys *thorclient.Keys,
+	sleep func(time.Duration),
+) (LiteChainClient, error) {
+	var lastErr error
+	for attempt := 1; attempt <= chainClientStartupRetryAttempts; attempt++ {
+		client, err := constructor(chain, keys)
+		if err == nil {
+			return client, nil
+		}
+
+		lastErr = err
+		if !isRetryableChainClientStartupError(err) || attempt == chainClientStartupRetryAttempts {
+			return nil, err
+		}
+
+		log.Warn().
+			Stringer("chain", chain).
+			Int("attempt", attempt).
+			Int("max_attempts", chainClientStartupRetryAttempts).
+			Err(err).
+			Msg("waiting for chain client readiness")
+		sleep(chainClientStartupRetryDelay)
+	}
+
+	return nil, lastErr
+}
+
+func isRetryableChainClientStartupError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := strings.ToLower(err.Error())
+	for _, snippet := range []string{
+		"context deadline exceeded",
+		"connect: connection refused",
+		"connection reset by peer",
+		"EOF",
+		"i/o timeout",
+		"no wallet is loaded",
+		"wallet is loading",
+	} {
+		if strings.Contains(msg, strings.ToLower(snippet)) {
+			return true
+		}
+	}
+
+	return false
 }

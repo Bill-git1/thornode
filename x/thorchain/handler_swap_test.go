@@ -118,6 +118,10 @@ func (k *TestSwapHandleKeeper) GetNodeAccount(_ cosmos.Context, addr cosmos.AccA
 	return NodeAccount{}, errors.New("not exist")
 }
 
+func (k *TestSwapHandleKeeper) ListActiveValidators(_ cosmos.Context) (NodeAccounts, error) {
+	return NodeAccounts{k.activeNodeAccount}, nil
+}
+
 func (k *TestSwapHandleKeeper) AddToLiquidityFees(_ cosmos.Context, _ common.Asset, _ cosmos.Uint) error {
 	return nil
 }
@@ -189,8 +193,16 @@ func (s *HandlerSwapSuite) TestValidation(c *C) {
 		activeNodeAccount: GetRandomValidatorNode(NodeActive),
 		synthSupply:       cosmos.ZeroUint(),
 	}
+	keeper.activeNodeAccount.Bond = cosmos.NewUint(10_000_000 * common.One)
 	mgr.K = keeper
 	mgr.txOutStore = NewTxStoreDummy()
+	mgr.constAccessor = constants.NewDummyConstants(
+		map[constants.ConstantName]int64{},
+		map[constants.ConstantName]bool{
+			constants.StrictBondLiquidityRatio: false,
+		},
+		map[constants.ConstantName]string{},
+	)
 
 	handler := NewSwapHandler(mgr)
 
@@ -353,7 +365,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	poolTCAN.BalanceRune = cosmos.NewUint(2349500000)
 	c.Assert(mgr.Keeper().SetPool(ctx, poolTCAN), IsNil)
 	dogeAddr := GetRandomDOGEAddress()
-	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+dogeAddr.String()+":121855738")
+	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+dogeAddr.String()+":121800000")
 	c.Assert(err, IsNil)
 	txIn := NewObservedTx(
 		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
@@ -363,7 +375,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 			common.Gas{
 				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
 			},
-			"swap:DOGE.DOGE:"+signerDOGEAddr.String()+":121855738",
+			"swap:DOGE.DOGE:"+signerDOGEAddr.String()+":121800000",
 		),
 		1,
 		GetRandomPubKey(), 1,
@@ -682,7 +694,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	c.Assert(mgr.K.SetPool(ctx, pool), IsNil)
 
-	swapMemo := "swap:ETH.ETH:" + types.GetRandomETHAddress().String() + "::::2f2386f3848:" + types.GetRandomETHAddress().String()
+	swapMemo := "swap:ETH.ETH:" + types.GetRandomETHAddress().String() + "::::ec49fd2:" + types.GetRandomETHAddress().String()
 	m, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), swapMemo)
 	c.Assert(err, IsNil)
 
@@ -782,7 +794,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
-	c.Assert(items[0].Aggregator, Equals, "0x69800327b38A4CeF30367Dec3f64c2f2386f3848")
+	c.Assert(items[0].Aggregator, Equals, "0xd31f7e39afECEc4855fecc51b693F9A0Cec49fd2")
 	c.Assert(items[0].AggregatorTargetAsset, Equals, swapM.DexTargetAddress)
 	c.Assert(items[0].AggregatorTargetLimit, IsNil)
 }

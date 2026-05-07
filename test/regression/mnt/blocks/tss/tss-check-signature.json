@@ -288,8 +288,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -374,8 +377,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -460,8 +466,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -623,8 +632,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -709,8 +721,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -795,8 +810,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -958,8 +976,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -1144,8 +1165,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -1230,8 +1254,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -1269,6 +1296,29 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
+            },
+            {
+              "median_duration_ms": "0",
+              "msg_index": "0",
+              "pubkey": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
+              "type": "tss_keygen"
+            },
+            {
+              "msg_index": "0",
+              "set asgard vault to inactive": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
+              "type": "InactiveVault"
+            },
+            {
+              "add new asgard vault": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
+              "msg_index": "0",
+              "type": "ActiveVault"
+            },
+            {
+              "height": "10",
+              "members": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m, tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr, tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+              "msg_index": "0",
+              "pubkey": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
+              "type": "tss_keygen_success"
             }
           ]
         }
@@ -1316,8 +1366,11 @@
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "keyshares_backup_eddsa": null,
+                "keyshares_backup_frost": null,
+                "observed_monero_height": "0",
                 "pool_pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
                 "pool_pub_key_eddsa": "",
+                "pool_pub_key_frost": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
@@ -1361,11 +1414,6 @@
               "msg_index": "0",
               "pubkey": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
               "type": "tss_keygen"
-            },
-            {
-              "msg_index": "0",
-              "set asgard vault to inactive": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
-              "type": "InactiveVault"
             },
             {
               "add new asgard vault": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",

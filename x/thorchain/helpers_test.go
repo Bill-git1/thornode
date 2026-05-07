@@ -1128,7 +1128,7 @@ func (HelperSuite) TestSettleSwap(c *C) {
 		Tx:                      tx,
 		TargetAsset:             common.ETHAsset,
 		Destination:             ethAddr,
-		Aggregator:              "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
+		Aggregator:              "0xd31f7e39afECEc4855fecc51b693F9A0Cec49fd2",
 		AggregatorTargetAddress: "0x1234567890123456789012345678901234567890",
 		AggregatorTargetLimit:   &aggTargetLimit,
 		State: &types.SwapState{
@@ -1144,7 +1144,7 @@ func (HelperSuite) TestSettleSwap(c *C) {
 	outItems, err = mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(len(outItems), Equals, 1)
-	c.Assert(outItems[0].Aggregator, Equals, "0x69800327b38A4CeF30367Dec3f64c2f2386f3848")
+	c.Assert(outItems[0].Aggregator, Equals, "0xd31f7e39afECEc4855fecc51b693F9A0Cec49fd2")
 	c.Assert(outItems[0].AggregatorTargetAsset, Equals, "0x1234567890123456789012345678901234567890")
 
 	// Test 4: Settlement with no outbound (all deposit refunded)
@@ -1449,8 +1449,10 @@ func (s *HelperSuite) TestSettleSwapLimitSwapWithDifferentReasons(c *C) {
 
 func (s *HelperSuite) TestSettleSwapStreamingLimitSwap(c *C) {
 	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
 
-	// Test: Streaming limit swap (quantity > 1) should settle correctly
+	// Test: Streaming limit swap (quantity > 1) should settle correctly and
+	// still schedule the final outbound once the full swap is complete.
 	txID := GetRandomTxHash()
 	currentBlockHeight := int64(200)
 	ctx = ctx.WithBlockHeight(currentBlockHeight)
@@ -1462,15 +1464,15 @@ func (s *HelperSuite) TestSettleSwapStreamingLimitSwap(c *C) {
 		GetRandomETHAddress(),
 		common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
 		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
-		"swap:BTC.BTC",
+		"swap:ETH.ETH",
 	)
 
 	streamingLimitSwapMsg := types.MsgSwap{
 		Tx:          tx,
-		TargetAsset: common.BTCAsset,
-		Destination: GetRandomBTCAddress(),
+		TargetAsset: common.ETHAsset,
+		Destination: ethAddr,
 		SwapType:    types.SwapType_limit,
-		TradeTarget: cosmos.NewUint(50000000), // 0.5 BTC
+		TradeTarget: cosmos.NewUint(50000000),
 		State: &types.SwapState{
 			Quantity: 10, // Streaming swap with 10 sub-swaps
 			Count:    10, // All sub-swaps completed
@@ -1483,6 +1485,13 @@ func (s *HelperSuite) TestSettleSwapStreamingLimitSwap(c *C) {
 	// Settle the streaming limit swap
 	err := settleSwap(ctx, mgr, streamingLimitSwapMsg, "streaming limit swap completed")
 	c.Assert(err, IsNil)
+
+	outItems, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(outItems, HasLen, 1)
+	c.Assert(outItems[0].Coin.Asset.Equals(common.ETHAsset), Equals, true)
+	c.Assert(outItems[0].Coin.Amount.Equal(cosmos.NewUint(50000000)), Equals, true)
+	c.Assert(outItems[0].ToAddress.Equals(streamingLimitSwapMsg.Destination), Equals, true)
 
 	// Verify it's recognized as a limit swap
 	c.Assert(streamingLimitSwapMsg.IsLimitSwap(), Equals, true)

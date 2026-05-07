@@ -1,0 +1,297 @@
+package core
+
+import (
+	rand "math/rand/v2"
+	"reflect"
+	"testing"
+	"unsafe"
+
+	sdkmath "cosmossdk.io/math"
+
+	"gitlab.com/thorchain/thornode/v3/common"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	simtypes "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
+	thorchaintypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
+)
+
+func TestSwapSpendableBalanceLeavesGasReserve(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		asset   common.Asset
+		balance sdkmath.Uint
+		want    sdkmath.Uint
+	}{
+		{
+			name:    "non gas asset can use full balance",
+			asset:   common.AVAXAsset.GetSyntheticAsset(), // force a non-gas asset? no, use token below
+			balance: sdkmath.NewUint(12345),
+			want:    sdkmath.NewUint(12345),
+		},
+		{
+			name:    "sol leaves five percent reserve",
+			asset:   common.SOLAsset,
+			balance: sdkmath.NewUint(1_000_000_000),
+			want:    sdkmath.NewUint(950_000_000),
+		},
+		{
+			name:    "xrp leaves at least base reserve",
+			asset:   common.XRPAsset,
+			balance: sdkmath.NewUint(2 * common.One),
+			want:    sdkmath.NewUint(common.One),
+		},
+		{
+			name:    "gas asset below reserve is unusable",
+			asset:   common.XRPAsset,
+			balance: sdkmath.NewUint(common.One),
+			want:    sdkmath.ZeroUint(),
+		},
+	}
+
+	token, err := common.NewAsset("ETH.TKN-0X17AB05351FC94A1A67BF3F56DDBB941AE6C63E25")
+	if err != nil {
+		t.Fatalf("failed to parse token asset: %v", err)
+	}
+	tests[0].asset = token
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := swapSpendableBalance(tc.asset, tc.balance)
+			if !got.Equal(tc.want) {
+				t.Fatalf("expected spendable balance %s, got %s", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestSwapAmountForBalanceCapsToSpendableBalance(t *testing.T) {
+	t.Parallel()
+
+	got := swapAmountForBalance(common.SOLAsset, sdkmath.NewUint(500_000_000), sdkmath.NewUint(100_000_000))
+	want := sdkmath.NewUint(95_000_000)
+	if !got.Equal(want) {
+		t.Fatalf("expected capped swap amount %s, got %s", want, got)
+	}
+
+	got = swapAmountForBalance(common.BTCAsset, sdkmath.NewUint(500_000), sdkmath.NewUint(2_000_000))
+	want = sdkmath.NewUint(500_000)
+	if !got.Equal(want) {
+		t.Fatalf("expected target swap amount %s, got %s", want, got)
+	}
+}
+
+func TestAcquireUserForAmountPrefersHighestSpendableBalance(t *testing.T) {
+	t.Parallel()
+
+	from, err := common.NewAsset("ETH.TKN-0X17AB05351FC94A1A67BF3F56DDBB941AE6C63E25")
+	if err != nil {
+		t.Fatalf("failed to parse token asset: %v", err)
+	}
+
+	actor := newSwapBalanceTestActor(from, common.BTCAsset, 1, 2)
+
+	poorer := newTestSwapUser(t, "poorer", from, sdkmath.NewUint(120), common.BTCAsset, sdkmath.ZeroUint())
+	richer := newTestSwapUser(t, "richer", from, sdkmath.NewUint(220), common.BTCAsset, sdkmath.ZeroUint())
+
+	result := actor.acquireUserForAmount(&simtypes.OpConfig{Users: []*simtypes.User{poorer, richer}}, sdkmath.NewUint(100), true)
+	if !result.Continue || result.Error != nil || result.Finish {
+		t.Fatalf("expected successful acquisition, got %+v", result)
+	}
+	t.Cleanup(func() {
+		if actor.user != nil {
+			actor.user.Release()
+		}
+	})
+
+	if actor.user != richer {
+		t.Fatalf("expected richest user to be selected")
+	}
+	if !actor.fromBalance.Equal(sdkmath.NewUint(220)) {
+		t.Fatalf("expected selected from balance 220, got %s", actor.fromBalance)
+	}
+	if !actor.swapAmount.Equal(sdkmath.NewUint(100)) {
+		t.Fatalf("expected swap amount 100, got %s", actor.swapAmount)
+	}
+	if poorer.IsLocked() {
+		t.Fatalf("expected unselected user to be released")
+	}
+}
+
+func TestAcquireUserForAmountWaitsForStrictQuotedAmount(t *testing.T) {
+	t.Parallel()
+
+	from, err := common.NewAsset("ETH.TKN-0X17AB05351FC94A1A67BF3F56DDBB941AE6C63E25")
+	if err != nil {
+		t.Fatalf("failed to parse token asset: %v", err)
+	}
+
+	actor := newSwapBalanceTestActor(from, common.BTCAsset, 3, 4)
+
+	first := newTestSwapUser(t, "first", from, sdkmath.NewUint(120), common.BTCAsset, sdkmath.ZeroUint())
+	second := newTestSwapUser(t, "second", from, sdkmath.NewUint(160), common.BTCAsset, sdkmath.ZeroUint())
+	if !second.Acquire() {
+		t.Fatal("expected to lock second user")
+	}
+	t.Cleanup(second.Release)
+
+	result := actor.acquireUserForAmount(&simtypes.OpConfig{Users: []*simtypes.User{first, second}}, sdkmath.NewUint(150), false)
+	if result.Continue || result.Error != nil || result.Finish {
+		t.Fatalf("expected pending acquisition, got %+v", result)
+	}
+	if actor.user != nil {
+		t.Fatalf("expected no user to be selected")
+	}
+	if first.IsLocked() {
+		t.Fatalf("expected insufficient unlocked user to be released while waiting")
+	}
+	if !second.IsLocked() {
+		t.Fatalf("expected externally locked user to remain locked")
+	}
+}
+
+func TestAcquireUserForAmountSkipsImpossibleStrictQuotedAmount(t *testing.T) {
+	t.Parallel()
+
+	from, err := common.NewAsset("ETH.TKN-0X17AB05351FC94A1A67BF3F56DDBB941AE6C63E25")
+	if err != nil {
+		t.Fatalf("failed to parse token asset: %v", err)
+	}
+
+	actor := newSwapBalanceTestActor(from, common.BTCAsset, 7, 8)
+
+	first := newTestSwapUser(t, "first", from, sdkmath.NewUint(120), common.BTCAsset, sdkmath.ZeroUint())
+	second := newTestSwapUser(t, "second", from, sdkmath.NewUint(140), common.BTCAsset, sdkmath.ZeroUint())
+
+	result := actor.acquireUserForAmount(&simtypes.OpConfig{Users: []*simtypes.User{first, second}}, sdkmath.NewUint(150), false)
+	if result.Continue || result.Error != nil || !result.Finish {
+		t.Fatalf("expected impossible acquisition to finish, got %+v", result)
+	}
+	if actor.user != nil {
+		t.Fatalf("expected no user to be selected")
+	}
+	if first.IsLocked() || second.IsLocked() {
+		t.Fatalf("expected all users to be released")
+	}
+}
+
+func newSwapBalanceTestActor(from, to common.Asset, seed1, seed2 uint64) *SwapActor {
+	//nolint:gosec // deterministic simulation test RNG, not security-sensitive randomness.
+	rng := rand.New(rand.NewPCG(seed1, seed2))
+	return &SwapActor{
+		Actor: *simtypes.NewActor("swap-balance-test", rng),
+		from:  from,
+		to:    to,
+	}
+}
+
+func TestAcquireUserForAmountTracksSpendableGasBalance(t *testing.T) {
+	t.Parallel()
+
+	actor := newSwapBalanceTestActor(common.SOLAsset, common.BTCAsset, 5, 6)
+
+	user := newTestSwapUser(t, "sol-user", common.SOLAsset, sdkmath.NewUint(100_000_000), common.BTCAsset, sdkmath.ZeroUint())
+
+	result := actor.acquireUserForAmount(&simtypes.OpConfig{Users: []*simtypes.User{user}}, sdkmath.NewUint(80_000_000), true)
+	if !result.Continue || result.Error != nil || result.Finish {
+		t.Fatalf("expected successful acquisition, got %+v", result)
+	}
+	t.Cleanup(func() {
+		if actor.user != nil {
+			actor.user.Release()
+		}
+	})
+
+	wantSpendable := sdkmath.NewUint(95_000_000)
+	if !actor.fromBalance.Equal(wantSpendable) {
+		t.Fatalf("expected spendable from balance %s, got %s", wantSpendable, actor.fromBalance)
+	}
+
+	err := actor.updateSwapAmount(sdkmath.NewUint(96_000_000), "recommended minimum inbound amount")
+	if err == nil {
+		t.Fatal("expected quoted amount above spendable balance to fail")
+	}
+}
+
+func TestOutboundAmountPlusGasPrefersActualGas(t *testing.T) {
+	t.Parallel()
+
+	out := openapi.Tx{
+		Coins: []openapi.Coin{{
+			Asset:  common.XMRAsset.String(),
+			Amount: "81593453",
+		}},
+		Gas: []openapi.Coin{{
+			Asset:  common.XMRAsset.String(),
+			Amount: "2250993",
+		}},
+	}
+	action := openapi.TxOutItem{
+		MaxGas: []openapi.Coin{{
+			Asset:  common.XMRAsset.String(),
+			Amount: "14897377",
+		}},
+	}
+
+	got, err := outboundAmountPlusGas(out, action, common.XMRAsset)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	want := sdkmath.NewUint(83_844_446)
+	if !got.Equal(want) {
+		t.Fatalf("expected outbound amount plus gas %s, got %s", want, got)
+	}
+}
+
+type testSwapLiteChainClient struct {
+	account common.Account
+}
+
+func (t *testSwapLiteChainClient) GetAccount(_ *common.PubKey) (*common.Account, error) {
+	account := t.account
+	return &account, nil
+}
+
+func (t *testSwapLiteChainClient) SignTx(simtypes.SimTx) ([]byte, error) {
+	return nil, nil
+}
+
+func (t *testSwapLiteChainClient) BroadcastTx([]byte) (string, error) {
+	return "", nil
+}
+
+func newTestSwapUser(t *testing.T, name string, from common.Asset, fromBalance sdkmath.Uint, to common.Asset, toBalance sdkmath.Uint) *simtypes.User {
+	t.Helper()
+
+	user := &simtypes.User{
+		ChainClients: map[common.Chain]simtypes.LiteChainClient{
+			from.Chain: &testSwapLiteChainClient{
+				account: common.NewAccount(0, 0, common.Coins{common.NewCoin(from, fromBalance)}, true),
+			},
+			to.Chain: &testSwapLiteChainClient{
+				account: common.NewAccount(0, 0, common.Coins{common.NewCoin(to, toBalance)}, true),
+			},
+		},
+	}
+
+	setTestSwapUserField(t, user, "lock", make(chan struct{}, 1))
+	setTestSwapUserField(t, user, "pubkey", thorchaintypes.GetRandomPubKey())
+	setTestSwapUserField(t, user, "eddsaPubkey", thorchaintypes.GetRandomEd25519PubKey())
+	setTestSwapUserField(t, user, "mnemonic", name+" test mnemonic")
+
+	return user
+}
+
+func setTestSwapUserField(t *testing.T, user *simtypes.User, field string, value interface{}) {
+	t.Helper()
+
+	v := reflect.ValueOf(user).Elem().FieldByName(field)
+	if !v.IsValid() {
+		t.Fatalf("missing user field %s", field)
+	}
+	reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
+}

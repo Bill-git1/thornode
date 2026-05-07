@@ -874,6 +874,12 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 		switch strings.ToLower(vOut.ScriptPubKey.Type) {
 		case "witness_v0_keyhash", "pubkeyhash", "nulldata":
 			// do nothing
+		case "nonstandard":
+			// zcashd reports the synthetic segwit-style memo continuation outputs as
+			// nonstandard, even though the script still disassembles to `0 <20-byte-data>`.
+			if !c.cfg.ChainID.Equals(common.ZECChain) {
+				continue
+			}
 		default:
 			continue
 		}

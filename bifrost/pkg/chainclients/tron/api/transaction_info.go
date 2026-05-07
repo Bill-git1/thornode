@@ -1,8 +1,10 @@
 package api
 
 type TransactionInfo struct {
-	Fee     uint64 `json:"fee"`
-	Receipt struct {
+	ID          string `json:"id"`
+	Fee         uint64 `json:"fee"`
+	BlockNumber int64  `json:"blockNumber"`
+	Receipt     struct {
 		EnergyPenaltyTotal int64 `json:"energy_penalty_total"`
 		EnergyUsageTotal   int64 `json:"energy_usage_total"`
 	} `json:"receipt"`

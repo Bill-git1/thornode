@@ -373,11 +373,17 @@ func (c *Client) SignContractTx(tx SimContractTx) ([]byte, error) {
 		return nil, fmt.Errorf("fail to pack contract call: %w", err)
 	}
 
+	value := big.NewInt(0)
+	if tx.Value != nil {
+		value = new(big.Int).Set(tx.Value)
+	}
+
 	// create the tx
 	txData := &etypes.LegacyTx{
-		To:   &contractAddress,
-		Data: data,
-		Gas:  ContractGasLimit,
+		To:    &contractAddress,
+		Data:  data,
+		Gas:   ContractGasLimit,
+		Value: value,
 	}
 
 	return c.signTx(txData)

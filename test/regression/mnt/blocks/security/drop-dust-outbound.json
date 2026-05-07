@@ -104,6 +104,17 @@
         "type": "swap"
       },
       {
+        "chain": "THOR",
+        "coin": "3999 BTC.BTC",
+        "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+        "id": "174A83D71CACC5651703245BCB4B6B8336C3A390FADFC6A7D31539C23B345C49",
+        "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+        "mode": "EndBlock",
+        "pool": "BTC.BTC",
+        "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "type": "donate"
+      },
+      {
         "chain": "BTC",
         "code": "131",
         "coin": "3999 BTC.BTC",
@@ -395,7 +406,7 @@
               "basis_points": "4999",
               "chain": "THOR",
               "coin": "0 THOR.RUNE",
-              "emit_asset": "49988001",
+              "emit_asset": "49990000",
               "emit_rune": "49991999600",
               "from": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "id": "54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
@@ -409,24 +420,24 @@
             {
               "coins": "7000 BTC.BTC",
               "msg_index": "0",
-              "pool_deduct": "6999580",
+              "pool_deduct": "6999300",
               "tx_id": "54C4A5A79277EEDE490CE21923364B0833A5126C00E193E7F0E41AC90C6E394A",
               "type": "fee"
             },
             {
-              "amount": "6999580rune",
+              "amount": "6999300rune",
               "msg_index": "0",
               "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "type": "coin_spent"
             },
             {
-              "amount": "6999580rune",
+              "amount": "6999300rune",
               "msg_index": "0",
               "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "type": "coin_received"
             },
             {
-              "amount": "6999580rune",
+              "amount": "6999300rune",
               "msg_index": "0",
               "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -439,7 +450,7 @@
             },
             {
               "chain": "BTC",
-              "coin_amount": "49981001",
+              "coin_amount": "49983000",
               "coin_asset": "BTC.BTC",
               "coin_decimals": "0",
               "gas_rate": "10",

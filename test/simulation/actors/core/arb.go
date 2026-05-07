@@ -38,6 +38,10 @@ func NewArbActor(rng *rand.Rand) *Actor {
 		originalPools: make(map[string]types.Pool),
 	}
 	a.Timeout = time.Hour
+	// Once backgrounded, arbitrage can run alongside the foreground DAG. A slower
+	// retry interval keeps it from overwhelming the sim with continuous rebalance
+	// deposits while still providing ongoing pool stabilization.
+	a.Interval = 5 * time.Second
 
 	// init pool balances
 	a.Ops = append(a.Ops, a.init)
@@ -233,6 +237,10 @@ func (a *ArbActor) bootstrapTradeAssets(config *OpConfig) OpResult {
 	}
 	wg.Wait()
 
+	// Once the actor moves to the background, it should stop monopolizing its user.
+	// Foreground swaps still need both sim users to remain schedulable.
+	a.account.Release()
+
 	// mark actor as backgrounded
 	a.Log().Info().Msg("moving arbitrage actor to background")
 	a.Background()
@@ -243,6 +251,16 @@ func (a *ArbActor) bootstrapTradeAssets(config *OpConfig) OpResult {
 }
 
 func (a *ArbActor) arb(config *OpConfig) OpResult {
+	// Hold the arb account only while actively evaluating/broadcasting a trade so
+	// foreground actors can reuse the user between background iterations.
+	if !a.account.Acquire() {
+		a.Log().Info().Msg("arb user busy, waiting to retry")
+		return OpResult{
+			Continue: false,
+		}
+	}
+	defer a.account.Release()
+
 	// get all pools
 	pools, err := thornode.GetPools()
 	if err != nil {
@@ -255,7 +273,6 @@ func (a *ArbActor) arb(config *OpConfig) OpResult {
 
 	// if pools are drained then we are done
 	if len(pools) == 0 {
-		a.account.Release()
 		a.Log().Info().Msg("pools are drained, nothing more to arb")
 		return OpResult{
 			Finish: true,

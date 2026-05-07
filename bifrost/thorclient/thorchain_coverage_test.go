@@ -293,6 +293,9 @@ func (s *CoverageSuite) TestGetKeygenStdTx(c *C) {
 		12345,
 		common.EmptyPubKey,
 		nil,
+		nil,
+		common.EmptyPubKey,
+		0,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(msg, NotNil)

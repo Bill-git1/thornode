@@ -63,6 +63,78 @@ func (s *KeeperVaultSuite) TestVaultV2(c *C) {
 	c.Assert(v.PubKeyEddsa, Equals, eddsaPubKey)
 }
 
+func (s *KeeperVaultSuite) TestVaultFrostIndex(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	pubKey := GetRandomPubKey()
+	eddsaPubKey := GetRandomPubKey()
+	frostPubKey := GetRandomPubKey()
+
+	asgard := NewVaultV2(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.XMRChain}.Strings(), []ChainContract{}, eddsaPubKey)
+	asgard.PubKeyFrost = frostPubKey
+	c.Assert(k.SetVault(ctx, asgard), IsNil)
+
+	// VaultExists must resolve all three keys.
+	c.Check(k.VaultExists(ctx, pubKey), Equals, true, Commentf("ECDSA primary key"))
+	c.Check(k.VaultExists(ctx, eddsaPubKey), Equals, true, Commentf("EDDSA index"))
+	c.Check(k.VaultExists(ctx, frostPubKey), Equals, true, Commentf("FROST index"))
+
+	// GetVault by frost key must resolve to the ECDSA-keyed vault.
+	v, err := k.GetVault(ctx, frostPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(v.PubKey.Equals(pubKey), Equals, true)
+	c.Assert(v.PubKeyEddsa.Equals(eddsaPubKey), Equals, true)
+	c.Assert(v.PubKeyFrost.Equals(frostPubKey), Equals, true)
+
+	// GetVault by eddsa key must also work (regression).
+	vByEddsa, err := k.GetVault(ctx, eddsaPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(vByEddsa.PubKey.Equals(pubKey), Equals, true)
+}
+
+func (s *KeeperVaultSuite) TestVaultFrostIndexCreatedBySetVault(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	pubKey := GetRandomPubKey()
+	eddsaPubKey := GetRandomPubKey()
+	frostPubKey := GetRandomPubKey()
+
+	// Create vault without frost key (simulates pre-frost vault).
+	asgard := NewVaultV2(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.XMRChain}.Strings(), []ChainContract{}, eddsaPubKey)
+	c.Assert(k.SetVault(ctx, asgard), IsNil)
+
+	// Frost lookup should fail since no frost key was set yet.
+	c.Check(k.VaultExists(ctx, frostPubKey), Equals, false)
+
+	// Now upgrade the vault to add the frost key. The next SetVault call
+	// (which happens on every vault update — outbound observations, churn,
+	// status changes) creates the frost index. There is no lazy migration
+	// in GetVault to avoid non-deterministic state writes during read paths.
+	asgard.PubKeyFrost = frostPubKey
+	c.Assert(k.SetVault(ctx, asgard), IsNil)
+
+	// Frost lookup should now resolve via the index created by SetVault.
+	c.Check(k.VaultExists(ctx, frostPubKey), Equals, true)
+	resolved, err := k.GetVault(ctx, frostPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(resolved.PubKey.Equals(pubKey), Equals, true)
+}
+
+func (s *KeeperVaultSuite) TestVaultFrostIndexMissingForNonFrostVault(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	pubKey := GetRandomPubKey()
+	eddsaPubKey := GetRandomPubKey()
+
+	// Vault with no frost key — common for non-XMR vaults.
+	asgard := NewVaultV2(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.SOLChain}.Strings(), []ChainContract{}, eddsaPubKey)
+	c.Assert(k.SetVault(ctx, asgard), IsNil)
+
+	// Looking up by some random pubkey must not return this vault.
+	stranger := GetRandomPubKey()
+	c.Check(k.VaultExists(ctx, stranger), Equals, false)
+}
+
 func (s *KeeperVaultSuite) TestVaultSorBySecurity(c *C) {
 	ctx, k := setupKeeperForTest(c)
 

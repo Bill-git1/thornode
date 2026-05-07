@@ -15,6 +15,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	peerstorecore "github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
@@ -43,7 +44,8 @@ var (
 
 const (
 	// TimeoutConnecting maximum time for wait for peers to connect
-	TimeoutConnecting = time.Second * 20
+	TimeoutConnecting      = time.Second * 20
+	bootstrapRetryInterval = time.Second * 5
 
 	StreamUnknown = "UNKNOWN"
 	StreamMsgDone = "done"
@@ -71,6 +73,11 @@ type Communication struct {
 	externalAddr     maddr.Multiaddr
 	streamMgr        *StreamMgr
 	nodeGater        *NodeGater // gater to restrict connections to allowed nodes only
+	peerFinder       peerFinder
+}
+
+type peerFinder interface {
+	FindPeer(context.Context, peer.ID) (peer.AddrInfo, error)
 }
 
 type P2PConfig interface {
@@ -281,6 +288,15 @@ func (c *Communication) getPeers() addr.AddrList {
 	return bootstrapPeers
 }
 
+func (c *Communication) bootstrapConnectivityRequired() bool {
+	cfgBootstrapPeers, err := c.config.GetBootstrapPeers()
+	if err != nil {
+		c.logger.Error().Err(err).Msg("fail to get bootstrap peers from config")
+		return true
+	}
+	return len(cfgBootstrapPeers) > 0
+}
+
 func (c *Communication) bootStrapConnectivityCheck() error {
 	bootstrapPeers := c.getPeers()
 
@@ -370,35 +386,62 @@ func (c *Communication) startChannel(privKeyBytes []byte) error {
 	if err != nil {
 		return fmt.Errorf("fail to create DHT: %w", err)
 	}
+	c.peerFinder = kademliaDHT
 	c.logger.Debug().Msg("Bootstrapping the DHT")
 	if err = kademliaDHT.Bootstrap(ctx); err != nil {
 		return fmt.Errorf("fail to bootstrap DHT: %w", err)
 	}
 
+	requireBootstrapConnectivity := c.bootstrapConnectivityRequired()
 	var connectionErr error
-	for i := 0; i < 5; i++ {
+	for i := 0; i < c.bootstrapRetryAttempts(); i++ {
 		connectionErr = c.connectToBootstrapPeers()
 		if connectionErr == nil {
 			break
 		}
-		c.logger.Error().Msg("cannot connect to any bootstrap node, retry in 5 seconds")
-		time.Sleep(time.Second * 5)
+		c.logger.Warn().Err(connectionErr).Msgf("cannot connect to any bootstrap node, retry in %s", bootstrapRetryInterval)
+		time.Sleep(bootstrapRetryInterval)
 	}
 	if connectionErr != nil {
-		return fmt.Errorf("fail to connect to bootstrap peer: %w", connectionErr)
+		if requireBootstrapConnectivity {
+			return fmt.Errorf("fail to connect to bootstrap peer: %w", connectionErr)
+		}
+		// If this node has no configured bootstrap peers and is only trying
+		// stale peers from address_book.seed, do not hard-fail startup. This
+		// lets the bootstrap bifrost come up after a simultaneous restart; the
+		// other bifrosts still fail-fast because they do have configured peers.
+		c.logger.Warn().Err(connectionErr).Msg("saved bootstrap peers unreachable at startup, continuing")
 	}
 
 	// We use a rendezvous point "meet me here" to announce our location.
 	// This is like telling your friends to meet you at the Eiffel Tower.
 	routingDiscovery := discovery.NewRoutingDiscovery(kademliaDHT)
 	discovery.Advertise(ctx, routingDiscovery, c.config.GetRendezvous())
-	err = c.bootStrapConnectivityCheck()
-	if err != nil {
-		return err
+	if err = c.bootStrapConnectivityCheck(); err != nil {
+		if requireBootstrapConnectivity {
+			return err
+		}
+		c.logger.Warn().Err(err).Msg("saved bootstrap connectivity check failed, continuing")
 	}
 
 	c.logger.Info().Msg("Successfully announced!")
 	return nil
+}
+
+func (c *Communication) bootstrapRetryAttempts() int {
+	attempts := 5
+	if c == nil || c.nodeGater == nil || c.nodeGater.refreshInterval <= 0 {
+		return attempts
+	}
+
+	// Give bootstrap peers at least one full node-gater refresh window plus a
+	// little extra time so simultaneous bifrost restarts do not fail before the
+	// bootstrap node has refreshed its allowlist to include the other nodes.
+	gaterAttempts := int(c.nodeGater.refreshInterval/bootstrapRetryInterval) + 2
+	if gaterAttempts > attempts {
+		return gaterAttempts
+	}
+	return attempts
 }
 
 func (c *Communication) connectToOnePeer(pID peer.ID) (network.Stream, error) {
@@ -410,11 +453,42 @@ func (c *Communication) connectToOnePeer(pID peer.ID) (network.Stream, error) {
 	c.logger.Debug().Msgf("connect to peer : %s", pID.String())
 	ctx, cancel := context.WithTimeout(context.Background(), TimeoutConnecting)
 	defer cancel()
+	if len(c.host.Peerstore().Addrs(pID)) == 0 {
+		if err := c.discoverPeer(ctx, pID); err != nil {
+			c.logger.Debug().Err(err).Msg("fail to discover peer before opening stream")
+		}
+	}
 	stream, err := c.host.NewStream(ctx, pID, TSSProtocolID)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create new stream to peer: %s, %w", pID, err)
 	}
 	return stream, nil
+}
+
+func (c *Communication) discoverPeer(ctx context.Context, pID peer.ID) error {
+	if c == nil || c.host == nil {
+		return errors.New("communication host is not initialized")
+	}
+	if len(c.host.Peerstore().Addrs(pID)) > 0 {
+		return nil
+	}
+	if c.peerFinder == nil {
+		return errors.New("peer discovery is not initialized")
+	}
+
+	info, err := c.peerFinder.FindPeer(ctx, pID)
+	if err != nil {
+		return err
+	}
+	if info.ID != pID {
+		return fmt.Errorf("discovered unexpected peer %s while looking for %s", info.ID, pID)
+	}
+	if len(info.Addrs) == 0 {
+		return fmt.Errorf("discovered peer %s without addresses", pID)
+	}
+
+	c.host.Peerstore().AddAddrs(info.ID, info.Addrs, peerstorecore.TempAddrTTL)
+	return nil
 }
 
 func (c *Communication) connectToBootstrapPeers() error {
@@ -427,6 +501,7 @@ func (c *Communication) connectToBootstrapPeers() error {
 	}
 	var wg sync.WaitGroup
 	connRet := make(chan bool, len(bootstrapPeers))
+	dialAttempts := 0
 	for _, peerAddr := range bootstrapPeers {
 		pi, err := peer.AddrInfoFromP2pAddr(peerAddr)
 		if err != nil {
@@ -437,6 +512,7 @@ func (c *Communication) connectToBootstrapPeers() error {
 			c.logger.Debug().Msgf("skipping connection to self: %s", pi.ID)
 			continue
 		}
+		dialAttempts++
 		wg.Add(1)
 		go func(connRet chan bool) {
 			defer wg.Done()
@@ -452,7 +528,13 @@ func (c *Communication) connectToBootstrapPeers() error {
 		}(connRet)
 	}
 	wg.Wait()
-	for i := 0; i < len(bootstrapPeers); i++ {
+	// Read exactly dialAttempts results, not len(bootstrapPeers). Self entries
+	// are skipped above without spawning a goroutine, so reading more than
+	// dialAttempts blocks forever waiting for sends that never come.
+	if dialAttempts == 0 {
+		return nil
+	}
+	for i := 0; i < dialAttempts; i++ {
 		if <-connRet {
 			return nil
 		}

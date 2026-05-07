@@ -3,6 +3,7 @@ package keeperv1
 import (
 	"cosmossdk.io/math"
 	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/tcysmartcontract"
 	. "gopkg.in/check.v1"
 )
 
@@ -43,8 +44,9 @@ func (s *KeeperTCYStakerSuite) TestTCYStaker(c *C) {
 	stakers, err := k.ListTCYStakers(ctx)
 	c.Assert(err, IsNil)
 
-	// Include TCY smart contract staker
-	expectedLen := len(initStakers) + 1
+	addresses, err := tcysmartcontract.GetTCYSmartContractAddresses()
+	c.Assert(err, IsNil)
+	expectedLen := len(initStakers) + len(addresses)
 	c.Assert(len(stakers), Equals, expectedLen)
 
 	var staker TCYStaker
@@ -63,8 +65,7 @@ func (s *KeeperTCYStakerSuite) TestTCYStaker(c *C) {
 	stakers, err = k.ListTCYStakers(ctx)
 	c.Assert(err, IsNil)
 
-	// Just TCY smart contract staker
-	c.Assert(len(stakers), Equals, 1)
+	c.Assert(len(stakers), Equals, len(addresses))
 
 	for _, staker := range initStakers {
 		c.Assert(k.TCYStakerExists(ctx, staker.Address), Equals, false)

@@ -3,6 +3,7 @@ package cosmos
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
@@ -21,7 +22,9 @@ import (
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -156,6 +159,13 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	accountReq := &atypes.QueryAccountRequest{Address: address.String()}
 	account, err := atypes.NewQueryClient(c.grpc).Account(ctx(), accountReq)
 	if err != nil {
+		if isCosmosAccountNotFoundError(err) {
+			return &common.Account{
+				Sequence:      0,
+				AccountNumber: 0,
+				Coins:         nativeCoins,
+			}, nil
+		}
 		return nil, fmt.Errorf("fail to get account: %w", err)
 	}
 
@@ -175,6 +185,20 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 
 func (c *Client) SignContractTx(SimContractTx) ([]byte, error) {
 	return nil, fmt.Errorf("not implemented")
+}
+
+func isCosmosAccountNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if status.Code(err) == codes.NotFound {
+		return true
+	}
+
+	errStr := strings.ToLower(err.Error())
+	return strings.Contains(errStr, "account") &&
+		strings.Contains(errStr, "not found")
 }
 
 func (c *Client) SignTx(tx SimTx) ([]byte, error) {

@@ -154,4 +154,21 @@ func (s *VaultSuite) TestVaultSort(c *C) {
 	result1, err1 := vaults.HasAddress(common.BTCChain, GetRandomBTCAddress())
 	c.Check(err1, IsNil)
 	c.Check(result1, Equals, false)
+
+	// Ensure XMR uses the vault FROST pubkey when deriving addresses.
+	xmrVault := NewVaultV2(
+		1024,
+		VaultStatus_ActiveVault,
+		VaultType_AsgardVault,
+		GetRandomPubKey(),
+		common.Chains{common.XMRChain}.Strings(),
+		[]ChainContract{},
+		common.EmptyPubKey,
+	)
+	xmrVault.PubKeyFrost = GetRandomEd25519PubKey()
+	xmrAddr, err := xmrVault.PubKeyFrost.GetAddress(common.XMRChain)
+	c.Check(err, IsNil)
+	hasXMRAddr, err := Vaults{xmrVault}.HasAddress(common.XMRChain, xmrAddr)
+	c.Check(err, IsNil)
+	c.Check(hasXMRAddr, Equals, true)
 }

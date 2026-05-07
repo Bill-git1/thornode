@@ -38,16 +38,24 @@ func deepMerge(a, b map[string]any, overrideKeys ...string) map[string]any {
 					// deep merge if key in overrideKeys matches in the source and destination
 					for _, ov := range overrideKeys {
 						for i := range av {
+							avEntry, ok := av[i].(map[string]any)
+							if !ok {
+								continue
+							}
 							for j := range v {
-								if _, ok = av[i].(map[string]any)[ov]; !ok {
+								vEntry, ok := v[j].(map[string]any)
+								if !ok {
 									continue
 								}
-								if _, ok = v[j].(map[string]any)[ov]; !ok {
+								if _, ok = avEntry[ov]; !ok {
+									continue
+								}
+								if _, ok = vEntry[ov]; !ok {
 									continue
 								}
 
-								if av[i].(map[string]any)[ov] == v[j].(map[string]any)[ov] {
-									av[i] = deepMerge(av[i].(map[string]any), v[j].(map[string]any), overrideKeys...)
+								if avEntry[ov] == vEntry[ov] {
+									av[i] = deepMerge(avEntry, vEntry, overrideKeys...)
 
 									// remove value from v
 									v = append(v[:j], v[j+1:]...)
@@ -214,7 +222,11 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 			if err != nil {
 				log.Fatal().Str("path", path).Err(err).Msg("failed to create operation")
 			}
-			env = append(env, fmt.Sprintf("%s=%s", o.(*OpEnv).Key, o.(*OpEnv).Value))
+			envOp, ok := o.(*OpEnv)
+			if !ok {
+				log.Fatal().Str("path", path).Msg("env operation has unexpected type")
+			}
+			env = append(env, fmt.Sprintf("%s=%s", envOp.Key, envOp.Value))
 			envAdded++
 			continue
 		}
@@ -250,8 +262,8 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 func blockCount(ops []Operation) int {
 	blocks := 0
 	for _, op := range ops {
-		if _, ok := op.(*OpCreateBlocks); ok {
-			blocks += op.(*OpCreateBlocks).Count
+		if createBlocks, ok := op.(*OpCreateBlocks); ok {
+			blocks += createBlocks.Count
 		}
 	}
 	return blocks

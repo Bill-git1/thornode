@@ -13,6 +13,9 @@ func (s *KeeperTssSuite) TestTssVoter(c *C) {
 
 	pk := GetRandomPubKey()
 	voter := NewTssVoter("hello", nil, pk, GetRandomPubKey())
+	frostPk := GetRandomPubKey()
+	voter.PoolPubKeyFrost = frostPk
+	voter.ObservedMoneroHeight = 777
 
 	v, err1 := k.GetTssVoter(ctx, voter.ID)
 	c.Check(err1, IsNil)
@@ -23,6 +26,8 @@ func (s *KeeperTssSuite) TestTssVoter(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(voter.ID, Equals, "hello")
 	c.Check(voter.PoolPubKey.Equals(pk), Equals, true)
+	c.Check(voter.PoolPubKeyFrost.Equals(frostPk), Equals, true)
+	c.Check(voter.ObservedMoneroHeight, Equals, int64(777))
 	iter := k.GetTssVoterIterator(ctx)
 	c.Check(iter, NotNil)
 	iter.Close()

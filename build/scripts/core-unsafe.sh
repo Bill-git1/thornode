@@ -2,30 +2,90 @@
 
 set -o pipefail
 
+wait_for_evm_rpc() {
+  local chain="$1"
+  local rpc="$2"
+  local require_accounts="$3"
+
+  echo "Waiting for $chain RPC: $rpc"
+  python3 - "$chain" "$rpc" "$require_accounts" <<'PY'
+import sys
+import time
+
+import requests
+
+chain, rpc, require_accounts = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+deadline = time.time() + 60
+last_err = "rpc not ready"
+session = requests.Session()
+
+while time.time() < deadline:
+    try:
+        response = session.post(
+            rpc,
+            json={"jsonrpc": "2.0", "method": "net_version", "params": [], "id": 1},
+            timeout=3,
+        )
+        response.raise_for_status()
+        data = response.json()
+        if "result" not in data:
+            raise RuntimeError(f"missing net_version result: {data}")
+
+        if require_accounts:
+            response = session.post(
+                rpc,
+                json={"jsonrpc": "2.0", "method": "eth_accounts", "params": [], "id": 1},
+                timeout=3,
+            )
+            response.raise_for_status()
+            data = response.json()
+            accounts = data.get("result") or []
+            if not accounts:
+                raise RuntimeError("eth_accounts is empty")
+
+        print(f"{chain} RPC ready", flush=True)
+        sys.exit(0)
+    except Exception as err:
+        last_err = err
+        time.sleep(1)
+
+print(f"{chain} RPC not ready after 60s: {last_err}", file=sys.stderr, flush=True)
+sys.exit(1)
+PY
+}
+
 deploy_evm_contracts() {
   for CHAIN in ETH AVAX BASE POL; do
-    (
-      # deploy contract and get address from output
-      echo "Deploying $CHAIN contracts"
-      if ! python3 scripts/evm/evm-tool.py --chain $CHAIN --rpc "$(eval echo "\$${CHAIN}_HOST")" --action deploy >/tmp/evm-tool-$CHAIN.log 2>&1; then
-        cat /tmp/evm-tool-$CHAIN.log && exit 1
-      fi
+    RPC_VAR="${CHAIN}_HOST"
+    RPC_URL="$(eval echo "\$${RPC_VAR}")"
+    REQUIRE_ACCOUNTS=0
+    if [[ $CHAIN == "ETH" || $CHAIN == "BASE" || $CHAIN == "BSC" ]]; then
+      REQUIRE_ACCOUNTS=1
+    fi
+
+    wait_for_evm_rpc "$CHAIN" "$RPC_URL" "$REQUIRE_ACCOUNTS" || return 1
+
+    # deploy contract and get address from output
+    echo "Deploying $CHAIN contracts"
+    if ! PYTHONUNBUFFERED=1 python3 scripts/evm/evm-tool.py --chain "$CHAIN" --rpc "$RPC_URL" --action deploy >/tmp/evm-tool-$CHAIN.log 2>&1; then
       cat /tmp/evm-tool-$CHAIN.log
-      CONTRACT=$(grep </tmp/evm-tool-$CHAIN.log "Router Contract Address" | awk '{print $NF}')
+      return 1
+    fi
+    cat /tmp/evm-tool-$CHAIN.log
+    CONTRACT=$(grep </tmp/evm-tool-$CHAIN.log "Router Contract Address" | awk '{print $NF}')
+    if [ -z "$CONTRACT" ]; then
+      echo "Failed to determine $CHAIN router contract address"
+      return 1
+    fi
 
-      # add contract address to genesis
-      echo "$CHAIN Contract Address: $CONTRACT"
+    # add contract address to genesis
+    echo "$CHAIN Contract Address: $CONTRACT"
 
-      (
-        flock -x 200
-        jq --arg CHAIN "$CHAIN" --arg CONTRACT "$CONTRACT" \
-          '.app_state.thorchain.chain_contracts += [{"chain": $CHAIN, "router": $CONTRACT}]' \
-          ~/.thornode/config/genesis.json >/tmp/genesis-$CHAIN.json
-        mv /tmp/genesis-$CHAIN.json ~/.thornode/config/genesis.json
-      ) 200>/tmp/genesis.lock
-    ) &
+    jq --arg CHAIN "$CHAIN" --arg CONTRACT "$CONTRACT" \
+      '.app_state.thorchain.chain_contracts += [{"chain": $CHAIN, "router": $CONTRACT}]' \
+      ~/.thornode/config/genesis.json >/tmp/genesis-$CHAIN.json
+    mv /tmp/genesis-$CHAIN.json ~/.thornode/config/genesis.json
   done
-  wait
 }
 
 init_mocknet() {

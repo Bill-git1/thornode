@@ -11,7 +11,7 @@ endif
 # Config
 ########################################################################################
 
-.PHONY: build test tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi test-performance test-performance-quick test-performance-all test-performance-analyze test-performance-profile-cpu test-performance-profile-mem test-performance-trace test-performance-clean
+.PHONY: build test test-xmr-frost-e2e tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi test-performance test-performance-quick test-performance-all test-performance-analyze test-performance-profile-cpu test-performance-profile-mem test-performance-trace test-performance-clean test-xmr-e2e
 
 # mocknet docker compose files and overrides for macOS
 DOCKER_COMPOSE_FILES ?= -f build/docker/docker-compose.yml
@@ -72,12 +72,15 @@ TEST_BUILD_FLAGS := -parallel=$(PARALLELISM) -tags=mocknet
 ifdef RUN
 RUN_FLAG := -run=$(RUN)
 endif
+XMR_E2E_RUN := TestSeraiDistributedSignAndSubmitFlow|TestSeraiDistributedSignFailsClosedWhenThresholdCannotBeMet|TestKeygenFailsClosedWhenPeerCoordinationFails|TestXMRScannerInboundDeferredReferenceMemoAttribution|TestXMRScannerInboundMemolessDeferredAttribution|TestXMRReportSolvencyMultiVaultAccounting
 BINARIES?=./cmd/thornode ./cmd/bifrost ./tools/recover-keyshare-backup
 GOVERSION=$(shell awk '($$1 == "go") { print $$2 }' go.mod)
 
-# docker tty args are disabled in CI
+# docker tty args are disabled in CI and non-interactive shells
 ifndef CI
+ifneq ($(shell test -t 0 && test -t 1 && echo tty),)
 DOCKER_TTY_ARGS=-it
+endif
 endif
 
 HTTPS_GIT := https://gitlab.com/thorchain/thornode.git
@@ -110,8 +113,13 @@ openapi:
 		openapitools/openapi-generator-cli:v6.0.0@sha256:310bd0353c11863c0e51e5cb46035c9e0778d4b9c6fe6a7fc8307b3b41997a35 \
 		generate -i /mnt/openapi.yaml -g go -o /mnt/gen
 	@rm openapi/gen/go.mod openapi/gen/go.sum
-	@find ./openapi/gen -type f | xargs sed -i '/^[- ]*API version.*$(shell cat version)/d;/APIClient.*$(shell cat version)/d'
-	@find ./openapi/gen -type f | grep model | xargs sed -i 's/MarshalJSON(/MarshalJSON_deprecated(/'
+	@find ./openapi/gen -type f -print0 | xargs -0 sed -i.bak \
+		-e '/^[- ]*API version.*$(shell cat version)/d' \
+		-e '/APIClient.*$(shell cat version)/d'
+	@find ./openapi/gen -type f -name '*.bak' -delete
+	@find ./openapi/gen -type f -name '*model*' -print0 | xargs -0 sed -i.bak \
+		-e 's/MarshalJSON(/MarshalJSON_deprecated(/'
+	@find ./openapi/gen -type f -name '*.bak' -delete
 
 protoVer=0.13.2
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
@@ -159,6 +167,9 @@ docs-dev: docs-init
 build:
 	go build ${BUILD_FLAGS} ${BINARIES}
 
+test-xmr-frost-e2e:
+	GOTOOLCHAIN=go1.23.10 go test -count=1 -tags=mocknet ./bifrost/pkg/chainclients/monero/... -run '$${XMR_FROST_E2E_RUN}'
+
 install:
 	go install ${BUILD_FLAGS} ${BINARIES}
 
@@ -190,15 +201,17 @@ lint-ci:
 
 test-coverage: test-network-specific
 	@go test ${TEST_BUILD_FLAGS} -v -coverprofile=coverage.txt -covermode count ${TEST_DIR}
-	sed -i '/\.pb\.go:/d' coverage.txt
+	sed -i.bak '/\.pb\.go:/d' coverage.txt
+	@rm -f coverage.txt.bak
 
 coverage-report: test-coverage
 	@go tool cover -html=coverage.txt
 
 test-coverage-sum: test-network-specific
-	@go run gotest.tools/gotestsum --junitfile report.xml --format testname -- ${TEST_BUILD_FLAGS} -v -coverprofile=coverage.txt -covermode count ${TEST_DIR}
-	sed -i '/\.pb\.go:/d' coverage.txt
-	@GOFLAGS='${TEST_BUILD_FLAGS}' go run github.com/boumenot/gocover-cobertura < coverage.txt > coverage.xml
+	@go run gotest.tools/gotestsum@v1.13.0 --junitfile report.xml --format testname -- ${TEST_BUILD_FLAGS} -v -coverprofile=coverage.txt -covermode count ${TEST_DIR}
+	sed -i.bak '/\.pb\.go:/d' coverage.txt
+	@rm -f coverage.txt.bak
+	@GOFLAGS='${TEST_BUILD_FLAGS}' go run github.com/boumenot/gocover-cobertura@v1.4.0 < coverage.txt > coverage.xml
 	@go tool cover -func=coverage.txt
 	@go tool cover -html=coverage.txt -o coverage.html
 
@@ -214,6 +227,9 @@ test-all: test-network-specific
 
 test-go-tss:
 	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} --race "./bifrost/tss/go-tss/..."
+
+test-xmr-e2e:
+	@go test -count=1 ./bifrost/pkg/chainclients/monero -run '${XMR_E2E_RUN}'
 
 test-network-specific:
 	@go test -tags stagenet ${RUN_FLAG} ./common
@@ -336,15 +352,25 @@ _test-regression:
 
 test-simulation: build-mocknet reset-mocknet test-simulation-no-reset
 
-STAGES ?= all
+TEST_SIMULATION_STAGES ?= seed,bootstrap,xmr-coverage,arb,swaps,memoless-swaps,consolidate,inactive-vault-refunds,solvency,ragnarok
+TEST_SIMULATION_CLUSTER_STAGES ?= seed,bootstrap,swaps,memoless-swaps,inactive-vault-refunds,solvency,ragnarok,xmr-post-churn
+
 test-simulation-cluster: build-test-simulation build-mocknet-cluster reset-mocknet-cluster
-	@STAGES=$(STAGES) docker run --rm ${DOCKER_TTY_ARGS} \
-		-e PARALLELISM -e STAGES --network host -w /app \
+	@docker stop docker-midgard-1 docker-midgard-db-1 >/dev/null 2>&1 || true
+	@STAGES=$(TEST_SIMULATION_CLUSTER_STAGES) docker run --rm ${DOCKER_TTY_ARGS} \
+		-e PARALLELISM=$(PARALLELISM) -e STAGES \
+		-e XMR_SIM_HELPER_ENDPOINT -e XMR_SIM_HELPER_AUTH_BEARER \
+		-e XMR_FROST_ENDPOINT -e XMR_FROST_AUTH_BEARER \
+		--network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
 
 test-simulation-no-reset: build-test-simulation
-	@docker run --rm ${DOCKER_TTY_ARGS} \
-		-e PARALLELISM -e STAGES --network host -w /app \
+	@docker stop docker-midgard-1 docker-midgard-db-1 >/dev/null 2>&1 || true
+	@STAGES=$(TEST_SIMULATION_STAGES) docker run --rm ${DOCKER_TTY_ARGS} \
+		-e PARALLELISM=$(PARALLELISM) -e STAGES \
+		-e XMR_SIM_HELPER_ENDPOINT -e XMR_SIM_HELPER_AUTH_BEARER \
+		-e XMR_FROST_ENDPOINT -e XMR_FROST_AUTH_BEARER \
+		--network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
 
 build-test-simulation:
@@ -388,7 +414,10 @@ build-mocknet:
 
 bootstrap-mocknet:
 	@docker run --rm ${DOCKER_TTY_ARGS} \
-		-e PARALLELISM -e STAGES=seed,bootstrap --network host -w /app \
+		-e PARALLELISM=$(PARALLELISM) -e STAGES=seed,bootstrap \
+		-e XMR_SIM_HELPER_ENDPOINT -e XMR_SIM_HELPER_AUTH_BEARER \
+		-e XMR_FROST_ENDPOINT -e XMR_FROST_AUTH_BEARER \
+		--network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
 
 ps-mocknet:
@@ -410,6 +439,10 @@ reset-mocknet-fork-%: stop-mocknet
 run-mocknet-cluster:
 	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster \
 		--profile midgard up -d
+	@# Compose can leave dependent validator thornodes in Created under detached
+	@# startup when the primary thornode healthcheck is not yet satisfied.
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster \
+		--profile midgard up -d thornode-cat thornode-fox thornode-pig
 
 stop-mocknet-cluster:
 	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster --profile midgard down -v

@@ -158,6 +158,23 @@ func (s *SolTestSuite) SetUpSuite(c *C) {
 				// fmt.Println("GET LATEST BLOCK HASH", rpcRequest)
 				httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
 			}
+			if rpcRequest.Method == "getTransaction" {
+				if bytes.Contains(body, []byte("somesig")) {
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"slot":12345,"meta":{},"transaction":{}}}`))
+				} else {
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+				}
+				c.Assert(err, IsNil)
+			}
+			if rpcRequest.Method == "getSignatureStatuses" {
+				switch {
+				case bytes.Contains(body, []byte("pendingsig")):
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"value":[{"slot":12345,"confirmations":1,"err":null,"confirmationStatus":"processed"}]}}`))
+				default:
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"value":[null]}}`))
+				}
+				c.Assert(err, IsNil)
+			}
 		}
 	}))
 
@@ -290,6 +307,95 @@ func (s *SolTestSuite) TestSignSOLTx(c *C) {
 	result, _, _, err = e.SignTx(txOut, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, IsNil) // suppressed by signer cache
+}
+
+func (s *SolTestSuite) TestSignSOLTxReSignsWhenCachedTxMissingFromChain(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + s.server.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	e.solScanner.recentBlockHash = "asdfasdf"
+	pubkeys := pubkeyMgr.GetPubKeys()
+
+	txOut := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "missingsig", expired), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false)
+}
+
+func (s *SolTestSuite) TestSignSOLTxDoesNotReSignWhenCachedTxIsStillPending(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + s.server.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	e.solScanner.recentBlockHash = "asdfasdf"
+	pubkeys := pubkeyMgr.GetPubKeys()
+
+	txOut := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	c.Assert(e.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "pendingsig"), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil)
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
 }
 
 func (s *SolTestSuite) TestBroadcastTxLandedDespiteError(c *C) {

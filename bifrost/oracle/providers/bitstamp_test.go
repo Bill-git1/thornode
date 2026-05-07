@@ -31,7 +31,7 @@ func (s *ProviderTestSuite) TestBitstampProvider(c *C) {
 
 	provider.Start()
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(2 * time.Second)
 
 	tickers, err := provider.GetTickers()
 	c.Assert(err, IsNil)

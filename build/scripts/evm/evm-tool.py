@@ -346,6 +346,73 @@ def check_socket(host, port):
             return False
 
 
+def rpc_call(rpc_url, method, params=None, timeout=5):
+    response = requests.post(
+        rpc_url,
+        json={
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params or [],
+            "id": 1,
+        },
+        headers=EVMSetupTool.headers,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if payload.get("error"):
+        raise ValueError(payload["error"])
+    return payload["result"]
+
+
+def wait_for_rpc_open(rpc_url, attempts=30, interval=1):
+    target = urlparse(rpc_url)
+    for attempt in range(1, attempts + 1):
+        if check_socket(target.hostname, target.port):
+            return
+        if attempt == attempts:
+            raise TimeoutError(f"{target.hostname}:{target.port} not open")
+        time.sleep(interval)
+
+
+def wait_for_block_number(rpc_url, attempts=30, interval=1):
+    for attempt in range(1, attempts + 1):
+        try:
+            result = rpc_call(rpc_url, "eth_blockNumber")
+            return int(result, 16)
+        except Exception as err:
+            if attempt == attempts:
+                raise TimeoutError(
+                    f"timed out waiting for eth_blockNumber from {rpc_url}"
+                ) from err
+            time.sleep(interval)
+
+
+def wait_for_chain_progress(rpc_url, attempts=45, interval=2):
+    current_block = wait_for_block_number(rpc_url)
+    logging.info(f"waiting for chain progress from block {current_block}")
+    for attempt in range(1, attempts + 1):
+        time.sleep(interval)
+        latest_block = wait_for_block_number(rpc_url, attempts=1, interval=interval)
+        if latest_block > current_block:
+            logging.info(
+                f"observed chain progress on {rpc_url}: {current_block} -> {latest_block}"
+            )
+            return latest_block
+        if attempt == attempts:
+            raise TimeoutError(
+                f"timed out waiting for block production on {rpc_url} from block {current_block}"
+            )
+
+
+def wait_for_chain_readiness(chain, rpc_url):
+    wait_for_rpc_open(rpc_url)
+    block_number = wait_for_block_number(rpc_url)
+    logging.info(f"{chain}: rpc responding at block {block_number}")
+    if chain == "POL":
+        wait_for_chain_progress(rpc_url)
+
+
 ########################################################################################
 # Main
 ########################################################################################
@@ -404,16 +471,11 @@ def main():
     parser.add_argument("--rpc", help="rpc address", default=default_rpc[args.chain])
     args = parser.parse_args()
 
-    # check that the port is open
-    t = urlparse(args.rpc)
-    for i in range(1, 30):
-        if check_socket(t.hostname, t.port):
-            time.sleep(1)
-            break
-        if i == 30:
-            logging.error(f"{args.chain}: {t.hostname}:{t.port} not open")
-            sys.exit(1)
-        time.sleep(1)
+    try:
+        wait_for_chain_readiness(args.chain, args.rpc)
+    except Exception as err:
+        logging.error(f"{args.chain}: chain not ready: {err}")
+        sys.exit(1)
 
     # run the action
     setup_tool = EVMSetupTool(args.chain, args.rpc)

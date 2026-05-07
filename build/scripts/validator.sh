@@ -25,7 +25,39 @@ if [ ! -f ~/.thornode/config/genesis.json ]; then
   else
     NODE_ADDRESS=$(echo "$SIGNER_PASSWD" | thornode keys show "$SIGNER_NAME" -a --keyring-backend file)
     echo "Your THORNode address: $NODE_ADDRESS"
-    echo "Send your bond to that address"
+
+    if [ "${AUTO_BOND:-false}" = "true" ]; then
+      until curl -s "$PEER:$PORT_RPC" 1>/dev/null 2>&1; do
+        echo "Waiting for peer: $PEER:$PORT_RPC"
+        sleep 3
+      done
+
+      printf "%s\n" "$SIGNER_PASSWD" | thornode tx thorchain deposit 100000000000000 RUNE "bond:$NODE_ADDRESS" \
+        --node "tcp://$PEER:${PORT_RPC:-26657}" --from "$SIGNER_NAME" --keyring-backend=file --chain-id "$CHAIN_ID" --yes
+      sleep 8
+
+      NODE_PUB_KEY=$(echo "$SIGNER_PASSWD" | thornode keys show thorchain --pubkey --keyring-backend=file | thornode pubkey)
+      NODE_PUB_KEY_ED25519=$(printf "%s\n" "$SIGNER_SEED_PHRASE" | thornode ed25519)
+      VALIDATOR=$(thornode tendermint show-validator | thornode pubkey --bech cons)
+
+      until printf "%s\n%s\n" "$SIGNER_PASSWD" "$SIGNER_PASSWD" | thornode tx thorchain set-node-keys "$NODE_PUB_KEY" "$NODE_PUB_KEY_ED25519" "$VALIDATOR" \
+        --node "tcp://$PEER:${PORT_RPC:-26657}" --from "$SIGNER_NAME" --keyring-backend=file --chain-id "$CHAIN_ID" --yes; do
+        sleep 5
+      done
+      sleep 4
+
+      NODE_IP_ADDRESS=${EXTERNAL_IP:=$(hostname -i)}
+      until printf "%s\n%s\n" "$SIGNER_PASSWD" "$SIGNER_PASSWD" | thornode tx thorchain set-ip-address "$NODE_IP_ADDRESS" \
+        --node "tcp://$PEER:${PORT_RPC:-26657}" --from "$SIGNER_NAME" --keyring-backend=file --chain-id "$CHAIN_ID" --yes; do
+        sleep 5
+      done
+      sleep 4
+
+      printf "%s\n%s\n" "$SIGNER_PASSWD" "$SIGNER_PASSWD" | thornode tx thorchain set-version \
+        --node "tcp://$PEER:${PORT_RPC:-26657}" --from "$SIGNER_NAME" --keyring-backend=file --chain-id "$CHAIN_ID" --yes
+    else
+      echo "Send your bond to that address"
+    fi
   fi
 fi
 

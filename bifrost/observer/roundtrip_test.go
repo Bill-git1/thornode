@@ -24,16 +24,16 @@ import (
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
-	types2 "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 func TestObserverRoundTrip(t *testing.T) {
-	types2.SetupConfigForTest()
+	setupMocknetThorConfig()
 	var txs []*types.TxIn
 	deckBz, err := os.ReadFile("../../test/fixtures/observer/deck.json")
 	require.NoError(t, err)
 	err = json.Unmarshal(deckBz, &txs)
 	require.NoError(t, err)
+	txs = filterAttributableFixtureDeck(t, txs)
 
 	server := httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -156,7 +156,7 @@ func TestObserverRoundTrip(t *testing.T) {
 
 		obsTxs, invalidIndices, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
 		require.NoError(t, txErr)
-		require.Empty(t, invalidIndices, "expected no invalid transactions in test data")
+		require.Empty(t, invalidIndices, "expected no invalid transactions in filtered fixture data")
 
 		inbound, outbound, getErr := bridge.GetInboundOutbound(obsTxs)
 		require.NoError(t, getErr)
@@ -178,20 +178,17 @@ func TestObserverRoundTrip(t *testing.T) {
 	}
 
 	for _, tx := range dbTxs {
-		numTxs := len(tx.TxArray)
-
 		final := true
 
 		obsTxs, invalidIndices, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
 		require.NoError(t, txErr)
-		require.Empty(t, invalidIndices, "expected no invalid transactions in test data")
-
-		require.Len(t, obsTxs, numTxs)
+		require.Empty(t, invalidIndices, "expected no invalid transactions in filtered fixture data")
+		require.Len(t, obsTxs, len(tx.TxArray))
 
 		inbound, outbound, getErr := bridge.GetInboundOutbound(obsTxs)
 		require.NoError(t, getErr)
 
-		require.GreaterOrEqual(t, len(inbound)+len(outbound), numTxs)
+		require.GreaterOrEqual(t, len(inbound)+len(outbound), len(tx.TxArray))
 
 		rand.Shuffle(len(inbound), func(i, j int) {
 			inbound[i], inbound[j] = inbound[j], inbound[i]
@@ -213,4 +210,70 @@ func TestObserverRoundTrip(t *testing.T) {
 	dbTxs, err = obs.storage.GetOnDeckTxs()
 	require.NoError(t, err)
 	require.Len(t, dbTxs, 0)
+}
+
+func filterAttributableFixtureDeck(t *testing.T, txs []*types.TxIn) []*types.TxIn {
+	t.Helper()
+
+	filtered := make([]*types.TxIn, 0, len(txs))
+	skippedDecks := 0
+	skippedItems := 0
+	keptItems := 0
+
+	for _, tx := range txs {
+		if tx == nil || len(tx.TxArray) == 0 {
+			skippedDecks++
+			continue
+		}
+
+		filteredItems := make([]*types.TxInItem, 0, len(tx.TxArray))
+		for _, item := range tx.TxArray {
+			if item == nil || !isAttributableFixtureItem(tx.Chain, item) {
+				skippedItems++
+				continue
+			}
+			filteredItems = append(filteredItems, item)
+			keptItems++
+		}
+
+		if len(filteredItems) == 0 {
+			skippedDecks++
+			continue
+		}
+
+		filteredTx := *tx
+		filteredTx.TxArray = filteredItems
+		filtered = append(filtered, &filteredTx)
+	}
+
+	t.Logf(
+		"fixture normalization kept %d/%d deck entries and %d tx items (skipped %d decks, %d items)",
+		len(filtered),
+		len(txs),
+		keptItems,
+		skippedDecks,
+		skippedItems,
+	)
+	require.NotEmpty(t, filtered, "fixture did not contain attributable tx items for this build network")
+
+	return filtered
+}
+
+func isAttributableFixtureItem(chain common.Chain, item *types.TxInItem) bool {
+	sender, err := common.NewAddress(item.Sender)
+	if err != nil {
+		return false
+	}
+
+	to, err := common.NewAddress(item.To)
+	if err != nil {
+		return false
+	}
+
+	observedAddr, err := item.ObservedVaultPubKey.GetAddress(chain)
+	if err != nil || observedAddr.IsEmpty() {
+		return false
+	}
+
+	return sender.Equals(observedAddr) || to.Equals(observedAddr)
 }

@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **EffectiveSecurityBond** | **string** | effective security bond used to determine maximum pooled RUNE | 
 **TotalReserve** | **string** | total reserve RUNE | 
 **VaultsMigrating** | **bool** | Returns true if there exist RetiringVaults which have not finished migrating funds to new ActiveVaults | 
+**XmrActiveVaultReady** | **bool** | Indicates whether an active Asgard vault currently has spendable XMR funds | 
 **GasSpentRune** | **string** | Sum of the gas the network has spent to send outbounds | 
 **GasWithheldRune** | **string** | Sum of the gas withheld from users to cover outbound gas | 
 **OutboundFeeMultiplier** | Pointer to **string** | Current outbound fee multiplier, in basis points | [optional] 
@@ -26,7 +27,7 @@ Name | Type | Description | Notes
 
 ### NewNetworkResponse
 
-`func NewNetworkResponse(bondRewardRune string, totalBondUnits string, availablePoolsRune string, vaultsLiquidityRune string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string, torPriceHalted bool, ) *NetworkResponse`
+`func NewNetworkResponse(bondRewardRune string, totalBondUnits string, availablePoolsRune string, vaultsLiquidityRune string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, xmrActiveVaultReady bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string, torPriceHalted bool, ) *NetworkResponse`
 
 NewNetworkResponse instantiates a new NetworkResponse object
 This constructor will assign default values to properties that have it defined,
@@ -179,6 +180,26 @@ and a boolean to check if the value has been set.
 `func (o *NetworkResponse) SetVaultsMigrating(v bool)`
 
 SetVaultsMigrating sets VaultsMigrating field to given value.
+
+
+### GetXmrActiveVaultReady
+
+`func (o *NetworkResponse) GetXmrActiveVaultReady() bool`
+
+GetXmrActiveVaultReady returns the XmrActiveVaultReady field if non-nil, zero value otherwise.
+
+### GetXmrActiveVaultReadyOk
+
+`func (o *NetworkResponse) GetXmrActiveVaultReadyOk() (*bool, bool)`
+
+GetXmrActiveVaultReadyOk returns a tuple with the XmrActiveVaultReady field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetXmrActiveVaultReady
+
+`func (o *NetworkResponse) SetXmrActiveVaultReady(v bool)`
+
+SetXmrActiveVaultReady sets XmrActiveVaultReady field to given value.
 
 
 ### GetGasSpentRune

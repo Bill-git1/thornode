@@ -40,6 +40,7 @@ type SwapMemolessActor struct {
 	registrationTxID common.TxID
 	memolessRef      uint64
 	swapMemo         string
+	swapTx           SimTx
 	signedSwap       []byte
 }
 
@@ -52,6 +53,7 @@ func NewSwapMemolessActor(from, to common.Asset, memolessType MemolessType, rng 
 		},
 		memolessType: memolessType,
 	}
+	a.Timeout = swapMemolessActorTimeout(from, to)
 
 	a.Ops = append(a.Ops, a.updateLogContext)
 
@@ -66,12 +68,14 @@ func NewSwapMemolessActor(from, to common.Asset, memolessType MemolessType, rng 
 		a.Ops = append(a.Ops, a.registerSwap)
 		a.Ops = append(a.Ops, a.getMemolessRef)
 		a.Ops = append(a.Ops, a.prepareSwapMemolessByRef)
+		a.Ops = append(a.Ops, a.requotePreparedSwap)
 		a.Ops = append(a.Ops, a.signSwap)
 		a.Ops = append(a.Ops, a.broadcastSwap)
 	case MemolessTypeAmount:
 		a.Ops = append(a.Ops, a.registerSwap)
 		a.Ops = append(a.Ops, a.getMemolessRef)
 		a.Ops = append(a.Ops, a.prepareSwapMemolessByAmount)
+		a.Ops = append(a.Ops, a.requoteEncodedSwap)
 		a.Ops = append(a.Ops, a.signSwap)
 		a.Ops = append(a.Ops, a.broadcastSwap)
 	}
@@ -82,6 +86,17 @@ func NewSwapMemolessActor(from, to common.Asset, memolessType MemolessType, rng 
 	return &a.Actor
 }
 
+func swapMemolessActorTimeout(from, to common.Asset) time.Duration {
+	timeout := 5 * time.Minute
+	if from.Chain.Equals(common.XMRChain) || to.Chain.Equals(common.XMRChain) {
+		timeout += 2 * time.Minute
+	}
+	if from.Chain.Equals(common.SOLChain) || to.Chain.Equals(common.SOLChain) {
+		timeout += 2 * time.Minute
+	}
+	return timeout
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Ops
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -90,6 +105,46 @@ func (a *SwapMemolessActor) updateLogContext(config *OpConfig) OpResult {
 	a.SetLogger(log.With().Stringer("type", a.memolessType).Logger())
 	return OpResult{
 		Continue: true,
+	}
+}
+
+func (a *SwapMemolessActor) getQuote(config *OpConfig) OpResult {
+	for attempt := 0; attempt < 4; attempt++ {
+		quote, result := a.getQuoteWithUserRetry(config)
+		if !result.Continue || result.Finish {
+			return result
+		}
+
+		if a.memolessType == MemolessTypeAmount {
+			requiredAmount := a.maxAmountWithEncodedRefAtOrAbove(a.swapAmount)
+			if requiredAmount.GT(a.fromBalance) {
+				targetAmount := a.swapAmount
+				a.Log().Info().
+					Stringer("required_amount", requiredAmount).
+					Stringer("user_balance", a.fromBalance).
+					Msg("memoless amount encoding may exceed selected user balance, retrying user selection")
+				a.releaseUserSelection()
+				a.releaseTargetXMRSwapSlot()
+				result := a.acquireUserForAmount(config, requiredAmount, false)
+				if !result.Continue || result.Finish {
+					return result
+				}
+				a.swapAmount = targetAmount
+				continue
+			}
+		}
+
+		setQuoteExpectations(&a.SwapActor, quote)
+		return OpResult{
+			Continue: true,
+		}
+	}
+
+	a.Log().Info().
+		Stringer("amount", a.swapAmount).
+		Msg("waiting for user that can satisfy memoless amount encoding headroom")
+	return OpResult{
+		Continue: false,
 	}
 }
 
@@ -219,6 +274,28 @@ func (a *SwapMemolessActor) prepareSwapMemolessByRef(config *OpConfig) OpResult 
 	}
 }
 
+func (a *SwapMemolessActor) requotePreparedSwap(config *OpConfig) OpResult {
+	quote, quoteAmount, err := getSwapQuoteWithRecommendedMin(a.from, a.to, a.swapAmount, a.toAddress, a.from.Chain.IsUTXO())
+	if err != nil {
+		a.Log().Error().Err(err).Str("amount", a.swapAmount.String()).Msg("failed to get quote for prepared memoless swap")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	if err := a.updateSwapAmount(quoteAmount, "recommended minimum inbound amount after memoless reference registration"); err != nil {
+		return OpResult{
+			Error:  err,
+			Finish: true,
+		}
+	}
+
+	setQuoteExpectations(&a.SwapActor, quote)
+	return OpResult{
+		Continue: true,
+	}
+}
+
 func (a *SwapMemolessActor) prepareSwapMemolessByAmount(config *OpConfig) OpResult {
 	// encode the memoless ref in the amount
 	modulus := a.amountModulus()
@@ -244,13 +321,48 @@ func (a *SwapMemolessActor) prepareSwapMemolessByAmount(config *OpConfig) OpResu
 		Stringer("after", a.swapAmount).
 		Msg("encoded memoless ref in amount")
 
-	// scale expected by the change in amount to encode the memoless ref
-	factor := float64(a.swapAmount.Uint64()) / float64(before.Uint64())
-	a.minExpected = sdkmath.NewUint(uint64(float64(a.minExpected.Uint64()) * factor))
-	a.maxExpected = sdkmath.NewUint(uint64(float64(a.maxExpected.Uint64()) * factor))
-
 	return OpResult{
 		Continue: true,
+	}
+}
+
+func (a *SwapMemolessActor) requoteEncodedSwap(config *OpConfig) OpResult {
+	for attempt := 0; attempt < 4; attempt++ {
+		quote, quoteAmount, err := getSwapQuoteWithRecommendedMin(a.from, a.to, a.swapAmount, a.toAddress, a.from.Chain.IsUTXO())
+		if err != nil {
+			a.Log().Error().Err(err).Str("amount", a.swapAmount.String()).Msg("failed to get quote for encoded memoless swap amount")
+			return OpResult{
+				Continue: false,
+			}
+		}
+
+		if quoteAmount.GT(a.swapAmount) {
+			encodedAmount := a.amountWithEncodedRefAtOrAbove(quoteAmount)
+			if encodedAmount.Equal(a.swapAmount) {
+				return OpResult{
+					Error:  fmt.Errorf("failed to raise memoless encoded amount to recommended minimum"),
+					Finish: true,
+				}
+			}
+
+			if err := a.updateSwapAmount(encodedAmount, "recommended minimum inbound amount after memoless encoding"); err != nil {
+				return OpResult{
+					Error:  err,
+					Finish: true,
+				}
+			}
+			continue
+		}
+
+		setQuoteExpectations(&a.SwapActor, quote)
+		return OpResult{
+			Continue: true,
+		}
+	}
+
+	return OpResult{
+		Error:  fmt.Errorf("failed to settle memoless encoded amount within recommended minimum"),
+		Finish: true,
 	}
 }
 
@@ -270,14 +382,23 @@ func (a *SwapMemolessActor) signSwap(config *OpConfig) OpResult {
 
 	// create tx
 	tx := SimTx{
-		Chain:     a.from.Chain,
-		ToAddress: inboundAddr,
-		Coin:      common.NewCoin(a.from, a.swapAmount),
-		Memo:      a.swapMemo,
+		Chain:       a.from.Chain,
+		ToAddress:   inboundAddr,
+		Coin:        common.NewCoin(a.from, a.swapAmount),
+		Memo:        a.swapMemo,
+		OneShotMemo: true,
+	}
+	a.swapTx = tx
+
+	client := a.user.ChainClients[a.from.Chain]
+	if a.from.Chain.Equals(common.TRONChain) || a.from.Chain.Equals(common.SOLChain) {
+		a.signedSwap = nil
+		return OpResult{
+			Continue: true,
+		}
 	}
 
 	// sign transaction
-	client := a.user.ChainClients[a.from.Chain]
 	a.signedSwap, err = client.SignTx(tx)
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to sign tx")
@@ -388,10 +509,17 @@ func (a *SwapMemolessActor) signTokenSwap() OpResult {
 }
 
 func (a *SwapMemolessActor) broadcastSwap(config *OpConfig) OpResult {
-	// broadcast transaction
+	if result := a.ensureXMRVaultSpendable(config, a.requiredOutboundSpend); !result.Continue || result.Finish {
+		return result
+	}
+
 	client := a.user.ChainClients[a.from.Chain]
 	var err error
-	a.swapTxID, err = client.BroadcastTx(a.signedSwap)
+	if a.from.Chain.Equals(common.TRONChain) || a.from.Chain.Equals(common.SOLChain) {
+		a.swapTxID, err = SignAndBroadcastTx(client, a.swapTx)
+	} else {
+		a.swapTxID, err = client.BroadcastTx(a.signedSwap)
+	}
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to broadcast tx")
 		return OpResult{
@@ -447,4 +575,46 @@ func (a *SwapMemolessActor) amountScalingDivisor() uint64 {
 		divisor *= 10
 	}
 	return divisor
+}
+
+func (a *SwapMemolessActor) amountWithEncodedRefAtOrAbove(target sdkmath.Uint) sdkmath.Uint {
+	modulus := a.amountModulus()
+	scalingDivisor := a.amountScalingDivisor()
+
+	baseAmount := target.Uint64()
+	if scalingDivisor == 1 {
+		remainder := baseAmount % modulus
+		if remainder <= a.memolessRef {
+			return sdkmath.NewUint(baseAmount - remainder + a.memolessRef)
+		}
+		return sdkmath.NewUint(baseAmount - remainder + modulus + a.memolessRef)
+	}
+
+	normalizedAmount := baseAmount / scalingDivisor
+	if baseAmount%scalingDivisor != 0 {
+		normalizedAmount++
+	}
+	remainder := normalizedAmount % modulus
+	if remainder <= a.memolessRef {
+		return sdkmath.NewUint(normalizedAmount - remainder + a.memolessRef).MulUint64(scalingDivisor)
+	}
+	return sdkmath.NewUint(normalizedAmount - remainder + modulus + a.memolessRef).MulUint64(scalingDivisor)
+}
+
+func (a *SwapMemolessActor) maxAmountWithEncodedRefAtOrAbove(target sdkmath.Uint) sdkmath.Uint {
+	modulus := a.amountModulus()
+	scalingDivisor := a.amountScalingDivisor()
+
+	baseAmount := target.Uint64()
+	if scalingDivisor == 1 {
+		remainder := baseAmount % modulus
+		return sdkmath.NewUint(baseAmount - remainder + modulus - 1)
+	}
+
+	normalizedAmount := baseAmount / scalingDivisor
+	if baseAmount%scalingDivisor != 0 {
+		normalizedAmount++
+	}
+	remainder := normalizedAmount % modulus
+	return sdkmath.NewUint(normalizedAmount - remainder + modulus - 1).MulUint64(scalingDivisor)
 }

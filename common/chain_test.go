@@ -111,7 +111,7 @@ func (s ChainSuite) TestChain(c *C) {
 	// XMR chain tests
 	xmrGasUnits, _ := XMRChain.GetGasUnits()
 	c.Assert(xmrGasUnits, Equals, "piconero")
-	c.Assert(XMRChain.GetGasAssetDecimal(), Equals, int64(8))
+	c.Assert(XMRChain.GetGasAssetDecimal(), Equals, int64(12))
 	c.Assert(XMRChain.ApproximateBlockMilliseconds(), Equals, int64(120000))
 }
 

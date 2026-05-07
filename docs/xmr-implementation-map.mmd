@@ -1,0 +1,109 @@
+flowchart TB
+  MAIN["Bifrost main()"]
+  LOAD["LoadChains()"]
+  XMR_CLIENT["Monero Chain Client\nNewClient()"]
+  OBS["Observer.Start()"]
+  SIGNER["Signer.Start()"]
+
+  MAIN --> LOAD --> XMR_CLIENT
+  MAIN --> OBS
+  MAIN --> SIGNER
+  OBS -->|"chain.Start(...)"| XMR_CLIENT
+  SIGNER -->|"getChain(XMR)"| XMR_CLIENT
+
+  subgraph INBOUND["Inbound Observation (XMR -> THORChain)"]
+    BS["BlockScanner.scanBlocks()"]
+    FETCH["Scanner.FetchTxs(height)"]
+    DAEMON_BLOCK["sidecar.Client.ChainBlock()"]
+    REORG["processReorg()/reConfirmTx()\n+ Errata queue"]
+    TRANSFERS["fetchTransfersByHeight()\nsidecar.Client.SyncAt()"]
+    BUILD_TXIN["transferToTxInItem()"]
+    QUEUE["globalTxsQueue"]
+    PROC["Observer.processTxIns()/processObservedTx()"]
+    FILTER["filterObservations()"]
+    CONF["GetConfirmationCount()/ConfirmationCountReady()"]
+    ATTEST["sendDeck() -> AttestObservedTx()"]
+    COMMIT["THORChain commits observation"]
+    ONOBS["handleObservedTxCommitted()\n-> OnObservedTxIn()"]
+  end
+
+  XMR_CLIENT --> BS --> FETCH
+  FETCH --> DAEMON_BLOCK
+  FETCH --> REORG
+  FETCH --> TRANSFERS --> BUILD_TXIN --> QUEUE --> PROC --> FILTER --> CONF --> ATTEST --> COMMIT --> ONOBS
+
+  subgraph OUTBOUND["Outbound Signing (THORChain -> XMR)"]
+    TXOUT["Signer processTransactions()/signAndBroadcast()"]
+    SIGNTX["Client.SignTx() -> signTx()"]
+    VALIDATE["validateSignTx()"]
+    BAL["ensureVaultBalance()\n-> sidecar.Client.Balance()"]
+    MEMBERS["vaultSigningMembers()\n(GetVault/GetAsgards)"]
+    FKS["tssServer.FrostKeySign()"]
+    ADAPTER["sidecar.NewFrostAdapter()\nFrostSignPrepare/Partial/Combine"]
+    PAYLOAD["signedTxPayload JSON\n(tx_hash, tx_metadata, fee, msg_id, eventuality)"]
+    OBS_OUT["buildOutboundObservation()"]
+    BROAD["BroadcastTx() -> broadcastTx()"]
+    BCALL["sidecar.Client.Broadcast()"]
+    CACHE["signerCache SetSigned()"]
+    AUTOOBS["observer.ObserveSigned() (AutoObserve)"]
+  end
+
+  SIGNER --> TXOUT --> SIGNTX --> VALIDATE --> BAL --> MEMBERS --> FKS --> ADAPTER --> PAYLOAD --> OBS_OUT
+  TXOUT --> BROAD
+  PAYLOAD --> BROAD --> BCALL --> CACHE --> AUTOOBS --> PROC
+  ONOBS --> CACHE
+
+  subgraph KEYGEN["XMR Custom Keygen Path"]
+    KHOOK["Signer.runCustomKeygenHooks()"]
+    CK["Client.CustomKeygen() = true\nClient.Keygen()"]
+    FKG["tssServer.FrostKeygen()"]
+    JOIN["joinParty() + full-member enforcement"]
+    IDX["Deterministic participant indexing"]
+    R1["FrostDKGRound1 (sidecar + p2p exchange)"]
+    R2["FrostDKGRound2 (sidecar + p2p exchange)"]
+    R3["FrostDKGRound3 (sidecar + p2p exchange)"]
+    VERIFY["Validate shared address + group key"]
+    FINALIZE["FrostDKGFinalize()\n(explicit sidecar commit)"]
+    MAP["setVaultAddressMapping()\n+ scanner.SetVaultAddress()"]
+  end
+
+  SIGNER --> KHOOK --> CK --> FKG --> JOIN --> IDX --> R1 --> R2 --> R3 --> VERIFY --> FINALIZE --> MAP
+
+  subgraph SIDECAR["xmr-frost-signer Sidecar (Rust)"]
+    ROUTER["Axum routes /v1/monero/* + /health"]
+    AUTH["Auth middleware\n(bearer/basic required on protected routes)"]
+    DKGC["frost::dkg::DkgCoordinator"]
+    SIGNC["frost::sign::SignCoordinator"]
+    SCANSYNC["scanner_sync handler\n(canonical scan + rollback/rescan)"]
+    STORE["Encrypted Store\n(vaults, key shares, outputs, outgoing)"]
+    DAEMON["Monero daemon RPC"]
+  end
+
+  ADAPTER --> ROUTER
+  BCALL --> ROUTER
+  TRANSFERS --> ROUTER
+  BAL --> ROUTER
+  R1 --> ROUTER
+  R2 --> ROUTER
+  R3 --> ROUTER
+  FINALIZE --> ROUTER
+
+  ROUTER --> AUTH
+  AUTH --> DKGC
+  AUTH --> SIGNC
+  AUTH --> SCANSYNC
+  DKGC --> STORE
+  SIGNC --> STORE
+  SIGNC --> DAEMON
+  SCANSYNC --> DAEMON
+  SCANSYNC --> STORE
+
+  subgraph SOLVENCY["Side Path: Solvency / Fees"]
+    SOLV["SolvencyCheckRunner -> ReportSolvency()"]
+    SOLVQ["globalSolvencyQueue -> AttestSolvency()"]
+    FEE["Scanner.GetNetworkFee()/lastFee"]
+    NQ["globalNetworkFeeQueue -> AttestNetworkFee()"]
+  end
+
+  XMR_CLIENT --> SOLV --> SOLVQ
+  XMR_CLIENT --> FEE --> NQ

@@ -158,10 +158,17 @@ func processSolvencyAttestation(
 // insolvent usually means vault has more coins than wallet
 // return true means the vault is insolvent , the network should halt , otherwise false
 func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.Coins, chain common.Chain) bool {
-	adjustVault, err := excludePendingOutboundFromVault(ctx, mgr, vault)
+	adjustVault, pendingOutbounds, err := excludePendingOutboundFromVault(ctx, mgr, vault)
 	if err != nil {
 		ctx.Logger().Error("fail to exclude pending outbound from vault, assuming insolvent", "error", err)
 		return true
+	}
+	originalAmounts := make(map[string]cosmos.Uint, len(vault.Coins))
+	for _, c := range vault.Coins {
+		if !c.Asset.Chain.Equals(chain) {
+			continue
+		}
+		originalAmounts[c.Asset.String()] = c.Amount
 	}
 	// Get the permitted solvency gap in RUNE (converted from USD)
 	permittedGapInRune := mgr.Keeper().DollarConfigInRune(ctx, constants.PermittedSolvencyGapUSD)
@@ -176,6 +183,8 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 			continue
 		}
 		walletCoin := coins.GetCoin(c.Asset)
+		pendingAmount := pendingOutbounds[c.Asset.String()]
+		originalAmount := originalAmounts[c.Asset.String()]
 
 		// Compute the gap between vault and wallet balances.
 		gap := cosmos.ZeroUint()
@@ -191,6 +200,17 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 		// Convert the gap to RUNE value using the pool
 		pool, err := mgr.Keeper().GetPool(ctx, c.Asset.GetLayer1Asset())
 		if err != nil {
+			if pendingRagnarokOutboundsExplainGap(ctx, mgr, nil, c.Asset, originalAmount, walletCoin.Amount, pendingAmount) {
+				ctx.Logger().Error(
+					"missing pool solvency gap explained by pending ragnarok outbounds",
+					"asset", c.Asset.String(),
+					"original", originalAmount.String(),
+					"wallet", walletCoin.Amount.String(),
+					"pending", pendingAmount.String(),
+					"gap", gap.String(),
+				)
+				continue
+			}
 			ctx.Logger().Error("fail to get pool for solvency check", "asset", c.Asset.String(), "error", err)
 			// If we can't get the pool, treat as insolvent to be safe
 			return true
@@ -200,6 +220,17 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 		// Treat as insolvent to be conservative: a zero-liquidity pool should not
 		// allow a real insolvency to go undetected.
 		if gapInRune.IsZero() && !gap.IsZero() {
+			if pendingRagnarokOutboundsExplainGap(ctx, mgr, &pool, c.Asset, originalAmount, walletCoin.Amount, pendingAmount) {
+				ctx.Logger().Error(
+					"unpriceable solvency gap explained by pending ragnarok outbounds",
+					"asset", c.Asset.String(),
+					"original", originalAmount.String(),
+					"wallet", walletCoin.Amount.String(),
+					"pending", pendingAmount.String(),
+					"gap", gap.String(),
+				)
+				continue
+			}
 			ctx.Logger().Info("cannot value gap for solvency check (pool has no liquidity), treating as insolvent", "asset", c.Asset.String(), "gap", gap.String())
 			return true
 		}
@@ -211,7 +242,35 @@ func insolvencyCheck(ctx cosmos.Context, mgr Manager, vault Vault, coins common.
 	return false
 }
 
-func excludePendingOutboundFromVault(ctx cosmos.Context, mgr Manager, vault Vault) (Vault, error) {
+func pendingRagnarokOutboundsExplainGap(
+	ctx cosmos.Context,
+	mgr Manager,
+	pool *Pool,
+	asset common.Asset,
+	originalAmount cosmos.Uint,
+	walletAmount cosmos.Uint,
+	pendingAmount cosmos.Uint,
+) bool {
+	if originalAmount.IsNil() || originalAmount.IsZero() || pendingAmount.IsNil() || pendingAmount.IsZero() {
+		return false
+	}
+	if walletAmount.IsNil() {
+		walletAmount = cosmos.ZeroUint()
+	}
+	if !mgr.Keeper().IsRagnarok(ctx, []common.Asset{asset.GetLayer1Asset()}) {
+		return false
+	}
+	if pool != nil && !(pool.Status == PoolStaged || pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero()) {
+		return false
+	}
+	if !originalAmount.GT(walletAmount) {
+		return false
+	}
+	shortage := originalAmount.Sub(walletAmount)
+	return pendingAmount.GTE(shortage)
+}
+
+func excludePendingOutboundFromVault(ctx cosmos.Context, mgr Manager, vault Vault) (Vault, map[string]cosmos.Uint, error) {
 	// Deep copy vault coins to avoid mutating the caller's slice backing array.
 	// Element-by-element copy ensures the pass-by-value contract is honored,
 	// even if future code modifies Amount in-place rather than via SafeSub.
@@ -220,6 +279,7 @@ func excludePendingOutboundFromVault(ctx cosmos.Context, mgr Manager, vault Vaul
 		coinsCopy[i] = common.NewCoin(c.Asset, c.Amount)
 	}
 	vault.Coins = coinsCopy
+	pendingOutbounds := make(map[string]cosmos.Uint)
 
 	// go back SigningTransactionPeriod blocks to see whether there are outstanding tx, the vault need to send out
 	// if there is , deduct it from their balance
@@ -232,20 +292,24 @@ func excludePendingOutboundFromVault(ctx cosmos.Context, mgr Manager, vault Vaul
 		blockOut, err := mgr.Keeper().GetTxOut(ctx, i)
 		if err != nil {
 			ctx.Logger().Error("fail to get block tx out", "error", err)
-			return vault, fmt.Errorf("fail to get block tx out, err: %w", err)
+			return vault, pendingOutbounds, fmt.Errorf("fail to get block tx out, err: %w", err)
 		}
-		vault = deductVaultBlockPendingOutbound(vault, blockOut)
+		vault, pendingOutbounds = deductVaultBlockPendingOutbound(ctx, mgr, vault, blockOut, pendingOutbounds)
 	}
-	return vault, nil
+	return vault, pendingOutbounds, nil
 }
 
-func deductVaultBlockPendingOutbound(vault Vault, block *TxOut) Vault {
+func deductVaultBlockPendingOutbound(ctx cosmos.Context, mgr Manager, vault Vault, block *TxOut, pendingOutbounds map[string]cosmos.Uint) (Vault, map[string]cosmos.Uint) {
 	for _, txOutItem := range block.TxArray {
 		if !txOutItem.VaultPubKey.Equals(vault.PubKey) {
 			continue
 		}
 		// only still outstanding txout will be considered
 		if !txOutItem.OutHash.IsEmpty() {
+			continue
+		}
+		if strings.HasPrefix(strings.ToUpper(txOutItem.Memo), "RAGNAROK") &&
+			!mgr.Keeper().IsRagnarok(ctx, []common.Asset{txOutItem.Coin.Asset.GetLayer1Asset()}) {
 			continue
 		}
 		// deduct the gas asset from the vault as well
@@ -255,12 +319,26 @@ func deductVaultBlockPendingOutbound(vault Vault, block *TxOut) Vault {
 		}
 		for i, vaultCoin := range vault.Coins {
 			if vaultCoin.Asset.Equals(txOutItem.Coin.Asset) {
+				addPendingOutbound(pendingOutbounds, txOutItem.Coin)
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, txOutItem.Coin.Amount)
 			}
 			if vaultCoin.Asset.Equals(gasCoin.Asset) {
+				addPendingOutbound(pendingOutbounds, gasCoin)
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, gasCoin.Amount)
 			}
 		}
 	}
-	return vault
+	return vault, pendingOutbounds
+}
+
+func addPendingOutbound(pendingOutbounds map[string]cosmos.Uint, coin common.Coin) {
+	if coin.IsEmpty() {
+		return
+	}
+	key := coin.Asset.String()
+	if existing, ok := pendingOutbounds[key]; ok {
+		pendingOutbounds[key] = existing.Add(coin.Amount)
+		return
+	}
+	pendingOutbounds[key] = coin.Amount
 }

@@ -52,7 +52,7 @@ func (h AddLiquidityHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resu
 func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	if !msg.Tx.ID.IsBlank() { // don't validate tx if internal txn
 		if err := msg.ValidateBasic(); err != nil {
-			ctx.Logger().Error(err.Error())
+			ctx.Logger().Error("msg add liquidity fail validation", "error", err)
 			return errAddLiquidityFailValidation
 		}
 	}
@@ -140,6 +140,11 @@ func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) e
 		}
 	}
 
+	assetSender := common.ResolveObservedSender(msg.Asset.GetLayer1Asset().GetChain(), msg.AssetAddress)
+	txSender := msg.Tx.ObservedSender()
+	isXMRUnknownSenderObserved := msg.Asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) &&
+		(assetSender.RefundAddressRequired || txSender.RefundAddressRequired)
+
 	if !msg.AssetAddress.IsEmpty() {
 		// If the needsSwap check disallows a cross-chain AssetAddress,
 		// a position with pending RUNE cannot be completed with Asset,
@@ -149,7 +154,7 @@ func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) e
 			if !msg.AssetAddress.IsChain(common.THORChain) {
 				return errAddLiquidityMismatchAddr
 			}
-		} else if !msg.AssetAddress.IsChain(msg.Asset.GetLayer1Asset().GetChain()) {
+		} else if !isXMRUnknownSenderObserved && !msg.AssetAddress.IsChain(msg.Asset.GetLayer1Asset().GetChain()) {
 			return errAddLiquidityMismatchAddr
 		}
 
@@ -227,6 +232,15 @@ func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) err
 		return h.swap(ctx, msg)
 	}
 
+	txSender := msg.Tx.ObservedSender()
+	assetAddress := msg.AssetAddress
+	if msg.Asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) && txSender.RefundAddressRequired {
+		// Monero inbound observations cannot reliably recover the sender address.
+		// Normalize the asset-side address here as a final guard so staged LP
+		// reconciliation can reuse the paired address from the RUNE-side memo.
+		assetAddress = txSender.Address
+	}
+
 	// Use L1 pool for secured assets only, don't change behaviour for synths
 	asset := msg.Asset
 	if asset.IsSecuredAsset() {
@@ -290,7 +304,7 @@ func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) err
 			msg.RuneAmount,
 			msg.AssetAmount,
 			msg.RuneAddress,
-			msg.AssetAddress,
+			assetAddress,
 			msg.Tx.ID,
 			stage,
 			h.mgr.GetConstants())
@@ -308,7 +322,7 @@ func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) err
 		userRune,
 		userAsset,
 		msg.RuneAddress,
-		msg.AssetAddress,
+		assetAddress,
 		msg.Tx.ID,
 		stage,
 		h.mgr.GetConstants(),
@@ -544,33 +558,79 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	if fetchAddr.IsEmpty() {
 		fetchAddr = assetAddr
 	}
+	effectiveRuneAddr := runeAddr
+	effectiveAssetAddr := assetAddr
+	// addLiquidity is called both from handle(), which pre-normalizes XMR
+	// unknown senders to NoAddress, and from direct/unit-test paths that can
+	// still supply the raw xmrunknown marker. Re-resolve here so both entry
+	// points converge on the same staged-LP behavior.
+	effectiveAssetSender := common.ResolveObservedSender(asset.GetLayer1Asset().GetChain(), effectiveAssetAddr)
+	if asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) && effectiveAssetSender.RefundAddressRequired {
+		// Monero inbound observations cannot recover the sender address, so the
+		// asset-side tx may arrive with an xmrunknown marker instead of the user's
+		// real address. Preserve the staged LP address instead of treating that as
+		// a mismatched counterparty.
+		effectiveAssetAddr = effectiveAssetSender.Address
+	}
 	su, err := h.mgr.Keeper().GetLiquidityProvider(ctx, asset, fetchAddr)
 	if err != nil {
 		return ErrInternal(err, "fail to get liquidity provider")
+	}
+	if asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) &&
+		!effectiveRuneAddr.IsEmpty() &&
+		!effectiveAssetAddr.IsEmpty() {
+		// Once a real XMR asset address is known, do not allow a different RUNE
+		// address to bind against an existing LP record for that same asset-side
+		// address. Unknown-sender staging still works, but it cannot overwrite an
+		// established LP pairing.
+		//
+		// Keeper only indexes LPs by the canonical fetch address, so this is
+		// currently an O(n) scan across the asset LP set. That is acceptable for
+		// the low-cardinality XMR pool today; add a reverse index if LP counts
+		// grow enough for this guard to become hot.
+		iter := h.mgr.Keeper().GetLiquidityProviderIterator(ctx, asset)
+		defer iter.Close()
+		for ; iter.Valid(); iter.Next() {
+			var assetLP types.LiquidityProvider
+			if err = h.mgr.Keeper().Cdc().Unmarshal(iter.Value(), &assetLP); err != nil {
+				return ErrInternal(err, "fail to decode liquidity provider")
+			}
+			if assetLP.AssetAddress.Equals(effectiveAssetAddr) &&
+				!assetLP.RuneAddress.IsEmpty() &&
+				!assetLP.RuneAddress.Equals(effectiveRuneAddr) {
+				return errAddLiquidityMismatchAddr
+			}
+		}
 	}
 
 	su.LastAddHeight = ctx.BlockHeight()
 	if su.Units.IsZero() {
 		if su.PendingTxID.IsEmpty() {
 			if su.RuneAddress.IsEmpty() {
-				su.RuneAddress = runeAddr
+				su.RuneAddress = effectiveRuneAddr
 			}
 			if su.AssetAddress.IsEmpty() {
-				su.AssetAddress = assetAddr
+				su.AssetAddress = effectiveAssetAddr
 			}
 		}
 
 		if asset.IsSyntheticAsset() {
 			// new SU, by default, places the thor address to the rune address,
 			// but here we want it to be on the asset address only
-			su.AssetAddress = assetAddr
+			su.AssetAddress = effectiveAssetAddr
 			su.RuneAddress = common.NoAddress // no rune to add/withdraw
 		} else {
+			if su.RuneAddress.IsEmpty() {
+				su.RuneAddress = effectiveRuneAddr
+			}
+			if su.AssetAddress.IsEmpty() {
+				su.AssetAddress = effectiveAssetAddr
+			}
 			// ensure input addresses match LP position addresses
-			if !runeAddr.Equals(su.RuneAddress) {
+			if !effectiveRuneAddr.IsEmpty() && !effectiveRuneAddr.Equals(su.RuneAddress) {
 				return errAddLiquidityMismatchAddr
 			}
-			if !assetAddr.Equals(su.AssetAddress) {
+			if !effectiveAssetAddr.IsEmpty() && !effectiveAssetAddr.Equals(su.AssetAddress) {
 				return errAddLiquidityMismatchAddr
 			}
 		}
@@ -580,7 +640,7 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 		if su.AssetAddress.IsEmpty() || !su.AssetAddress.IsChain(asset.GetLayer1Asset().GetChain()) {
 			return errAddLiquidityMismatchAddr
 		}
-	} else if !assetAddr.IsEmpty() && !su.AssetAddress.Equals(assetAddr) {
+	} else if !effectiveAssetAddr.IsEmpty() && !su.AssetAddress.Equals(effectiveAssetAddr) {
 		// mismatch of asset addresses from what is known to the address
 		// given. Refund it.
 		return errAddLiquidityMismatchAddr

@@ -2,18 +2,23 @@
 # Config
 ########################################################################################
 
-# trunk-ignore-all(yamllint/empty-values)
-
 volumes:
-  cli:
-  thornode:
-  thornode-cat:
-  thornode-fox:
-  thornode-pig:
-  bifrost:
-  bifrost-cat:
-  bifrost-fox:
-  bifrost-pig:
+  cli: {}
+  thornode: {}
+  thornode-cat: {}
+  thornode-fox: {}
+  thornode-pig: {}
+  bifrost: {}
+  bifrost-cat: {}
+  bifrost-fox: {}
+  bifrost-pig: {}
+  monero-daemon: {}
+  monero-wallet: {}
+  xmr-frost-data: {}
+  xmr-frost-data-cat: {}
+  xmr-frost-data-fox: {}
+  xmr-frost-data-pig: {}
+  xmr-sim-data: {}
 
 ########################################################################################
 # Services
@@ -141,7 +146,11 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
-      start_period: 10s
+      # Clean-volume mocknet boots can spend tens of seconds validating genesis,
+      # upgrading IAVL stores, and importing the first state before RPC is ready.
+      # Keep the container in "starting" during that bootstrap window so cluster
+      # depends_on checks do not abort while thornode is still legitimately coming up.
+      start_period: 60s
 
   thornode:
     <<: *thornode
@@ -167,15 +176,19 @@ services:
       - mocknet-cluster
       - bifrost
       - validator
-    depends_on:
+    depends_on: &bifrost-depends-on
       - bitcoin
       - bitcoin-cash
       - dogecoin
       - gaia
       - litecoin
+      - monero-daemon
+      - monero-wallet-rpc
+      - xmr-frost-signer
       - tron-supernode
       - tron-fullnode
       - thornode
+      - solana
       - polygon
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -200,7 +213,8 @@ services:
       BIFROST_SIGNER_BACKUP_KEYSHARES: "true"
       BIFROST_SIGNER_RESCHEDULE_BUFFER_BLOCKS: "5"
       BIFROST_SIGNER_AUTO_OBSERVE: "false"
-      BIFROST_SIGNER_KEYGEN_TIMEOUT: 6s
+      BIFROST_SIGNER_KEYGEN_TIMEOUT: 20s
+      BIFROST_SIGNER_FROST_KEYGEN_TIMEOUT: 300s
       BIFROST_SIGNER_KEYSIGN_TIMEOUT: 6s
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_BCH_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
@@ -248,6 +262,15 @@ services:
       BIFROST_CHAINS_XRP_DISABLED: "${BIFROST_CHAINS_XRP_DISABLED:-false}"
       BIFROST_CHAINS_XRP_RPC_HOST: http://xrp:5005
       BIFROST_CHAINS_XRP_CHAIN_NETWORK: "1234"
+
+      # enable xmr
+      BIFROST_CHAINS_XMR_DISABLED: "${BIFROST_CHAINS_XMR_DISABLED:-false}"
+      BIFROST_CHAINS_XMR_RPC_HOST: http://monero-daemon:18081
+      BIFROST_CHAINS_XMR_CHAIN_HOST: http://monero-wallet-rpc:18082
+      BIFROST_CHAINS_XMR_CHAIN_NETWORK: "mocknet"
+      BIFROST_CHAINS_XMR_DISABLE_TLS: "true"
+      BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer:8283"
+      BIFROST_CHAINS_XMR_AUTHORIZATION_BEARER: "${XMR_FROST_AUTH_BEARER:-xmr-frost-mocknet-token}"
 
       # enable tron
       BIFROST_CHAINS_TRON_DISABLED: "${BIFROST_CHAINS_TRON_DISABLED:-false}"
@@ -417,14 +440,26 @@ services:
     profiles:
       - mocknet-cluster
     depends_on:
-      thornode:
-        condition: service_healthy
+      - bitcoin
+      - bitcoin-cash
+      - dogecoin
+      - gaia
+      - litecoin
+      - monero-daemon
+      - monero-wallet-rpc
+      - xmr-frost-signer
+      - xmr-frost-signer-cat
+      - tron-supernode
+      - tron-fullnode
+      - thornode
+      - polygon
     environment:
       <<: *bifrost-environment
       PEER: bifrost
       CHAIN_API: thornode-cat:1317
       CHAIN_RPC: thornode-cat:26657
       BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-cat:50051
+      BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer-cat:8283"
       SIGNER_SEED_PHRASE: "cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat crawl"
     ports:
       - 5040
@@ -440,14 +475,26 @@ services:
     profiles:
       - mocknet-cluster
     depends_on:
-      thornode:
-        condition: service_healthy
+      - bitcoin
+      - bitcoin-cash
+      - dogecoin
+      - gaia
+      - litecoin
+      - monero-daemon
+      - monero-wallet-rpc
+      - xmr-frost-signer
+      - xmr-frost-signer-fox
+      - tron-supernode
+      - tron-fullnode
+      - thornode
+      - polygon
     environment:
       <<: *bifrost-environment
       PEER: bifrost
       CHAIN_API: thornode-fox:1317
       CHAIN_RPC: thornode-fox:26657
       BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-fox:50051
+      BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer-fox:8283"
       SIGNER_SEED_PHRASE: "fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox filter"
     ports:
       - 5040
@@ -463,14 +510,26 @@ services:
     profiles:
       - mocknet-cluster
     depends_on:
-      thornode:
-        condition: service_healthy
+      - bitcoin
+      - bitcoin-cash
+      - dogecoin
+      - gaia
+      - litecoin
+      - monero-daemon
+      - monero-wallet-rpc
+      - xmr-frost-signer
+      - xmr-frost-signer-pig
+      - tron-supernode
+      - tron-fullnode
+      - thornode
+      - polygon
     environment:
       <<: *bifrost-environment
       PEER: bifrost
       CHAIN_API: thornode-pig:1317
       CHAIN_RPC: thornode-pig:26657
       BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-pig:50051
+      BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer-pig:8283"
       SIGNER_SEED_PHRASE: "pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig quick"
     ports:
       - 5040
@@ -491,6 +550,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
+    restart: unless-stopped
     image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-27.2.0
     volumes:
       - "./mocknet:/mocknet"
@@ -508,6 +568,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
+    restart: unless-stopped
     image: registry.gitlab.com/thorchain/devops/node-launcher:noble-daemon-9.0.4
     volumes:
       - "./mocknet:/mocknet"
@@ -562,12 +623,14 @@ services:
       - mocknet-cluster
     image: registry.gitlab.com/thorchain/devops/node-launcher:dogecoin-daemon-1.14.9
     restart: unless-stopped
+    volumes:
+      - "./mocknet:/mocknet"
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-1}
       DOGE_MASTER_ADDR: ${DOGE_MASTER_ADDR:-mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo}
     ports:
       - 18332:18332
-    entrypoint: "/scripts/entrypoint-mock.sh"
+    entrypoint: "/mocknet/dogecoin-entrypoint.sh"
 
   # ------------------------------ litecoin ------------------------------
 
@@ -637,6 +700,192 @@ services:
       - "../scripts:/docker/scripts"
     entrypoint: /docker/scripts/xrp/start-xrp.sh
 
+  # ------------------------------ monero ------------------------------
+
+  monero-daemon:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    build:
+      context: ./mocknet/monero
+      dockerfile: Dockerfile
+    image: thornode-monero-mocknet:latest
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/daemon-entrypoint.sh
+    volumes:
+      - monero-daemon:/var/lib/monero
+    ports:
+      - 18081:18081
+      - 18080:18080
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sf",
+          "-H",
+          "Content-Type: application/json",
+          "-d",
+          '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}',
+          "http://localhost:18081/json_rpc",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
+  monero-wallet-rpc:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: thornode-monero-mocknet:latest
+    restart: unless-stopped
+    depends_on:
+      monero-daemon:
+        condition: service_healthy
+    entrypoint: /usr/local/bin/wallet-entrypoint.sh
+    environment:
+      XMR_DAEMON_HOST: monero-daemon
+      XMR_DAEMON_PORT: "18081"
+      XMR_WALLET_NAME: mocknet
+      XMR_WALLET_PASSWORD: password
+    volumes:
+      - monero-wallet:/var/lib/monero-wallet
+    ports:
+      - 18082:18082
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sf",
+          "-H",
+          "Content-Type: application/json",
+          "-d",
+          '{"jsonrpc":"2.0","id":"0","method":"get_address"}',
+          "http://localhost:18082/json_rpc",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 15s
+
+  # ------------------------------ xmr-frost-signer ------------------------------
+
+  xmr-frost-signer: &xmr-frost-signer
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: ${XMR_FROST_SIGNER_IMAGE:-registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer:boonew-xmr-frost-signer}
+    restart: unless-stopped
+    user: root
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        chown -R serai:serai /home/serai/xmr-frost &&
+        exec runuser -u serai -- /bin/sh -lc 'if [ -x /usr/local/bin/xmr-frost-signer ];
+        then exec /usr/local/bin/xmr-frost-signer; elif [ -x /bin/service ]; then
+        exec /bin/service; else echo >&2 "missing xmr-frost-signer entrypoint";
+        exit 127; fi'
+    depends_on:
+      monero-daemon:
+        condition: service_healthy
+    environment:
+      XMR_FROST_LISTEN_ADDR: "0.0.0.0:8283"
+      XMR_FROST_DAEMON_URL: "http://monero-daemon:18081"
+      XMR_FROST_DATA_DIR: "/home/serai/xmr-frost"
+      XMR_FROST_CHAIN_NETWORK: "mocknet"
+      XMR_FROST_MAX_SIGN_SCAN_LAG_BLOCKS: "32"
+      XMR_FROST_RATE_LIMIT_GLOBAL_RPS: "500"
+      XMR_FROST_RATE_LIMIT_GLOBAL_BURST: "5000"
+      XMR_FROST_RATE_LIMIT_PER_IP_RPS: "500"
+      XMR_FROST_RATE_LIMIT_PER_IP_BURST: "5000"
+      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+      XMR_FROST_AUTH_BEARER: "${XMR_FROST_AUTH_BEARER:-xmr-frost-mocknet-token}"
+    volumes:
+      - xmr-frost-data:/home/serai/xmr-frost
+    ports:
+      - 8283:8283
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8283'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  xmr-frost-signer-cat:
+    <<: *xmr-frost-signer
+    profiles:
+      - mocknet-cluster
+    volumes:
+      - xmr-frost-data-cat:/home/serai/xmr-frost
+    ports: []
+
+  xmr-frost-signer-fox:
+    <<: *xmr-frost-signer
+    profiles:
+      - mocknet-cluster
+    volumes:
+      - xmr-frost-data-fox:/home/serai/xmr-frost
+    ports: []
+
+  xmr-frost-signer-pig:
+    <<: *xmr-frost-signer
+    profiles:
+      - mocknet-cluster
+    volumes:
+      - xmr-frost-data-pig:/home/serai/xmr-frost
+    ports: []
+
+  xmr-sim-helper:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: ${XMR_FROST_SIGNER_IMAGE:-registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer:boonew-xmr-frost-signer}
+    restart: unless-stopped
+    user: root
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        chown -R serai:serai /home/serai/xmr-sim &&
+        exec runuser -u serai -- /bin/sh -lc 'if [ -x /usr/local/bin/xmr-frost-signer ];
+        then exec /usr/local/bin/xmr-frost-signer; elif [ -x /bin/service ]; then
+        exec /bin/service; else echo >&2 "missing xmr-frost-signer entrypoint";
+        exit 127; fi'
+    depends_on:
+      monero-daemon:
+        condition: service_healthy
+      monero-wallet-rpc:
+        condition: service_healthy
+      xmr-frost-signer:
+        condition: service_healthy
+    environment:
+      XMR_FROST_LISTEN_ADDR: "0.0.0.0:8284"
+      XMR_FROST_DAEMON_URL: "http://monero-daemon:18081"
+      XMR_FROST_DATA_DIR: "/home/serai/xmr-sim"
+      XMR_FROST_CHAIN_NETWORK: "mocknet"
+      XMR_FROST_MAX_SIGN_SCAN_LAG_BLOCKS: "32"
+      XMR_FROST_RATE_LIMIT_GLOBAL_RPS: "500"
+      XMR_FROST_RATE_LIMIT_GLOBAL_BURST: "5000"
+      XMR_FROST_RATE_LIMIT_PER_IP_RPS: "500"
+      XMR_FROST_RATE_LIMIT_PER_IP_BURST: "5000"
+      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+      XMR_FROST_AUTH_BEARER: "${XMR_SIM_HELPER_AUTH_BEARER:-xmr-sim-helper-mocknet-token}"
+      XMR_SIM_HELPER_ENABLED: "true"
+      XMR_SIM_HELPER_WALLET_RPC_URL: "http://monero-wallet-rpc:18082"
+    volumes:
+      - xmr-sim-data:/home/serai/xmr-sim
+    ports:
+      - 8284:8284
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8284'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
   # ------------------------------ binance-smart ------------------------------
 
   binance-smart:
@@ -670,6 +919,8 @@ services:
       - --http-host=0.0.0.0
       - --chain-config-dir=/mocknet/configs
       - --http-allowed-hosts=*
+      - --system-tracker-disk-required-available-space-percentage=0
+      - --system-tracker-disk-warning-available-space-percentage=0
     ports:
       - 9650:9650
     environment:
@@ -677,21 +928,27 @@ services:
 
   # ------------------------------ tron ------------------------------
   # The fullnode must wait for the supernode to be healthy before starting.
-  # Without this, both nodes try to connect simultaneously, triggering DUPLICATE_PEER
-  # detection which closes both connections. The fullnode ends up with 0 peers and
-  # fails to sync blocks, causing simulation tests to timeout waiting for tron.
+  # Starting the fullnode too early can trigger DUPLICATE_PEER / seed resolution
+  # races that leave it stuck at block 0 with no peers for the rest of the run.
+  # Waiting for several produced blocks and seeding via the stable service alias
+  # makes tron bootstrap deterministic in simulation.
 
   tron-supernode:
     profiles:
       - mocknet
       - mocknet-cluster
+    restart: unless-stopped
     image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.1
+    entrypoint: /mocknet/tron-entrypoint.sh
     volumes:
       - "./mocknet:/mocknet"
     environment:
       TRON_NODE_TYPE: mocknet-supernode
     healthcheck:
-      # Wait for supernode to produce block 1 before fullnode connects
+      # Wait for the supernode to produce several blocks before fullnode
+      # connects. On slower local Docker hosts, especially under amd64
+      # emulation, block production can lag long enough that a block-10 check
+      # trips false negatives even though the node is healthy and advancing.
       test:
         [
           "CMD",
@@ -702,19 +959,21 @@ services:
           "-H",
           "Content-Type: application/json",
           "-d",
-          '{"num":1}',
+          '{"num":5}',
           "http://localhost:8090/wallet/getblockbynum",
         ]
       interval: 3s
       timeout: 5s
-      retries: 30
-      start_period: 10s
+      retries: 120
+      start_period: 20s
 
   tron-fullnode:
     profiles:
       - mocknet
       - mocknet-cluster
+    restart: unless-stopped
     image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.1
+    entrypoint: /mocknet/tron-entrypoint.sh
     depends_on:
       tron-supernode:
         condition: service_healthy

@@ -12,16 +12,21 @@ import (
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 )
 
 var m *metrics.Metrics
 
 func SetupThorchainForTest(c *C) (config.BifrostClientConfiguration, *cKeys.Record, cKeys.Keyring) {
-	thorchain.SetupConfigForTest()
-	cfg := config.BifrostClientConfiguration{
+	cfg := sdk.GetConfig()
+	cfg.SetBech32PrefixForAccount("tthor", "tthorpub")
+	cfg.SetBech32PrefixForValidator("tthorv", "tthorvpub")
+	cfg.SetBech32PrefixForConsensusNode("tthorc", "tthorcpub")
+	cfg.SetCoinType(cmd.THORChainCoinType)
+	cfg.SetPurpose(cmd.THORChainCoinPurpose)
+	clientCfg := config.BifrostClientConfiguration{
 		ChainID:         "thorchain",
 		ChainHost:       "localhost",
 		ChainRPC:        "localhost",
@@ -38,10 +43,10 @@ func SetupThorchainForTest(c *C) (config.BifrostClientConfiguration, *cKeys.Reco
 	hdPath := params.String()
 
 	// create a consistent user
-	record, err := kb.NewAccount(cfg.SignerName, "industry segment educate height inject hover bargain offer employ select speak outer video tornado story slow chief object junk vapor venue large shove behave", cfg.SignerPasswd, hdPath, hd.Secp256k1)
+	record, err := kb.NewAccount(clientCfg.SignerName, "industry segment educate height inject hover bargain offer employ select speak outer video tornado story slow chief object junk vapor venue large shove behave", clientCfg.SignerPasswd, hdPath, hd.Secp256k1)
 	c.Assert(err, IsNil)
 
-	return cfg, record, kb
+	return clientCfg, record, kb
 }
 
 func GetMetricForTest(c *C) *metrics.Metrics {

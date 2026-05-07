@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"fmt"
-
 	storetypes "cosmossdk.io/core/store"
 	"cosmossdk.io/log"
 
@@ -47,7 +45,7 @@ func NewKeeper(
 
 // Logger returns a logger for the x/denom module
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+	return ctx.Logger().With("module", "x/"+types.ModuleName)
 }
 
 // CreateModuleAccount creates a module account with minting and burning capabilities

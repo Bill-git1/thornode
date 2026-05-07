@@ -22,6 +22,7 @@ COPY config config
 COPY constants constants
 COPY log log
 COPY openapi openapi
+COPY scripts/check-env.sh scripts/check-env.sh
 COPY x x
 COPY Makefile Makefile
 COPY version version

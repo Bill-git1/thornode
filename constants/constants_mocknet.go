@@ -36,7 +36,7 @@ func init() {
 		FundMigrationInterval:               15,
 		LiquidityLockUpBlocks:               0,
 		MaxRuneSupply:                       500_000_000_00000000,
-		JailTimeKeygen:                      10,
+		JailTimeKeygen:                      30,
 		JailTimeKeysign:                     10,
 		AsgardSize:                          6,
 		StreamingSwapMinBPFee:               100, // TODO: remove on hard fork

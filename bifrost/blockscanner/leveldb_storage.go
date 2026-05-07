@@ -15,7 +15,8 @@ type LevelDBScannerStorage struct {
 }
 
 const (
-	ScanPosKey = "blockscanpos"
+	ScanPosKey           = "blockscanpos"
+	blockStatusKeyPrefix = "block-process-status-"
 )
 
 // BlockStatusItem indicate the status of a block
@@ -63,7 +64,7 @@ func (ldbss *LevelDBScannerStorage) SetBlockScanStatus(block Block, status Block
 
 // GetFailedBlocksForRetry
 func (ldbss *LevelDBScannerStorage) GetBlocksForRetry(failedOnly bool) ([]Block, error) {
-	iterator := ldbss.db.NewIterator(util.BytesPrefix([]byte("block-process-status-")), nil)
+	iterator := ldbss.db.NewIterator(util.BytesPrefix([]byte(blockStatusKeyPrefix)), nil)
 	defer iterator.Release()
 	var results []Block
 	for iterator.Next() {
@@ -87,11 +88,36 @@ func (ldbss *LevelDBScannerStorage) GetBlocksForRetry(failedOnly bool) ([]Block,
 }
 
 func getBlockStatusKey(block int64) string {
-	return fmt.Sprintf("block-process-status-%d", block)
+	return fmt.Sprintf("%s%d", blockStatusKeyPrefix, block)
 }
 
 func (ldbss *LevelDBScannerStorage) RemoveBlockStatus(block int64) error {
 	return ldbss.db.Delete([]byte(getBlockStatusKey(block)), nil)
+}
+
+func (ldbss *LevelDBScannerStorage) PurgeFromHeight(height int64) (int, error) {
+	err := ldbss.SetScanPos(height)
+	if err != nil {
+		return 0, fmt.Errorf("fail to set scan pos: %w", err)
+	}
+	iterator := ldbss.db.NewIterator(util.BytesPrefix([]byte(blockStatusKeyPrefix)), nil)
+	defer iterator.Release()
+	var removed int
+	for iterator.Next() {
+		var item BlockStatusItem
+		err = json.Unmarshal(iterator.Value(), &item)
+		if err != nil {
+			continue
+		}
+		if item.Block.Height >= height {
+			err = ldbss.db.Delete(iterator.Key(), nil)
+			if err != nil {
+				return removed, fmt.Errorf("fail to delete block status at %d: %w", item.Block.Height, err)
+			}
+			removed++
+		}
+	}
+	return removed, nil
 }
 
 func (ldbss *LevelDBScannerStorage) Close() error {

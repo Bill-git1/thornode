@@ -10,11 +10,11 @@ RUN mkdir /simtest
 WORKDIR /app
 COPY go.mod go.sum ./
 COPY test/simulation/go.mod test/simulation/go.sum ./test/simulation/
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 WORKDIR /app/test/simulation
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 WORKDIR /app
 
 COPY . .
 
-RUN --mount=type=cache,target=/root/.cache/go-build make _build-test-simulation
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build make _build-test-simulation

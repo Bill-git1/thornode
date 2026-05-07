@@ -33,7 +33,7 @@ func (s *ProviderTestSuite) TestLbankProvider(c *C) {
 	provider.Poll()
 
 	// does one request per asset, so wait for them to complete
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(500 * time.Millisecond)
 
 	tickers, err := provider.GetTickers()
 	c.Assert(err, IsNil)
@@ -62,7 +62,7 @@ func (s *ProviderTestSuite) TestLbankProvider(c *C) {
 
 	provider.Start()
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(500 * time.Millisecond)
 
 	tickers, err = provider.GetTickers()
 	c.Assert(err, IsNil)

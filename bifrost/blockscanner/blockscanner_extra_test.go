@@ -726,6 +726,28 @@ func (s *BlockScannerExtraSuite) TestGetStartHeightChainHeight(c *C) {
 	c.Check(scanner.PreviousHeight(), Equals, int64(200))
 }
 
+func (s *BlockScannerExtraSuite) TestGetStartHeightThorBackfillsRecentWindow(c *C) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.RequestURI, "/status"):
+			_, _ = w.Write([]byte(`{"result":{"sync_info":{"catching_up":false}}}`))
+		case strings.HasPrefix(r.RequestURI, "/thorchain/lastblock"):
+			_, _ = w.Write([]byte(`[{"chain":"","last_observed_in":0,"last_signed_out":0,"thorchain":1200}]`))
+		}
+	}))
+	defer server.Close()
+	bridge := s.makeBridge(c, server)
+
+	mss := NewMockScannerStorage()
+	fetcher := &configFetcher{chainHeight: 1200}
+	scanner, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
+		ChainID:           common.THORChain,
+		MaxResumeBlockLag: time.Hour,
+	}, mss, m, bridge, fetcher)
+	c.Assert(err, IsNil)
+	c.Check(scanner.PreviousHeight(), Equals, int64(600))
+}
+
 func (s *BlockScannerExtraSuite) TestStartStopWithMempoolDisabled(c *C) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {

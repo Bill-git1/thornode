@@ -180,13 +180,21 @@ func (s *SignatureNotifier) sendOneMsgToPeer(m *signatureItem) error {
 	if err != nil {
 		return fmt.Errorf("fail to write message to stream:%w", err)
 	}
-	// we wait for 1 second to allow the receive notify us
-	if err := stream.SetReadDeadline(time.Now().Add(time.Second * 1)); nil != err {
+	// Wait for the receiver ack without assuming the underlying stream supports deadlines.
+	ackResult := make(chan error, 1)
+	go func() {
+		ret := make([]byte, 8)
+		_, readErr := stream.Read(ret)
+		ackResult <- readErr
+	}()
+
+	select {
+	case err := <-ackResult:
 		return err
+	case <-time.After(time.Second):
+		_ = stream.Reset()
+		return fmt.Errorf("timeout waiting for signature ack")
 	}
-	ret := make([]byte, 8)
-	_, err = stream.Read(ret)
-	return err
 }
 
 // BroadcastSignature sending the keysign signature to all other peers

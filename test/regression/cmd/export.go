@@ -58,6 +58,7 @@ func export(out io.Writer, path string, routine int, failExportInvariants bool) 
 	thorchain, _ := appState["thorchain"].(map[string]any)
 	delete(thorchain, "store_version")
 	deleteEmptySpentOutputRefs(thorchain)
+	deleteEmptyPOLReserveDeposits(thorchain)
 
 	// ignore node account version for comparison
 	nodeAccounts, _ := thorchain["node_accounts"].([]interface{})
@@ -306,6 +307,7 @@ func checkExportChanges(out io.Writer, newExport map[string]any, path string) er
 	if appState, ok := oldExport["app_state"].(map[string]any); ok {
 		if thorchain, ok := appState["thorchain"].(map[string]any); ok {
 			deleteEmptySpentOutputRefs(thorchain)
+			deleteEmptyPOLReserveDeposits(thorchain)
 		}
 	}
 
@@ -375,6 +377,12 @@ func deleteEmptySpentOutputRefs(value any) {
 		for _, child := range v {
 			deleteEmptySpentOutputRefs(child)
 		}
+	}
+}
+
+func deleteEmptyPOLReserveDeposits(thorchain map[string]any) {
+	if deposits, ok := thorchain["pol_reserve_deposits"]; ok && isEmptyJSONList(deposits) {
+		delete(thorchain, "pol_reserve_deposits")
 	}
 }
 

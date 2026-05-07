@@ -208,6 +208,8 @@ var (
 	fd_TssVoter_majority_consensus_block_height protoreflect.FieldDescriptor
 	fd_TssVoter_secp256k1_signatures            protoreflect.FieldDescriptor
 	fd_TssVoter_pool_pub_key_eddsa              protoreflect.FieldDescriptor
+	fd_TssVoter_pool_pub_key_frost              protoreflect.FieldDescriptor
+	fd_TssVoter_observed_monero_height          protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -222,6 +224,8 @@ func init() {
 	fd_TssVoter_majority_consensus_block_height = md_TssVoter.Fields().ByName("majority_consensus_block_height")
 	fd_TssVoter_secp256k1_signatures = md_TssVoter.Fields().ByName("secp256k1_signatures")
 	fd_TssVoter_pool_pub_key_eddsa = md_TssVoter.Fields().ByName("pool_pub_key_eddsa")
+	fd_TssVoter_pool_pub_key_frost = md_TssVoter.Fields().ByName("pool_pub_key_frost")
+	fd_TssVoter_observed_monero_height = md_TssVoter.Fields().ByName("observed_monero_height")
 }
 
 var _ protoreflect.Message = (*fastReflection_TssVoter)(nil)
@@ -343,6 +347,18 @@ func (x *fastReflection_TssVoter) Range(f func(protoreflect.FieldDescriptor, pro
 			return
 		}
 	}
+	if x.PoolPubKeyFrost != "" {
+		value := protoreflect.ValueOfString(x.PoolPubKeyFrost)
+		if !f(fd_TssVoter_pool_pub_key_frost, value) {
+			return
+		}
+	}
+	if x.ObservedMoneroHeight != int64(0) {
+		value := protoreflect.ValueOfInt64(x.ObservedMoneroHeight)
+		if !f(fd_TssVoter_observed_monero_height, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -376,6 +392,10 @@ func (x *fastReflection_TssVoter) Has(fd protoreflect.FieldDescriptor) bool {
 		return len(x.Secp256K1Signatures) != 0
 	case "types.TssVoter.pool_pub_key_eddsa":
 		return x.PoolPubKeyEddsa != ""
+	case "types.TssVoter.pool_pub_key_frost":
+		return x.PoolPubKeyFrost != ""
+	case "types.TssVoter.observed_monero_height":
+		return x.ObservedMoneroHeight != int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssVoter"))
@@ -410,6 +430,10 @@ func (x *fastReflection_TssVoter) Clear(fd protoreflect.FieldDescriptor) {
 		x.Secp256K1Signatures = nil
 	case "types.TssVoter.pool_pub_key_eddsa":
 		x.PoolPubKeyEddsa = ""
+	case "types.TssVoter.pool_pub_key_frost":
+		x.PoolPubKeyFrost = ""
+	case "types.TssVoter.observed_monero_height":
+		x.ObservedMoneroHeight = int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssVoter"))
@@ -465,6 +489,12 @@ func (x *fastReflection_TssVoter) Get(descriptor protoreflect.FieldDescriptor) p
 	case "types.TssVoter.pool_pub_key_eddsa":
 		value := x.PoolPubKeyEddsa
 		return protoreflect.ValueOfString(value)
+	case "types.TssVoter.pool_pub_key_frost":
+		value := x.PoolPubKeyFrost
+		return protoreflect.ValueOfString(value)
+	case "types.TssVoter.observed_monero_height":
+		value := x.ObservedMoneroHeight
+		return protoreflect.ValueOfInt64(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssVoter"))
@@ -511,6 +541,10 @@ func (x *fastReflection_TssVoter) Set(fd protoreflect.FieldDescriptor, value pro
 		x.Secp256K1Signatures = *clv.list
 	case "types.TssVoter.pool_pub_key_eddsa":
 		x.PoolPubKeyEddsa = value.Interface().(string)
+	case "types.TssVoter.pool_pub_key_frost":
+		x.PoolPubKeyFrost = value.Interface().(string)
+	case "types.TssVoter.observed_monero_height":
+		x.ObservedMoneroHeight = value.Int()
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssVoter"))
@@ -565,6 +599,10 @@ func (x *fastReflection_TssVoter) Mutable(fd protoreflect.FieldDescriptor) proto
 		panic(fmt.Errorf("field majority_consensus_block_height of message types.TssVoter is not mutable"))
 	case "types.TssVoter.pool_pub_key_eddsa":
 		panic(fmt.Errorf("field pool_pub_key_eddsa of message types.TssVoter is not mutable"))
+	case "types.TssVoter.pool_pub_key_frost":
+		panic(fmt.Errorf("field pool_pub_key_frost of message types.TssVoter is not mutable"))
+	case "types.TssVoter.observed_monero_height":
+		panic(fmt.Errorf("field observed_monero_height of message types.TssVoter is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssVoter"))
@@ -600,6 +638,10 @@ func (x *fastReflection_TssVoter) NewField(fd protoreflect.FieldDescriptor) prot
 		return protoreflect.ValueOfList(&_TssVoter_8_list{list: &list})
 	case "types.TssVoter.pool_pub_key_eddsa":
 		return protoreflect.ValueOfString("")
+	case "types.TssVoter.pool_pub_key_frost":
+		return protoreflect.ValueOfString("")
+	case "types.TssVoter.observed_monero_height":
+		return protoreflect.ValueOfInt64(int64(0))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssVoter"))
@@ -711,6 +753,13 @@ func (x *fastReflection_TssVoter) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
+		l = len(x.PoolPubKeyFrost)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.ObservedMoneroHeight != 0 {
+			n += 1 + runtime.Sov(uint64(x.ObservedMoneroHeight))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -739,6 +788,18 @@ func (x *fastReflection_TssVoter) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if x.ObservedMoneroHeight != 0 {
+			i = runtime.EncodeVarint(dAtA, i, uint64(x.ObservedMoneroHeight))
+			i--
+			dAtA[i] = 0x58
+		}
+		if len(x.PoolPubKeyFrost) > 0 {
+			i -= len(x.PoolPubKeyFrost)
+			copy(dAtA[i:], x.PoolPubKeyFrost)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.PoolPubKeyFrost)))
+			i--
+			dAtA[i] = 0x52
 		}
 		if len(x.PoolPubKeyEddsa) > 0 {
 			i -= len(x.PoolPubKeyEddsa)
@@ -1118,6 +1179,57 @@ func (x *fastReflection_TssVoter) ProtoMethods() *protoiface.Methods {
 				}
 				x.PoolPubKeyEddsa = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
+			case 10:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PoolPubKeyFrost", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.PoolPubKeyFrost = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 11:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ObservedMoneroHeight", wireType)
+				}
+				x.ObservedMoneroHeight = 0
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					x.ObservedMoneroHeight |= int64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -1180,6 +1292,8 @@ type TssVoter struct {
 	MajorityConsensusBlockHeight int64    `protobuf:"varint,7,opt,name=majority_consensus_block_height,json=majorityConsensusBlockHeight,proto3" json:"majority_consensus_block_height,omitempty"`
 	Secp256K1Signatures          []string `protobuf:"bytes,8,rep,name=secp256k1_signatures,json=secp256k1Signatures,proto3" json:"secp256k1_signatures,omitempty"`
 	PoolPubKeyEddsa              string   `protobuf:"bytes,9,opt,name=pool_pub_key_eddsa,json=poolPubKeyEddsa,proto3" json:"pool_pub_key_eddsa,omitempty"`
+	PoolPubKeyFrost              string   `protobuf:"bytes,10,opt,name=pool_pub_key_frost,json=poolPubKeyFrost,proto3" json:"pool_pub_key_frost,omitempty"`
+	ObservedMoneroHeight         int64    `protobuf:"varint,11,opt,name=observed_monero_height,json=observedMoneroHeight,proto3" json:"observed_monero_height,omitempty"`
 }
 
 func (x *TssVoter) Reset() {
@@ -1265,13 +1379,27 @@ func (x *TssVoter) GetPoolPubKeyEddsa() string {
 	return ""
 }
 
+func (x *TssVoter) GetPoolPubKeyFrost() string {
+	if x != nil {
+		return x.PoolPubKeyFrost
+	}
+	return ""
+}
+
+func (x *TssVoter) GetObservedMoneroHeight() int64 {
+	if x != nil {
+		return x.ObservedMoneroHeight
+	}
+	return 0
+}
+
 var File_types_type_tss_proto protoreflect.FileDescriptor
 
 var file_types_type_tss_proto_rawDesc = []byte{
 	0x0a, 0x14, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x74, 0x73, 0x73,
 	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x74, 0x79, 0x70, 0x65, 0x73, 0x1a, 0x14, 0x67,
 	0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x67, 0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x22, 0xc7, 0x03, 0x0a, 0x08, 0x54, 0x73, 0x73, 0x56, 0x6f, 0x74, 0x65, 0x72,
+	0x6f, 0x74, 0x6f, 0x22, 0xe2, 0x04, 0x0a, 0x08, 0x54, 0x73, 0x73, 0x56, 0x6f, 0x74, 0x65, 0x72,
 	0x12, 0x16, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06, 0xe2, 0xde,
 	0x1f, 0x02, 0x49, 0x44, 0x52, 0x02, 0x69, 0x64, 0x12, 0x54, 0x0a, 0x0c, 0x70, 0x6f, 0x6f, 0x6c,
 	0x5f, 0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x32,
@@ -1299,16 +1427,26 @@ var file_types_type_tss_proto_rawDesc = []byte{
 	0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61,
 	0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63,
 	0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x52, 0x0f, 0x70, 0x6f,
-	0x6f, 0x6c, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x45, 0x64, 0x64, 0x73, 0x61, 0x42, 0x85, 0x01,
-	0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0c, 0x54, 0x79, 0x70,
-	0x65, 0x54, 0x73, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74,
-	0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69,
-	0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70,
-	0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05,
-	0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11,
-	0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74,
-	0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0xd8, 0xe1, 0x1e,
-	0x00, 0x80, 0xe2, 0x1e, 0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x6c, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x45, 0x64, 0x64, 0x73, 0x61, 0x12, 0x63, 0x0a,
+	0x12, 0x70, 0x6f, 0x6f, 0x6c, 0x5f, 0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x5f, 0x66, 0x72,
+	0x6f, 0x73, 0x74, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x09, 0x42, 0x36, 0xc8, 0xde, 0x1f, 0x01, 0xfa,
+	0xde, 0x1f, 0x2e, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68,
+	0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65,
+	0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x50, 0x75, 0x62, 0x4b, 0x65,
+	0x79, 0x52, 0x0f, 0x70, 0x6f, 0x6f, 0x6c, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x46, 0x72, 0x6f,
+	0x73, 0x74, 0x12, 0x34, 0x0a, 0x16, 0x6f, 0x62, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x5f, 0x6d,
+	0x6f, 0x6e, 0x65, 0x72, 0x6f, 0x5f, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x0b, 0x20, 0x01,
+	0x28, 0x03, 0x52, 0x14, 0x6f, 0x62, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x4d, 0x6f, 0x6e, 0x65,
+	0x72, 0x6f, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x42, 0x85, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d,
+	0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0c, 0x54, 0x79, 0x70, 0x65, 0x54, 0x73, 0x73, 0x50,
+	0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f,
+	0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70,
+	0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54,
+	0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0xd8, 0xe1, 0x1e, 0x00, 0x80, 0xe2, 0x1e, 0x00,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

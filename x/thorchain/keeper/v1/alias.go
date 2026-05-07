@@ -41,9 +41,10 @@ const (
 	BurnSupplyType = types.MintBurnSupplyType_burn
 
 	// Bond type
-	AsgardKeygen = types.KeygenType_AsgardKeygen
-	BondCost     = types.BondType_bond_cost
-	BondReturned = types.BondType_bond_returned
+	AsgardKeygen       = types.KeygenType_AsgardKeygen
+	XMRMonovaultKeygen = types.KeygenType_XMRMonovaultKeygen
+	BondCost           = types.BondType_bond_cost
+	BondReturned       = types.BondType_bond_returned
 )
 
 var (

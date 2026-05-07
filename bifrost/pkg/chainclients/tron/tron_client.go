@@ -355,10 +355,63 @@ func (c *TronClient) SignTx(
 	_ int64,
 ) ([]byte, []byte, *types.TxInItem, error) {
 	if c.signerCacheManager.HasSigned(txOutItem.CacheHash()) {
-		c.logger.Info().
-			Interface("tx", txOutItem).
-			Msg("transaction already signed, ignoring...")
-		return nil, nil, nil, nil
+		prevTxID, err := c.signerCacheManager.GetTransactionHash(txOutItem.CacheHash())
+		if err != nil {
+			c.logger.Warn().
+				Err(err).
+				Interface("tx", txOutItem).
+				Msg("signed tx cache missing txid mapping, re-signing tx")
+		} else {
+			prevTx, txErr := c.api.GetTransaction(prevTxID)
+			switch {
+			case txErr != nil && isTronNotFoundErr(txErr):
+				c.logger.Warn().
+					Str("txid", prevTxID).
+					Interface("tx", txOutItem).
+					Msg("cached signed tx missing from chain, re-signing tx")
+				c.signerCacheManager.RemoveSigned(prevTxID)
+			case txErr != nil:
+				c.logger.Err(txErr).
+					Str("txid", prevTxID).
+					Interface("tx", txOutItem).
+					Msg("failed to check signed tx on chain")
+				return nil, nil, nil, txErr
+			case prevTx.TxId != "":
+				prevInfo, infoErr := c.api.GetTransactionInfo(prevTxID)
+				switch {
+				case infoErr == nil && tronTransactionConfirmed(prevInfo):
+					c.logger.Info().
+						Str("txid", prevTxID).
+						Interface("tx", txOutItem).
+						Msg("transaction already signed and confirmed on chain, ignoring...")
+					return nil, nil, nil, nil
+				case infoErr == nil || isTronNotFoundErr(infoErr):
+					if !tronTransactionExpired(prevTx, time.Now()) {
+						c.logger.Info().
+							Str("txid", prevTxID).
+							Interface("tx", txOutItem).
+							Msg("transaction already signed and still pending before expiration, ignoring...")
+						return nil, nil, nil, nil
+					}
+					c.logger.Warn().
+						Str("txid", prevTxID).
+						Interface("tx", txOutItem).
+						Msg("cached signed tx is unconfirmed after expiration, re-signing tx")
+					c.signerCacheManager.RemoveSigned(prevTxID)
+				default:
+					c.logger.Err(infoErr).
+						Str("txid", prevTxID).
+						Interface("tx", txOutItem).
+						Msg("failed to check signed tx confirmation on chain")
+					return nil, nil, nil, infoErr
+				}
+			default:
+				c.logger.Err(txErr).
+					Interface("tx", txOutItem).
+					Msg("cached signed tx missing txid on chain, re-signing tx")
+				c.signerCacheManager.RemoveSigned(prevTxID)
+			}
+		}
 	}
 
 	if len(c.tronScanner.refBlocks) == 0 {
@@ -384,6 +437,7 @@ func (c *TronClient) SignTx(
 
 	var err error
 	var tronTx api.Transaction
+	memo := txOutItem.GetMemo()
 
 	fromAddress := c.GetAddress(txOutItem.VaultPubKey)
 
@@ -393,7 +447,7 @@ func (c *TronClient) SignTx(
 			fromAddress,
 			txOutItem.ToAddress.String(),
 			coin.Amount.Quo(math.NewUint(100)).Uint64(), // 1e8 -> 1e6
-			txOutItem.Memo,
+			memo,
 		)
 		if err != nil {
 			c.logger.Err(err).Msg("failed to create tx")
@@ -478,7 +532,7 @@ func (c *TronClient) SignTx(
 	tronTx.RawData.RefBlockHash = refBlockHash
 	tronTx.RawData.Timestamp = timestamp
 	tronTx.RawData.Expiration = timestamp + TimestampValidity.Milliseconds()
-	tronTx.RawData.Data = hex.EncodeToString([]byte(txOutItem.Memo))
+	tronTx.RawData.Data = hex.EncodeToString([]byte(memo))
 
 	err = tronTx.Rehash()
 	if err != nil {
@@ -522,7 +576,7 @@ func (c *TronClient) SignTx(
 	txIn := types.NewTxInItem(
 		currentHeight,
 		tronTx.TxId,
-		txOutItem.Memo,
+		memo,
 		fromAddress,
 		txOutItem.ToAddress.String(),
 		txOutItem.Coins,
@@ -577,6 +631,21 @@ func (c *TronClient) BroadcastTx(
 	}
 
 	return response.TxId, nil
+}
+
+func tronTransactionConfirmed(info api.TransactionInfo) bool {
+	return info.BlockNumber > 0 || info.ID != "" || info.Fee > 0
+}
+
+func tronTransactionExpired(tx api.Transaction, now time.Time) bool {
+	if tx.RawData.Expiration == 0 {
+		return true
+	}
+	return tx.RawData.Expiration <= now.UnixMilli()
+}
+
+func isTronNotFoundErr(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "response status: 404")
 }
 
 func (c *TronClient) ShouldReportSolvency(height int64) bool {
@@ -707,7 +776,7 @@ func (c *TronClient) sign(
 			txId, errPostKeysignFail := c.bridge.PostKeysignFailure(
 				keysignError.Blame,
 				txOutItem.Height,
-				txOutItem.Memo,
+				txOutItem.GetMemo(),
 				txOutItem.Coins,
 				txOutItem.VaultPubKey,
 			)

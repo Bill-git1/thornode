@@ -153,10 +153,10 @@ const (
 var httpClient = &http.Client{
 	Transport: &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: 5 * time.Second,
+			Timeout: 5 * time.Second * getTimeFactor(),
 		}).Dial,
 	},
-	Timeout: 5 * time.Second,
+	Timeout: 5 * time.Second * getTimeFactor(),
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

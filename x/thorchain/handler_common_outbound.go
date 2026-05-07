@@ -90,7 +90,20 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	// (assuming that most signed outbounds will have been scheduled more rather than less recently)
 	// to the current height starting from inbound consensus height
 	// or one signingTransPeriod ago, whichever is later.
-	earliestHeight := ctx.BlockHeight() - signingTransPeriod
+	//
+	// XMR outbounds use FROST threshold signing whose sign + confirmation +
+	// observation round-trip exceeds the standard SigningTransactionPeriod
+	// window. The slasher processes XMR items at xmrSigningPeriodMultiplier
+	// times the normal period (see x/thorchain/manager_slasher_current.go),
+	// so an XMR observation can legitimately reference a TxOutItem up to
+	// that many blocks old. Mirror that lookback here so the match loop can
+	// find the original TxOutItem instead of falsely slashing the signer
+	// for a "missing tx out".
+	searchPeriod := signingTransPeriod
+	if tx.Tx.Chain.Equals(common.XMRChain) {
+		searchPeriod = signingTransPeriod * xmrSigningPeriodMultiplier
+	}
+	earliestHeight := ctx.BlockHeight() - searchPeriod
 	if voter.Height > earliestHeight {
 		earliestHeight = voter.Height
 	}
@@ -141,8 +154,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 				tx.Tx.ToAddress.Equals(txOutItem.ToAddress) &&
 				strings.ToLower(tx.Aggregator) == strings.ToLower(txOutItem.Aggregator) &&
 				strings.ToLower(tx.AggregatorTarget) == strings.ToLower(txOutItem.AggregatorTargetAsset) &&
-				(tx.ObservedPubKey.Equals(txOutItem.VaultPubKey) ||
-					tx.ObservedPubKey.Equals(txOutItem.VaultPubKeyEddsa)) {
+				txOutPubKeyMatchesObserved(tx.Tx.Chain, tx.ObservedPubKey, txOutItem) {
 
 				matchCoin := tx.Tx.Coins.EqualsEx(common.Coins{txOutItem.Coin})
 				if !matchCoin {

@@ -1,17 +1,20 @@
 package thorclient
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	cometed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/hashicorp/go-retryablehttp"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/cmd"
@@ -35,7 +38,7 @@ var _ = Suite(&ThorchainSuite{})
 
 func (s *ThorchainSuite) SetUpTest(c *C) {
 	cfg2 := cosmos.GetConfig()
-	cfg2.SetBech32PrefixForAccount(cmd.Bech32PrefixAccAddr, cmd.Bech32PrefixAccAddr)
+	cfg2.SetBech32PrefixForAccount("tthor", "tthorpub")
 	cfg, _, kb := SetupThorchainForTest(c)
 	s.cfg = cfg
 	s.server = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -91,6 +94,48 @@ func (s *ThorchainSuite) TearDownTest(c *C) {
 func (s *ThorchainSuite) TestGetThorChainURL(c *C) {
 	uri := s.bridge.getThorChainURL("")
 	c.Assert(uri, Equals, "http://"+s.server.Listener.Addr().String())
+}
+
+func TestGetKeysignPartyReadsVaultMembership(t *testing.T) {
+	vaultPubKey := stypes.GetRandomPubKey()
+	members := common.PubKeys{
+		stypes.GetRandomPubKey(),
+		stypes.GetRandomPubKey(),
+	}
+	var requestedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		requestedPath = req.URL.Path
+		rw.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(rw).Encode(map[string]any{
+			"block_height": 100,
+			"pub_key":      vaultPubKey.String(),
+			"coins":        []string{},
+			"type":         "AsgardVault",
+			"status":       "ActiveVault",
+			"membership":   members.Strings(),
+		}); err != nil {
+			t.Fatalf("failed to encode vault response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	httpClient := retryablehttp.NewClient()
+	httpClient.Logger = nil
+	bridge := &thorchainBridge{
+		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
+		httpClient: httpClient,
+	}
+
+	party, err := bridge.GetKeysignParty(vaultPubKey)
+	if err != nil {
+		t.Fatalf("GetKeysignParty returned error: %v", err)
+	}
+	if requestedPath != "/thorchain/vault/"+vaultPubKey.String() {
+		t.Fatalf("expected vault endpoint, got %s", requestedPath)
+	}
+	if !party.Equals(members) {
+		t.Fatalf("expected members %v, got %v", members, party)
+	}
 }
 
 func httpTestHandler(c *C, rw http.ResponseWriter, fixture string) {
@@ -165,6 +210,82 @@ func (s *ThorchainSuite) TestSign(c *C) {
 	_, out, err := s.bridge.GetInboundOutbound(common.ObservedTxs{tx})
 	c.Assert(out, NotNil)
 	c.Assert(err, IsNil)
+}
+
+func (s *ThorchainSuite) TestGetInboundOutboundXMRRequiresDerivableObservedAddress(c *C) {
+	pk := stypes.GetRandomPubKey()
+	tx := common.NewObservedTx(
+		common.Tx{
+			Chain: common.XMRChain,
+			Coins: common.Coins{
+				common.NewCoin(common.XMRAsset, cosmos.NewUint(123400000)),
+			},
+			FromAddress: common.Address(common.XMRChecksummedDummyAddress('8')),
+			ToAddress:   common.Address(common.XMRChecksummedDummyAddress('4')),
+		},
+		1,
+		pk,
+		1,
+	)
+
+	_, _, err := s.bridge.GetInboundOutbound(common.ObservedTxs{tx})
+	c.Assert(err, NotNil)
+	c.Assert(strings.Contains(err.Error(), "xmr observed vault pubkey"), Equals, true)
+}
+
+func (s *ThorchainSuite) TestGetInboundOutboundXMRInboundWithEddsaObservedPubKey(c *C) {
+	pk, err := common.NewPubKeyFromCrypto(cometed25519.GenPrivKey().PubKey())
+	c.Assert(err, IsNil)
+	vaultAddr, err := pk.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	tx := common.NewObservedTx(
+		common.Tx{
+			Chain: common.XMRChain,
+			Coins: common.Coins{
+				common.NewCoin(common.XMRAsset, cosmos.NewUint(123400000)),
+			},
+			Memo:        "SWAP:XMR.XMR:thor1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0l5m4g",
+			FromAddress: common.Address(common.XMRChecksummedDummyAddress('8')),
+			ToAddress:   vaultAddr,
+		},
+		1,
+		pk,
+		1,
+	)
+
+	in, out, err := s.bridge.GetInboundOutbound(common.ObservedTxs{tx})
+	c.Assert(err, IsNil)
+	c.Assert(in, HasLen, 1)
+	c.Assert(out, HasLen, 0)
+}
+
+func (s *ThorchainSuite) TestGetInboundOutboundXMROutboundWithEddsaObservedPubKey(c *C) {
+	pk, err := common.NewPubKeyFromCrypto(cometed25519.GenPrivKey().PubKey())
+	c.Assert(err, IsNil)
+	vaultAddr, err := pk.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	tx := common.NewObservedTx(
+		common.Tx{
+			Chain: common.XMRChain,
+			Coins: common.Coins{
+				common.NewCoin(common.XMRAsset, cosmos.NewUint(123400000)),
+			},
+			Memo:        "OUT:ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890",
+			FromAddress: vaultAddr,
+			ToAddress:   common.Address(common.XMRChecksummedDummyAddress('8')),
+		},
+		1,
+		pk,
+		100,
+	)
+
+	in, out, err := s.bridge.GetInboundOutbound(common.ObservedTxs{tx})
+	c.Assert(err, IsNil)
+	c.Assert(in, HasLen, 0)
+	c.Assert(out, HasLen, 1)
+	c.Assert(out[0].FinaliseHeight > out[0].BlockHeight, Equals, true)
 }
 
 func (ThorchainSuite) TestNewThorchainBridge(c *C) {
@@ -261,7 +382,15 @@ func (s *ThorchainSuite) TestGetAsgards(c *C) {
 func (s *ThorchainSuite) TestGetPubKeys(c *C) {
 	pks, err := s.bridge.GetPubKeys()
 	c.Assert(err, IsNil)
-	c.Assert(pks, HasLen, 7)
+	c.Assert(pks, HasLen, 8)
+	foundFrost := false
+	for _, pk := range pks {
+		if pk.Algo == common.SigningAlgoEd25519 && pk.PubKey.String() == "tthorpub1zcjduepqfrostvaultpubkeyforxmrtest000000000000000000" {
+			foundFrost = true
+			break
+		}
+	}
+	c.Assert(foundFrost, Equals, true)
 }
 
 func (s *ThorchainSuite) TestPostNetworkFee(c *C) {

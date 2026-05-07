@@ -52,7 +52,7 @@ func (s *ProviderTestSuite) TestDigifinexProvider(c *C) {
 
 	provider.Start()
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(500 * time.Millisecond)
 
 	tickers, err = provider.GetTickers()
 	c.Assert(err, IsNil)

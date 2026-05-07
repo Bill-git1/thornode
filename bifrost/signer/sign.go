@@ -2,11 +2,14 @@ package signer
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +27,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/observer"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients"
+	chainclienttypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
@@ -56,6 +60,60 @@ type Signer struct {
 	tssKeysignMetricMgr   *metrics.TssKeysignMetricMgr
 	observer              *observer.Observer
 	pipeline              *pipeline
+}
+
+type pendingKeygenBroadcast struct {
+	height               int64
+	poolPk               common.PubKey
+	secp256k1Signature   []byte
+	blame                []ttypes.Blame
+	input                common.PubKeys
+	keygenType           ttypes.KeygenType
+	chains               common.Chains
+	keygenTime           int64
+	poolPubKeyEddsa      common.PubKey
+	poolPubKeyFrost      common.PubKey
+	frostKeyshareHex     string
+	observedMoneroHeight int64
+}
+
+type keygenBackups struct {
+	keyshares      []byte
+	keysharesEddsa []byte
+	keysharesFrost []byte
+}
+
+var (
+	encryptKeysharesFn    = tss.EncryptKeyshares
+	encryptRawKeysharesFn = tss.EncryptRawKeyshares
+)
+
+type vaultLocker interface {
+	GetVaultLock(vaultPubKey string) *sync.Mutex
+}
+
+type vaultLockKeyResolver interface {
+	GetVaultLockKey(tx types.TxOutItem) string
+}
+
+func chainVaultLock(chain chainclients.ChainClient, vaultPubKey string) *sync.Mutex {
+	lockable, ok := chain.(vaultLocker)
+	if !ok {
+		return nil
+	}
+	return lockable.GetVaultLock(vaultPubKey)
+}
+
+func chainVaultLockKey(chain chainclients.ChainClient, tx types.TxOutItem) string {
+	resolver, ok := chain.(vaultLockKeyResolver)
+	if !ok {
+		return tx.VaultPubKey.String()
+	}
+	key := strings.TrimSpace(resolver.GetVaultLockKey(tx))
+	if key == "" {
+		return tx.VaultPubKey.String()
+	}
+	return key
 }
 
 // NewSigner create a new instance of signer
@@ -170,7 +228,16 @@ func (s *Signer) Start() error {
 }
 
 func (s *Signer) shouldSign(tx types.TxOutItem) bool {
-	return s.pubkeyMgr.HasPubKey(tx.VaultPubKey) || s.pubkeyMgr.HasPubKey(tx.VaultPubKeyEddsa)
+	return s.pubkeyMgr.HasPubKey(tx.VaultPubKey) ||
+		s.pubkeyMgr.HasPubKey(tx.VaultPubKeyEddsa) ||
+		s.pubkeyMgr.HasPubKey(tx.VaultPubKeyFrost)
+}
+
+func (s *Signer) shouldAutoObserve(tx types.TxOutItem) bool {
+	// Monero outbounds need sign-time observation even when global auto-observe is disabled.
+	// The chain scanner can later see the mined tx as an incoming change output, which is
+	// insufficient to attribute the scheduled outbound on THORChain.
+	return s.cfg.Signer.AutoObserve || tx.Chain.Equals(common.XMRChain)
 }
 
 // signTransactions - looks for work to do by getting a list of all unsigned
@@ -360,55 +427,271 @@ func (s *Signer) scheduleKeygenRetry(keygenBlock ttypes.KeygenBlock) bool {
 	return true
 }
 
+func singleKeygenBlock(height int64, keygen ttypes.Keygen) ttypes.KeygenBlock {
+	return ttypes.KeygenBlock{
+		Height:  height,
+		Keygens: []ttypes.Keygen{keygen},
+	}
+}
+
 func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 	s.logger.Info().Interface("keygenBlock", keygenBlock).Msg("processing keygen block")
+	pendingBroadcasts := make([]pendingKeygenBroadcast, 0, len(keygenBlock.Keygens))
 
 	// NOTE: in practice there is only one keygen in the keygen block
 	for _, keygenReq := range keygenBlock.Keygens {
 		keygenStart := time.Now()
-		pubKey, blame, err := s.tssKeygen.GenerateNewKey(keygenBlock.Height, keygenReq.GetMembers())
-		if len(blame) > 0 {
-			for _, b := range blame {
-				s.logger.Error().
-					Str("reason", b.FailReason).
-					Interface("nodes", b.BlameNodes).
-					Msg("keygen blame")
-			}
-		}
 		keygenTime := time.Since(keygenStart).Milliseconds()
+		keygenChains := s.keygenChainsForType(keygenReq.Type)
+		var pubKey common.PubKeySet
+		var blame []ttypes.Blame
+		var frostPubKey common.PubKey
+		var frostKeyshareHex string
+		var observedMoneroHeight int64
+		var err error
+		var secp256k1Sig []byte
 
-		if err != nil {
-			s.errCounter.WithLabelValues("fail_to_keygen_pubkey", "").Inc()
-			s.logger.Error().Err(err).Msg("fail to generate new pubkey")
-		}
-
-		// re-enqueue the keygen block to retry if we failed to generate a key
-		if pubKey.Secp256k1.IsEmpty() || pubKey.Ed25519.IsEmpty() {
-			if s.scheduleKeygenRetry(keygenBlock) {
-				return
+		switch keygenReq.Type {
+		case ttypes.KeygenType_XMRMonovaultKeygen:
+			pubKey.Ed25519, frostPubKey, frostKeyshareHex, observedMoneroHeight, err = s.runCustomKeygenHooks(
+				keygenChains,
+				keygenReq.GetMembers().Strings(),
+				keygenBlock.Height,
+				common.EmptyPubKey,
+				common.EmptyPubKey,
+			)
+			if err != nil {
+				s.errCounter.WithLabelValues("fail_custom_keygen_hook", "").Inc()
+				s.logger.Error().Err(err).Interface("keygenBlock", keygenBlock).Msg("xmr monovault keygen hooks failed")
+				if s.scheduleKeygenRetry(singleKeygenBlock(keygenBlock.Height, keygenReq)) {
+					continue
+				}
+				s.logger.Error().Interface("keygen", keygenReq).Msg("done with keygen retries after xmr monovault keygen failure")
+				continue
 			}
-			s.logger.Error().Interface("keygenBlock", keygenBlock).Msg("done with keygen retries")
+			if pubKey.Ed25519.IsEmpty() {
+				pubKey.Ed25519 = frostPubKey
+			}
+			if frostPubKey.IsEmpty() {
+				frostPubKey = pubKey.Ed25519
+			}
+			pubKey.Secp256k1 = frostPubKey
+		default:
+			pubKey, blame, err = s.tssKeygen.GenerateNewKey(keygenBlock.Height, keygenReq.GetMembers())
+			if len(blame) > 0 {
+				for _, b := range blame {
+					s.logger.Error().
+						Str("reason", b.FailReason).
+						Interface("nodes", b.BlameNodes).
+						Msg("keygen blame")
+				}
+			}
+			if err != nil {
+				s.errCounter.WithLabelValues("fail_to_keygen_pubkey", "").Inc()
+				s.logger.Error().Err(err).Msg("fail to generate new pubkey")
+			}
+
+			// re-enqueue the keygen block to retry if we failed to generate a key
+			if pubKey.Secp256k1.IsEmpty() || pubKey.Ed25519.IsEmpty() {
+				if s.scheduleKeygenRetry(singleKeygenBlock(keygenBlock.Height, keygenReq)) {
+					continue
+				}
+				s.logger.Error().Interface("keygen", keygenReq).Msg("done with keygen retries")
+				continue
+			}
+
+			// Give chain clients with custom keygen logic a chance to initialize chain-specific
+			// signer state (for example Monero multisig address mapping) before keygen is finalized.
+			pubKey.Ed25519, frostPubKey, frostKeyshareHex, observedMoneroHeight, err = s.runCustomKeygenHooks(
+				keygenChains,
+				keygenReq.GetMembers().Strings(),
+				keygenBlock.Height,
+				pubKey.Secp256k1,
+				pubKey.Ed25519,
+			)
+			if err != nil {
+				s.errCounter.WithLabelValues("fail_custom_keygen_hook", "").Inc()
+				s.logger.Error().Err(err).Interface("keygenBlock", keygenBlock).Msg("custom keygen hooks failed")
+				if s.scheduleKeygenRetry(singleKeygenBlock(keygenBlock.Height, keygenReq)) {
+					continue
+				}
+				s.logger.Error().Interface("keygen", keygenReq).Msg("done with keygen retries after custom keygen hook failure")
+				continue
+			}
+
+			// generate a verification signature to ensure we can sign with the new key
+			secp256k1Sig = s.secp256k1VerificationSignature(pubKey.Secp256k1)
 		}
 
-		// generate a verification signature to ensure we can sign with the new key
-		secp256k1Sig := s.secp256k1VerificationSignature(pubKey.Secp256k1)
+		if pubKey.Secp256k1.IsEmpty() || pubKey.Ed25519.IsEmpty() {
+			if s.scheduleKeygenRetry(singleKeygenBlock(keygenBlock.Height, keygenReq)) {
+				continue
+			}
+			s.logger.Error().Interface("keygen", keygenReq).Msg("done with keygen retries after empty keygen result")
+			continue
+		}
 
-		if err = s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, secp256k1Sig, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime, pubKey.Ed25519); err != nil {
+		pendingBroadcasts = append(pendingBroadcasts, pendingKeygenBroadcast{
+			height:               keygenBlock.Height,
+			poolPk:               pubKey.Secp256k1,
+			secp256k1Signature:   secp256k1Sig,
+			blame:                blame,
+			input:                keygenReq.GetMembers(),
+			keygenType:           keygenReq.Type,
+			chains:               keygenChains,
+			keygenTime:           keygenTime,
+			poolPubKeyEddsa:      pubKey.Ed25519,
+			poolPubKeyFrost:      frostPubKey,
+			frostKeyshareHex:     frostKeyshareHex,
+			observedMoneroHeight: observedMoneroHeight,
+		})
+	}
+
+	s.flushPendingKeygenBroadcasts(pendingBroadcasts)
+}
+
+func (s *Signer) flushPendingKeygenBroadcasts(pending []pendingKeygenBroadcast) {
+	if len(pending) == 0 {
+		return
+	}
+
+	msgs := make([]sdktypes.Msg, len(pending))
+	for i, item := range pending {
+		// Keep the final THORChain submit batched per block, but build the
+		// individual keygen messages in-process one at a time. In practice there
+		// are at most two messages here (regular Asgard + XMR monovault), and the
+		// real backup/encryption work inside buildKeygenMsg has shown signs of
+		// wedging some nodes when both builders run concurrently.
+		msg, err := s.buildKeygenMsg(item.height, item.poolPk, item.secp256k1Signature, item.blame, item.input, item.keygenType, item.chains, item.keygenTime, item.poolPubKeyEddsa, item.poolPubKeyFrost, item.frostKeyshareHex, item.observedMoneroHeight)
+		if err != nil {
 			s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
-			s.logger.Error().Err(err).Msg("fail to broadcast keygen")
+			s.logger.Error().Err(err).Str("keygen_type", item.keygenType.String()).Msg("fail to build keygen")
+			return
 		}
+		msgs[i] = msg
+	}
 
-		// monitor the new pubkey and any new members
-		if !pubKey.Secp256k1.IsEmpty() {
-			s.pubkeyMgr.AddPubKey(pubKey.Secp256k1, true, common.SigningAlgoSecp256k1)
+	txID, err := s.broadcastKeygenMsgs(pending[0].height, msgs...)
+	if err != nil {
+		s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
+		s.logger.Error().Err(err).Msg("fail to broadcast keygen")
+		return
+	}
+
+	for _, item := range pending {
+		s.logger.Info().
+			Stringer("txid", txID).
+			Int64("block", item.height).
+			Str("keygen_type", item.keygenType.String()).
+			Msg("sent keygen tx to thorchain")
+
+		// Broadcast all keygen messages for the block together so the XMR
+		// monovault vote cannot be stranded behind a separate THORChain tx path.
+		if !item.poolPk.IsEmpty() {
+			algo := common.SigningAlgoSecp256k1
+			if item.keygenType == ttypes.KeygenType_XMRMonovaultKeygen {
+				algo = common.SigningAlgoEd25519
+			}
+			s.pubkeyMgr.AddPubKey(item.poolPk, true, algo)
 		}
-		if !pubKey.Ed25519.IsEmpty() {
-			s.pubkeyMgr.AddPubKey(pubKey.Ed25519, true, common.SigningAlgoEd25519)
+		if !item.poolPubKeyEddsa.IsEmpty() {
+			s.pubkeyMgr.AddPubKey(item.poolPubKeyEddsa, true, common.SigningAlgoEd25519)
 		}
-		for _, pk := range keygenReq.GetMembers() {
+		for _, pk := range item.input {
 			s.pubkeyMgr.AddPubKey(pk, false, common.SigningAlgoSecp256k1)
 		}
 	}
+}
+
+func (s *Signer) keygenChainsForType(keygenType ttypes.KeygenType) common.Chains {
+	if keygenType == ttypes.KeygenType_XMRMonovaultKeygen {
+		return common.Chains{common.THORChain, common.XMRChain}
+	}
+	chains := common.Chains{common.THORChain}
+	for chain, chainCfg := range s.cfg.GetChains() {
+		if chainCfg.OptToRetire || chainCfg.Disabled || chain == common.XMRChain {
+			continue
+		}
+		chains = append(chains, chain)
+	}
+	return chains.Distinct()
+}
+
+func (s *Signer) runCustomKeygenHooks(
+	chains common.Chains,
+	keys []string,
+	blockHeight int64,
+	poolPubKey common.PubKey,
+	poolPubKeyEddsa common.PubKey,
+) (common.PubKey, common.PubKey, string, int64, error) {
+	version := ""
+	if v, err := s.thorchainBridge.GetThorchainVersion(); err != nil {
+		s.logger.Debug().Err(err).Msg("fail to fetch thorchain version for custom keygen")
+	} else {
+		version = v.String()
+	}
+
+	var customHookErr error
+	effectivePoolPubKeyEddsa := poolPubKeyEddsa
+	var frostPoolPubKey common.PubKey
+	var frostKeyshareHex string
+	var observedMoneroHeight int64
+	for chainID, chainClient := range s.chains {
+		if !chains.Has(chainID) {
+			continue
+		}
+		custom, ok := chainClient.(chainclients.CustomKeygenChainClient)
+		if !ok || !custom.CustomKeygen() {
+			continue
+		}
+
+		result, err := custom.Keygen(chainclienttypes.CustomKeygenRequest{
+			Members:          keys,
+			BlockHeight:      blockHeight,
+			ThorchainVersion: version,
+			PoolPubKey:       poolPubKey,
+			PoolPubKeyEddsa:  effectivePoolPubKeyEddsa,
+		})
+		if err != nil {
+			s.logger.Error().Err(err).Str("chain", chainID.String()).Msg("custom keygen failed")
+			for _, b := range result.Blame {
+				s.logger.Error().
+					Str("chain", chainID.String()).
+					Str("reason", b.FailReason).
+					Interface("nodes", b.BlameNodes).
+					Msg("custom keygen blame")
+			}
+			customHookErr = errors.Join(customHookErr, fmt.Errorf("custom keygen failed for %s: %w", chainID.String(), err))
+			continue
+		}
+		if result.FrostKeyshareHex != "" {
+			frostKeyshareHex = result.FrostKeyshareHex
+		}
+		if result.ObservedMoneroHeight > 0 {
+			observedMoneroHeight = result.ObservedMoneroHeight
+		}
+		if !result.PoolPubKeyFrost.IsEmpty() {
+			frostPoolPubKey = result.PoolPubKeyFrost
+		}
+		if chainID == common.XMRChain && !result.PoolPubKeyFrost.IsEmpty() {
+			effectivePoolPubKeyEddsa = common.EmptyPubKey
+		}
+		if !result.PoolPubKeyEddsa.IsEmpty() && !result.PoolPubKeyEddsa.Equals(effectivePoolPubKeyEddsa) {
+			effectivePoolPubKeyEddsa = result.PoolPubKeyEddsa
+			s.logger.Info().
+				Str("chain", chainID.String()).
+				Str("pool_pubkey_eddsa", result.PoolPubKeyEddsa.String()).
+				Str("pool_pubkey_frost", frostPoolPubKey.String()).
+				Msg("custom keygen updated eddsa vault pubkey (FROST group key)")
+		}
+		if !result.Address.IsEmpty() {
+			s.logger.Info().
+				Str("chain", chainID.String()).
+				Str("address", result.Address.String()).
+				Msg("custom keygen produced chain address")
+		}
+	}
+	return effectivePoolPubKeyEddsa, frostPoolPubKey, frostKeyshareHex, observedMoneroHeight, customHookErr
 }
 
 // secp256k1VerificationSignature will make a best effort to sign the public key with
@@ -440,6 +723,10 @@ func (s *Signer) secp256k1VerificationSignature(pk common.PubKey) []byte {
 	}
 
 	// build the signature
+	if len(sigBytes) < 64 {
+		s.logger.Error().Int("len", len(sigBytes)).Msg("unexpected sigBytes length")
+		return nil
+	}
 	r := new(big.Int).SetBytes(sigBytes[:32])
 	ss := new(big.Int).SetBytes(sigBytes[32:])
 	signature := &btcec.Signature{R: r, S: ss}
@@ -448,6 +735,7 @@ func (s *Signer) secp256k1VerificationSignature(pk common.PubKey) []byte {
 	spk, err := pk.Secp256K1()
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to get secp256k1 pubkey")
+		return nil
 	}
 	if !signature.Verify(data, spk) {
 		s.logger.Error().Msg("secp256k1 check signature verification failed")
@@ -458,64 +746,149 @@ func (s *Signer) secp256k1VerificationSignature(pk common.PubKey) []byte {
 	return sigBytes
 }
 
-func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp256k1Signature []byte, blame []ttypes.Blame, input common.PubKeys, keygenType ttypes.KeygenType, keygenTime int64, poolPubKeyEddsa common.PubKey) error {
-	// collect supported chains in the configuration
-	chains := common.Chains{
-		common.THORChain,
-	}
-	for chain, chainCfg := range s.cfg.GetChains() {
-		if !chainCfg.OptToRetire && !chainCfg.Disabled {
-			chains = append(chains, chain)
-		}
-	}
-
-	// make a best effort to add encrypted keyshares to the message
-	var keyshares []byte
-	var keysharesEddsa []byte
-	var err error
-	if s.cfg.Signer.BackupKeyshares {
-		seedPhrase, seedErr := common.GetSignerSeedPhrase()
-		if seedErr != nil {
-			s.logger.Error().Err(seedErr).Msg("fail to get signer seed phrase")
-		}
+func (s *Signer) buildKeygenMsg(height int64, poolPk common.PubKey, secp256k1Signature []byte, blame []ttypes.Blame, input common.PubKeys, keygenType ttypes.KeygenType, chains common.Chains, keygenTime int64, poolPubKeyEddsa common.PubKey, poolPubKeyFrost common.PubKey, frostKeyshareHex string, observedMoneroHeight int64) (sdktypes.Msg, error) {
+	secpKeysharePath := ""
+	eddsaKeysharePath := ""
+	if s.cfg.Signer.BackupKeyshares && keygenType != ttypes.KeygenType_XMRMonovaultKeygen {
 		if !poolPk.IsEmpty() {
-			keyshares, err = tss.EncryptKeyshares(
-				filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPk)),
-				seedPhrase,
-			)
-			if err != nil {
-				s.logger.Error().Err(err).Msg("fail to encrypt secp256k1 keyshares")
-			}
+			secpKeysharePath = filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPk))
 		}
 		if !poolPubKeyEddsa.IsEmpty() {
-			keysharesEddsa, err = tss.EncryptKeyshares(
-				filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPubKeyEddsa)),
-				seedPhrase,
-			)
-			if err != nil {
-				s.logger.Error().Err(err).Msg("fail to encrypt eddsa keyshares")
-			}
+			eddsaKeysharePath = filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPubKeyEddsa))
 		}
 	}
 
-	keygenMsg, err := s.thorchainBridge.GetKeygenStdTx(poolPk, secp256k1Signature, keyshares, blame, input, keygenType, chains, height, keygenTime, poolPubKeyEddsa, keysharesEddsa)
+	backups := s.buildKeygenBackups(secpKeysharePath, eddsaKeysharePath, frostKeyshareHex)
+	keygenMsg, err := s.thorchainBridge.GetKeygenStdTx(poolPk, secp256k1Signature, backups.keyshares, blame, input, keygenType, chains, height, keygenTime, poolPubKeyEddsa, backups.keysharesEddsa, backups.keysharesFrost, poolPubKeyFrost, observedMoneroHeight)
 	if err != nil {
-		return fmt.Errorf("fail to get keygen id: %w", err)
+		return nil, fmt.Errorf("fail to get keygen id: %w", err)
+	}
+	return keygenMsg, nil
+}
+
+func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp256k1Signature []byte, blame []ttypes.Blame, input common.PubKeys, keygenType ttypes.KeygenType, keygenTime int64, poolPubKeyEddsa common.PubKey, poolPubKeyFrost common.PubKey, frostKeyshareHex string, observedMoneroHeight int64) error {
+	chains := s.keygenChainsForType(keygenType)
+	keygenMsg, err := s.buildKeygenMsg(height, poolPk, secp256k1Signature, blame, input, keygenType, chains, keygenTime, poolPubKeyEddsa, poolPubKeyFrost, frostKeyshareHex, observedMoneroHeight)
+	if err != nil {
+		return err
+	}
+
+	txID, err := s.broadcastKeygenMsgs(height, keygenMsg)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Info().
+		Stringer("txid", txID).
+		Int64("block", height).
+		Str("keygen_type", keygenType.String()).
+		Msg("sent keygen tx to thorchain")
+
+	return nil
+}
+
+func (s *Signer) buildKeygenBackups(secpKeysharePath, eddsaKeysharePath, frostKeyshareHex string) keygenBackups {
+	if !s.cfg.Signer.BackupKeyshares {
+		return keygenBackups{}
+	}
+
+	type backupResult struct {
+		kind string
+		data []byte
+		err  error
+		path string
+	}
+
+	results := make(chan backupResult, 3)
+	seedPhrase, seedErr := common.GetSignerSeedPhrase()
+	if seedErr != nil {
+		s.logger.Error().Err(seedErr).Msg("fail to get signer seed phrase")
+		return keygenBackups{}
+	}
+	expected := 0
+
+	if secpKeysharePath != "" {
+		expected++
+		path := secpKeysharePath
+		go func() {
+			data, err := encryptKeysharesFn(path, seedPhrase)
+			results <- backupResult{kind: "secp256k1", data: data, err: err, path: path}
+		}()
+	}
+
+	if eddsaKeysharePath != "" {
+		if _, statErr := os.Stat(eddsaKeysharePath); statErr == nil {
+			expected++
+			path := eddsaKeysharePath
+			go func() {
+				data, err := encryptKeysharesFn(path, seedPhrase)
+				results <- backupResult{kind: "eddsa", data: data, err: err, path: path}
+			}()
+		} else if !errors.Is(statErr, os.ErrNotExist) {
+			s.logger.Error().Err(statErr).Str("path", eddsaKeysharePath).Msg("fail to stat eddsa keyshares")
+		}
+	}
+
+	if frostKeyshareHex != "" {
+		rawKey, decodeErr := hex.DecodeString(frostKeyshareHex)
+		if decodeErr != nil {
+			s.logger.Error().Err(decodeErr).Msg("fail to decode frost keyshare hex")
+		} else {
+			expected++
+			go func(raw []byte) {
+				data, err := encryptRawKeysharesFn(raw, seedPhrase)
+				results <- backupResult{kind: "frost", data: data, err: err}
+			}(rawKey)
+		}
+	}
+
+	var backups keygenBackups
+	for i := 0; i < expected; i++ {
+		result := <-results
+		if result.err != nil {
+			switch result.kind {
+			case "secp256k1":
+				s.logger.Error().Err(result.err).Str("path", result.path).Msg("fail to encrypt secp256k1 keyshares")
+			case "eddsa":
+				s.logger.Error().Err(result.err).Str("path", result.path).Msg("fail to encrypt eddsa keyshares")
+			case "frost":
+				s.logger.Error().Err(result.err).Msg("fail to encrypt frost keyshare")
+			}
+			continue
+		}
+		switch result.kind {
+		case "secp256k1":
+			backups.keyshares = result.data
+		case "eddsa":
+			backups.keysharesEddsa = result.data
+		case "frost":
+			backups.keysharesFrost = result.data
+		}
+	}
+
+	return backups
+}
+
+func (s *Signer) broadcastKeygenMsgs(height int64, msgs ...sdktypes.Msg) (common.TxID, error) {
+	if len(msgs) == 0 {
+		return common.BlankTxID, nil
 	}
 	strHeight := strconv.FormatInt(height, 10)
+	var txID common.TxID
 
 	bf := backoff.NewExponentialBackOff()
 	bf.MaxElapsedTime = time.Minute
-	return backoff.Retry(func() error {
-		txID, err := s.thorchainBridge.Broadcast(keygenMsg)
+	err := backoff.Retry(func() error {
+		var err error
+		txID, err = s.thorchainBridge.Broadcast(msgs...)
 		if err != nil {
 			s.logger.Warn().Err(err).Msg("fail to send keygen tx to thorchain")
 			s.errCounter.WithLabelValues("fail_to_send_to_thorchain", strHeight).Inc()
 			return fmt.Errorf("fail to send the tx to thorchain: %w", err)
 		}
-		s.logger.Info().Stringer("txid", txID).Int64("block", height).Msg("sent keygen tx to thorchain")
 		return nil
 	}, bf)
+	return txID, err
 }
 
 // signAndBroadcast will sign the tx and broadcast it to the corresponding chain. On
@@ -658,10 +1031,10 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		}
 	}
 
-	// If this chain provides a vault lock, hold it across sign and broadcast to avoid
-	// concurrent UTXO selection or local double-spend on ambiguous broadcast errors.
-	if locker, ok := chain.(interface{ GetVaultLock(string) *sync.Mutex }); ok {
-		lock := locker.GetVaultLock(tx.VaultPubKey.String())
+	// If the chain client exposes a vault lock, hold it for sign+broadcast so
+	// chain-specific consolidation routines cannot race normal outbounds.
+	lockKey := chainVaultLockKey(chain, tx)
+	if lock := chainVaultLock(chain, lockKey); lock != nil {
 		lock.Lock()
 		defer lock.Unlock()
 	}
@@ -675,6 +1048,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		signedTx = item.SignedTx
 		observation = item.Observation
 	} else {
+		tx.SigningID = item.Key()
 		startKeySign := time.Now()
 		signedTx, checkpoint, observation, err = chain.SignTx(tx, height)
 		if err != nil {
@@ -765,11 +1139,23 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 		Interface("tx", item.TxOutItem).
 		Msg("Signing transaction")
 
-	// a single keysign should not take longer than 5 minutes , regardless TSS or local
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), signingTimeoutForChain(item.TxOutItem.Chain))
 	checkpoint, obs, err := runWithContext(ctx, func() ([]byte, *types.TxInItem, error) {
 		return s.signAndBroadcast(item)
 	})
+
+	// Apply spent output refs from the signing observation before handling
+	// errors. The observation is populated during FROST signing and contains
+	// the real inputs consumed. Applying immediately ensures the sidecar
+	// marks outputs spent even when broadcast fails (another signer may have
+	// broadcast the same tx successfully).
+	// Fall back to the stored observation from a prior signing attempt.
+	obsForRefs := obs
+	if obsForRefs == nil {
+		obsForRefs = item.Observation
+	}
+	s.applySpentOutputRefsFromObs(item.TxOutItem, obsForRefs)
+
 	if err != nil {
 		// Always store the checkpoint of the built tx if we have one. This ensures the same
 		// vault will never attempt multiple txs for an outbound, as further protection
@@ -801,7 +1187,7 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 	cancel()
 
 	// if enabled and the observation is non-nil, instant observe the outbound
-	if s.cfg.Signer.AutoObserve && obs != nil {
+	if s.shouldAutoObserve(item.TxOutItem) && obs != nil {
 		s.observer.ObserveSigned(types.TxIn{
 			Chain:                  item.TxOutItem.Chain,
 			TxArray:                []*types.TxInItem{obs},
@@ -816,4 +1202,48 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 	if err = s.storage.Remove(item); err != nil {
 		s.logger.Error().Err(err).Msg("fail to update tx out store item")
 	}
+}
+
+func signingTimeoutForChain(chain common.Chain) time.Duration {
+	if chain.Equals(common.XMRChain) {
+		return 15 * time.Minute
+	}
+	// a single non-XMR keysign should not take longer than 5 minutes, regardless TSS or local
+	return 5 * time.Minute
+}
+
+func (s *Signer) applySpentOutputRefsFromObs(tx types.TxOutItem, obs *types.TxInItem) {
+	if obs == nil || len(obs.SpentOutputRefs) == 0 {
+		return
+	}
+	chain, ok := s.chains[tx.Chain]
+	if !ok {
+		return
+	}
+	type spentRefApplier interface {
+		ApplySpentOutputRefs(common.ObservedTx)
+	}
+	applier, ok := chain.(spentRefApplier)
+	if !ok {
+		return
+	}
+	obsTx := common.NewObservedTx(
+		common.NewTx(
+			common.TxID(obs.Tx),
+			common.Address(obs.Sender),
+			common.Address(obs.To),
+			obs.Coins,
+			obs.Gas,
+			obs.Memo,
+		),
+		obs.BlockHeight,
+		obs.ObservedVaultPubKey,
+		obs.BlockHeight,
+	)
+	obsTx.SpentOutputRefs = common.OutputRefsFromPointers(obs.SpentOutputRefs)
+	s.logger.Info().
+		Str("tx_hash", obs.Tx).
+		Int("refs", len(obs.SpentOutputRefs)).
+		Msg("applying spent output refs from signing observation")
+	applier.ApplySpentOutputRefs(obsTx)
 }

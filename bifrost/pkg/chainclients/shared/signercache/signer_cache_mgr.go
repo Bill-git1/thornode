@@ -16,6 +16,7 @@ type StorageAccessor interface {
 	HasSignedWithExpiry(hash string) (signed, expired bool)
 	RemoveSigned(transactionHash string) error
 	SetTransactionHashMap(txOutItemHash, transactionHash string) error
+	GetTransactionHash(txOutItemHash string) (string, error)
 	GetSignedTxHash(txOutItemHash string) (string, bool)
 	SetLatestRecordedTx(vaultKey, transactionHash string) error
 	GetLatestRecordedTx(vaultKey string) (string, error)
@@ -99,6 +100,10 @@ func (cm *CacheManager) GetSignedTxHash(txOutItemHash string) (string, bool) {
 
 func (cm *CacheManager) GetLatestRecordedTx(vaultKey string) (string, error) {
 	return cm.storageAccessor.GetLatestRecordedTx(vaultKey)
+}
+
+func (cm *CacheManager) GetTransactionHash(txOutItemHash string) (string, error) {
+	return cm.storageAccessor.GetTransactionHash(txOutItemHash)
 }
 
 // RemoveSigned removes the corresponding TxOutItem from the signer cache. The provided

@@ -40,6 +40,10 @@ func (m Vault) GetChains() common.Chains {
 	return chains
 }
 
+func (m Vault) HasChain(chain common.Chain) bool {
+	return m.GetChains().Has(chain)
+}
+
 func (m Vault) GetMembership() common.PubKeys {
 	pubkeys := make(common.PubKeys, 0)
 	for _, pk := range m.Membership {
@@ -60,6 +64,25 @@ func (m Vault) IsType(vtype VaultType) bool {
 // IsAsgard check whether the vault is Asgard vault, it returns true when it is an asgard vault
 func (m Vault) IsAsgard() bool {
 	return m.IsType(VaultType_AsgardVault)
+}
+
+// IsXMRMonovault is retained for legacy tests that assert the old dedicated
+// THOR+XMR shape. Runtime XMR routing should use chain capability/readiness
+// checks rather than this vault-topology predicate.
+func (m Vault) IsXMRMonovault() bool {
+	if !m.IsAsgard() {
+		return false
+	}
+	chains := m.GetChains().Distinct()
+	if !chains.Has(common.XMRChain) {
+		return false
+	}
+	for _, chain := range chains {
+		if !chain.Equals(common.THORChain) && !chain.Equals(common.XMRChain) {
+			return false
+		}
+	}
+	return true
 }
 
 // IsActive return true when the vault is in active status
@@ -313,6 +336,12 @@ func (m *Vault) AlgoPubKey(chain common.Chain) (common.PubKey, error) {
 	case common.SigningAlgoSecp256k1:
 		return m.PubKey, nil
 	case common.SigningAlgoEd25519:
+		if chain == common.XMRChain {
+			if m.PubKeyFrost.IsEmpty() {
+				return "", fmt.Errorf("xmr vault has no frost public key")
+			}
+			return m.PubKeyFrost, nil
+		}
 		if m.PubKeyEddsa.IsEmpty() {
 			return "", fmt.Errorf("vault has no eddsa public key")
 		}
@@ -386,9 +415,9 @@ func (vs Vaults) SelectByMaxCoin(asset common.Asset) (vault Vault) {
 // vault match the given address on the given chain
 func (vs Vaults) HasAddress(chain common.Chain, address common.Address) (bool, error) {
 	for _, item := range vs {
-		addr, err := item.PubKey.GetAddress(chain)
+		addr, err := item.GetAddress(chain)
 		if err != nil {
-			return false, fmt.Errorf("fail to get address from (%s) for chain(%s)", item.PubKey, chain)
+			return false, fmt.Errorf("fail to get address from vault(%s) for chain(%s): %w", item.PubKey, chain, err)
 		}
 		if addr.Equals(address) {
 			return true, nil

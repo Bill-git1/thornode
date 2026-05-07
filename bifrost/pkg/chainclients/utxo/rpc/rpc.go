@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -254,6 +255,50 @@ func (c *Client) ImportAddress(address string) error {
 func (c *Client) ImportAddressRescan(address string) error {
 	err := c.Call(nil, "importaddress", address, "", true)
 	return extractBTCError(err)
+}
+
+// IsAddressImported reports whether the node already tracks the address.
+func (c *Client) IsAddressImported(address string) (bool, error) {
+	info, err := c.getAddressTrackingInfo("getaddressinfo", address)
+	if err != nil && isMethodNotFoundError(err) {
+		info, err = c.getAddressTrackingInfo("validateaddress", address)
+	}
+	if err != nil {
+		return false, extractBTCError(err)
+	}
+
+	return info.IsMine || info.IsWatchOnly, nil
+}
+
+func (c *Client) getAddressTrackingInfo(method, address string) (struct {
+	IsMine      bool `json:"ismine"`
+	IsWatchOnly bool `json:"iswatchonly"`
+}, error,
+) {
+	var info struct {
+		IsMine      bool `json:"ismine"`
+		IsWatchOnly bool `json:"iswatchonly"`
+	}
+
+	err := c.Call(&info, method, address)
+	if err != nil {
+		return info, err
+	}
+
+	return info, nil
+}
+
+func isMethodNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var rpcErr *btcjson.RPCError
+	if errors.As(err, &rpcErr) && rpcErr.Code == btcjson.RPCErrorCode(-32601) {
+		return true
+	}
+
+	return strings.Contains(strings.ToLower(err.Error()), "method not found")
 }
 
 // CreateWallet creates a new wallet.

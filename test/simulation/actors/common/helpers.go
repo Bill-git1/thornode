@@ -22,10 +22,48 @@ import (
 
 func DepositL1(log *zerolog.Logger, client LiteChainClient, asset common.Asset, memo string, amount cosmos.Uint) (string, error) {
 	// get inbound address
-	inboundAddr, _, err := thornode.GetInboundAddress(asset.Chain)
+	inboundAddr, routerAddr, err := thornode.GetInboundAddress(asset.Chain)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get inbound address")
 		return "", err
+	}
+
+	// Native ETH transfers are observed unreliably when sent directly to the vault in
+	// mocknet. Route them through the payable router path instead.
+	if asset.Equals(common.ETHAsset) && routerAddr != nil {
+		eClient, ok := client.(*evm.Client)
+		if !ok {
+			return "", fmt.Errorf("failed to get evm client")
+		}
+
+		amountWei := amount.Mul(cosmos.NewUint(1e10)).BigInt() // 1e8 -> 1e18
+		expiry := time.Now().Add(time.Hour).Unix()
+		tx := SimContractTx{
+			Chain:    asset.Chain,
+			Contract: *routerAddr,
+			ABI:      evm.RouterABI(),
+			Method:   "depositWithExpiry",
+			Args: []interface{}{
+				ecommon.HexToAddress(inboundAddr.String()),
+				ecommon.Address{},
+				amountWei,
+				memo,
+				big.NewInt(expiry),
+			},
+			Value: amountWei,
+		}
+
+		signed, err := eClient.SignContractTx(tx)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to sign tx")
+			return "", err
+		}
+
+		txid, err := client.BroadcastTx(signed)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to broadcast tx")
+		}
+		return txid, err
 	}
 
 	// create tx out
@@ -36,15 +74,7 @@ func DepositL1(log *zerolog.Logger, client LiteChainClient, asset common.Asset, 
 		Memo:      memo,
 	}
 
-	// sign transaction
-	signed, err := client.SignTx(tx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to sign tx")
-		return "", err
-	}
-
-	// broadcast transaction
-	txid, err := client.BroadcastTx(signed)
+	txid, err := SignAndBroadcastTx(client, tx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to broadcast tx")
 	}

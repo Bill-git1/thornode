@@ -27,11 +27,11 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 
 	// initialize dag
 	root.InitRoot()
-	sem := make(chan struct{}, parallelism)
 
-	status := func() (ready, running, finished map[*Actor]bool) {
+	status := func() (ready, running, backgrounded, finished map[*Actor]bool) {
 		// determine all actors that are ready to execute
 		ready = map[*Actor]bool{}
+		backgrounded = map[*Actor]bool{}
 		finished = map[*Actor]bool{}
 		running = map[*Actor]bool{}
 		root.WalkDepthFirst(func(a *Actor) bool {
@@ -39,7 +39,11 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 				finished[a] = true
 				return true
 			}
-			if a.Started() || a.Backgrounded() {
+			if a.Backgrounded() {
+				backgrounded[a] = true
+				return true
+			}
+			if a.Started() {
 				running[a] = true
 				return true
 			}
@@ -55,7 +59,7 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 			return true
 		})
 
-		return ready, running, finished
+		return ready, running, backgrounded, finished
 	}
 
 	// execute dag
@@ -63,38 +67,47 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
 	for range tick.C {
-		ready, running, finished := status()
+		ready, running, backgrounded, finished := status()
 
-		// if all actors are finished we are done
-		if len(finished) == total {
-			log.Info().Int("actors", len(finished)).Msg("simulation finished successfully")
+		// if only finished/backgrounded actors remain, foreground work is done
+		if len(running) == 0 && len(finished)+len(backgrounded) == total {
+			log.Info().
+				Int("finished", len(finished)).
+				Int("backgrounded", len(backgrounded)).
+				Msg("simulation finished successfully")
 			return
 		}
 
 		// info log context
 		infoLog := log.Info().
 			Int("finished", len(finished)).
+			Int("backgrounded", len(backgrounded)).
 			Int("running", len(running)).
-			Int("remaining", total-len(finished)).
+			Int("remaining", total-len(finished)-len(backgrounded)).
 			Int("ready", len(ready))
 
-		// determine how many users are available
+		// determine how many users are available; unit tests may execute DAGs
+		// without a user set, in which case user availability should not gate work.
 		lockedUsers := 0
-		availableUsers := 0
-		for _, user := range c.Users {
-			if !user.IsLocked() {
-				availableUsers++
-			} else {
-				lockedUsers++
+		availableUsers := len(ready)
+		if c != nil && len(c.Users) > 0 {
+			availableUsers = 0
+			for _, user := range c.Users {
+				if !user.IsLocked() {
+					availableUsers++
+				} else {
+					lockedUsers++
+				}
 			}
 		}
 
-		// sleep if no actors are ready to execute
-		if len(ready) == 0 || availableUsers == 0 {
+		// backgrounded actors should not consume a foreground execution slot.
+		if len(ready) == 0 || availableUsers == 0 || len(running) >= parallelism {
 			infoLog.
 				Int("available_users", availableUsers).
 				Int("locked_users", lockedUsers).
-				Msg("waiting for ready actors and users")
+				Int("parallelism", parallelism).
+				Msg("waiting for ready actors, users, and slots")
 
 			continue
 		}
@@ -113,12 +126,10 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 		// execute actor
 		infoLog.Str("actor", a.Name).Msg("executing actor")
 		a.Start()
-		sem <- struct{}{}
 		go func(a *Actor, start time.Time) {
 			defer func() {
 				duration := time.Since(start) / time.Second * time.Second // round to second
 				a.Log().Info().Str("duration", duration.String()).Msg("finished")
-				<-sem
 			}()
 
 			// tee the actor logs to a buffer that we dump if it fails
@@ -135,8 +146,11 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 
 				// print currently running actors
 				os.Stderr.Write([]byte("\n\nCurrently running actors:\n"))
-				running, _, _ := status()
+				_, running, backgrounded, _ := status()
 				for a := range running {
+					os.Stderr.Write([]byte(a.Name + "\n"))
+				}
+				for a := range backgrounded {
 					os.Stderr.Write([]byte(a.Name + "\n"))
 				}
 				os.Stderr.Write([]byte("\n\n"))

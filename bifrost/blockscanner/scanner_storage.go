@@ -17,6 +17,7 @@ type ScannerStorage interface {
 	SetBlockScanStatus(block Block, status BlockScanStatus) error
 	RemoveBlockStatus(block int64) error
 	GetBlocksForRetry(failedOnly bool) ([]Block, error)
+	PurgeFromHeight(height int64) (int, error)
 	GetInternalDb() *leveldb.DB
 	io.Closer
 }

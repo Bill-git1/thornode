@@ -30,6 +30,8 @@ type NetworkResponse struct {
 	TotalReserve string `json:"total_reserve"`
 	// Returns true if there exist RetiringVaults which have not finished migrating funds to new ActiveVaults
 	VaultsMigrating bool `json:"vaults_migrating"`
+	// Indicates whether an active Asgard vault currently has spendable XMR funds
+	XmrActiveVaultReady bool `json:"xmr_active_vault_ready"`
 	// Sum of the gas the network has spent to send outbounds
 	GasSpentRune string `json:"gas_spent_rune"`
 	// Sum of the gas withheld from users to cover outbound gas
@@ -56,7 +58,7 @@ type NetworkResponse struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewNetworkResponse(bondRewardRune string, totalBondUnits string, availablePoolsRune string, vaultsLiquidityRune string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string, torPriceHalted bool) *NetworkResponse {
+func NewNetworkResponse(bondRewardRune string, totalBondUnits string, availablePoolsRune string, vaultsLiquidityRune string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, xmrActiveVaultReady bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string, torPriceHalted bool) *NetworkResponse {
 	this := NetworkResponse{}
 	this.BondRewardRune = bondRewardRune
 	this.TotalBondUnits = totalBondUnits
@@ -65,6 +67,7 @@ func NewNetworkResponse(bondRewardRune string, totalBondUnits string, availableP
 	this.EffectiveSecurityBond = effectiveSecurityBond
 	this.TotalReserve = totalReserve
 	this.VaultsMigrating = vaultsMigrating
+	this.XmrActiveVaultReady = xmrActiveVaultReady
 	this.GasSpentRune = gasSpentRune
 	this.GasWithheldRune = gasWithheldRune
 	this.NativeOutboundFeeRune = nativeOutboundFeeRune
@@ -251,6 +254,30 @@ func (o *NetworkResponse) GetVaultsMigratingOk() (*bool, bool) {
 // SetVaultsMigrating sets field value
 func (o *NetworkResponse) SetVaultsMigrating(v bool) {
 	o.VaultsMigrating = v
+}
+
+// GetXmrActiveVaultReady returns the XmrActiveVaultReady field value
+func (o *NetworkResponse) GetXmrActiveVaultReady() bool {
+	if o == nil {
+		var ret bool
+		return ret
+	}
+
+	return o.XmrActiveVaultReady
+}
+
+// GetXmrActiveVaultReadyOk returns a tuple with the XmrActiveVaultReady field value
+// and a boolean to check if the value has been set.
+func (o *NetworkResponse) GetXmrActiveVaultReadyOk() (*bool, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.XmrActiveVaultReady, true
+}
+
+// SetXmrActiveVaultReady sets field value
+func (o *NetworkResponse) SetXmrActiveVaultReady(v bool) {
+	o.XmrActiveVaultReady = v
 }
 
 // GetGasSpentRune returns the GasSpentRune field value
@@ -523,6 +550,9 @@ func (o NetworkResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["vaults_migrating"] = o.VaultsMigrating
+	}
+	if true {
+		toSerialize["xmr_active_vault_ready"] = o.XmrActiveVaultReady
 	}
 	if true {
 		toSerialize["gas_spent_rune"] = o.GasSpentRune

@@ -12,17 +12,17 @@ fi
 
 if [ "${NET}" = "mainnet" ]; then
   CHAIN_ID=thorchain-1
+  EXTRA_ARGS=()
 elif [ "${NET}" = "chainnet" ]; then
   CHAIN_ID=thorchain-chainnet-1
   SNAPSHOTS_URL=https://chainnet-snapshots.thorchain.network
-  EXTRA_ARGS="-e THOR_SEED_NODES_ENDPOINT=https://chainnet-thornode.thorchain.network/thorchain/nodes"
+  EXTRA_ARGS=(-e THOR_SEED_NODES_ENDPOINT=https://chainnet-thornode.thorchain.network/thorchain/nodes)
 else
   CHAIN_ID=thorchain-stagenet-2
   SNAPSHOTS_URL=https://stagenet-snapshots.ninerealms.com
-  EXTRA_ARGS="-e THOR_SEED_NODES_ENDPOINT=https://stagenet-thornode.ninerealms.com/thorchain/nodes"
+  EXTRA_ARGS=(-e THOR_SEED_NODES_ENDPOINT=https://stagenet-thornode.ninerealms.com/thorchain/nodes)
 fi
 
-EXTRA_ARGS="${EXTRA_ARGS-}"
 NET_DIR=tmp/sync-test/${NET}
 
 # download snapshot
@@ -62,8 +62,7 @@ fi
 
 # build and start thornode
 BUILDTAG=${NET} BRANCH=${NET} make docker-gitlab-build
-# trunk-ignore(shellcheck/SC2086)
-docker run --rm ${EXTRA_ARGS} \
+docker run --rm "${EXTRA_ARGS[@]}" \
   -v "$(pwd)/${NET_DIR}/data:/root/.thornode" \
   -e "CHAIN_ID=${CHAIN_ID}" \
   -e "NET=${NET}" \

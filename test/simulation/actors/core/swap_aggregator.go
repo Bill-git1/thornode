@@ -46,6 +46,7 @@ func NewAggregatorSwapActor(from, to common.Asset, aggregatorSuffix, aggregatorT
 		aggregatorTargetAsset: aggregatorTargetAsset,
 		aggregatorTargetLimit: aggregatorTargetLimit,
 	}
+	a.Timeout = aggregatorSwapActorTimeout(from, to)
 
 	a.Ops = append(a.Ops, a.acquireUser)
 	a.Ops = append(a.Ops, a.getQuote)
@@ -59,6 +60,16 @@ func NewAggregatorSwapActor(from, to common.Asset, aggregatorSuffix, aggregatorT
 	a.Ops = append(a.Ops, a.verifyAggregatorOutbound)
 
 	return &a.Actor
+}
+
+func aggregatorSwapActorTimeout(from, to common.Asset) time.Duration {
+	timeout := swapActorTimeout(from, to) + 2*time.Minute
+	if from.Chain.Equals(common.SOLChain) || to.Chain.Equals(common.SOLChain) {
+		// Aggregator swaps involving Solana can consume several full
+		// broadcast/re-sign cycles while waiting for finalized confirmation.
+		timeout += 6 * time.Minute
+	}
+	return timeout
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -92,13 +103,7 @@ func (a *AggregatorSwapActor) sendAggregatorSwap(config *OpConfig) OpResult {
 
 	client := a.user.ChainClients[a.from.Chain]
 
-	signed, err := client.SignTx(tx)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to sign tx")
-		return OpResult{Continue: false}
-	}
-
-	txid, err := client.BroadcastTx(signed)
+	txid, err := SignAndBroadcastTx(client, tx)
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to broadcast tx")
 		return OpResult{Continue: false}
@@ -253,11 +258,30 @@ func (a *AggregatorSwapActor) verifyAggregatorOutbound(config *OpConfig) OpResul
 
 	// verify aggregator metadata is present
 	if !action.HasAggregator() || action.GetAggregator() == "" {
-		a.user.Release()
-		return OpResult{
-			Error:  fmt.Errorf("action missing aggregator field"),
-			Finish: true,
+		outTx := details.OutTxs[0]
+		completedDirectFallback := action.Coin.Asset == a.to.String() &&
+			strings.EqualFold(action.GetToAddress(), a.toAddress.String()) &&
+			len(outTx.Coins) == 1 &&
+			outTx.Coins[0].Asset == a.to.String() &&
+			strings.EqualFold(outTx.GetToAddress(), a.toAddress.String())
+
+		if !completedDirectFallback {
+			a.user.Release()
+			return OpResult{
+				Error:  fmt.Errorf("action missing aggregator field"),
+				Finish: true,
+			}
 		}
+
+		// THORChain can clear aggregator metadata when an outbound is reassigned,
+		// then complete a direct outbound to the requested destination instead.
+		a.Log().Info().
+			Str("asset", action.Coin.Asset).
+			Str("to_address", action.GetToAddress()).
+			Msg("aggregator metadata cleared after reassignment; direct outbound verified")
+
+		a.user.Release()
+		return OpResult{Finish: true}
 	}
 
 	// verify aggregator address ends with the suffix we sent

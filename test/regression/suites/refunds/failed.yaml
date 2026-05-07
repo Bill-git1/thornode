@@ -113,7 +113,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc
 asserts:
-  - .balance_asset|tonumber == 100000991
+  - .balance_asset|tonumber == 100001000
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

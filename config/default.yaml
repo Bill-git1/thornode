@@ -30,6 +30,7 @@ bifrost:
       - BASE
       - TRON
       - XRP
+      - XMR
       - NOBLE
       - SOL
       - POL
@@ -72,6 +73,7 @@ bifrost:
     leveldb: *default-leveldb
     auto_observe: true
     keygen_timeout: 5m
+    frost_keygen_timeout: 5m
     keysign_timeout: 45s
     party_timeout: 45s
     pre_param_timeout: 5m
@@ -89,6 +91,8 @@ bifrost:
       cosmos_chain_id: ""
       username: thorchain
       password: password
+      wallet_username: ""
+      wallet_password: ""
       http_post_mode: 1
       disable_tls: 1
       parallel_mempool_scan: 5
@@ -102,6 +106,20 @@ bifrost:
       max_rpc_retries: 9 # about 1 min
       max_pending_nonces: 0
       authorization_bearer: ""
+      wallet_authorization_bearer: ""
+      signer_backend: ""
+      signer_endpoint: ""
+      xmr_consolidation_enabled: false
+      xmr_consolidation_check_interval_blocks: 0
+      xmr_consolidation_cooldown_blocks: 0
+      xmr_consolidation_min_unlocked_outputs: 0
+      xmr_consolidation_target_outputs: 0
+      xmr_consolidation_min_unlocked_atomic: 0
+      xmr_consolidation_reserve_bps: 0
+      xmr_consolidation_churn_lookahead_blocks: 0
+      xmr_consolidation_max_retries: 0
+      xmr_consolidation_max_inputs: 0
+      xmr_consolidation_max_lock_bps: 0
       evm:
         max_gas_tip_percentage: 0
         token_max_gas_multiplier: 0
@@ -437,6 +455,38 @@ bifrost:
         chain_id: XRP
         gas_price_resolution: 100 # drops
         observation_flexibility_blocks: 40
+      mempool_tx_id_cache_size: 0
+      scanner_leveldb: *default-leveldb
+
+    xmr:
+      <<: *default-chain
+      disabled: true
+      chain_id: XMR
+      signer_backend: "tss" # monero signer backend
+      signer_endpoint: "http://127.0.0.1:8283" # this node's xmr tss signer endpoint
+      xmr_consolidation_enabled: true
+      xmr_consolidation_check_interval_blocks: 10
+      xmr_consolidation_cooldown_blocks: 30
+      xmr_consolidation_min_unlocked_outputs: 40
+      xmr_consolidation_target_outputs: 15
+      xmr_consolidation_min_unlocked_atomic: 1000000000000 # 1 XMR in piconero
+      xmr_consolidation_reserve_bps: 50 # 0.50%
+      xmr_consolidation_churn_lookahead_blocks: 720
+      xmr_consolidation_max_retries: 3
+      xmr_consolidation_max_inputs: 8
+      xmr_consolidation_max_lock_bps: 1000 # 10.00%
+      # monitor fail-closed events: log message "xmr tss coordination failed closed"
+      chain_host: "" # monero-wallet-rpc endpoint
+      username: "" # monero-daemon rpc basic auth username (optional)
+      password: "" # monero-daemon rpc basic auth password (optional)
+      wallet_username: "" # monero-wallet-rpc basic auth username (optional; falls back to username)
+      wallet_password: "" # monero-wallet-rpc basic auth password (optional; falls back to password)
+      wallet_authorization_bearer: "" # monero-wallet-rpc bearer token (optional; falls back to authorization_bearer)
+      block_scanner:
+        <<: *default-block-scanner
+        chain_id: XMR
+        block_height_discover_back_off: 30s
+        scan_mempool: false
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

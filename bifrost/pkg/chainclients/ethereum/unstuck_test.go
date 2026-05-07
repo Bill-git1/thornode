@@ -43,7 +43,7 @@ var _ = Suite(&UnstuckTestSuite{})
 func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	s.m = GetMetricForTest(c)
 	c.Assert(s.m, NotNil)
-	types2.SetupConfigForTest()
+	setupMocknetThorConfig()
 	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	cfg := config.BifrostClientConfiguration{

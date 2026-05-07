@@ -23,18 +23,19 @@ type TxIn struct {
 }
 
 type TxInItem struct {
-	BlockHeight           int64         `json:"block_height"`
-	Tx                    string        `json:"tx"`
-	Memo                  string        `json:"memo"`
-	Sender                string        `json:"sender"`
-	To                    string        `json:"to"` // to address
-	Coins                 common.Coins  `json:"coins"`
-	Gas                   common.Gas    `json:"gas"`
-	ObservedVaultPubKey   common.PubKey `json:"observed_vault_pub_key"`
-	Aggregator            string        `json:"aggregator"`
-	AggregatorTarget      string        `json:"aggregator_target"`
-	AggregatorTargetLimit *cosmos.Uint  `json:"aggregator_target_limit"`
-	CommittedUnFinalised  bool          `json:"committed_pre_final"`
+	BlockHeight           int64               `json:"block_height"`
+	Tx                    string              `json:"tx"`
+	Memo                  string              `json:"memo"`
+	Sender                string              `json:"sender"`
+	To                    string              `json:"to"` // to address
+	Coins                 common.Coins        `json:"coins"`
+	Gas                   common.Gas          `json:"gas"`
+	ObservedVaultPubKey   common.PubKey       `json:"observed_vault_pub_key"`
+	Aggregator            string              `json:"aggregator"`
+	AggregatorTarget      string              `json:"aggregator_target"`
+	AggregatorTargetLimit *cosmos.Uint        `json:"aggregator_target_limit"`
+	SpentOutputRefs       []*common.OutputRef `json:"spent_output_refs,omitempty"`
+	CommittedUnFinalised  bool                `json:"committed_pre_final"`
 }
 type TxInStatus byte
 
@@ -133,6 +134,14 @@ func (t *TxInItem) EqualsObservedTx(other common.ObservedTx) bool {
 }
 
 func (t *TxInItem) Copy() *TxInItem {
+	var refs []*common.OutputRef
+	if len(t.SpentOutputRefs) > 0 {
+		refs = make([]*common.OutputRef, len(t.SpentOutputRefs))
+		for i, r := range t.SpentOutputRefs {
+			cp := *r
+			refs[i] = &cp
+		}
+	}
 	return &TxInItem{
 		BlockHeight:           t.BlockHeight,
 		Tx:                    t.Tx,
@@ -145,6 +154,7 @@ func (t *TxInItem) Copy() *TxInItem {
 		Aggregator:            t.Aggregator,
 		AggregatorTarget:      t.AggregatorTarget,
 		AggregatorTargetLimit: t.AggregatorTargetLimit,
+		SpentOutputRefs:       refs,
 		CommittedUnFinalised:  t.CommittedUnFinalised,
 	}
 }

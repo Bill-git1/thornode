@@ -54,7 +54,8 @@
     },
     {
       "pub_key": "tthorpub1addwnpepq27s79a9xk8hjcpjuthmwnl2z4su43uynekcjuqcnmhpemfgfrh6sm4yd8e",
-      "pub_key_eddsa": "tthorpub1zcjduepq3p80uejsez2p7ynwjfshlsetm7uqqjxn8xe5susgsf37c0de0kcsecrfnm"
+      "pub_key_eddsa": "tthorpub1zcjduepq3p80uejsez2p7ynwjfshlsetm7uqqjxn8xe5susgsf37c0de0kcsecrfnm",
+      "pub_key_frost": "tthorpub1zcjduepqfrostvaultpubkeyforxmrtest000000000000000000"
     },
     {
       "pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",

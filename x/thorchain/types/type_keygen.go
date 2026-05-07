@@ -50,6 +50,8 @@ func getKeygenTypeFromString(t string) KeygenType {
 	switch {
 	case strings.EqualFold(t, "asgardKeygen"):
 		return KeygenType_AsgardKeygen
+	case strings.EqualFold(t, "xmrMonovaultKeygen"):
+		return KeygenType_XMRMonovaultKeygen
 	default:
 		return KeygenType_UnknownKeygen
 	}

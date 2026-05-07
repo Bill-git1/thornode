@@ -25,12 +25,27 @@ Each chain lives in its own folder and typically inherits logic from a shared im
 | `tron/`       | Tron-specific logic     | TRON                 |
 | `solana/`     | Solana-specific logic   | SOL                  |
 | `cosmos/`     | Cosmos SDK-based chains | ATOM.                |
+| `monero/`     | Monero-specific logic   | XMR                  |
 
 Chains that do not fit a shared model can implement their own logic from scratch. For UTXO-based chains, the actual `Client` is constructed using the shared implementation in `utxo/client.go`, which handles block scanning, mempool fetches, reorg tracking, and solvency reporting.
 
 Each specific chain such as BTC, LTC, or DOGE wraps this shared logic with minimal overrides in `btc/client.go`, `ltc/client.go`, etc.
 
 Similarly, for EVM-based chains like Ethereum, Avalanche, and BSC, shared functionality is implemented in evm/client.go and reused by each specific EVM client (e.g., `ethereum/client.go`, `bsc/client.go`).
+
+## Monero (XMR) Client Notes
+
+Monero integration uses a dedicated Bifrost chain client (`monero/`) plus a local `xmr-frost-signer` sidecar for chain-specific cryptography and scanner state. On this branch the sidecar is consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer:boonew-xmr-frost-signer` by default, overridable via `XMR_FROST_SIGNER_IMAGE`.
+
+- Keygen uses a custom FROST DKG path with explicit finalize (`/v1/monero/dkg/finalize`) before vault mapping/key persistence.
+- Outbound signing is a 3-step FROST API flow (`prepare` -> `partial` -> `combine`) with idempotent `msg_id`.
+- Scanner sync is canonical-hash driven via `POST /v1/monero/scanner/sync`; `GET /v1/monero/transfers` is diagnostic/read-only.
+- Inbound mempool attribution is intentionally unsupported; mempool queries are used for tracked outgoing visibility only.
+
+For full XMR architecture and API details:
+
+- [XMR Integration Design](../xmr-addition-design.md)
+- [XMR TSS Signer API](https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/pkg/chainclients/monero/XMR_TSS_SIGNER_API.md)
 
 ## ChainClient Interface
 
@@ -219,3 +234,4 @@ See [token-lists.md](./token-lists.md) for details.
 - [Vault Behaviors](../bifrost/vault-behaviors.md)
 - [Integrating New Chains](../new-chains/implementation-guide.md)
 - [Sending Transactions](../concepts/sending-transactions.md)
+- [XMR Integration Design](../xmr-addition-design.md)

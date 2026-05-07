@@ -85,11 +85,16 @@ func (vm *ValidatorMgr) BeginBlock(ctx cosmos.Context, mgr Manager, existingVali
 	if asgardSize <= 0 {
 		return nil
 	}
-	expectedActiveVaults := int64(len(nas)) / asgardSize
-	if int64(len(nas))%asgardSize > 0 {
+	expectedActiveVaults := splitAsgardGroupCount(len(nas), asgardSize)
+	// Do not treat the dedicated XMR monovault as a missing active vault until
+	// it actually exists in the active set. Counting a future monovault here
+	// causes regular churn retries to overlap a still-settling Asgard keygen,
+	// which can keep the delayed successful round from ever becoming the lone
+	// init-vault set that RotateVault expects.
+	if hasDedicatedXMRMonovault(vaults) {
 		expectedActiveVaults++
 	}
-	incompleteChurnCheck := int64(len(vaults)) != expectedActiveVaults
+	incompleteChurnCheck := len(vaults) != expectedActiveVaults
 	oldVaultCheck := ctx.BlockHeight()-lastChurnHeight > churnInterval
 	retryChurn := (oldVaultCheck || incompleteChurnCheck) && onChurnTick
 
@@ -188,8 +193,24 @@ func (vm *ValidatorMgr) churnInner(ctx cosmos.Context) error {
 		return err
 	}
 	if ok {
-		for _, nodeAccSet := range vm.splitNext(ctx, next, asgardSize) {
+		splitGroups := vm.splitNext(ctx, next, asgardSize)
+		for _, nodeAccSet := range splitGroups {
 			if err := vm.networkMgr.TriggerKeygen(ctx, nodeAccSet); err != nil {
+				return err
+			}
+		}
+		allVaults, err := vm.k.GetAsgardVaults(ctx)
+		if err != nil {
+			return err
+		}
+		if shouldMaintainXMRMonovault(allVaults, len(next)) {
+			// Keep the dedicated XMR monovault in the same keygen block as the
+			// regular churn so both vault families are ready together at rotation
+			// time. Once an XMR monovault already exists, later churns still need a
+			// replacement monovault whenever the validator membership changes.
+			// triggerKeygen's membership-aware dedupe keeps same-membership rounds
+			// from being rescheduled.
+			if err := vm.networkMgr.TriggerXMRKeygen(ctx, next); err != nil {
 				return err
 			}
 		}
@@ -472,8 +493,16 @@ func (vm *ValidatorMgr) getChangedNodes(ctx cosmos.Context, activeNodes NodeAcco
 		return newActive, removedNodes, errors.New("no active vault")
 	}
 	var membership common.PubKeys
+	seenMembers := make(map[string]struct{})
 	for _, vault := range activeVaults {
-		membership = append(membership, vault.GetMembership()...)
+		for _, member := range vault.GetMembership() {
+			memberKey := member.String()
+			if _, exists := seenMembers[memberKey]; exists {
+				continue
+			}
+			seenMembers[memberKey] = struct{}{}
+			membership = append(membership, member)
+		}
 	}
 
 	// find active node accounts that are no longer active

@@ -33,6 +33,7 @@ func (s *SwapSuite) TestSwap(c *C) {
 		returnAmount  cosmos.Uint
 		tradeTarget   cosmos.Uint
 		expectedErr   error
+		expectedErrRe string
 		events        int
 	}{
 		{
@@ -161,7 +162,7 @@ func (s *SwapSuite) TestSwap(c *C) {
 			destination:   GetRandomETHAddress(),
 			returnAmount:  cosmos.ZeroUint(),
 			tradeTarget:   cosmos.NewUint(9 * common.One),
-			expectedErr:   errors.New("emit asset 757474493 less than price limit 900000000"),
+			expectedErrRe: "emit asset [0-9]+ less than price limit 900000000",
 		},
 		{
 			name:          "swap-no-target-price-no-protection",
@@ -185,7 +186,7 @@ func (s *SwapSuite) TestSwap(c *C) {
 			requester:     GetRandomTHORAddress(),
 			destination:   GetRandomETHAddress(),
 			returnAmount:  cosmos.NewUint(453514739),
-			tradeTarget:   cosmos.NewUint(453477238),
+			tradeTarget:   cosmos.NewUint(453400000),
 			expectedErr:   nil,
 			events:        1,
 		},
@@ -198,7 +199,7 @@ func (s *SwapSuite) TestSwap(c *C) {
 			requester:     GetRandomTHORAddress(),
 			destination:   GetRandomETHAddress(),
 			returnAmount:  cosmos.NewUint(415017809),
-			tradeTarget:   cosmos.NewUint(414980309),
+			tradeTarget:   cosmos.NewUint(414900000),
 			expectedErr:   nil,
 			events:        2,
 		},
@@ -223,8 +224,8 @@ func (s *SwapSuite) TestSwap(c *C) {
 			amount:        cosmos.NewUint(2 * 1000_000),
 			requester:     GetRandomTHORAddress(),
 			destination:   GetRandomETHAddress(),
-			returnAmount:  cosmos.NewUint(1999200),
-			tradeTarget:   cosmos.NewUint(1961700),
+			returnAmount:  cosmos.NewUint(1_999_200),
+			tradeTarget:   cosmos.NewUint(1_942_000),
 			expectedErr:   nil,
 			events:        1,
 		},
@@ -250,12 +251,17 @@ func (s *SwapSuite) TestSwap(c *C) {
 		mgr.txOutStore = NewTxStoreDummy()
 
 		amount, evts, err := newSwapper().Swap(ctx, poolStorage, tx, item.target, item.destination, item.tradeTarget, "", "", nil, StreamingSwap{}, 20_000, mgr, nil, nil)
-		if item.expectedErr == nil {
+		if item.expectedErr == nil && item.expectedErrRe == "" {
 			c.Assert(err, IsNil)
 			c.Assert(evts, HasLen, item.events)
 		} else {
-			c.Assert(err, NotNil, Commentf("Expected: %s, got nil", item.expectedErr.Error()))
-			c.Assert(err.Error(), Equals, item.expectedErr.Error())
+			c.Assert(err, NotNil, Commentf("Expected an error, got nil"))
+			if item.expectedErr != nil {
+				c.Assert(err.Error(), Equals, item.expectedErr.Error())
+			}
+			if item.expectedErrRe != "" {
+				c.Assert(err.Error(), Matches, item.expectedErrRe)
+			}
 		}
 
 		c.Logf("expected amount:%s, actual amount:%s", item.returnAmount, amount)

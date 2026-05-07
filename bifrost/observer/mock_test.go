@@ -224,10 +224,18 @@ func (m *MockGRPCClient) SendQuorumPriceFeedBatch(ctx context.Context, batch *co
 
 type MockThorchainBridge struct {
 	thorclient.ThorchainBridge
+	getKeysignPartyFunc func(common.PubKey) (common.PubKeys, error)
 }
 
 func (m *MockThorchainBridge) GetMimir(key string) (int64, error) {
 	return 0, nil
+}
+
+func (m *MockThorchainBridge) GetKeysignParty(pubKey common.PubKey) (common.PubKeys, error) {
+	if m.getKeysignPartyFunc != nil {
+		return m.getKeysignPartyFunc(pubKey)
+	}
+	return nil, nil
 }
 
 type MockStream struct {
@@ -328,9 +336,10 @@ func NewMockEventClient() *MockEventClient {
 // MockThorchainBridge2 implements a broader set of ThorchainBridge methods for observer tests
 type MockThorchainBridge2 struct {
 	thorclient.ThorchainBridge
-	nodeStatus   stypes.NodeStatus
-	activeNodes  common.PubKeys
-	getMimirFunc func(key string) (int64, error)
+	nodeStatus          stypes.NodeStatus
+	activeNodes         common.PubKeys
+	getMimirFunc        func(key string) (int64, error)
+	getKeysignPartyFunc func(common.PubKey) (common.PubKeys, error)
 }
 
 func (m *MockThorchainBridge2) FetchNodeStatus() (stypes.NodeStatus, error) {
@@ -346,6 +355,13 @@ func (m *MockThorchainBridge2) GetMimir(key string) (int64, error) {
 		return m.getMimirFunc(key)
 	}
 	return 0, nil
+}
+
+func (m *MockThorchainBridge2) GetKeysignParty(pubKey common.PubKey) (common.PubKeys, error) {
+	if m.getKeysignPartyFunc != nil {
+		return m.getKeysignPartyFunc(pubKey)
+	}
+	return nil, nil
 }
 
 // Define a custom pipe that implements the stream interface

@@ -34,6 +34,10 @@ message QueryVaultResponse {
   repeated VaultAddress addresses = 13 [ (gogoproto.jsontag) = "addresses" ];
   repeated string frozen = 14;
   string pub_key_eddsa = 15 [ (gogoproto.nullable) = true ];
+  int64 vault_creation_height_xmr = 16;
+  reserved 17;
+  reserved "spent_output_refs_xmr";
+  string pub_key_frost = 18 [ (gogoproto.nullable) = true ];
 }
 
 message QueryAsgardVaultsRequest { string height = 1; }
@@ -54,6 +58,16 @@ message VaultInfo {
   repeated VaultRouter routers = 2 [ (gogoproto.jsontag) = "routers" ];
   string pub_key_eddsa = 3 [ (gogoproto.jsontag) = "pub_key_eddsa" ];
   repeated string membership = 4;
+  string pub_key_frost = 5 [ (gogoproto.jsontag) = "pub_key_frost" ];
+}
+
+message QueryXMRSpentOutputRefsRequest {
+  string vault_pub_key = 1;
+  string height = 2;
+}
+
+message QueryXMRSpentOutputRefsResponse {
+  repeated common.OutputRef spent_output_refs = 1;
 }
 
 message VaultRouter {

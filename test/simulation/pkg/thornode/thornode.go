@@ -2,6 +2,7 @@ package thornode
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -93,6 +94,27 @@ func GetInboundAddress(chain common.Chain) (address common.Address, router *comm
 	return "", nil, fmt.Errorf("no inbound address found for chain %s", chain)
 }
 
+func GetInboundAddressPubKey(chain common.Chain) (common.PubKey, error) {
+	url := fmt.Sprintf("%s/thorchain/inbound_addresses", thornodeURL)
+	var inboundAddresses []openapi.InboundAddress
+	err := Get(url, &inboundAddresses)
+	if err != nil {
+		return common.EmptyPubKey, err
+	}
+
+	for _, inboundAddress := range inboundAddresses {
+		if *inboundAddress.Chain != string(chain) {
+			continue
+		}
+		if inboundAddress.PubKey == nil || *inboundAddress.PubKey == "" {
+			return common.EmptyPubKey, fmt.Errorf("no inbound pubkey found for chain %s", chain)
+		}
+		return common.NewPubKey(*inboundAddress.PubKey)
+	}
+
+	return common.EmptyPubKey, fmt.Errorf("no inbound pubkey found for chain %s", chain)
+}
+
 func GetRouterAddress(chain common.Chain) (common.Address, error) {
 	url := fmt.Sprintf("%s/thorchain/inbound_addresses", thornodeURL)
 	var inboundAddresses []openapi.InboundAddress
@@ -160,7 +182,7 @@ func GetPool(asset common.Asset) (openapi.Pool, error) {
 	return pool, err
 }
 
-func GetSwapQuote(from, to common.Asset, amount sdk.Uint) (openapi.QuoteSwapResponse, error) {
+func GetSwapQuote(from, to common.Asset, amount sdk.Uint, destination common.Address, extended bool) (openapi.QuoteSwapResponse, error) {
 	baseURL := fmt.Sprintf("%s/thorchain/quote/swap", thornodeURL)
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
@@ -170,6 +192,12 @@ func GetSwapQuote(from, to common.Asset, amount sdk.Uint) (openapi.QuoteSwapResp
 	params.Add("from_asset", from.String())
 	params.Add("to_asset", to.String())
 	params.Add("amount", amount.String())
+	if !destination.IsEmpty() {
+		params.Add("destination", destination.String())
+	}
+	if extended {
+		params.Add("extended", "true")
+	}
 	parsedURL.RawQuery = params.Encode()
 	url := parsedURL.String()
 
@@ -190,6 +218,50 @@ func GetTxDetails(txid string) (openapi.TxDetailsResponse, error) {
 	var details openapi.TxDetailsResponse
 	err := Get(url, &details)
 	return details, err
+}
+
+type VaultXMRState struct {
+	VaultCreationHeightXmr int64  `json:"vault_creation_height_xmr"`
+	PubKeyFrost            string `json:"pub_key_frost"`
+	Status                 string `json:"status"`
+}
+
+func GetVaultXMRStates() ([]VaultXMRState, error) {
+	url := fmt.Sprintf("%s/thorchain/vaults/asgard", thornodeURL)
+	var vaults []VaultXMRState
+	err := Get(url, &vaults)
+	return vaults, err
+}
+
+type XMRSpentOutputRefs struct {
+	SpentOutputRefs []struct {
+		TxHash      string `json:"tx_hash"`
+		OutputIndex uint32 `json:"output_index"`
+	} `json:"spent_output_refs"`
+}
+
+func GetXMRSpentOutputRefs(vaultPubKey string) (XMRSpentOutputRefs, error) {
+	url := fmt.Sprintf("%s/thorchain/xmr/spent_refs/%s", thornodeURL, vaultPubKey)
+	var result XMRSpentOutputRefs
+	err := Get(url, &result)
+	return result, err
+}
+
+type ObservedTxSpentRefs struct {
+	ObservedTx struct {
+		SpentOutputRefs []struct {
+			TxHash      string `json:"tx_hash"`
+			OutputIndex uint32 `json:"output_index"`
+		} `json:"spent_output_refs"`
+		Status string `json:"status"`
+	} `json:"observed_tx"`
+}
+
+func GetTxSpentRefs(txid string) (ObservedTxSpentRefs, error) {
+	url := fmt.Sprintf("%s/thorchain/tx/details/%s", thornodeURL, txid)
+	var result ObservedTxSpentRefs
+	err := Get(url, &result)
+	return result, err
 }
 
 func GetMimirs() (map[string]int64, error) {
@@ -217,6 +289,25 @@ func GetMemoHash(txid string) (openapi.ReferenceMemoResponse, error) {
 }
 
 func Get(url string, target interface{}) error {
+	var lastErr error
+	for attempt := 1; attempt <= thornodeHTTPRetryAttempts; attempt++ {
+		err := getOnce(url, target)
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+		if !isRetryableThornodeGetError(err) || attempt == thornodeHTTPRetryAttempts {
+			return err
+		}
+
+		thornodeHTTPSleep(thornodeHTTPRetryDelay)
+	}
+
+	return lastErr
+}
+
+func getOnce(url string, target interface{}) error {
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
@@ -254,6 +345,37 @@ func Get(url string, target interface{}) error {
 	return json.Unmarshal(buf, target)
 }
 
+func isRetryableThornodeGetError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+
+	msg := err.Error()
+	for _, snippet := range []string{
+		"context deadline exceeded",
+		"connect: connection refused",
+		"connection reset by peer",
+		"EOF",
+		"i/o timeout",
+		"server closed idle connection",
+		"HTTP: 429",
+		"HTTP: 502",
+		"HTTP: 503",
+		"HTTP: 504",
+	} {
+		if strings.Contains(msg, snippet) {
+			return true
+		}
+	}
+
+	return false
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Internal
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -266,3 +388,9 @@ var httpClient = &http.Client{
 	},
 	Timeout: 5 * time.Second,
 }
+
+var (
+	thornodeHTTPRetryAttempts = 2
+	thornodeHTTPRetryDelay    = 250 * time.Millisecond
+	thornodeHTTPSleep         = time.Sleep
+)

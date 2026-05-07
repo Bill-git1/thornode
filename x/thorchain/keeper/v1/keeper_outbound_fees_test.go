@@ -2,11 +2,13 @@ package keeperv1
 
 import (
 	"math"
+	"math/big"
 
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 type KeeperOutboundFeesSuite struct{}
@@ -16,8 +18,23 @@ var _ = Suite(&KeeperOutboundFeesSuite{})
 func (s *KeeperOutboundFeesSuite) TestGetSurplusForTargetMultiplier(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
-	surplus := k.GetSurplusForTargetMultiplier(ctx, cosmos.NewUint(10_000))
-	c.Check(surplus.String(), Equals, "689655172414")
+	targetMultiplier := cosmos.NewUint(10_000)
+	surplus := k.GetSurplusForTargetMultiplier(ctx, targetMultiplier)
+	c.Assert(surplus.IsZero(), Equals, false)
+
+	targetSurplus := cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune))
+	maxMultiplier := cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.MaxOutboundFeeMultiplierBasisPoints))
+	minMultiplier := cosmos.SafeUintFromInt64(k.GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints))
+	deltaToTarget := new(big.Int).Sub(maxMultiplier.BigInt(), targetMultiplier.BigInt())
+	denominator := new(big.Int).Sub(maxMultiplier.BigInt(), minMultiplier.BigInt())
+	numerator := new(big.Int).Mul(deltaToTarget, targetSurplus.BigInt())
+	expected := new(big.Int)
+	remainder := new(big.Int)
+	expected.QuoRem(numerator, denominator, remainder)
+	if new(big.Int).Mul(remainder, big.NewInt(2)).Cmp(denominator) >= 0 {
+		expected.Add(expected, big.NewInt(1))
+	}
+	c.Check(surplus.String(), Equals, cosmos.NewUintFromBigInt(expected).String())
 }
 
 func (s *KeeperOutboundFeesSuite) TestOutboundRuneRecords(c *C) {

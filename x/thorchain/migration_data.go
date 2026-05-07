@@ -7,6 +7,16 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
+// Keep mainnet-only migration helpers reachable in non-mainnet builds where this
+// data file still compiles, while the actual migrator entrypoints live behind the
+// mainnet build tag.
+var (
+	_ = mainnetManualOutbounds6to7
+	_ = mainnetManualInbounds6to7
+	_ = mainnetManualOutbounds8to9
+	_ = mainnetManualOutbounds9to10
+)
+
 var mainnetSlashRefunds4to5 = []struct {
 	address string
 	amount  uint64
@@ -764,8 +774,6 @@ var mainnetSlashRefunds5to6 = []struct {
 //
 // NOTE: The vaults must be dusted with sufficient gas asset using a NOOP memo before
 // the migration is run, otherwise the refund will fail again.
-//
-// trunk-ignore(golangci-lint/unused)
 func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr Manager) ([]TxOutItem, error) {
 	ethUSDT, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
 	if err != nil {
@@ -847,8 +855,6 @@ func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr Manager) ([]TxOutItem, e
 //
 // NOTE: The vault for the AVAX.USDT inbound must be dusted with sufficient gas asset
 // using a NOOP memo before the migration is run, otherwise the refund will fail.
-//
-// trunk-ignore(golangci-lint/unused)
 func mainnetManualInbounds6to7() (ObservedTxs, error) {
 	recoveryEVMAddress, err := common.NewAddress("0x3c4a7c01811e14bb3d723d4961b4f2c28afc5e6e")
 	if err != nil {
@@ -930,7 +936,6 @@ func mainnetManualInbounds6to7() (ObservedTxs, error) {
 	return unobservedTxs, nil
 }
 
-// trunk-ignore(golangci-lint/unused)
 func mainnetManualOutbounds8to9(ctx cosmos.Context, mgr Manager) ([]TxOutItem, error) {
 	// none of the attempts in 6to7 were successful, so retry them all
 	manualOutbounds, err := mainnetManualOutbounds6to7(ctx, mgr)
@@ -1016,7 +1021,6 @@ func mainnetManualOutbounds8to9(ctx cosmos.Context, mgr Manager) ([]TxOutItem, e
 	return manualOutbounds, nil
 }
 
-// trunk-ignore(golangci-lint/unused)
 func mainnetManualOutbounds9to10(ctx cosmos.Context, mgr Manager) ([]TxOutItem, error) {
 	// none of the attempts in 8to9 were successful, so retry them all
 	manualOutbounds, err := mainnetManualOutbounds8to9(ctx, mgr)

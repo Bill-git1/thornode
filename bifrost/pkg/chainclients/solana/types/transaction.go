@@ -17,29 +17,31 @@ type Transaction struct {
 }
 
 func NewTransferTransaction(from, to PublicKey, amount uint64, memo, recentBlockHash string) Transaction {
-	accountKeys := []PublicKey{from, to, SystemProgramID, MemoProgramID}
-
-	// Memo instruction
-	// Program index is 3 (referencing accountKeys) for the memo program
-	// Account index is 0 for the vault/signer
-	memoInstruction := NewCompiledInstruction(3, []int{0}, []byte(memo))
+	accountKeys := []PublicKey{from, to, SystemProgramID}
+	instructions := make([]CompiledInstruction, 0, 2)
 
 	// 1e8 --> 1e9
 	solValue := amount * 10
+
+	if memo != "" {
+		accountKeys = append(accountKeys, MemoProgramID)
+		// Preserve the legacy memo-first ordering for memo-bearing transfers.
+		instructions = append(instructions, NewCompiledInstruction(3, []int{0}, []byte(memo)))
+	}
 
 	// Transfer instruction
 	// Program index is 2 (referencing accountKeys) for the system program
 	// Account index is 0 for the vault/signer
 	// Account index is 1 for the recipient
-	transferInstruction := NewCompiledTransferInstruction(2, 0, 1, solValue)
+	instructions = append(instructions, NewCompiledTransferInstruction(2, 0, 1, solValue))
 
 	header := MessageHeader{
 		NumRequireSignatures:        1,
 		NumReadonlySignedAccounts:   0,
-		NumReadonlyUnsignedAccounts: 2,
+		NumReadonlyUnsignedAccounts: uint8(len(accountKeys) - 2),
 	}
 
-	message := NewMessage(header, accountKeys, recentBlockHash, []CompiledInstruction{transferInstruction, memoInstruction})
+	message := NewMessage(header, accountKeys, recentBlockHash, instructions)
 	return NewTransaction(message)
 }
 

@@ -116,7 +116,7 @@ func (s *ObserverSuite) ResetMockClient(c *C) {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (s *ObserverSuite) SetUpSuite(c *C) {
-	types2.SetupConfigForTest()
+	setupMocknetThorConfig()
 
 	server := httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

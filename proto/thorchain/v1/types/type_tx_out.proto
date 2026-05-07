@@ -50,6 +50,10 @@ message TxOutItem {
     (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey",
     (gogoproto.nullable) = true
   ];
+  string vault_pub_key_frost = 17 [
+    (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey",
+    (gogoproto.nullable) = true
+  ];
 }
 
 message TxOut {

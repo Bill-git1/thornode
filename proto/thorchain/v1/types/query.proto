@@ -308,6 +308,11 @@ service Query {
     option (google.api.http).get = "/thorchain/vault/{pub_key}";
   }
 
+  rpc XMRSpentOutputRefs(QueryXMRSpentOutputRefsRequest)
+      returns (QueryXMRSpentOutputRefsResponse) {
+    option (google.api.http).get = "/thorchain/xmr/spent_refs/{vault_pub_key}";
+  }
+
   rpc AsgardVaults(QueryAsgardVaultsRequest)
       returns (QueryAsgardVaultsResponse) {
     option (google.api.http).get = "/thorchain/vaults/asgard";

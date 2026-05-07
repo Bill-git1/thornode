@@ -301,21 +301,23 @@ func (x *_Vault_23_list) IsValid() bool {
 }
 
 var (
-	md_Vault                          protoreflect.MessageDescriptor
-	fd_Vault_block_height             protoreflect.FieldDescriptor
-	fd_Vault_pub_key                  protoreflect.FieldDescriptor
-	fd_Vault_coins                    protoreflect.FieldDescriptor
-	fd_Vault_type                     protoreflect.FieldDescriptor
-	fd_Vault_status                   protoreflect.FieldDescriptor
-	fd_Vault_status_since             protoreflect.FieldDescriptor
-	fd_Vault_membership               protoreflect.FieldDescriptor
-	fd_Vault_chains                   protoreflect.FieldDescriptor
-	fd_Vault_inbound_tx_count         protoreflect.FieldDescriptor
-	fd_Vault_outbound_tx_count        protoreflect.FieldDescriptor
-	fd_Vault_pending_tx_block_heights protoreflect.FieldDescriptor
-	fd_Vault_routers                  protoreflect.FieldDescriptor
-	fd_Vault_frozen                   protoreflect.FieldDescriptor
-	fd_Vault_pub_key_eddsa            protoreflect.FieldDescriptor
+	md_Vault                           protoreflect.MessageDescriptor
+	fd_Vault_block_height              protoreflect.FieldDescriptor
+	fd_Vault_pub_key                   protoreflect.FieldDescriptor
+	fd_Vault_coins                     protoreflect.FieldDescriptor
+	fd_Vault_type                      protoreflect.FieldDescriptor
+	fd_Vault_status                    protoreflect.FieldDescriptor
+	fd_Vault_status_since              protoreflect.FieldDescriptor
+	fd_Vault_membership                protoreflect.FieldDescriptor
+	fd_Vault_chains                    protoreflect.FieldDescriptor
+	fd_Vault_inbound_tx_count          protoreflect.FieldDescriptor
+	fd_Vault_outbound_tx_count         protoreflect.FieldDescriptor
+	fd_Vault_pending_tx_block_heights  protoreflect.FieldDescriptor
+	fd_Vault_routers                   protoreflect.FieldDescriptor
+	fd_Vault_frozen                    protoreflect.FieldDescriptor
+	fd_Vault_pub_key_eddsa             protoreflect.FieldDescriptor
+	fd_Vault_vault_creation_height_xmr protoreflect.FieldDescriptor
+	fd_Vault_pub_key_frost             protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -335,6 +337,8 @@ func init() {
 	fd_Vault_routers = md_Vault.Fields().ByName("routers")
 	fd_Vault_frozen = md_Vault.Fields().ByName("frozen")
 	fd_Vault_pub_key_eddsa = md_Vault.Fields().ByName("pub_key_eddsa")
+	fd_Vault_vault_creation_height_xmr = md_Vault.Fields().ByName("vault_creation_height_xmr")
+	fd_Vault_pub_key_frost = md_Vault.Fields().ByName("pub_key_frost")
 }
 
 var _ protoreflect.Message = (*fastReflection_Vault)(nil)
@@ -486,6 +490,18 @@ func (x *fastReflection_Vault) Range(f func(protoreflect.FieldDescriptor, protor
 			return
 		}
 	}
+	if x.VaultCreationHeightXmr != int64(0) {
+		value := protoreflect.ValueOfInt64(x.VaultCreationHeightXmr)
+		if !f(fd_Vault_vault_creation_height_xmr, value) {
+			return
+		}
+	}
+	if x.PubKeyFrost != "" {
+		value := protoreflect.ValueOfString(x.PubKeyFrost)
+		if !f(fd_Vault_pub_key_frost, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -529,6 +545,10 @@ func (x *fastReflection_Vault) Has(fd protoreflect.FieldDescriptor) bool {
 		return len(x.Frozen) != 0
 	case "types.Vault.pub_key_eddsa":
 		return x.PubKeyEddsa != ""
+	case "types.Vault.vault_creation_height_xmr":
+		return x.VaultCreationHeightXmr != int64(0)
+	case "types.Vault.pub_key_frost":
+		return x.PubKeyFrost != ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.Vault"))
@@ -573,6 +593,10 @@ func (x *fastReflection_Vault) Clear(fd protoreflect.FieldDescriptor) {
 		x.Frozen = nil
 	case "types.Vault.pub_key_eddsa":
 		x.PubKeyEddsa = ""
+	case "types.Vault.vault_creation_height_xmr":
+		x.VaultCreationHeightXmr = int64(0)
+	case "types.Vault.pub_key_frost":
+		x.PubKeyFrost = ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.Vault"))
@@ -649,6 +673,12 @@ func (x *fastReflection_Vault) Get(descriptor protoreflect.FieldDescriptor) prot
 	case "types.Vault.pub_key_eddsa":
 		value := x.PubKeyEddsa
 		return protoreflect.ValueOfString(value)
+	case "types.Vault.vault_creation_height_xmr":
+		value := x.VaultCreationHeightXmr
+		return protoreflect.ValueOfInt64(value)
+	case "types.Vault.pub_key_frost":
+		value := x.PubKeyFrost
+		return protoreflect.ValueOfString(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.Vault"))
@@ -709,6 +739,10 @@ func (x *fastReflection_Vault) Set(fd protoreflect.FieldDescriptor, value protor
 		x.Frozen = *clv.list
 	case "types.Vault.pub_key_eddsa":
 		x.PubKeyEddsa = value.Interface().(string)
+	case "types.Vault.vault_creation_height_xmr":
+		x.VaultCreationHeightXmr = value.Int()
+	case "types.Vault.pub_key_frost":
+		x.PubKeyFrost = value.Interface().(string)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.Vault"))
@@ -781,6 +815,10 @@ func (x *fastReflection_Vault) Mutable(fd protoreflect.FieldDescriptor) protoref
 		panic(fmt.Errorf("field outbound_tx_count of message types.Vault is not mutable"))
 	case "types.Vault.pub_key_eddsa":
 		panic(fmt.Errorf("field pub_key_eddsa of message types.Vault is not mutable"))
+	case "types.Vault.vault_creation_height_xmr":
+		panic(fmt.Errorf("field vault_creation_height_xmr of message types.Vault is not mutable"))
+	case "types.Vault.pub_key_frost":
+		panic(fmt.Errorf("field pub_key_frost of message types.Vault is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.Vault"))
@@ -827,6 +865,10 @@ func (x *fastReflection_Vault) NewField(fd protoreflect.FieldDescriptor) protore
 		list := []string{}
 		return protoreflect.ValueOfList(&_Vault_23_list{list: &list})
 	case "types.Vault.pub_key_eddsa":
+		return protoreflect.ValueOfString("")
+	case "types.Vault.vault_creation_height_xmr":
+		return protoreflect.ValueOfInt64(int64(0))
+	case "types.Vault.pub_key_frost":
 		return protoreflect.ValueOfString("")
 	default:
 		if fd.IsExtension() {
@@ -960,6 +1002,13 @@ func (x *fastReflection_Vault) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 2 + l + runtime.Sov(uint64(l))
 		}
+		if x.VaultCreationHeightXmr != 0 {
+			n += 2 + runtime.Sov(uint64(x.VaultCreationHeightXmr))
+		}
+		l = len(x.PubKeyFrost)
+		if l > 0 {
+			n += 2 + l + runtime.Sov(uint64(l))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -988,6 +1037,22 @@ func (x *fastReflection_Vault) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.PubKeyFrost) > 0 {
+			i -= len(x.PubKeyFrost)
+			copy(dAtA[i:], x.PubKeyFrost)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.PubKeyFrost)))
+			i--
+			dAtA[i] = 0x1
+			i--
+			dAtA[i] = 0xda
+		}
+		if x.VaultCreationHeightXmr != 0 {
+			i = runtime.EncodeVarint(dAtA, i, uint64(x.VaultCreationHeightXmr))
+			i--
+			dAtA[i] = 0x1
+			i--
+			dAtA[i] = 0xc8
 		}
 		if len(x.PubKeyEddsa) > 0 {
 			i -= len(x.PubKeyEddsa)
@@ -1586,6 +1651,57 @@ func (x *fastReflection_Vault) ProtoMethods() *protoiface.Methods {
 				}
 				x.PubKeyEddsa = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
+			case 25:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field VaultCreationHeightXmr", wireType)
+				}
+				x.VaultCreationHeightXmr = 0
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					x.VaultCreationHeightXmr |= int64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+			case 27:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PubKeyFrost", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.PubKeyFrost = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -1737,20 +1853,22 @@ type Vault struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockHeight           int64            `protobuf:"varint,1,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
-	PubKey                string           `protobuf:"bytes,2,opt,name=pub_key,json=pubKey,proto3" json:"pub_key,omitempty"`
-	Coins                 []*common.Coin   `protobuf:"bytes,3,rep,name=coins,proto3" json:"coins,omitempty"`
-	Type_                 VaultType        `protobuf:"varint,4,opt,name=type,proto3,enum=types.VaultType" json:"type,omitempty"`
-	Status                VaultStatus      `protobuf:"varint,5,opt,name=status,proto3,enum=types.VaultStatus" json:"status,omitempty"`
-	StatusSince           int64            `protobuf:"varint,6,opt,name=status_since,json=statusSince,proto3" json:"status_since,omitempty"`
-	Membership            []string         `protobuf:"bytes,7,rep,name=membership,proto3" json:"membership,omitempty"`
-	Chains                []string         `protobuf:"bytes,8,rep,name=chains,proto3" json:"chains,omitempty"`
-	InboundTxCount        int64            `protobuf:"varint,9,opt,name=inbound_tx_count,json=inboundTxCount,proto3" json:"inbound_tx_count,omitempty"`
-	OutboundTxCount       int64            `protobuf:"varint,10,opt,name=outbound_tx_count,json=outboundTxCount,proto3" json:"outbound_tx_count,omitempty"`
-	PendingTxBlockHeights []int64          `protobuf:"varint,11,rep,packed,name=pending_tx_block_heights,json=pendingTxBlockHeights,proto3" json:"pending_tx_block_heights,omitempty"`
-	Routers               []*ChainContract `protobuf:"bytes,22,rep,name=routers,proto3" json:"routers,omitempty"`
-	Frozen                []string         `protobuf:"bytes,23,rep,name=frozen,proto3" json:"frozen,omitempty"`
-	PubKeyEddsa           string           `protobuf:"bytes,24,opt,name=pub_key_eddsa,json=pubKeyEddsa,proto3" json:"pub_key_eddsa,omitempty"`
+	BlockHeight            int64            `protobuf:"varint,1,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
+	PubKey                 string           `protobuf:"bytes,2,opt,name=pub_key,json=pubKey,proto3" json:"pub_key,omitempty"`
+	Coins                  []*common.Coin   `protobuf:"bytes,3,rep,name=coins,proto3" json:"coins,omitempty"`
+	Type_                  VaultType        `protobuf:"varint,4,opt,name=type,proto3,enum=types.VaultType" json:"type,omitempty"`
+	Status                 VaultStatus      `protobuf:"varint,5,opt,name=status,proto3,enum=types.VaultStatus" json:"status,omitempty"`
+	StatusSince            int64            `protobuf:"varint,6,opt,name=status_since,json=statusSince,proto3" json:"status_since,omitempty"`
+	Membership             []string         `protobuf:"bytes,7,rep,name=membership,proto3" json:"membership,omitempty"`
+	Chains                 []string         `protobuf:"bytes,8,rep,name=chains,proto3" json:"chains,omitempty"`
+	InboundTxCount         int64            `protobuf:"varint,9,opt,name=inbound_tx_count,json=inboundTxCount,proto3" json:"inbound_tx_count,omitempty"`
+	OutboundTxCount        int64            `protobuf:"varint,10,opt,name=outbound_tx_count,json=outboundTxCount,proto3" json:"outbound_tx_count,omitempty"`
+	PendingTxBlockHeights  []int64          `protobuf:"varint,11,rep,packed,name=pending_tx_block_heights,json=pendingTxBlockHeights,proto3" json:"pending_tx_block_heights,omitempty"`
+	Routers                []*ChainContract `protobuf:"bytes,22,rep,name=routers,proto3" json:"routers,omitempty"`
+	Frozen                 []string         `protobuf:"bytes,23,rep,name=frozen,proto3" json:"frozen,omitempty"`
+	PubKeyEddsa            string           `protobuf:"bytes,24,opt,name=pub_key_eddsa,json=pubKeyEddsa,proto3" json:"pub_key_eddsa,omitempty"`
+	VaultCreationHeightXmr int64            `protobuf:"varint,25,opt,name=vault_creation_height_xmr,json=vaultCreationHeightXmr,proto3" json:"vault_creation_height_xmr,omitempty"`
+	PubKeyFrost            string           `protobuf:"bytes,27,opt,name=pub_key_frost,json=pubKeyFrost,proto3" json:"pub_key_frost,omitempty"`
 }
 
 func (x *Vault) Reset() {
@@ -1871,6 +1989,20 @@ func (x *Vault) GetPubKeyEddsa() string {
 	return ""
 }
 
+func (x *Vault) GetVaultCreationHeightXmr() int64 {
+	if x != nil {
+		return x.VaultCreationHeightXmr
+	}
+	return 0
+}
+
+func (x *Vault) GetPubKeyFrost() string {
+	if x != nil {
+		return x.PubKeyFrost
+	}
+	return ""
+}
+
 var File_types_type_vault_proto protoreflect.FileDescriptor
 
 var file_types_type_vault_proto_rawDesc = []byte{
@@ -1880,7 +2012,7 @@ var file_types_type_vault_proto_rawDesc = []byte{
 	0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x74, 0x79, 0x70, 0x65,
 	0x5f, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x2e,
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x14, 0x67, 0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x2f, 0x67, 0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xb8, 0x05, 0x0a, 0x05,
+	0x2f, 0x67, 0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xec, 0x06, 0x0a, 0x05,
 	0x56, 0x61, 0x75, 0x6c, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x68,
 	0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0b, 0x62, 0x6c, 0x6f,
 	0x63, 0x6b, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x12, 0x4b, 0x0a, 0x07, 0x70, 0x75, 0x62, 0x5f,
@@ -1924,24 +2056,35 @@ var file_types_type_vault_proto_rawDesc = []byte{
 	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f,
 	0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d,
 	0x6f, 0x6e, 0x2e, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x52, 0x0b, 0x70, 0x75, 0x62, 0x4b, 0x65,
-	0x79, 0x45, 0x64, 0x64, 0x73, 0x61, 0x2a, 0x2e, 0x0a, 0x09, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x54,
-	0x79, 0x70, 0x65, 0x12, 0x10, 0x0a, 0x0c, 0x55, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e, 0x56, 0x61,
-	0x75, 0x6c, 0x74, 0x10, 0x00, 0x12, 0x0f, 0x0a, 0x0b, 0x41, 0x73, 0x67, 0x61, 0x72, 0x64, 0x56,
-	0x61, 0x75, 0x6c, 0x74, 0x10, 0x01, 0x2a, 0x53, 0x0a, 0x0b, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x53,
-	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x11, 0x0a, 0x0d, 0x49, 0x6e, 0x61, 0x63, 0x74, 0x69, 0x76,
-	0x65, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x00, 0x12, 0x0f, 0x0a, 0x0b, 0x41, 0x63, 0x74, 0x69,
-	0x76, 0x65, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x01, 0x12, 0x11, 0x0a, 0x0d, 0x52, 0x65, 0x74,
-	0x69, 0x72, 0x69, 0x6e, 0x67, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x02, 0x12, 0x0d, 0x0a, 0x09,
-	0x49, 0x6e, 0x69, 0x74, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x03, 0x42, 0x7f, 0x0a, 0x09, 0x63,
-	0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0e, 0x54, 0x79, 0x70, 0x65, 0x56, 0x61,
-	0x75, 0x6c, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c,
-	0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
-	0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69,
-	0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54,
-	0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54,
-	0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61,
-	0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0x62, 0x06, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x33,
+	0x79, 0x45, 0x64, 0x64, 0x73, 0x61, 0x12, 0x39, 0x0a, 0x19, 0x76, 0x61, 0x75, 0x6c, 0x74, 0x5f,
+	0x63, 0x72, 0x65, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x5f,
+	0x78, 0x6d, 0x72, 0x18, 0x19, 0x20, 0x01, 0x28, 0x03, 0x52, 0x16, 0x76, 0x61, 0x75, 0x6c, 0x74,
+	0x43, 0x72, 0x65, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x58, 0x6d,
+	0x72, 0x12, 0x5a, 0x0a, 0x0d, 0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x5f, 0x66, 0x72, 0x6f,
+	0x73, 0x74, 0x18, 0x1b, 0x20, 0x01, 0x28, 0x09, 0x42, 0x36, 0xc8, 0xde, 0x1f, 0x01, 0xfa, 0xde,
+	0x1f, 0x2e, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f,
+	0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f,
+	0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79,
+	0x52, 0x0b, 0x70, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x46, 0x72, 0x6f, 0x73, 0x74, 0x4a, 0x04, 0x08,
+	0x1a, 0x10, 0x1b, 0x52, 0x15, 0x73, 0x70, 0x65, 0x6e, 0x74, 0x5f, 0x6f, 0x75, 0x74, 0x70, 0x75,
+	0x74, 0x5f, 0x72, 0x65, 0x66, 0x73, 0x5f, 0x78, 0x6d, 0x72, 0x2a, 0x2e, 0x0a, 0x09, 0x56, 0x61,
+	0x75, 0x6c, 0x74, 0x54, 0x79, 0x70, 0x65, 0x12, 0x10, 0x0a, 0x0c, 0x55, 0x6e, 0x6b, 0x6e, 0x6f,
+	0x77, 0x6e, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x00, 0x12, 0x0f, 0x0a, 0x0b, 0x41, 0x73, 0x67,
+	0x61, 0x72, 0x64, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x01, 0x2a, 0x53, 0x0a, 0x0b, 0x56, 0x61,
+	0x75, 0x6c, 0x74, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x11, 0x0a, 0x0d, 0x49, 0x6e, 0x61,
+	0x63, 0x74, 0x69, 0x76, 0x65, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x00, 0x12, 0x0f, 0x0a, 0x0b,
+	0x41, 0x63, 0x74, 0x69, 0x76, 0x65, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x01, 0x12, 0x11, 0x0a,
+	0x0d, 0x52, 0x65, 0x74, 0x69, 0x72, 0x69, 0x6e, 0x67, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x02,
+	0x12, 0x0d, 0x0a, 0x09, 0x49, 0x6e, 0x69, 0x74, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x10, 0x03, 0x42,
+	0x7f, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0e, 0x54, 0x79,
+	0x70, 0x65, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a,
+	0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63,
+	0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33,
+	0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58,
+	0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61,
+	0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

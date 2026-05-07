@@ -3,6 +3,7 @@ package signer
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
 	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
@@ -31,6 +33,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients"
+	chainclienttypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
@@ -46,6 +49,66 @@ import (
 
 func TestPackage(t *testing.T) { TestingT(t) }
 
+const testSignerMnemonic = "profit used piece repeat real curtain endorse tennis tenant sentence include glass return learn upgrade apple crane polar attend before ripple doctor decrease depend"
+
+func TestShouldAutoObserve(t *testing.T) {
+	signer := &Signer{}
+
+	signer.cfg.Signer.AutoObserve = false
+	if !signer.shouldAutoObserve(types.TxOutItem{Chain: common.XMRChain}) {
+		t.Fatal("expected XMR outbounds to auto-observe even when disabled globally")
+	}
+	if signer.shouldAutoObserve(types.TxOutItem{Chain: common.ETHChain}) {
+		t.Fatal("expected non-XMR outbounds to honor disabled global auto-observe")
+	}
+
+	signer.cfg.Signer.AutoObserve = true
+	if !signer.shouldAutoObserve(types.TxOutItem{Chain: common.ETHChain}) {
+		t.Fatal("expected global auto-observe to enable non-XMR outbounds")
+	}
+}
+
+func TestApplySpentOutputRefsFromObsUsesObservationHeight(t *testing.T) {
+	vaultPubKey := types2.GetRandomPubKey()
+	spendTxHash := strings.Repeat("a", 64)
+	ref := &common.OutputRef{
+		TxHash:      strings.Repeat("b", 64),
+		OutputIndex: 1,
+		KeyImage:    strings.Repeat("c", 64),
+		SpendTxHash: spendTxHash,
+	}
+	chain := &spentRefApplyingChainClient{}
+	signer := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.XMRChain: chain,
+		},
+		logger: log.Logger,
+	}
+
+	signer.applySpentOutputRefsFromObs(types.TxOutItem{Chain: common.XMRChain}, &types.TxInItem{
+		BlockHeight:         123,
+		Tx:                  spendTxHash,
+		Sender:              "xmr-vault",
+		To:                  "xmr-recipient",
+		Coins:               common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(1))),
+		Gas:                 common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		ObservedVaultPubKey: vaultPubKey,
+		SpentOutputRefs:     []*common.OutputRef{ref},
+	})
+
+	chain.mu.Lock()
+	defer chain.mu.Unlock()
+	if len(chain.applied) != 1 {
+		t.Fatalf("expected one spent-ref application, got %d", len(chain.applied))
+	}
+	if chain.applied[0].BlockHeight != 123 {
+		t.Fatalf("expected block height 123, got %d", chain.applied[0].BlockHeight)
+	}
+	if chain.applied[0].FinaliseHeight != 123 {
+		t.Fatalf("expected finalise height 123, got %d", chain.applied[0].FinaliseHeight)
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Mocks
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -54,6 +117,21 @@ func TestPackage(t *testing.T) { TestingT(t) }
 
 type fakeBridge struct {
 	thorclient.ThorchainBridge
+}
+
+type batchingKeygenBridge struct {
+	fakeBridge
+	batchSizes []int
+}
+
+type retryAwareKeygenBridge struct {
+	batchingKeygenBridge
+	mimirs map[string]int64
+}
+
+type timingKeygenBridge struct {
+	batchingKeygenBridge
+	buildDelay time.Duration
 }
 
 func (b fakeBridge) GetBlockHeight() (int64, error) {
@@ -98,6 +176,23 @@ func (b fakeBridge) GetVault(pubkey string) (types2.Vault, error) {
 		PubKey: pk,
 		Status: types2.VaultStatus_ActiveVault,
 	}, nil
+}
+
+func (b *batchingKeygenBridge) Broadcast(msgs ...sdktypes.Msg) (common.TxID, error) {
+	b.batchSizes = append(b.batchSizes, len(msgs))
+	return common.TxID("batched-keygen-tx"), nil
+}
+
+func (b *retryAwareKeygenBridge) GetMimir(key string) (int64, error) {
+	if value, ok := b.mimirs[key]; ok {
+		return value, nil
+	}
+	return b.batchingKeygenBridge.GetMimir(key)
+}
+
+func (b *timingKeygenBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []types2.Blame, inputPks common.PubKeys, keygenType types2.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte, frostExtras ...any) (sdktypes.Msg, error) {
+	time.Sleep(b.buildDelay)
+	return &types2.MsgTssPool{}, nil
 }
 
 // -------------------------------- tss ---------------------------------
@@ -301,6 +396,61 @@ func (b *MockChainClient) ConfirmationCountReady(txIn types.TxIn) bool {
 
 func (b *MockChainClient) GetConfirmationCount(txIn types.TxIn) int64 {
 	return 0
+}
+
+type spentRefApplyingChainClient struct {
+	MockChainClient
+	mu      sync.Mutex
+	applied []common.ObservedTx
+}
+
+func (b *spentRefApplyingChainClient) GetChain() common.Chain {
+	return common.XMRChain
+}
+
+func (b *spentRefApplyingChainClient) ApplySpentOutputRefs(tx common.ObservedTx) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.applied = append(b.applied, tx)
+}
+
+type MockCustomKeygenChainClient struct {
+	*MockChainClient
+	called        bool
+	callCount     int
+	calledKeys    []string
+	calledHeight  int64
+	calledVersion string
+	calledPoolPK  common.PubKey
+	calledPoolED  common.PubKey
+	retAddress    common.Address
+	retPoolED     common.PubKey
+	retPoolFrost  common.PubKey
+	retBlame      []types2.Blame
+	retErr        error
+	results       []chainclienttypes.CustomKeygenResult
+	errs          []error
+}
+
+func (m *MockCustomKeygenChainClient) CustomKeygen() bool { return true }
+
+func (m *MockCustomKeygenChainClient) Keygen(req chainclienttypes.CustomKeygenRequest) (chainclienttypes.CustomKeygenResult, error) {
+	m.called = true
+	m.callCount++
+	m.calledKeys = append([]string(nil), req.Members...)
+	m.calledHeight = req.BlockHeight
+	m.calledVersion = req.ThorchainVersion
+	m.calledPoolPK = req.PoolPubKey
+	m.calledPoolED = req.PoolPubKeyEddsa
+	if len(m.results) >= m.callCount {
+		return m.results[m.callCount-1], m.errs[m.callCount-1]
+	}
+	return chainclienttypes.CustomKeygenResult{
+		Address:         m.retAddress,
+		PoolPubKeyEddsa: m.retPoolED,
+		PoolPubKeyFrost: m.retPoolFrost,
+		Blame:           m.retBlame,
+	}, m.retErr
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -598,7 +748,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 			Chain:       common.ETHChain,
 			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			Memo:        msg,
-			VaultPubKey: "tthorpub1addwnpepqfup3y8p0egd7ml7vrnlxgl3wvnp89mpn0tjpj0p2nm2gh0n9hlrvrtylay",
+			VaultPubKey: "thorpub1addwnpepqtspqyy6gk22u37ztra4hq3hdakc0w0k60sfy849mlml2vrpfr0wvm6uz09",
 			Coins: common.Coins{ // must be set or signer overrides memo
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
@@ -708,4 +858,341 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	sign.wg.Wait()
 	ks.Stop()
 	ks2.Stop()
+}
+
+func (s *SignSuite) TestRunCustomKeygenHooks(c *C) {
+	bridge := fakeBridge{s.bridge}
+
+	custom := &MockCustomKeygenChainClient{
+		MockChainClient: &MockChainClient{},
+	}
+
+	sign := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.ETHChain: custom,
+		},
+		thorchainBridge: bridge,
+		logger:          log.With().Str("module", "signer").Logger(),
+	}
+
+	poolPK := types2.GetRandomPubKey()
+	poolED := common.EmptyPubKey
+	updatedPoolED, _, _, _, err := sign.runCustomKeygenHooks(common.Chains{common.THORChain, common.ETHChain}, []string{"nodeA", "nodeB"}, 1234, poolPK, poolED)
+	c.Assert(err, IsNil)
+
+	c.Assert(custom.called, Equals, true)
+	c.Assert(custom.calledHeight, Equals, int64(1234))
+	c.Assert(custom.calledVersion, Equals, "1.0.0")
+	c.Assert(custom.calledPoolPK.Equals(poolPK), Equals, true)
+	c.Assert(custom.calledPoolED.IsEmpty(), Equals, true)
+	c.Assert(updatedPoolED.IsEmpty(), Equals, true)
+	c.Assert(len(custom.calledKeys), Equals, 2)
+}
+
+func (s *SignSuite) TestRunCustomKeygenHooksAppliesPoolPubKeyOverride(c *C) {
+	bridge := fakeBridge{s.bridge}
+	override := types2.GetRandomPubKey()
+	custom := &MockCustomKeygenChainClient{
+		MockChainClient: &MockChainClient{},
+		retPoolED:       override,
+	}
+
+	sign := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.ETHChain: custom,
+		},
+		thorchainBridge: bridge,
+		logger:          log.With().Str("module", "signer").Logger(),
+	}
+
+	poolPK := types2.GetRandomPubKey()
+	poolED := common.EmptyPubKey
+	updatedPoolED, _, _, _, err := sign.runCustomKeygenHooks(common.Chains{common.THORChain, common.ETHChain}, []string{"nodeA", "nodeB"}, 1234, poolPK, poolED)
+	c.Assert(err, IsNil)
+	c.Assert(updatedPoolED.Equals(override), Equals, true)
+}
+
+func (s *SignSuite) TestRunCustomKeygenHooksCarriesFrostPubKeyWithoutOverride(c *C) {
+	bridge := fakeBridge{s.bridge}
+	frost := types2.GetRandomPubKey()
+	custom := &MockCustomKeygenChainClient{
+		MockChainClient: &MockChainClient{},
+		retPoolFrost:    frost,
+	}
+
+	sign := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.ETHChain: custom,
+		},
+		thorchainBridge: bridge,
+		logger:          log.With().Str("module", "signer").Logger(),
+	}
+
+	poolPK := types2.GetRandomPubKey()
+	poolED := common.EmptyPubKey
+	updatedPoolED, updatedPoolFrost, _, _, err := sign.runCustomKeygenHooks(common.Chains{common.THORChain, common.ETHChain}, []string{"nodeA", "nodeB"}, 1234, poolPK, poolED)
+	c.Assert(err, IsNil)
+	c.Assert(updatedPoolED.IsEmpty(), Equals, true)
+	c.Assert(updatedPoolFrost.Equals(frost), Equals, true)
+}
+
+func (s *SignSuite) TestRunCustomKeygenHooksClearsEddsaForXMRFrostKeygen(c *C) {
+	bridge := fakeBridge{s.bridge}
+	frost := types2.GetRandomPubKey()
+	custom := &MockCustomKeygenChainClient{
+		MockChainClient: &MockChainClient{},
+		retPoolFrost:    frost,
+	}
+
+	sign := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.XMRChain: custom,
+		},
+		thorchainBridge: bridge,
+		logger:          log.With().Str("module", "signer").Logger(),
+	}
+
+	poolPK := types2.GetRandomPubKey()
+	poolED := types2.GetRandomPubKey()
+	updatedPoolED, updatedPoolFrost, _, _, err := sign.runCustomKeygenHooks(common.Chains{common.THORChain, common.XMRChain}, []string{"nodeA", "nodeB"}, 1234, poolPK, poolED)
+	c.Assert(err, IsNil)
+	c.Assert(custom.calledPoolED.Equals(poolED), Equals, true)
+	c.Assert(updatedPoolED.IsEmpty(), Equals, true)
+	c.Assert(updatedPoolFrost.Equals(frost), Equals, true)
+}
+
+func (s *SignSuite) TestRunCustomKeygenHooksFailClosed(c *C) {
+	bridge := fakeBridge{s.bridge}
+	custom := &MockCustomKeygenChainClient{
+		MockChainClient: &MockChainClient{},
+		retErr:          errors.New("boom"),
+	}
+
+	sign := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.ETHChain: custom,
+		},
+		thorchainBridge: bridge,
+		logger:          log.With().Str("module", "signer").Logger(),
+	}
+
+	poolPK := types2.GetRandomPubKey()
+	poolED := common.EmptyPubKey
+
+	_, _, _, _, err := sign.runCustomKeygenHooks(common.Chains{common.THORChain, common.ETHChain}, []string{"nodeA", "nodeB"}, 1234, poolPK, poolED)
+	c.Assert(err, NotNil)
+	c.Assert(strings.Contains(err.Error(), "custom keygen failed for ETH"), Equals, true)
+}
+
+func (s *SignSuite) TestFlushPendingKeygenBroadcastsBatchesBlock(c *C) {
+	bridge := &batchingKeygenBridge{fakeBridge: fakeBridge{s.bridge}}
+	sign := &Signer{
+		thorchainBridge: bridge,
+		pubkeyMgr:       pubkeymanager.NewMockPoolAddressValidator(),
+		logger:          log.With().Str("module", "signer").Logger(),
+		errCounter:      s.metrics.GetCounterVec(metrics.SignerError),
+	}
+
+	memberA := types2.GetRandomPubKey()
+	memberB := types2.GetRandomPubKey()
+	asgardPK := types2.GetRandomPubKey()
+	asgardED := types2.GetRandomPubKey()
+	xmrPK := types2.GetRandomPubKey()
+
+	sign.flushPendingKeygenBroadcasts([]pendingKeygenBroadcast{
+		{
+			height:          2700,
+			poolPk:          asgardPK,
+			input:           common.PubKeys{memberA, memberB},
+			keygenType:      types2.KeygenType_AsgardKeygen,
+			chains:          common.Chains{common.THORChain, common.BTCChain},
+			keygenTime:      1,
+			poolPubKeyEddsa: asgardED,
+		},
+		{
+			height:               2700,
+			poolPk:               xmrPK,
+			input:                common.PubKeys{memberA, memberB},
+			keygenType:           types2.KeygenType_XMRMonovaultKeygen,
+			chains:               common.Chains{common.THORChain, common.XMRChain},
+			keygenTime:           1,
+			poolPubKeyEddsa:      xmrPK,
+			poolPubKeyFrost:      xmrPK,
+			observedMoneroHeight: 12345,
+		},
+	})
+
+	c.Assert(bridge.batchSizes, HasLen, 1)
+	c.Assert(bridge.batchSizes[0], Equals, 2)
+}
+
+func (s *SignSuite) TestBuildKeygenBackupsRunsEncryptionsInParallel(c *C) {
+	tmpDir := c.MkDir()
+	secpPath := filepath.Join(tmpDir, "secp.json")
+	eddsaPath := filepath.Join(tmpDir, "eddsa.json")
+	c.Assert(os.WriteFile(secpPath, []byte("{}"), 0o600), IsNil)
+	c.Assert(os.WriteFile(eddsaPath, []byte("{}"), 0o600), IsNil)
+
+	originalSeed, hadSeed := os.LookupEnv("SIGNER_SEED_PHRASE")
+	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testSignerMnemonic), IsNil)
+	defer func() {
+		if hadSeed {
+			_ = os.Setenv("SIGNER_SEED_PHRASE", originalSeed)
+		} else {
+			_ = os.Unsetenv("SIGNER_SEED_PHRASE")
+		}
+	}()
+
+	origEncryptKeyshares := encryptKeysharesFn
+	origEncryptRawKeyshares := encryptRawKeysharesFn
+	defer func() {
+		encryptKeysharesFn = origEncryptKeyshares
+		encryptRawKeysharesFn = origEncryptRawKeyshares
+	}()
+
+	encryptKeysharesFn = func(path, passphrase string) ([]byte, error) {
+		time.Sleep(200 * time.Millisecond)
+		return []byte(filepath.Base(path)), nil
+	}
+	encryptRawKeysharesFn = func(raw []byte, passphrase string) ([]byte, error) {
+		time.Sleep(200 * time.Millisecond)
+		return append([]byte(nil), raw...), nil
+	}
+
+	sign := &Signer{
+		cfg:    config.Bifrost{Signer: config.BifrostSignerConfiguration{BackupKeyshares: true}},
+		logger: log.With().Str("module", "signer").Logger(),
+	}
+
+	start := time.Now()
+	backups := sign.buildKeygenBackups(secpPath, eddsaPath, "abcd")
+	elapsed := time.Since(start)
+
+	c.Assert(string(backups.keyshares), Equals, filepath.Base(secpPath))
+	c.Assert(string(backups.keysharesEddsa), Equals, filepath.Base(eddsaPath))
+	c.Assert(backups.keysharesFrost, DeepEquals, []byte{0xab, 0xcd})
+	c.Assert(elapsed < 400*time.Millisecond, Equals, true)
+}
+
+func (s *SignSuite) TestFlushPendingKeygenBroadcastsBuildsMessagesSequentially(c *C) {
+	originalSeed, hadSeed := os.LookupEnv("SIGNER_SEED_PHRASE")
+	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testSignerMnemonic), IsNil)
+	defer func() {
+		if hadSeed {
+			_ = os.Setenv("SIGNER_SEED_PHRASE", originalSeed)
+		} else {
+			_ = os.Unsetenv("SIGNER_SEED_PHRASE")
+		}
+	}()
+
+	origEncryptKeyshares := encryptKeysharesFn
+	origEncryptRawKeyshares := encryptRawKeysharesFn
+	defer func() {
+		encryptKeysharesFn = origEncryptKeyshares
+		encryptRawKeysharesFn = origEncryptRawKeyshares
+	}()
+
+	encryptKeysharesFn = func(path, passphrase string) ([]byte, error) {
+		time.Sleep(200 * time.Millisecond)
+		return []byte("ecdsa"), nil
+	}
+	encryptRawKeysharesFn = func(raw []byte, passphrase string) ([]byte, error) {
+		time.Sleep(200 * time.Millisecond)
+		return append([]byte(nil), raw...), nil
+	}
+
+	bridge := &timingKeygenBridge{
+		batchingKeygenBridge: batchingKeygenBridge{fakeBridge: fakeBridge{s.bridge}},
+	}
+	sign := &Signer{
+		cfg:             config.Bifrost{Signer: config.BifrostSignerConfiguration{BackupKeyshares: true}},
+		thorchainBridge: bridge,
+		pubkeyMgr:       pubkeymanager.NewMockPoolAddressValidator(),
+		logger:          log.With().Str("module", "signer").Logger(),
+		errCounter:      s.metrics.GetCounterVec(metrics.SignerError),
+	}
+
+	memberA := types2.GetRandomPubKey()
+	memberB := types2.GetRandomPubKey()
+	asgardPK := types2.GetRandomPubKey()
+	xmrPK := types2.GetRandomPubKey()
+
+	start := time.Now()
+	sign.flushPendingKeygenBroadcasts([]pendingKeygenBroadcast{
+		{
+			height:          2700,
+			poolPk:          asgardPK,
+			input:           common.PubKeys{memberA, memberB},
+			keygenType:      types2.KeygenType_AsgardKeygen,
+			chains:          common.Chains{common.THORChain, common.BTCChain},
+			keygenTime:      1,
+			poolPubKeyFrost: common.EmptyPubKey,
+		},
+		{
+			height:               2700,
+			poolPk:               xmrPK,
+			input:                common.PubKeys{memberA, memberB},
+			keygenType:           types2.KeygenType_XMRMonovaultKeygen,
+			chains:               common.Chains{common.THORChain, common.XMRChain},
+			keygenTime:           1,
+			poolPubKeyEddsa:      xmrPK,
+			poolPubKeyFrost:      xmrPK,
+			frostKeyshareHex:     "abcd",
+			observedMoneroHeight: 12345,
+		},
+	})
+	elapsed := time.Since(start)
+
+	c.Assert(bridge.batchSizes, HasLen, 1)
+	c.Assert(bridge.batchSizes[0], Equals, 2)
+	c.Assert(elapsed >= 325*time.Millisecond, Equals, true)
+}
+
+func (s *SignSuite) TestProcessKeygenBlockKeepsSuccessfulSiblingWhenAnotherFails(c *C) {
+	bridge := &retryAwareKeygenBridge{
+		batchingKeygenBridge: batchingKeygenBridge{fakeBridge: fakeBridge{s.bridge}},
+		mimirs: map[string]int64{
+			constants.ChurnRetryInterval.String():  1000,
+			constants.KeygenRetryInterval.String(): 0,
+		},
+	}
+	successFrost := types2.GetRandomPubKey()
+	custom := &MockCustomKeygenChainClient{
+		MockChainClient: &MockChainClient{},
+		results: []chainclienttypes.CustomKeygenResult{
+			{PoolPubKeyFrost: successFrost},
+			{},
+		},
+		errs: []error{
+			nil,
+			errors.New("boom"),
+		},
+	}
+	sign := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.XMRChain: custom,
+		},
+		thorchainBridge: bridge,
+		pubkeyMgr:       pubkeymanager.NewMockPoolAddressValidator(),
+		logger:          log.With().Str("module", "signer").Logger(),
+		errCounter:      s.metrics.GetCounterVec(metrics.SignerError),
+	}
+
+	memberA := types2.GetRandomPubKey()
+	memberB := types2.GetRandomPubKey()
+	memberC := types2.GetRandomPubKey()
+	memberD := types2.GetRandomPubKey()
+	keygenA, err := types2.NewKeygen(2700, []string{memberA.String(), memberB.String()}, types2.KeygenType_XMRMonovaultKeygen)
+	c.Assert(err, IsNil)
+	keygenB, err := types2.NewKeygen(2700, []string{memberC.String(), memberD.String()}, types2.KeygenType_XMRMonovaultKeygen)
+	c.Assert(err, IsNil)
+
+	sign.processKeygenBlock(types2.KeygenBlock{
+		Height:  2700,
+		Keygens: []types2.Keygen{keygenA, keygenB},
+	})
+
+	c.Assert(custom.callCount, Equals, 2)
+	c.Assert(bridge.batchSizes, HasLen, 1)
+	c.Assert(bridge.batchSizes[0], Equals, 1)
 }

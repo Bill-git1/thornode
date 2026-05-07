@@ -57,6 +57,20 @@ add_account() {
   mv /tmp/genesis.json ~/.thornode/config/genesis.json
 }
 
+account_exists() {
+  jq -e --arg ADDRESS "$1" '.app_state.bank.balances[]? | select(.address == $ADDRESS)' \
+    ~/.thornode/config/genesis.json >/dev/null
+}
+
+add_account_if_missing() {
+  if account_exists "$1"; then
+    echo "Skipping duplicate genesis account for $1"
+    return
+  fi
+
+  add_account "$@"
+}
+
 reserve() {
   jq --arg RESERVE "$1" '.app_state.thorchain.reserve = $RESERVE' <~/.thornode/config/genesis.json >/tmp/genesis.json
   mv /tmp/genesis.json ~/.thornode/config/genesis.json

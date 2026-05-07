@@ -4,23 +4,13 @@ import (
 	rand "math/rand/v2"
 	"strings"
 	"testing"
+	"time"
 
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
-	. "gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { TestingT(t) }
-
-type DAGSuite struct{}
-
-var _ = Suite(&DAGSuite{})
-
-func testRNG() *rand.Rand {
-	return rand.New(rand.NewChaCha8([32]byte{}))
-}
-
-func (s *DAGSuite) TestExecute(c *C) {
-	rng := testRNG()
+func TestExecute(t *testing.T) {
+	rng := rand.New(rand.NewPCG(1, 2))
 
 	// bump count once on each operation
 	count := 0
@@ -61,5 +51,109 @@ func (s *DAGSuite) TestExecute(c *C) {
 	Execute(cfg, root, 1, rng)
 
 	// should have executed op 6 times
-	c.Assert(count, Equals, 6)
+	if count != 6 {
+		t.Fatalf("expected 6 operations, got %d", count)
+	}
+}
+
+func TestExecuteIgnoresBackgroundActorsAtShutdown(t *testing.T) {
+	rng := rand.New(rand.NewPCG(3, 4))
+
+	releaseBackground := make(chan struct{})
+	childRan := make(chan struct{})
+	executeDone := make(chan struct{})
+
+	background := NewActor("background", rng)
+	child := NewActor("child", rng)
+	root := NewActor("root", rng)
+
+	background.Ops = []Op{
+		func(config *OpConfig) OpResult {
+			background.Background()
+			return OpResult{Continue: true}
+		},
+		func(config *OpConfig) OpResult {
+			<-releaseBackground
+			return OpResult{Finish: true}
+		},
+	}
+	child.Ops = []Op{
+		func(config *OpConfig) OpResult {
+			close(childRan)
+			return OpResult{Finish: true}
+		},
+	}
+
+	root.Children[background] = true
+	background.Children[child] = true
+
+	go func() {
+		Execute(nil, root, 2, rng)
+		close(executeDone)
+	}()
+
+	select {
+	case <-childRan:
+	case <-time.After(5 * time.Second):
+		t.Fatal("child actor never ran")
+	}
+
+	select {
+	case <-executeDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("execute waited for background actor to finish")
+	}
+
+	close(releaseBackground)
+}
+
+func TestExecuteBackgroundActorDoesNotConsumeParallelism(t *testing.T) {
+	rng := rand.New(rand.NewPCG(5, 6))
+
+	releaseBackground := make(chan struct{})
+	childRan := make(chan struct{})
+	executeDone := make(chan struct{})
+
+	background := NewActor("background", rng)
+	child := NewActor("child", rng)
+	root := NewActor("root", rng)
+
+	background.Ops = []Op{
+		func(config *OpConfig) OpResult {
+			background.Background()
+			return OpResult{Continue: true}
+		},
+		func(config *OpConfig) OpResult {
+			<-releaseBackground
+			return OpResult{Finish: true}
+		},
+	}
+	child.Ops = []Op{
+		func(config *OpConfig) OpResult {
+			close(childRan)
+			return OpResult{Finish: true}
+		},
+	}
+
+	root.Children[background] = true
+	background.Children[child] = true
+
+	go func() {
+		Execute(nil, root, 1, rng)
+		close(executeDone)
+	}()
+
+	select {
+	case <-childRan:
+	case <-time.After(5 * time.Second):
+		t.Fatal("child actor never ran after parent backgrounded")
+	}
+
+	select {
+	case <-executeDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("execute waited for background actor to release a foreground slot")
+	}
+
+	close(releaseBackground)
 }

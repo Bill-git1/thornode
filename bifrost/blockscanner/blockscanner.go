@@ -167,8 +167,22 @@ func (b *BlockScanner) Start(globalTxsQueue chan types.TxIn, globalNetworkFeeQue
 	b.globalNetworkFeeQueue = globalNetworkFeeQueue
 	// Only use persisted scan position if no explicit start height was configured.
 	// When StartBlockHeight is set, it should always take precedence so operators
-	// can force a rescan from a specific height.
-	if b.cfg.StartBlockHeight <= 0 {
+	// can force a rescan from a specific height. If there is already persisted
+	// scan state, purge stale block metadata at or above that height so the
+	// scanner re-processes those blocks.
+	if b.cfg.StartBlockHeight > 0 {
+		currentPos, err := b.scannerStorage.GetScanPos()
+		if err != nil {
+			b.logger.Error().Err(err).Msg("fail to get current block scan pos before start-height override")
+		} else if currentPos > 0 {
+			removed, err := b.scannerStorage.PurgeFromHeight(b.cfg.StartBlockHeight)
+			if err != nil {
+				b.logger.Error().Err(err).Int64("height", b.cfg.StartBlockHeight).Msg("fail to purge block metadata from start height")
+			} else if removed > 0 {
+				b.logger.Info().Int64("height", b.cfg.StartBlockHeight).Int("removed", removed).Msg("purged stale block metadata for rescan")
+			}
+		}
+	} else {
 		currentPos, err := b.scannerStorage.GetScanPos()
 		if err != nil {
 			b.logger.Error().Err(err).Msgf("fail to get current block scan pos, %s will start from %d", b.cfg.ChainID, b.previousBlock)
@@ -355,9 +369,12 @@ func (b *BlockScanner) scanBlocks() {
 			ms := b.cfg.ChainID.ApproximateBlockMilliseconds()
 
 			// determine how often we compare THORNode network fee to Bifrost network fee.
-			// General goal is about once per hour.
+			// General goal is about once per hour, but report immediately if
+			// THORChain has no fee for this chain yet (rate=0).
 			mod := ((60 * 60 * 1000) + ms - 1) / ms
 			if currentBlock%mod == 0 {
+				b.updateStaleNetworkFee(currentBlock)
+			} else if _, thorRate, _ := b.thorchainBridge.GetNetworkFee(b.cfg.ChainID); thorRate == 0 && !b.cfg.ChainID.Equals(common.THORChain) && b.healthy.Load() {
 				b.updateStaleNetworkFee(currentBlock)
 			}
 
@@ -516,10 +533,24 @@ func (b *BlockScanner) GetStartHeight() (int64, error) {
 		clog.Error().Err(err).Msg("failed to get chain height")
 		return 0, err
 	}
+	if b.cfg.ChainID == common.THORChain && b.cfg.MaxResumeBlockLag > 0 {
+		maxLagBlocks := b.cfg.MaxResumeBlockLag.Milliseconds() / b.cfg.ChainID.ApproximateBlockMilliseconds()
+		if maxLagBlocks > 0 {
+			startHeight := height - maxLagBlocks
+			if startHeight < 1 {
+				startHeight = 1
+			}
+			clog.Info().
+				Int64("start_height", startHeight).
+				Int64("chain_height", height).
+				Msg("using chain height with max lag backfill")
+			return startHeight, nil
+		}
+	}
 	clog.Info().
 		Int64("start_height", height).
 		Msg("using chain height as start height")
-	return b.chainScanner.GetHeight()
+	return height, nil
 }
 
 func (b *BlockScanner) Stop() {

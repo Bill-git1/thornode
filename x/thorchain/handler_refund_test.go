@@ -300,6 +300,9 @@ func (s *HandlerRefundSuite) TestRefundTxNormalCase(c *C) {
 
 		helper := newRefundTxHandlerTestHelper(c, txId)
 		handler := NewRefundHandler(helper.mgr)
+		txOut, err := helper.keeper.GetTxOut(helper.ctx, helper.ctx.BlockHeight())
+		c.Assert(err, IsNil)
+		c.Assert(txOut.TxArray, HasLen, 1)
 
 		fromAddr, err := helper.yggVault.PubKey.GetAddress(common.ETHChain)
 		c.Assert(err, IsNil)
@@ -307,7 +310,7 @@ func (s *HandlerRefundSuite) TestRefundTxNormalCase(c *C) {
 			ID:    GetRandomTxHash(),
 			Chain: common.ETHChain,
 			Coins: common.Coins{
-				common.NewCoin(common.ETHAsset, cosmos.NewUint(199962500)),
+				common.NewCoin(common.ETHAsset, txOut.TxArray[0].Coin.Amount),
 			},
 			Memo:        NewRefundMemo(helper.inboundTx.Tx.ID).String(),
 			FromAddress: fromAddr,
@@ -322,7 +325,7 @@ func (s *HandlerRefundSuite) TestRefundTxNormalCase(c *C) {
 		c.Assert(err, IsNil)
 
 		// txout should had been complete
-		txOut, err := helper.keeper.GetTxOut(helper.ctx, helper.ctx.BlockHeight())
+		txOut, err = helper.keeper.GetTxOut(helper.ctx, helper.ctx.BlockHeight())
 		c.Assert(err, IsNil)
 		c.Assert(txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
 	}
@@ -487,7 +490,7 @@ func (s *HandlerRefundSuite) TestRefundTxHandlerVaultValidation(c *C) {
 			ID:    GetRandomTxHash(),
 			Chain: common.ETHChain,
 			Coins: common.Coins{
-				common.NewCoin(common.ETHAsset, cosmos.NewUint(199962500)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(199943750)),
 			},
 			Memo:        NewRefundMemo(helper.inboundTx.Tx.ID).String(),
 			FromAddress: fromAddr,

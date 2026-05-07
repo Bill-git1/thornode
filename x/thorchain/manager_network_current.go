@@ -33,6 +33,15 @@ type assetAmount struct {
 	Amount math.Int
 }
 
+const xmrMonovaultGenesisBootstrapDelayBlocks int64 = 128
+
+func xmrMonovaultGenesisKeygenHeight(currentHeight int64) int64 {
+	if currentHeight < 1 {
+		currentHeight = 1
+	}
+	return currentHeight + xmrMonovaultGenesisBootstrapDelayBlocks
+}
+
 // newNetworkMgr create a new vault manager
 func newNetworkMgr(k keeper.Keeper, txOutStore TxOutStore, eventMgr EventManager) *NetworkMgr {
 	return &NetworkMgr{
@@ -62,6 +71,11 @@ func (vm *NetworkMgr) processGenesisSetup(ctx cosmos.Context) error {
 		return errors.New("no active accounts,cannot proceed")
 	}
 	if len(active) == 1 {
+		// Single-node genesis still bootstraps the regular shared Asgard directly.
+		// XMR stays hard-cut over to its own dedicated vault family, but fresh
+		// bifrost instances start the THOR scanner from tip. Schedule the first
+		// dedicated XMR keygen a few blocks later so bifrost can actually observe
+		// it instead of seeding a hybrid/shared vault.
 		supportChains := common.Chains{
 			common.THORChain,
 			common.BTCChain,
@@ -86,11 +100,20 @@ func (vm *NetworkMgr) processGenesisSetup(ctx cosmos.Context) error {
 		if err := vm.k.SetVault(ctx, vault); err != nil {
 			return fmt.Errorf("fail to save vault: %w", err)
 		}
+		if err := vm.scheduleKeygen(ctx, active, XMRMonovaultKeygen, xmrMonovaultGenesisKeygenHeight(ctx.BlockHeight())); err != nil {
+			return fmt.Errorf("fail to trigger xmr monovault keygen: %w", err)
+		}
 	} else {
-		// Trigger a keygen ceremony
+		// Multi-node genesis should schedule both the regular split-Asgard churn
+		// family and the dedicated XMR monovault family. The XMR keygen needs a
+		// small bootstrap delay so fresh bifrost instances do not miss a height-1
+		// THOR keygen before their scanner is live.
 		err := vm.TriggerKeygen(ctx, active)
 		if err != nil {
 			return fmt.Errorf("fail to trigger a keygen: %w", err)
+		}
+		if err := vm.scheduleKeygen(ctx, active, XMRMonovaultKeygen, xmrMonovaultGenesisKeygenHeight(ctx.BlockHeight())); err != nil {
+			return fmt.Errorf("fail to trigger xmr monovault keygen: %w", err)
 		}
 	}
 	return nil
@@ -220,7 +243,11 @@ func (vm *NetworkMgr) spawnDerivedAssets(ctx cosmos.Context, mgr Manager) error 
 
 	// get assets to create derived pools
 	layer1Assets := []common.Asset{common.TOR}
-	for _, chain := range active[0].GetChains() {
+	activeChains := make(common.Chains, 0)
+	for _, vault := range active {
+		activeChains = append(activeChains, vault.GetChains()...)
+	}
+	for _, chain := range activeChains.Distinct() {
 		// no derived asset for thorchain
 		if chain.IsTHORChain() {
 			continue
@@ -529,13 +556,8 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	vaultsAvailableCoins := map[common.PubKey]common.Coins{}
+	vaultsWithPendingMigrate := map[common.PubKey]bool{}
 	for _, vault := range retiring {
-		if vault.LenPendingTxBlockHeights(ctx.BlockHeight(), mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)) > 0 {
-			ctx.Logger().Info("Skipping the migration of funds while transactions are still pending")
-			// This refers to migrate TxOutItems only.
-			return nil
-		}
-
 		// Copy the RetiringVault Coins for deduction.
 		vaultsAvailableCoins[vault.PubKey] = common.NewCoins(vault.Coins...)
 	}
@@ -576,6 +598,9 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 				// This isn't one of the RetiringVaults.
 				continue
 			}
+			if memo, memoErr := ParseMemo(mgr.GetVersion(), toi.Memo); memoErr == nil && memo.IsType(TxMigrate) {
+				vaultsWithPendingMigrate[toi.VaultPubKey] = true
+			}
 			// Deduct from the available Coins all pending outbounds and their MaxGas.
 			for _, coin := range append(common.Coins{toi.Coin}, toi.MaxGas...) {
 				availableCoins = availableCoins.SafeSub(coin)
@@ -600,6 +625,10 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 			ctx.Logger().Error("RetiringVault Coins not found in map", "vault_pubkey", vault.PubKey)
 			continue
 		}
+		if vaultsWithPendingMigrate[vault.PubKey] {
+			ctx.Logger().Info("Skipping migration scheduling while migrate transactions are still pending", "vault_pubkey", vault.PubKey)
+			continue
+		}
 
 		// move partial funds every 30 minutes
 		if (ctx.BlockHeight()-vault.StatusSince)%migrateInterval == 0 {
@@ -618,12 +647,28 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					continue
 				}
 
-				targetVaults := active
+				chain := coin.Asset.GetChain()
+				targetVaults := filterVaultsByChain(active, chain)
+				if len(targetVaults) == 0 && !chain.Equals(common.XMRChain) {
+					// Some churn/bootstrap paths still materialize regular Asgards without a
+					// fully populated external-chain list. In that case, keep migration on
+					// the regular Asgard family rather than stalling or ever targeting a
+					// vault that also serves the single-vault XMR chain.
+					for _, activeVault := range active {
+						if !activeVault.HasChain(common.XMRChain) {
+							targetVaults = append(targetVaults, activeVault)
+						}
+					}
+				}
+				if len(targetVaults) == 0 {
+					ctx.Logger().Error("no active target vault for migration chain", "chain", chain.String())
+					continue
+				}
 
 				// Only prioritise migration to unreceived ActiveVaults for gas assets.
 				if coin.Asset.IsGasAsset() {
 					var filteredVaults Vaults
-					for _, activeVault := range active {
+					for _, activeVault := range targetVaults {
 						// Do not use HasAsset function so as to use zero-amount Coins to mark scheduled migrations,
 						// without double-counting outbound item migration amounts.
 						hasAsset := false
@@ -700,8 +745,6 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 				}
 				amt = cosmos.RoundToDecimal(amt, coin.Decimals)
 
-				chain := coin.Asset.GetChain()
-
 				// minus gas costs for our transactions
 				gasAsset := chain.GetGasAsset()
 				if coin.Asset.Equals(gasAsset) {
@@ -723,6 +766,13 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 
 					// burn the remainder if amount after deducting gas is below dust threshold
 					dustThreshold := chain.DustThreshold()
+					if chain.Equals(common.XMRChain) && amt.GT(dustThreshold) {
+						// THORChain tracks XMR at 8 decimals while the signer spends at 12.
+						// Leave a dust-sized buffer so final-round migrations do not fail on
+						// small spendable-balance deltas after atomic conversion and output
+						// accounting.
+						amt = common.SafeSub(amt, dustThreshold)
+					}
 
 					if amt.LTE(dustThreshold) && nth > migrationRounds {
 						// No migration should be attempted, but only burn dust if there are no pending outbounds.
@@ -781,7 +831,8 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					InHash:           common.BlankTxID,
 					ToAddress:        addr,
 					VaultPubKey:      vault.PubKey,
-					VaultPubKeyEddsa: vault.PubKeyEddsa,
+					VaultPubKeyEddsa: txOutVaultPubKeyEddsa(chain, vault.PubKeyEddsa),
+					VaultPubKeyFrost: vault.PubKeyFrost,
 					Coin: common.Coin{
 						Asset:  coin.Asset,
 						Amount: amt,
@@ -1371,20 +1422,34 @@ func (vm *NetworkMgr) removePOLLiquidity(
 
 // TriggerKeygen generate a record to instruct signer kick off keygen process
 func (vm *NetworkMgr) TriggerKeygen(ctx cosmos.Context, nas NodeAccounts) error {
-	halt, err := vm.k.GetMimir(ctx, "HaltChurning")
-	if halt > 0 && halt <= ctx.BlockHeight() && err == nil {
-		ctx.Logger().Info("churn event skipped due to mimir has halted churning")
-		return nil
+	return vm.triggerKeygen(ctx, nas, AsgardKeygen)
+}
+
+func (vm *NetworkMgr) TriggerXMRKeygen(ctx cosmos.Context, nas NodeAccounts) error {
+	return vm.triggerKeygen(ctx, nas, XMRMonovaultKeygen)
+}
+
+func (vm *NetworkMgr) triggerKeygen(ctx cosmos.Context, nas NodeAccounts, keygenType types.KeygenType) error {
+	return vm.scheduleKeygen(ctx, nas, keygenType, ctx.BlockHeight())
+}
+
+func (vm *NetworkMgr) scheduleKeygen(ctx cosmos.Context, nas NodeAccounts, keygenType types.KeygenType, keygenHeight int64) error {
+	if ctx.BlockHeight() != genesisBlockHeight {
+		halt, err := vm.k.GetMimir(ctx, "HaltChurning")
+		if halt > 0 && halt <= ctx.BlockHeight() && err == nil {
+			ctx.Logger().Info("churn event skipped due to mimir has halted churning")
+			return nil
+		}
 	}
 	var members []string
 	for i := range nas {
 		members = append(members, nas[i].PubKeySet.Secp256k1.String())
 	}
-	keygen, err := NewKeygen(ctx.BlockHeight(), members, AsgardKeygen)
+	keygen, err := NewKeygen(keygenHeight, members, keygenType)
 	if err != nil {
 		return fmt.Errorf("fail to create a new keygen: %w", err)
 	}
-	keygenBlock, err := vm.k.GetKeygenBlock(ctx, ctx.BlockHeight())
+	keygenBlock, err := vm.k.GetKeygenBlock(ctx, keygenHeight)
 	if err != nil {
 		return fmt.Errorf("fail to get keygen block from data store: %w", err)
 	}
@@ -1400,7 +1465,16 @@ func (vm *NetworkMgr) TriggerKeygen(ctx cosmos.Context, nas NodeAccounts) error 
 		return fmt.Errorf("fail to get active vaults: %w", err)
 	}
 	for _, vault := range active {
-		if vault.MembershipEquals(keygen.GetMembers()) {
+		if !vault.MembershipEquals(keygen.GetMembers()) {
+			continue
+		}
+		if keygenType == XMRMonovaultKeygen && !vault.HasChain(common.XMRChain) {
+			continue
+		}
+		if keygenType == AsgardKeygen && vault.HasChain(common.XMRChain) {
+			continue
+		}
+		if vault.Status == ActiveVault {
 			ctx.Logger().Info("skip keygen due to vault already existing")
 			return nil
 		}
@@ -1434,19 +1508,33 @@ func (vm *NetworkMgr) RotateVault(ctx cosmos.Context, vault Vault) error {
 
 	// find vaults the new vault conflicts with, mark them as inactive
 	for _, asgard := range active {
-		for _, member := range asgard.GetMembership() {
-			if vault.Contains(member) {
-				asgard.UpdateStatus(RetiringVault, ctx.BlockHeight())
-				if err := vm.k.SetVault(ctx, asgard); err != nil {
-					return err
-				}
-
-				ctx.EventManager().EmitEvent(
-					cosmos.NewEvent(EventTypeInactiveVault,
-						cosmos.NewAttribute("set asgard vault to inactive", asgard.PubKey.String())))
+		conflicts := false
+		switch {
+		case vault.HasChain(common.XMRChain):
+			conflicts = asgard.HasChain(common.XMRChain)
+		default:
+			if asgard.HasChain(common.XMRChain) {
+				conflicts = false
 				break
 			}
+			for _, member := range asgard.GetMembership() {
+				if vault.Contains(member) {
+					conflicts = true
+					break
+				}
+			}
 		}
+		if !conflicts {
+			continue
+		}
+		asgard.UpdateStatus(RetiringVault, ctx.BlockHeight())
+		if err := vm.k.SetVault(ctx, asgard); err != nil {
+			return err
+		}
+
+		ctx.EventManager().EmitEvent(
+			cosmos.NewEvent(EventTypeInactiveVault,
+				cosmos.NewAttribute("set asgard vault to inactive", asgard.PubKey.String())))
 	}
 
 	// Update Node account membership
@@ -1456,6 +1544,9 @@ func (vm *NetworkMgr) RotateVault(ctx cosmos.Context, vault Vault) error {
 			return err
 		}
 		na.TryAddSignerPubKey(vault.PubKey)
+		if !vault.PubKeyFrost.IsEmpty() && !vault.PubKeyFrost.Equals(vault.PubKey) {
+			na.TryAddSignerPubKey(vault.PubKeyFrost)
+		}
 		if err := vm.k.SetNodeAccount(ctx, na); err != nil {
 			return err
 		}
@@ -1827,7 +1918,7 @@ func (vm *NetworkMgr) UpdateNetwork(ctx cosmos.Context, constAccessor constants.
 		}
 		// Decrement the MaxRuneSupply mimir by the amount of RUNE burnt
 		currentMaxRuneSupply := cosmos.SafeUintFromInt64(vm.k.GetConfigInt64(ctx, constants.MaxRuneSupply))
-		currentMaxRuneSupply = currentMaxRuneSupply.Sub(systemIncomeBurnDeduct)
+		currentMaxRuneSupply = common.SafeSub(currentMaxRuneSupply, systemIncomeBurnDeduct)
 		vm.k.SetMimir(ctx, constants.MaxRuneSupply.String(), int64(currentMaxRuneSupply.Uint64()))
 	}
 
@@ -2881,7 +2972,7 @@ func (vm *NetworkMgr) createSwapToOverSolvency(ctx cosmos.Context, mgr Manager, 
 	var chainAddr common.Address
 	for _, vault := range activeVaults {
 		if vault.HasAsset(l1Asset) {
-			addr, addrErr := vault.PubKey.GetAddress(chain)
+			addr, addrErr := vault.GetAddress(chain)
 			if addrErr != nil {
 				ctx.Logger().Error("failed to get vault address for chain", "chain", chain, "error", addrErr)
 				continue

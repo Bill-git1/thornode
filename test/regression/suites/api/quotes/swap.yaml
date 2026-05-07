@@ -348,9 +348,9 @@ params:
   tolerance_bps: 5000
   affiliate: {{ addr_thor_pig }}
   affiliate_bps: 1000
-status: 400
 asserts:
-  - .message|test("memo too long")
+  - .error|not
+  - has("memo")|not
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap

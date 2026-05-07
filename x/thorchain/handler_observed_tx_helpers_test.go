@@ -485,10 +485,9 @@ func (s *HandlerObservedTxHelpersSuite) TestUnfinalizedHeightUsedInFetchMemoFrom
 	resolvedMemo := fetchMemoFromReference(ctx, mgr, common.BTCAsset, voter.Tx.Tx, voter.UnfinalizedHeight)
 	c.Assert(resolvedMemo, Equals, "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890")
 
-	// If we had used Height (120) instead, let's verify it would fail the height check
-	// (transaction observed after memo creation: 120 > 50, but this should be caught by height validation)
+	// A later finalized height still represents an observation after memo creation, so it should succeed.
 	resolvedMemoWithHeight := fetchMemoFromReference(ctx, mgr, common.BTCAsset, voter.Tx.Tx, voter.Height)
-	c.Assert(resolvedMemoWithHeight, Equals, "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890") // This will still work since 120 > 50
+	c.Assert(resolvedMemoWithHeight, Equals, "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890")
 
 	// Test edge case where using Height would fail but UnfinalizedHeight succeeds
 	// Create reference memo at height 70
@@ -628,6 +627,49 @@ func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundSingleMat
 	}
 
 	// Should return OriginalMemo when set
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, item.OriginalMemo)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundUsesExtendedXMRWindow(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	mgr.Keeper().SetMimir(ctx, constants.SigningTransactionPeriod.String(), 10)
+
+	vaultPubKey := GetRandomPubKey()
+	vaultPubKeyFrost := getRandomXMRFrostPubKey(c)
+	toAddress, err := vaultPubKeyFrost.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	inHash, _ := common.NewTxID("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+	item := TxOutItem{
+		Chain:            common.XMRChain,
+		ToAddress:        toAddress,
+		VaultPubKey:      vaultPubKey,
+		VaultPubKeyFrost: vaultPubKeyFrost,
+		Coin:             common.NewCoin(common.XMRAsset, cosmos.NewUint(1000000)),
+		Memo:             "OUT:" + inHash.String(),
+		OriginalMemo:     "SWAP:XMR.XMR:" + toAddress.String(),
+		InHash:           inHash,
+		GasRate:          100,
+		MaxGas:           common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(10000))},
+	}
+
+	ctx = ctx.WithBlockHeight(100)
+	txOut := NewTxOut(75)
+	txOut.TxArray = append(txOut.TxArray, item)
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			Chain:     common.XMRChain,
+			ToAddress: toAddress,
+			Coins:     common.Coins{item.Coin},
+			Memo:      "",
+		},
+		ObservedPubKey: vaultPubKeyFrost,
+	}
+
 	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
 	c.Assert(result, Equals, item.OriginalMemo)
 }
@@ -1205,6 +1247,84 @@ func (s *HandlerObservedTxHelpersSuite) TestCountMatchingSigners(c *C) {
 	c.Assert(count, Equals, 2)
 }
 
+func (s *HandlerObservedTxHelpersSuite) TestCountMatchingSignersScopesByObservedVault(c *C) {
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+
+	txID := GetRandomTxHash()
+	gas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(23061))}
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+		Gas:         gas,
+		Memo:        "OUT:xyz",
+	}
+
+	vaultPubKeyA := GetRandomPubKey()
+	vaultPubKeyB := GetRandomPubKey()
+
+	obsTxA := common.NewObservedTx(baseTx, 100, vaultPubKeyA, 100)
+	obsTxA.Signers = []string{nas[0].NodeAddress.String(), nas[1].NodeAddress.String()}
+
+	obsTxB := common.NewObservedTx(baseTx, 100, vaultPubKeyB, 100)
+	obsTxB.Signers = []string{nas[2].NodeAddress.String(), nas[3].NodeAddress.String()}
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{obsTxA, obsTxB})
+
+	countA := countMatchingSigners(voter, obsTxA, nas)
+	c.Assert(countA, Equals, 2)
+
+	countB := countMatchingSigners(voter, obsTxB, nas)
+	c.Assert(countB, Equals, 2)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestCountMatchingSignersDoesNotMixXMRSpentRefs(c *C) {
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+
+	txID := GetRandomTxHash()
+	baseTx := GetRandomTx()
+	baseTx.ID = txID
+	baseTx.Chain = common.XMRChain
+	baseTx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(500000000)))
+	baseTx.Gas = common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1000))}
+	baseTx.Memo = "OUT:xmr-spent-refs"
+
+	vaultPubKey := GetRandomPubKey()
+	obsTxA := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+	obsTxA.SpentOutputRefs = []common.OutputRef{
+		{TxHash: "aaaa", OutputIndex: 0, KeyImage: "ki_aaaa", SpendTxHash: txID.String()},
+		{TxHash: "bbbb", OutputIndex: 1, KeyImage: "ki_bbbb", SpendTxHash: txID.String()},
+	}
+	obsTxA.Signers = []string{nas[0].NodeAddress.String(), nas[1].NodeAddress.String()}
+
+	obsTxB := common.NewObservedTx(baseTx, 100, vaultPubKey, 100)
+	obsTxB.SpentOutputRefs = []common.OutputRef{
+		{TxHash: "cccc", OutputIndex: 0, KeyImage: "ki_cccc", SpendTxHash: txID.String()},
+		{TxHash: "dddd", OutputIndex: 1, KeyImage: "ki_dddd", SpendTxHash: txID.String()},
+	}
+	obsTxB.Signers = []string{nas[2].NodeAddress.String(), nas[3].NodeAddress.String()}
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{obsTxA, obsTxB})
+
+	countA := countMatchingSigners(voter, obsTxA, nas)
+	c.Assert(countA, Equals, 2)
+
+	countB := countMatchingSigners(voter, obsTxB, nas)
+	c.Assert(countB, Equals, 2)
+}
+
 func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionRequiresFinalityParity(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockHeight(100)
@@ -1519,4 +1639,33 @@ func (s *HandlerObservedTxHelpersSuite) TestDetectVaultSubFundsClampSumsDuplicat
 	c.Assert(err, IsNil)
 	c.Assert(haltTrading, Equals, ctx.BlockHeight(),
 		Commentf("clamp must fire when summed-by-asset amount exceeds vault balance"))
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestXMRSpentOutputRefsStoreAccumulation(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	vaultPubKey := GetRandomPubKey()
+	vault := NewVaultV2(1, ActiveVault, AsgardVault, vaultPubKey, []string{common.XMRChain.String()}, nil, vaultPubKey)
+	vault.PubKeyFrost = vaultPubKey
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	ref1 := common.OutputRef{TxHash: "aaa", OutputIndex: 0, KeyImage: "ki_aaa", SpendTxHash: "spend_tx"}
+	ref2 := common.OutputRef{TxHash: "bbb", OutputIndex: 1, KeyImage: "ki_bbb", SpendTxHash: "spend_tx"}
+
+	applySpentRefs := func(refs []common.OutputRef) {
+		c.Assert(mgr.Keeper().SetXMRSpentOutputRefs(ctx, vaultPubKey, common.TxID("spend_tx"), refs, ctx.BlockHeight(), ctx.BlockHeight()), IsNil)
+	}
+
+	applySpentRefs([]common.OutputRef{ref1, ref2})
+	refs, err := mgr.Keeper().GetXMRSpentOutputRefs(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(len(refs), Equals, 2)
+
+	applySpentRefs([]common.OutputRef{
+		{TxHash: "aaa", OutputIndex: 0, KeyImage: "ki_aaa", SpendTxHash: "spend_tx"},
+		{TxHash: "ccc", OutputIndex: 2, KeyImage: "ki_ccc", SpendTxHash: "spend_tx"},
+	})
+	refs, err = mgr.Keeper().GetXMRSpentOutputRefs(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(len(refs), Equals, 3, Commentf("duplicate ref should be deduped"))
 }

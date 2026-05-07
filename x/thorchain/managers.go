@@ -125,6 +125,7 @@ type ValidatorManager interface {
 // NetworkManager interface define the contract of network Manager
 type NetworkManager interface {
 	TriggerKeygen(ctx cosmos.Context, nas NodeAccounts) error
+	TriggerXMRKeygen(ctx cosmos.Context, nas NodeAccounts) error
 	RotateVault(ctx cosmos.Context, vault Vault) error
 	BeginBlock(ctx cosmos.Context, mgr Manager) error
 	EndBlock(ctx cosmos.Context, mgr Manager) error

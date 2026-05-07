@@ -265,12 +265,15 @@ func run(out io.Writer, path string, routine int, doneWithRetries func(path stri
 				if ops[j].OpType() != "check" {
 					break
 				}
+				checkOp, ok := ops[j].(*OpCheck)
+				if !ok {
+					continue
+				}
 				wg.Add(1)
-				go func(j int) {
+				go func(checkOp *OpCheck) {
 					defer wg.Done()
-					// trunk-ignore(golangci-lint/forcetypeassert)
-					ops[j].(*OpCheck).prefetch(routine)
-				}(j)
+					checkOp.prefetch(routine)
+				}(checkOp)
 			}
 			wg.Wait()
 		}

@@ -94,9 +94,10 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		txIDSource = append(txIDSource, height...)
 	}
 	hash := tmtypes.Tx(txIDSource).Hash()
-	txID, err := common.NewTxID(fmt.Sprintf("%X", hash))
+	hashHex := fmt.Sprintf("%X", hash)
+	txID, err := common.NewTxID(hashHex)
 	if idx > 0 {
-		ctx.Logger().Info("auto-increment txid", "idx", idx, "hash", fmt.Sprintf("%X", hash))
+		ctx.Logger().Info("auto-increment txid", "idx", idx, "hash", hashHex)
 		txID, err = common.NewTxID(fmt.Sprintf("%X-%d", hash, idx))
 		if err != nil {
 			return nil, fmt.Errorf("fail to get tx hash: %w", err)
@@ -213,7 +214,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 
 	m, txErr := processOneTxIn(ctx, h.mgr.Keeper(), txIn, msg.Signer)
 	if txErr != nil {
-		ctx.Logger().Error("fail to process native inbound tx", "error", txErr.Error(), "tx hash", tx.ID.String())
+		ctx.Logger().Error("fail to process native inbound tx", "error", txErr, "tx hash", tx.ID.String())
 		return nil, txErr
 	}
 

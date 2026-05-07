@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	. "gopkg.in/check.v1"
 )
 
@@ -18,7 +19,8 @@ func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawalNetworkValidation
 	addr := GetRandomBech32Addr()
 
 	// Enable trade accounts
-	mgr.Keeper().SetMimir(ctx, "TradeAccountsEnabled", 1)
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsEnabled.String(), 1)
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsDepositEnabled.String(), 1)
 
 	// Test that addresses from a different network are rejected
 	// MainNet and StageNet both use bc1 (mainnet format), MockNet uses tb1 (testnet format)
@@ -81,6 +83,9 @@ func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawal(c *C) {
 	txID, err := common.NewTxID("A" + strings.Repeat("0", 63))
 	c.Assert(err, IsNil)
 	dummyTx := common.Tx{ID: txID}
+
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsEnabled.String(), 1)
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsDepositEnabled.String(), 1)
 
 	{
 		msg := NewMsgTradeAccountDeposit(asset, cosmos.NewUint(500), addr, addr, dummyTx)

@@ -17,7 +17,7 @@ const (
 	featuredGuaranteedSubaddressVector    = "CjWdTpuDaZ69nTGxzm9YarR82YDYFECi1WaaREZTMy5yDsjaRX5bC3cbC3JpcrBPd7YYpjoWKuBMidgGaKBK5Jye2v4Pyz8bD"
 	xmrFixtureSpendHex                    = "b862409fb5c4c4123df2abf7462b88f041ad36dd6864ce872fd5472be363c5b1"
 	xmrFixtureMockAddress                 = "48cNbRvGyrb43yGQYLWKxshBnnq8nRkFfPcUwfqpihwJWiSwHb7gy6p6oAXAxDJXbPbGME2xWBgFdSUzrxhiKLiqGbm9KqB"
-	xmrFixturePublicAddress               = "Cq5MKQVvbmV43yGQYLWKxshBnnq8nRkFfPcUwfqpihwJWiSwHb7gy6p6oAXAxDJXbPbGME2xWBgFdSUzrxhiKLiq2BioLVug4"
+	xmrFixturePublicAddress               = "48cNbRvGyrb43yGQYLWKxshBnnq8nRkFfPcUwfqpihwJWiSwHb7gy6p6oAXAxDJXbPbGME2xWBgFdSUzrxhiKLiqGbm9KqB"
 )
 
 func expectedStandardXMRNetwork() ChainNetwork {
@@ -420,6 +420,42 @@ func (s *XMRAddressSuite) TestXMRFeaturedGuaranteedHelper(c *C) {
 	c.Check(IsXMRFeaturedGuaranteedAddress(XMRChecksummedDummyAddress('8')), Equals, false)
 }
 
+func (s *XMRAddressSuite) TestXMRSupportedExternalRecipientPolicy(c *C) {
+	spend := makeTestXMRKey("recipient-policy-spend")
+	view := makeTestXMRKey("recipient-policy-view")
+	var paymentID [8]byte
+	paymentID[0] = 0xA5
+
+	primary := makeTestXMRAddr(xmrPrimaryNetworkByte, spend, view)
+	subaddress := makeTestXMRAddr(xmrSubaddressNetworkByte, spend, view)
+	integrated := makeTestXMRIntegratedAddr(spend, view, paymentID)
+	featured := makeTestXMRFeaturedAddr(
+		xmrFeaturedMainnetNetworkByte,
+		spend,
+		view,
+		xmrFeaturedSubaddressBit|xmrFeaturedGuaranteedBit,
+		nil,
+	)
+	featuredIntegrated := makeTestXMRFeaturedAddr(
+		xmrFeaturedMainnetNetworkByte,
+		spend,
+		view,
+		xmrFeaturedIntegratedBit|xmrFeaturedGuaranteedBit,
+		&paymentID,
+	)
+
+	c.Check(IsValidXMRAddress(primary), Equals, true)
+	c.Check(IsValidXMRAddress(subaddress), Equals, true)
+	c.Check(IsValidXMRAddress(integrated), Equals, true)
+	c.Check(IsValidXMRAddress(featured), Equals, true)
+	c.Check(IsValidXMRAddress(featuredIntegrated), Equals, true)
+	c.Check(IsSupportedXMRAddress(primary), Equals, true)
+	c.Check(IsSupportedXMRAddress(subaddress), Equals, true)
+	c.Check(IsSupportedXMRAddress(integrated), Equals, false)
+	c.Check(IsSupportedXMRAddress(featured), Equals, false)
+	c.Check(IsSupportedXMRAddress(featuredIntegrated), Equals, false)
+}
+
 func (s *XMRAddressSuite) TestXMRCrossStackDeterminismFixture(c *C) {
 	spend, err := hex.DecodeString(xmrFixtureSpendHex)
 	c.Assert(err, IsNil)
@@ -434,7 +470,7 @@ func (s *XMRAddressSuite) TestXMRCrossStackDeterminismFixture(c *C) {
 	c.Check(public, Equals, xmrFixturePublicAddress)
 }
 
-func (s *XMRAddressSuite) TestXMRMocknetUsesWalletCompatibleStandardAddress(c *C) {
+func (s *XMRAddressSuite) TestXMRUsesWalletCompatibleStandardAddress(c *C) {
 	spend, err := hex.DecodeString(xmrFixtureSpendHex)
 	c.Assert(err, IsNil)
 	c.Assert(len(spend), Equals, 32)
@@ -447,9 +483,10 @@ func (s *XMRAddressSuite) TestXMRMocknetUsesWalletCompatibleStandardAddress(c *C
 
 	public, err := deriveXMRAddressFromSpendPubKey(spend, MainNet)
 	c.Assert(err, IsNil)
-	c.Check(len(public), Equals, 97)
-	c.Check(strings.HasPrefix(public, "C"), Equals, true)
+	c.Check(len(public), Equals, 95)
+	c.Check(strings.HasPrefix(public, "4"), Equals, true)
 	c.Check(IsXMRFeaturedGuaranteedAddress(public), Equals, false)
+	c.Check(public, Equals, mock)
 }
 
 func (s *XMRAddressSuite) TestXMRUnknownSenderAddress(c *C) {

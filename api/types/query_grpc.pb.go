@@ -72,6 +72,7 @@ const (
 	Query_LastBlocks_FullMethodName              = "/types.Query/LastBlocks"
 	Query_ChainsLastBlock_FullMethodName         = "/types.Query/ChainsLastBlock"
 	Query_Vault_FullMethodName                   = "/types.Query/Vault"
+	Query_XMRSpentOutputRefs_FullMethodName      = "/types.Query/XMRSpentOutputRefs"
 	Query_AsgardVaults_FullMethodName            = "/types.Query/AsgardVaults"
 	Query_VaultsPubkeys_FullMethodName           = "/types.Query/VaultsPubkeys"
 	Query_VaultSolvency_FullMethodName           = "/types.Query/VaultSolvency"
@@ -177,6 +178,7 @@ type QueryClient interface {
 	LastBlocks(ctx context.Context, in *QueryLastBlocksRequest, opts ...grpc.CallOption) (*QueryLastBlocksResponse, error)
 	ChainsLastBlock(ctx context.Context, in *QueryChainsLastBlockRequest, opts ...grpc.CallOption) (*QueryLastBlocksResponse, error)
 	Vault(ctx context.Context, in *QueryVaultRequest, opts ...grpc.CallOption) (*QueryVaultResponse, error)
+	XMRSpentOutputRefs(ctx context.Context, in *QueryXMRSpentOutputRefsRequest, opts ...grpc.CallOption) (*QueryXMRSpentOutputRefsResponse, error)
 	AsgardVaults(ctx context.Context, in *QueryAsgardVaultsRequest, opts ...grpc.CallOption) (*QueryAsgardVaultsResponse, error)
 	VaultsPubkeys(ctx context.Context, in *QueryVaultsPubkeysRequest, opts ...grpc.CallOption) (*QueryVaultsPubkeysResponse, error)
 	VaultSolvency(ctx context.Context, in *QueryVaultSolvencyRequest, opts ...grpc.CallOption) (*QueryVaultSolvencyResponse, error)
@@ -701,6 +703,15 @@ func (c *queryClient) Vault(ctx context.Context, in *QueryVaultRequest, opts ...
 	return out, nil
 }
 
+func (c *queryClient) XMRSpentOutputRefs(ctx context.Context, in *QueryXMRSpentOutputRefsRequest, opts ...grpc.CallOption) (*QueryXMRSpentOutputRefsResponse, error) {
+	out := new(QueryXMRSpentOutputRefsResponse)
+	err := c.cc.Invoke(ctx, Query_XMRSpentOutputRefs_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) AsgardVaults(ctx context.Context, in *QueryAsgardVaultsRequest, opts ...grpc.CallOption) (*QueryAsgardVaultsResponse, error) {
 	out := new(QueryAsgardVaultsResponse)
 	err := c.cc.Invoke(ctx, Query_AsgardVaults_FullMethodName, in, out, opts...)
@@ -1100,6 +1111,7 @@ type QueryServer interface {
 	LastBlocks(context.Context, *QueryLastBlocksRequest) (*QueryLastBlocksResponse, error)
 	ChainsLastBlock(context.Context, *QueryChainsLastBlockRequest) (*QueryLastBlocksResponse, error)
 	Vault(context.Context, *QueryVaultRequest) (*QueryVaultResponse, error)
+	XMRSpentOutputRefs(context.Context, *QueryXMRSpentOutputRefsRequest) (*QueryXMRSpentOutputRefsResponse, error)
 	AsgardVaults(context.Context, *QueryAsgardVaultsRequest) (*QueryAsgardVaultsResponse, error)
 	VaultsPubkeys(context.Context, *QueryVaultsPubkeysRequest) (*QueryVaultsPubkeysResponse, error)
 	VaultSolvency(context.Context, *QueryVaultSolvencyRequest) (*QueryVaultSolvencyResponse, error)
@@ -1302,6 +1314,9 @@ func (UnimplementedQueryServer) ChainsLastBlock(context.Context, *QueryChainsLas
 }
 func (UnimplementedQueryServer) Vault(context.Context, *QueryVaultRequest) (*QueryVaultResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Vault not implemented")
+}
+func (UnimplementedQueryServer) XMRSpentOutputRefs(context.Context, *QueryXMRSpentOutputRefsRequest) (*QueryXMRSpentOutputRefsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method XMRSpentOutputRefs not implemented")
 }
 func (UnimplementedQueryServer) AsgardVaults(context.Context, *QueryAsgardVaultsRequest) (*QueryAsgardVaultsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AsgardVaults not implemented")
@@ -2381,6 +2396,24 @@ func _Query_Vault_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_XMRSpentOutputRefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryXMRSpentOutputRefsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).XMRSpentOutputRefs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_XMRSpentOutputRefs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).XMRSpentOutputRefs(ctx, req.(*QueryXMRSpentOutputRefsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_AsgardVaults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryAsgardVaultsRequest)
 	if err := dec(in); err != nil {
@@ -3265,6 +3298,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Vault",
 			Handler:    _Query_Vault_Handler,
+		},
+		{
+			MethodName: "XMRSpentOutputRefs",
+			Handler:    _Query_XMRSpentOutputRefs_Handler,
 		},
 		{
 			MethodName: "AsgardVaults",

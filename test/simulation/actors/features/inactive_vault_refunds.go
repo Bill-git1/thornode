@@ -7,7 +7,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
-	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	acommon "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -128,38 +127,18 @@ func (a *InactiveVaultRefundActor) sendInactiveVaultInbound(config *OpConfig) Op
 	memo := "TEST-INACTIVE-VAULT-REFUND"
 	client := a.account.ChainClients[a.asset.Chain]
 
-	url := fmt.Sprintf("%s/thorchain/inbound_addresses?height=1", thornode.BaseURL()) // genesis vault
-	var inboundAddresses []openapi.InboundAddress
-	err := thornode.Get(url, &inboundAddresses)
+	inboundAddr, inboundPubkey, err := a.findInactiveVaultAddress()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get inbound addresses")
+		log.Error().Err(err).Msg("failed to get inactive vault")
 		return OpResult{
 			Continue: false,
 		}
 	}
-
-	// find address for chain
-	var inboundAddr common.Address
-	var inboundPubkey string
-	for _, inboundAddress := range inboundAddresses {
-		if *inboundAddress.Chain == string(a.asset.Chain) {
-			inboundAddr = common.Address(*inboundAddress.Address)
-			inboundPubkey = *inboundAddress.PubKey
-			break
-		}
-	}
-
-	vault, err := thornode.GetVault(inboundPubkey)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get vault")
+	if inboundAddr.IsEmpty() || inboundPubkey == "" {
+		a.Log().Info().Msg("no inactive vault available for chain, skipping")
+		a.account.Release()
 		return OpResult{
-			Continue: false,
-		}
-	}
-	if vault.Status == types.VaultStatus_ActiveVault.String() {
-		log.Error().Msgf("vault is active: %s", vault.Status)
-		return OpResult{
-			Continue: false,
+			Finish: true,
 		}
 	}
 
@@ -171,17 +150,7 @@ func (a *InactiveVaultRefundActor) sendInactiveVaultInbound(config *OpConfig) Op
 		Memo:      memo,
 	}
 
-	// sign transaction
-	signed, err := client.SignTx(tx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to sign tx")
-		return OpResult{
-			Continue: false,
-		}
-	}
-
-	// broadcast transaction
-	txid, err := client.BroadcastTx(signed)
+	txid, err := SignAndBroadcastTx(client, tx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to broadcast tx")
 		return OpResult{
@@ -194,6 +163,26 @@ func (a *InactiveVaultRefundActor) sendInactiveVaultInbound(config *OpConfig) Op
 	return OpResult{
 		Continue: true,
 	}
+}
+
+func (a *InactiveVaultRefundActor) findInactiveVaultAddress() (common.Address, string, error) {
+	vaults, err := thornode.GetVaults()
+	if err != nil {
+		return "", "", err
+	}
+
+	for _, vault := range vaults {
+		if vault.Status != types.VaultStatus_InactiveVault.String() {
+			continue
+		}
+		for _, address := range vault.Addresses {
+			if address.Chain == a.asset.Chain.String() {
+				return common.Address(address.Address), vault.GetPubKey(), nil
+			}
+		}
+	}
+
+	return "", "", nil
 }
 
 func (a *InactiveVaultRefundActor) verifyRefund(config *OpConfig) OpResult {

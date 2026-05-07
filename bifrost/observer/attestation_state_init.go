@@ -202,11 +202,14 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 	}
 
 	if totalBatches == 0 {
-		// If there are no transactions, we still need to send the end signal
+		// Receiver replied "done" because there are no batches to transfer.
+		// Validate and exit cleanly — falling through to the streamAckBegin
+		// check below would log a false "unexpected response to batch begin"
+		// error in this success path.
 		if string(ack) != p2p.StreamMsgDone {
 			s.logger.Error().Str("response", string(ack)).Msg("unexpected final response")
-			return
 		}
+		return
 	}
 
 	if string(ack) != streamAckBegin {
@@ -386,6 +389,8 @@ func (s *AttestationGossip) receiveBatchedAttestationState(stream network.Stream
 	}
 
 	total := 0
+	var batchWG sync.WaitGroup
+	defer batchWG.Wait()
 	// Receive all batches
 	for {
 		// Read next message
@@ -396,6 +401,7 @@ func (s *AttestationGossip) receiveBatchedAttestationState(stream network.Stream
 
 		// Check if this is the end marker
 		if len(message) >= 1 && bytes.Equal(message[:1], prefixBatchEnd) {
+			batchWG.Wait()
 			// Send final acknowledgment
 			if err = p2p.WriteStreamWithBuffer([]byte(p2p.StreamMsgDone), stream); err != nil {
 				return fmt.Errorf("failed to send final ack: %w", err)
@@ -457,7 +463,11 @@ func (s *AttestationGossip) receiveBatchedAttestationState(stream network.Stream
 		}
 
 		// Add the QuorumTxs to our collection
-		go s.processAttestationStateBatch(logger, batch)
+		batchWG.Add(1)
+		go func(batch common.QuorumState) {
+			defer batchWG.Done()
+			s.processAttestationStateBatch(logger, batch)
+		}(batch)
 
 		total += len(batch.QuoTxs)
 
@@ -562,7 +572,12 @@ func (s *AttestationGossip) askStreamForState(stream network.Stream) {
 	}
 
 	// Process the batched attestation state
-	if err := s.receiveBatchedAttestationState(stream, initialData); err != nil {
+	// Strip the prefixBatchBegin byte before passing to the receiver, matching
+	// the parallel call site in attestation_handlers.go which uses data[1:].
+	// Without this, receiveBatchedAttestationState reads initialData[:4] as
+	// totalBatches and gets garbage (prefix byte | first 3 bytes of real value),
+	// breaking the handshake on every state-init exchange after a restart.
+	if err := s.receiveBatchedAttestationState(stream, initialData[len(prefixBatchBegin):]); err != nil {
 		s.logger.Error().Err(err).Msgf("fail to receive batched attestation state from peer: %s", peer)
 	}
 }

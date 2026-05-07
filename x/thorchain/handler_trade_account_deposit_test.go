@@ -3,6 +3,7 @@ package thorchain
 import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	. "gopkg.in/check.v1"
 )
 
@@ -16,6 +17,9 @@ func (HandlerTradeAccountDeposit) TestTradeAccountDeposit(c *C) {
 	asset := common.BTCAsset
 	addr := GetRandomBech32Addr()
 	dummyTx := common.Tx{ID: "test"}
+
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsEnabled.String(), 1)
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsDepositEnabled.String(), 1)
 
 	msg := NewMsgTradeAccountDeposit(asset, cosmos.NewUint(350), addr, addr, dummyTx)
 

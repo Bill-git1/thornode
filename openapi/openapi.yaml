@@ -2576,6 +2576,9 @@ components:
         pub_key_eddsa:
           type: string
           example: "thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc"
+        pub_key_frost:
+          type: string
+          example: "thorpub1zcjduepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc"
         routers:
           type: array
           items:
@@ -4017,6 +4020,7 @@ components:
         - effective_security_bond
         - total_reserve
         - vaults_migrating
+        - xmr_active_vault_ready
         - gas_spent_rune
         - gas_withheld_rune
         - native_outbound_fee_rune
@@ -4055,6 +4059,10 @@ components:
           type: boolean
           example: false
           description: Returns true if there exist RetiringVaults which have not finished migrating funds to new ActiveVaults
+        xmr_active_vault_ready:
+          type: boolean
+          example: false
+          description: Indicates whether an active Asgard vault currently has spendable XMR funds
         gas_spent_rune:
           type: string
           example: "1000000000"

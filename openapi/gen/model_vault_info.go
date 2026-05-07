@@ -18,6 +18,7 @@ import (
 type VaultInfo struct {
 	PubKey string `json:"pub_key"`
 	PubKeyEddsa *string `json:"pub_key_eddsa,omitempty"`
+	PubKeyFrost *string `json:"pub_key_frost,omitempty"`
 	Routers []VaultRouter `json:"routers"`
 	// the list of node public keys which are members of the vault
 	Membership []string `json:"membership,omitempty"`
@@ -98,6 +99,38 @@ func (o *VaultInfo) SetPubKeyEddsa(v string) {
 	o.PubKeyEddsa = &v
 }
 
+// GetPubKeyFrost returns the PubKeyFrost field value if set, zero value otherwise.
+func (o *VaultInfo) GetPubKeyFrost() string {
+	if o == nil || o.PubKeyFrost == nil {
+		var ret string
+		return ret
+	}
+	return *o.PubKeyFrost
+}
+
+// GetPubKeyFrostOk returns a tuple with the PubKeyFrost field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VaultInfo) GetPubKeyFrostOk() (*string, bool) {
+	if o == nil || o.PubKeyFrost == nil {
+		return nil, false
+	}
+	return o.PubKeyFrost, true
+}
+
+// HasPubKeyFrost returns a boolean if a field has been set.
+func (o *VaultInfo) HasPubKeyFrost() bool {
+	if o != nil && o.PubKeyFrost != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPubKeyFrost gets a reference to the given string and assigns it to the PubKeyFrost field.
+func (o *VaultInfo) SetPubKeyFrost(v string) {
+	o.PubKeyFrost = &v
+}
+
 // GetRouters returns the Routers field value
 func (o *VaultInfo) GetRouters() []VaultRouter {
 	if o == nil {
@@ -161,6 +194,9 @@ func (o VaultInfo) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.PubKeyEddsa != nil {
 		toSerialize["pub_key_eddsa"] = o.PubKeyEddsa
+	}
+	if o.PubKeyFrost != nil {
+		toSerialize["pub_key_frost"] = o.PubKeyFrost
 	}
 	if true {
 		toSerialize["routers"] = o.Routers

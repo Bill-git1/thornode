@@ -2,7 +2,11 @@ package thorchain
 
 import (
 	"os"
+	"regexp"
+	"strings"
 
+	"github.com/btcsuite/btcutil/bech32"
+	"gitlab.com/thorchain/thornode/v3/cmd"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -14,6 +18,33 @@ type GenesisTestSuite struct{}
 
 var _ = Suite(&GenesisTestSuite{})
 
+var genesisFixtureBech32 = regexp.MustCompile(`thor[a-z]*1[0-9a-z]+`)
+
+func normalizeGenesisFixtureBech32(input string) string {
+	return genesisFixtureBech32.ReplaceAllStringFunc(input, func(raw string) string {
+		_, data, err := bech32.DecodeNoLimit(raw)
+		if err != nil {
+			return raw
+		}
+
+		targetPrefix := cmd.Bech32PrefixAccAddr
+		switch {
+		case strings.HasPrefix(raw, "thorcpub1"):
+			targetPrefix = cmd.Bech32PrefixConsPub
+		case strings.HasPrefix(raw, "thorpub1"):
+			targetPrefix = cmd.Bech32PrefixAccPub
+		case strings.HasPrefix(raw, "thorc1"):
+			targetPrefix = cmd.Bech32PrefixConsAddr
+		}
+
+		normalized, err := bech32.Encode(targetPrefix, data)
+		if err != nil {
+			return raw
+		}
+		return normalized
+	})
+}
+
 func (GenesisTestSuite) TestGenesis(c *C) {
 	SetupConfigForTest()
 	genesisState := DefaultGenesisState()
@@ -24,9 +55,10 @@ func (GenesisTestSuite) TestGenesis(c *C) {
 	content, err := os.ReadFile("../../test/fixtures/genesis/genesis.json")
 	c.Assert(err, IsNil)
 	c.Assert(content, NotNil)
+	normalizedContent := normalizeGenesisFixtureBech32(string(content))
 	ctx, mgr = setupManagerForTest(c)
 	var state GenesisState
-	c.Assert(ModuleCdc.UnmarshalJSON(content, &state), IsNil)
+	c.Assert(ModuleCdc.UnmarshalJSON([]byte(normalizedContent), &state), IsNil)
 	result := InitGenesis(ctx, mgr.Keeper(), state)
 	c.Assert(result, NotNil)
 	gs1 := ExportGenesis(ctx, mgr.Keeper())
@@ -36,8 +68,6 @@ func (GenesisTestSuite) TestGenesis(c *C) {
 func (GenesisTestSuite) TestGenesisPOLReserveDepositRoundTrip(c *C) {
 	SetupConfigForTest()
 
-	// Seed a source keeper with two POL reserve deposits whose amounts must
-	// survive an export/import round trip.
 	srcCtx, srcMgr := setupManagerForTest(c)
 	usdc, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
 	c.Assert(err, IsNil)
@@ -50,7 +80,6 @@ func (GenesisTestSuite) TestGenesisPOLReserveDepositRoundTrip(c *C) {
 	usdcDeposit.RuneDeposited = cosmos.NewUint(678 * common.One)
 	c.Assert(srcMgr.Keeper().SetPOLReserveDeposit(srcCtx, usdcDeposit), IsNil)
 
-	// Export must contain both records.
 	exported := ExportGenesis(srcCtx, srcMgr.Keeper())
 	found := map[string]cosmos.Uint{}
 	for _, prd := range exported.PolReserveDeposits {
@@ -59,7 +88,6 @@ func (GenesisTestSuite) TestGenesisPOLReserveDepositRoundTrip(c *C) {
 	c.Check(found[common.BTCAsset.String()].String(), Equals, btcDeposit.RuneDeposited.String())
 	c.Check(found[usdc.String()].String(), Equals, usdcDeposit.RuneDeposited.String())
 
-	// Import into a fresh keeper and confirm each per-asset record round-trips.
 	dstCtx, dstMgr := setupManagerForTest(c)
 	InitGenesis(dstCtx, dstMgr.Keeper(), exported)
 

@@ -23,6 +23,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/observer"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/monero"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/signer"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
@@ -126,6 +127,12 @@ func main() {
 			Stringer("keygenJail", jailTimeKeygen).
 			Msg("keygen timeout must be shorter than jail time")
 	}
+	// FrostKeygenTimeout is intentionally NOT bound by jailTimeKeygen.
+	// FROST DKG is a 3-round p2p protocol whose round-2 message exchange
+	// can legitimately exceed the aggressive jail times used in test
+	// environments. The 60s
+	// floor inside NewFrostKeygenCoordinator + per-environment overrides
+	// in docker-compose are the relevant safety nets here.
 	if cfg.Signer.KeysignTimeout >= jailTimeKeysign {
 		log.Fatal().
 			Stringer("keysignTimeout", cfg.Signer.KeysignTimeout).
@@ -150,11 +157,12 @@ func main() {
 		tmPrivateKey,
 		tmPrivateKeyEddsa,
 		common.TssConfig{
-			EnableMonitor:   true,
-			KeyGenTimeout:   cfg.Signer.KeygenTimeout,
-			KeySignTimeout:  cfg.Signer.KeysignTimeout,
-			PartyTimeout:    cfg.Signer.PartyTimeout,
-			PreParamTimeout: cfg.Signer.PreParamTimeout,
+			EnableMonitor:      true,
+			KeyGenTimeout:      cfg.Signer.KeygenTimeout,
+			FrostKeygenTimeout: cfg.Signer.FrostKeygenTimeout,
+			KeySignTimeout:     cfg.Signer.KeysignTimeout,
+			PartyTimeout:       cfg.Signer.PartyTimeout,
+			PreParamTimeout:    cfg.Signer.PreParamTimeout,
 		},
 		nil,
 	)
@@ -212,6 +220,10 @@ func main() {
 	// enable observer to react to notifications from thornode
 	// that come through the grpc connection within AttestationGossip.
 	ag.SetObserverHandleObservedTxCommitted(obs)
+
+	if xmrClient, ok := chains[tcommon.XMRChain].(*monero.Client); ok {
+		ag.SetObserverApplySpentOutputRefs(xmrClient.ApplySpentOutputRefs)
+	}
 
 	// start signer
 	sign, err := signer.NewSigner(cfg, thorchainBridge, k, pubkeyMgr, tssIns, chains, m, tssKeysignMetricMgr, obs)

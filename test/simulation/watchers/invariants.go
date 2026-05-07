@@ -14,6 +14,35 @@ import (
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 )
 
+var (
+	invariantRecheckAttempts = 2
+	invariantRecheckDelay    = 2 * time.Second
+)
+
+type invariantResponse struct {
+	Broken    bool
+	Invariant string
+	Msg       []string
+}
+
+func fetchInvariant(cl *http.Client, endpoint string) (invariantResponse, error) {
+	resp, err := cl.Get(endpoint)
+	if err != nil {
+		return invariantResponse{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return invariantResponse{}, fmt.Errorf("invariant returned non-200 status: %d", resp.StatusCode)
+	}
+
+	invRes := invariantResponse{}
+	if err = json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
+		return invariantResponse{}, err
+	}
+
+	return invRes, nil
+}
+
 func NewInvariants() *Watcher {
 	cl := log.With().Str("watcher", "invariants").Logger()
 
@@ -31,31 +60,39 @@ func NewInvariants() *Watcher {
 			for _, invariant := range invariants {
 				endpoint := fmt.Sprintf("%s/thorchain/invariant/%s", thornodeURL, invariant)
 
-				resp, err := httpClient.Get(endpoint)
+				invRes, err := fetchInvariant(httpClient, endpoint)
 				if err != nil {
 					cl.Error().Err(err).Str("invariant", invariant).Msg("failed to get invariant")
 					continue
 				}
-				defer resp.Body.Close()
-				if resp.StatusCode != http.StatusOK {
-					cl.Error().
-						Str("invariant", invariant).
-						Int("status", resp.StatusCode).
-						Msg("invariant returned non-200 status")
-					continue
-				}
-				invRes := struct {
-					Broken    bool
-					Invariant string
-					Msg       []string
-				}{}
-				if err = json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
-					cl.Error().Err(err).
-						Str("invariant", invariant).
-						Msg("failed to decode invariant response")
-					continue
-				}
+
 				if invRes.Broken {
+					transient := false
+					for attempt := 0; attempt < invariantRecheckAttempts; attempt++ {
+						time.Sleep(invariantRecheckDelay)
+
+						recheck, recheckErr := fetchInvariant(httpClient, endpoint)
+						if recheckErr != nil {
+							cl.Error().Err(recheckErr).
+								Str("invariant", invariant).
+								Int("attempt", attempt+1).
+								Msg("failed to recheck invariant")
+							continue
+						}
+						if !recheck.Broken {
+							transient = true
+							cl.Warn().
+								Str("invariant", invariant).
+								Int("attempt", attempt+1).
+								Msg("transient invariant failure cleared on recheck")
+							break
+						}
+						invRes = recheck
+					}
+					if transient {
+						continue
+					}
+
 					msg := strings.Join(invRes.Msg, ", ")
 					err = fmt.Errorf("invariant %s is broken: %s", invRes.Invariant, msg)
 					cl.Error().Err(err).Msg("invariant is broken")

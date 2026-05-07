@@ -2,7 +2,9 @@ package types
 
 import (
 	"errors"
+	"fmt"
 
+	cometed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	"gitlab.com/thorchain/thornode/v3/common"
 	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 
@@ -13,6 +15,14 @@ import (
 type MsgObservedTxOutSuite struct{}
 
 var _ = Suite(&MsgObservedTxOutSuite{})
+
+func getRandomXMRPubKeyForMsgTest(c *C) common.PubKey {
+	pubKey, err := common.NewPubKeyFromCrypto(cometed25519.GenPrivKey().PubKey())
+	c.Assert(err, IsNil)
+	_, err = pubKey.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	return pubKey
+}
 
 func (s *MsgObservedTxOutSuite) TestMsgObservedTxOut(c *C) {
 	var err error
@@ -66,4 +76,34 @@ func (s *MsgObservedTxOutSuite) TestMsgObservedTxOut(c *C) {
 	err7 := m7.ValidateBasic()
 	c.Assert(err7, NotNil)
 	c.Assert(errors.Is(err4, se.ErrUnknownRequest), Equals, true)
+}
+
+func (s *MsgObservedTxOutSuite) TestMsgObservedTxOutRejectsOversizedXMRSpentRefs(c *C) {
+	var err error
+	pk := getRandomXMRPubKeyForMsgTest(c)
+	fromAddress, err := pk.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	toAddress, err := getRandomXMRPubKeyForMsgTest(c).GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.XMRChain,
+		FromAddress: fromAddress,
+		ToAddress:   toAddress,
+		Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(100))),
+		Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:spent-refs",
+	}, 55, pk, 55)
+	for i := 0; i <= common.MaxXMRSpentOutputRefs; i++ {
+		tx.SpentOutputRefs = append(tx.SpentOutputRefs, common.OutputRef{
+			TxHash:      fmt.Sprintf("tx-%d", i),
+			OutputIndex: uint32(i),
+			KeyImage:    fmt.Sprintf("ki-%d", i),
+			SpendTxHash: tx.Tx.ID.String(),
+		})
+	}
+
+	m := NewMsgObservedTxOut(common.ObservedTxs{tx}, GetRandomBech32Addr())
+	c.Assert(m.ValidateBasic(), NotNil)
 }
