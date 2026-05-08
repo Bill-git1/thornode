@@ -392,3 +392,126 @@ func (HandlerUnBondSuite) TestBondProviders_Handler(c *C) {
 	c.Check(bp.Has(p.BondAddress), Equals, true)
 	c.Check(bp.Get(p.BondAddress).Bond.Uint64(), Equals, uint64(0), Commentf("%d", bp.Get(p.BondAddress).Bond.Uint64()))
 }
+
+func (HandlerUnBondSuite) TestRemoveZeroBalanceProviderFromActiveNode(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	activeNodeAccount := GetRandomValidatorNode(NodeActive)
+	c.Assert(k.SetNodeAccount(ctx, activeNodeAccount), IsNil)
+	handler := NewUnBondHandler(NewDummyMgrWithKeeper(k))
+
+	txIn := GetRandomTx()
+	txIn.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()))
+
+	// add a zero-balance whitelisted bond provider to the active node
+	zeroProvider := NewBondProvider(GetRandomBech32Addr())
+	bp := NewBondProviders(activeNodeAccount.NodeAddress)
+	operator, err := activeNodeAccount.BondAddress.AccAddress()
+	c.Assert(err, IsNil)
+	bp.Providers = []BondProvider{NewBondProvider(operator), zeroProvider}
+	c.Assert(k.SetBondProviders(ctx, bp), IsNil)
+
+	// node operator can remove a zero-balance bond provider while node is active
+	msg := NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.ZeroUint(), activeNodeAccount.BondAddress, zeroProvider.BondAddress, activeNodeAccount.NodeAddress)
+	err = handler.validate(ctx, *msg)
+	c.Assert(err, IsNil)
+	_, err = handler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+	bp, err = k.GetBondProviders(ctx, activeNodeAccount.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(bp.Has(zeroProvider.BondAddress), Equals, false)
+
+	// add a non-zero balance bond provider; cannot be removed while active
+	nonZeroProvider := NewBondProvider(GetRandomBech32Addr())
+	nonZeroProvider.Bond = cosmos.NewUint(100 * common.One)
+	bp.Providers = append(bp.Providers, nonZeroProvider)
+	c.Assert(k.SetBondProviders(ctx, bp), IsNil)
+
+	msg = NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.ZeroUint(), activeNodeAccount.BondAddress, nonZeroProvider.BondAddress, activeNodeAccount.NodeAddress)
+	err = handler.validate(ctx, *msg)
+	c.Assert(err, NotNil)
+
+	// non-operator cannot remove a bond provider while node is active
+	otherProvider := NewBondProvider(GetRandomBech32Addr())
+	bp.Providers = append(bp.Providers, otherProvider)
+	c.Assert(k.SetBondProviders(ctx, bp), IsNil)
+
+	msg = NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.ZeroUint(), common.Address(otherProvider.BondAddress.String()), otherProvider.BondAddress, activeNodeAccount.NodeAddress)
+	err = handler.validate(ctx, *msg)
+	c.Assert(err, NotNil)
+
+	// node operator cannot self-unbond while node is active (no provider address)
+	msg = NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.NewUint(common.One), activeNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress)
+	err = handler.validate(ctx, *msg)
+	c.Assert(err, NotNil)
+
+	// the node operator (provider 0) is preserved even if a request targets them:
+	// BondProviders.Remove independently refuses to remove index 0.
+	bpBefore, err := k.GetBondProviders(ctx, activeNodeAccount.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(bpBefore.Has(operator), Equals, true)
+	msg = NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.ZeroUint(), activeNodeAccount.BondAddress, operator, activeNodeAccount.NodeAddress)
+	_, err = handler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+	bpAfter, err := k.GetBondProviders(ctx, activeNodeAccount.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(bpAfter.Has(operator), Equals, true)
+}
+
+func (HandlerUnBondSuite) TestRemoveZeroBalanceProviderBypassesHandlerWalls(c *C) {
+	// Ensure the zero-balance bond provider removal path bypasses both the
+	// bond-lockup-period and retiring-vault walls in handle(), which would
+	// otherwise reject the message on mainnet for hours after each churn.
+	ctx, k := setupKeeperForTest(c)
+	activeNodeAccount := GetRandomValidatorNode(NodeActive)
+	activeNodeAccount.StatusSince = ctx.BlockHeight()
+	c.Assert(k.SetNodeAccount(ctx, activeNodeAccount), IsNil)
+
+	retiringVault := NewVault(12, RetiringVault, AsgardVault, GetRandomPubKey(), nil, []ChainContract{})
+	retiringVault.Membership = []string{activeNodeAccount.PubKeySet.Secp256k1.String()}
+	c.Assert(k.SetVault(ctx, retiringVault), IsNil)
+
+	zeroProvider := NewBondProvider(GetRandomBech32Addr())
+	bp := NewBondProviders(activeNodeAccount.NodeAddress)
+	operator, err := activeNodeAccount.BondAddress.AccAddress()
+	c.Assert(err, IsNil)
+	bp.Providers = []BondProvider{NewBondProvider(operator), zeroProvider}
+	c.Assert(k.SetBondProviders(ctx, bp), IsNil)
+
+	handler := NewUnBondHandler(NewDummyMgrWithKeeper(k))
+
+	txIn := GetRandomTx()
+	txIn.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()))
+
+	msg := NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.ZeroUint(), activeNodeAccount.BondAddress, zeroProvider.BondAddress, activeNodeAccount.NodeAddress)
+	_, err = handler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+	bp, err = k.GetBondProviders(ctx, activeNodeAccount.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(bp.Has(zeroProvider.BondAddress), Equals, false)
+}
+
+func (HandlerUnBondSuite) TestRemoveZeroBalanceProviderFromReadyNode(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	readyNodeAccount := GetRandomValidatorNode(NodeReady)
+	c.Assert(k.SetNodeAccount(ctx, readyNodeAccount), IsNil)
+	handler := NewUnBondHandler(NewDummyMgrWithKeeper(k))
+
+	txIn := GetRandomTx()
+	txIn.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()))
+
+	zeroProvider := NewBondProvider(GetRandomBech32Addr())
+	bp := NewBondProviders(readyNodeAccount.NodeAddress)
+	operator, err := readyNodeAccount.BondAddress.AccAddress()
+	c.Assert(err, IsNil)
+	bp.Providers = []BondProvider{NewBondProvider(operator), zeroProvider}
+	c.Assert(k.SetBondProviders(ctx, bp), IsNil)
+
+	msg := NewMsgUnBond(txIn, readyNodeAccount.NodeAddress, cosmos.ZeroUint(), readyNodeAccount.BondAddress, zeroProvider.BondAddress, readyNodeAccount.NodeAddress)
+	err = handler.validate(ctx, *msg)
+	c.Assert(err, IsNil)
+	_, err = handler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+	bp, err = k.GetBondProviders(ctx, readyNodeAccount.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(bp.Has(zeroProvider.BondAddress), Equals, false)
+}

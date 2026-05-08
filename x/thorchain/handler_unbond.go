@@ -56,10 +56,6 @@ func (h UnBondHandler) validate(ctx cosmos.Context, msg MsgUnBond) error {
 		return ErrInternal(err, fmt.Sprintf("fail to get node account(%s)", msg.NodeAddress))
 	}
 
-	if na.Status == NodeActive || na.Status == NodeReady {
-		return cosmos.ErrUnknownRequest("cannot unbond while node is in active or ready status")
-	}
-
 	if h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseUnbond) > 0 {
 		return fmt.Errorf("unbonding has been paused")
 	}
@@ -76,6 +72,20 @@ func (h UnBondHandler) validate(ctx cosmos.Context, msg MsgUnBond) error {
 		return cosmos.ErrUnauthorized(fmt.Sprintf("%s are not authorized to manage %s", msg.BondAddress, msg.NodeAddress))
 	}
 
+	if na.Status == NodeActive || na.Status == NodeReady {
+		// Allow the node operator to remove a whitelisted bond provider with a
+		// zero balance, even while the node is active or ready. No funds are
+		// moved in this path; refundBond and BondProviders.Remove independently
+		// guard against any state changes that would be unsafe in this status.
+		if na.BondAddress.Equals(msg.BondAddress) && !msg.BondProviderAddress.Empty() {
+			provider := bp.Get(msg.BondProviderAddress)
+			if !provider.IsEmpty() && provider.Bond.IsZero() {
+				return nil
+			}
+		}
+		return cosmos.ErrUnknownRequest("cannot unbond while node is in active or ready status")
+	}
+
 	return nil
 }
 
@@ -85,27 +95,47 @@ func (h UnBondHandler) handle(ctx cosmos.Context, msg MsgUnBond) error {
 		return ErrInternal(err, fmt.Sprintf("fail to get node account(%s)", msg.NodeAddress))
 	}
 
-	bondLockPeriod, err := h.mgr.Keeper().GetMimir(ctx, constants.BondLockupPeriod.String())
-	if err != nil || bondLockPeriod < 0 {
-		bondLockPeriod = h.mgr.GetConstants().GetInt64Value(constants.BondLockupPeriod)
-	}
-	if ctx.BlockHeight()-na.StatusSince < bondLockPeriod {
-		return fmt.Errorf("node can not unbond before %d", na.StatusSince+bondLockPeriod)
-	}
-	vaults, err := h.mgr.Keeper().GetAsgardVaultsByStatus(ctx, RetiringVault)
-	if err != nil {
-		return ErrInternal(err, "fail to get retiring vault")
-	}
-	isMemberOfRetiringVault := false
-	for _, v := range vaults {
-		if v.GetMembership().Contains(na.PubKeySet.Secp256k1) {
-			isMemberOfRetiringVault = true
-			ctx.Logger().Info("node account is still part of the retiring vault,can't return bond yet")
-			break
+	// Detect the zero-balance bond provider removal path. validate() permits
+	// this even when the node is active or ready; handle() must likewise skip
+	// the bond-lockup and retiring-vault walls because no funds are moving.
+	isZeroBalanceProviderRemoval := false
+	if msg.BondAddress.Equals(na.BondAddress) && !msg.BondProviderAddress.Empty() {
+		var bp BondProviders
+		bp, err = h.mgr.Keeper().GetBondProviders(ctx, msg.NodeAddress)
+		if err != nil {
+			return ErrInternal(err, fmt.Sprintf("fail to get bond providers(%s)", msg.NodeAddress))
+		}
+		provider := bp.Get(msg.BondProviderAddress)
+		if !provider.IsEmpty() && provider.Bond.IsZero() {
+			isZeroBalanceProviderRemoval = true
 		}
 	}
-	if isMemberOfRetiringVault {
-		return fmt.Errorf("fail to unbond, still part of the retiring vault")
+
+	if !isZeroBalanceProviderRemoval {
+		var bondLockPeriod int64
+		bondLockPeriod, err = h.mgr.Keeper().GetMimir(ctx, constants.BondLockupPeriod.String())
+		if err != nil || bondLockPeriod < 0 {
+			bondLockPeriod = h.mgr.GetConstants().GetInt64Value(constants.BondLockupPeriod)
+		}
+		if ctx.BlockHeight()-na.StatusSince < bondLockPeriod {
+			return fmt.Errorf("node can not unbond before %d", na.StatusSince+bondLockPeriod)
+		}
+		var vaults Vaults
+		vaults, err = h.mgr.Keeper().GetAsgardVaultsByStatus(ctx, RetiringVault)
+		if err != nil {
+			return ErrInternal(err, "fail to get retiring vault")
+		}
+		isMemberOfRetiringVault := false
+		for _, v := range vaults {
+			if v.GetMembership().Contains(na.PubKeySet.Secp256k1) {
+				isMemberOfRetiringVault = true
+				ctx.Logger().Info("node account is still part of the retiring vault,can't return bond yet")
+				break
+			}
+		}
+		if isMemberOfRetiringVault {
+			return fmt.Errorf("fail to unbond, still part of the retiring vault")
+		}
 	}
 
 	from, err := cosmos.AccAddressFromBech32(msg.BondAddress.String())
