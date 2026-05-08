@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"time"
-
 	"gitlab.com/thorchain/thornode/v3/common"
 	. "gopkg.in/check.v1"
 )
@@ -17,8 +15,6 @@ func (s *ProviderTestSuite) TestMexcProvider(c *C) {
 		"RUJI/RUNE",
 	}
 
-	config.PollingInterval = time.Second
-
 	provider, err := NewMexcProvider(s.ctx, s.logger, config, s.metrics)
 	c.Assert(err, IsNil)
 	c.Assert(provider, NotNil)
@@ -31,9 +27,7 @@ func (s *ProviderTestSuite) TestMexcProvider(c *C) {
 
 	// test polling
 
-	provider.Start()
-
-	time.Sleep(2 * time.Second)
+	provider.Poll()
 
 	tickers, err := provider.GetTickers()
 	c.Assert(err, IsNil)
