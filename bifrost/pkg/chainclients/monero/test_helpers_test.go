@@ -5,6 +5,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -12,8 +13,20 @@ import (
 	"filippo.io/edwards25519"
 	cometed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 
+	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
+
+func TestMain(m *testing.M) {
+	cfg := cosmos.GetConfig()
+	cfg.SetBech32PrefixForAccount("tthor", "tthorpub")
+	cfg.SetBech32PrefixForValidator("tthorv", "tthorvpub")
+	cfg.SetBech32PrefixForConsensusNode("tthorc", "tthorcpub")
+	cfg.SetCoinType(cmd.THORChainCoinType)
+	cfg.SetPurpose(cmd.THORChainCoinPurpose)
+	os.Exit(m.Run())
+}
 
 func testVaultPubKey(t *testing.T, seed string) common.PubKey {
 	t.Helper()

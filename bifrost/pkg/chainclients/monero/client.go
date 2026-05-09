@@ -19,6 +19,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/btcsuite/btcutil/bech32"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -2067,11 +2068,7 @@ func monovaultKeygenLabel(blockHeight int64, poolPubKey common.PubKey, members [
 		strings.Join(canonicalMembers, ","),
 	)
 	sum := sha256.Sum256([]byte(labelInput))
-	hrp := "tthorpub"
-	trimmedPoolPubKey := strings.TrimSpace(poolPubKey.String())
-	if strings.HasPrefix(trimmedPoolPubKey, "thorpub1") {
-		hrp = "thorpub"
-	}
+	hrp := sdk.GetConfig().GetBech32AccountPubPrefix()
 
 	converted, err := bech32.ConvertBits(sum[:20], 8, 5, true)
 	if err != nil {
