@@ -64,6 +64,51 @@ func txOutSourcePubKey(item TxOutItem) (common.PubKey, error) {
 	}
 }
 
+// observedVaultHasEffectiveRefundFunds checks whether a refund can safely keep
+// using the observed inbound vault. Refunds may preselect the vault that saw the
+// inbound, but that vault may already have outstanding outbounds assigned that
+// have not yet been observed and deducted from vault accounting.
+func observedVaultHasEffectiveRefundFunds(ctx cosmos.Context, tx ObservedTx, mgr Manager, vault Vault, coin common.Coin) bool {
+	if vault.IsEmpty() {
+		return false
+	}
+
+	// Work on a copy: pending deduction is only for this availability check.
+	availableVault := vault
+
+	// Pending outbounds are already committed to this vault, even though the
+	// vault ledger will not be debited until those outbounds are observed.
+	availableVault.DeductVaultPendingOutbounds(mgr.Keeper().GetPendingOutbounds(ctx, coin.Asset))
+
+	// Native THORChain outbounds do not need L1 gas reservation.
+	if coin.Asset.GetChain().IsTHORChain() {
+		return availableVault.GetCoin(coin.Asset).Amount.GTE(coin.Amount)
+	}
+
+	maxGasCoin, err := mgr.GasMgr().GetMaxGas(ctx, coin.Asset.GetChain())
+	if err != nil {
+		ctx.Logger().Error("fail to get max gas for observed refund vault", "tx_id", tx.Tx.ID, "chain", coin.Asset.GetChain(), "error", err)
+		return false
+	}
+
+	requiredCoinAmount := coin.Amount
+	if coin.Asset.Equals(maxGasCoin.Asset) {
+		if vault.Status == InactiveVault {
+			// Inactive-vault refunds keep the original vault for recovery and
+			// later deduct MaxGas from the coin amount, so the total wallet spend
+			// is the refund coin amount rather than coin amount plus MaxGas.
+			return availableVault.GetCoin(coin.Asset).Amount.GTE(requiredCoinAmount)
+		}
+		// Gas-asset refunds must leave enough of the same asset to pay gas.
+		requiredCoinAmount = requiredCoinAmount.Add(maxGasCoin.Amount)
+	} else if availableVault.GetCoin(maxGasCoin.Asset).Amount.LT(maxGasCoin.Amount) {
+		// Token refunds still require enough chain gas asset in the vault.
+		return false
+	}
+
+	return availableVault.GetCoin(coin.Asset).Amount.GTE(requiredCoinAmount)
+}
+
 func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
 	// If THORNode recognize one of the coins, and therefore able to refund
 	// withholding fees, refund all coins.
@@ -107,11 +152,10 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				if err != nil {
 					return fmt.Errorf("fail to get vault: %w", err)
 				}
-				// If the vault is no longer active or retiring and lacks sufficient
-				// balance for this refund, clear it so prepareTxOutItem discovers an
-				// appropriate active vault. This handles expired limit order refunds
-				// where the original inbound vault has been churned out and emptied.
-				if !vault.IsActive() && !vault.IsRetiring() && vault.GetCoin(coin.Asset).Amount.LT(coin.Amount) {
+				// Only keep the observed vault when it can fund the refund after
+				// pending outbounds and gas reservation. Otherwise let txout
+				// discovery choose an available vault.
+				if !observedVaultHasEffectiveRefundFunds(ctx, tx, mgr, vault, coin) {
 					vault = Vault{}
 				}
 			}

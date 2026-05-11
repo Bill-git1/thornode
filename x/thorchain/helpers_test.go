@@ -1319,6 +1319,719 @@ func (HelperSuite) TestSettleSwapRefundFromInactiveVault(c *C) {
 	c.Assert(refundItem.VaultPubKey.IsEmpty(), Equals, true)
 }
 
+// TestRefundTxSkipsObservedVaultWithoutEffectiveFunds reproduces the accounting
+// race that caused the ETH vault mismatch.
+//
+// This unit test covers the scheduling/accounting side. It does not model L1
+// wallet balance, signing, broadcast, or final outbound observation. The
+// important behavior is not the exact chain amounts from mainnet, but the
+// ordering:
+//   - an inbound is observed from an active vault, so refundTx would normally
+//     preselect that same observed vault for the refund
+//   - the observed vault still has enough raw vault balance for the refund
+//   - older outbounds assigned to that same vault are still pending, so the
+//     effective available vault balance is lower than the raw vault balance
+//   - refundTx must not force the refund back to that observed vault, because
+//     doing so can schedule an outbound that later observes against an already
+//     drained vault balance and hits SafeSub clamping.
+//
+// In this fixture the observed vault has 200 ETH in vault.Coins and the refund
+// is only 169 ETH, so a raw vault balance check would pass. The same vault also
+// has a pending 200 ETH outbound, so after pending-outbound deduction it has no
+// effective ETH available for a new 169 ETH refund. The expected result is that
+// refundTx clears the preselected observed vault and lets normal txout
+// discovery pick the other active vault that actually has available ETH.
+func (HelperSuite) TestRefundTxSkipsObservedVaultWithoutEffectiveFunds(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	var err error
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(1_000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1_000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// This is the vault that observed the inbound. Its vault balance
+	// intentionally has enough ETH to cover the refund amount below. Without the
+	// fix, refundTx would keep this vault selected because active vaults were
+	// trusted without checking pending outbounds.
+	observedVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	observedVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, observedVault), IsNil)
+
+	// This vault represents the safe fallback that normal txout discovery should
+	// choose after refundTx declines to force the refund from observedVault.
+	availableVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	availableVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(500*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, availableVault), IsNil)
+
+	// Simulate an older ETH outbound already assigned to observedVault but not
+	// yet observed on L1. This mirrors the incident window: the vault balance
+	// has not been debited yet, but those funds are already committed and must
+	// be treated as unavailable for any newly-created refund. Whether the L1
+	// wallet balance can actually sign/broadcast later is outside this unit
+	// test. The bug being tested here is the bad vault preselection.
+	pendingOut := NewTxOut(ctx.BlockHeight())
+	pendingOut.TxArray = append(pendingOut.TxArray, TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: observedVault.PubKey,
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
+		},
+		InHash: GetRandomTxHash(),
+		Memo:   NewOutboundMemo(GetRandomTxHash()).String(),
+	})
+	c.Assert(mgr.Keeper().SetTxOut(ctx, pendingOut), IsNil)
+
+	// Create the inbound that will be refunded. The refund amount is 169 ETH:
+	// less than the observed vault's raw 200 ETH vault balance, but greater
+	// than its effective available vault balance after the pending 200 ETH
+	// outbound.
+	txID := GetRandomTxHash()
+	fromAddr := GetRandomETHAddress()
+	var toAddr common.Address
+	toAddr, err = observedVault.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	tx := common.NewTx(
+		txID,
+		fromAddr,
+		toAddr,
+		common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(169*common.One))},
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		"SWAP:BTC.BTC",
+	)
+	observedTx := ObservedTx{
+		Tx:             tx,
+		ObservedPubKey: observedVault.PubKey,
+		BlockHeight:    ctx.BlockHeight(),
+	}
+	voter := NewObservedTxVoter(txID, nil)
+	voter.Tx = observedTx
+	mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+
+	// This should schedule exactly one refund outbound. The fix changes only the
+	// source vault selection: refundTx should clear observedVault before calling
+	// TryAddTxOutItem, allowing txout discovery to choose a vault with effective
+	// available funds.
+	c.Assert(refundTx(ctx, observedTx, mgr, CodeSwapFail, "incident simulation", ""), IsNil)
+
+	// refundTx schedules through TryAddTxOutItem, which may delay the outbound.
+	// The chosen txout height is stored on the inbound voter, so read that
+	// height instead of assuming the refund landed in the current block.
+	voter, err = mgr.Keeper().GetObservedTxInVoter(ctx, txID)
+	c.Assert(err, IsNil)
+	c.Assert(voter.OutboundHeight > 0, Equals, true)
+	var blockOut *TxOut
+	blockOut, err = mgr.Keeper().GetTxOut(ctx, voter.OutboundHeight)
+	c.Assert(err, IsNil)
+
+	// Fetch the generated refund item. The txout block can also contain the
+	// older pending outbound seeded above, so identify this refund by its inbound
+	// hash rather than assuming it is the only item in the block.
+	var refundItem TxOutItem
+	foundRefundItem := false
+	for _, item := range blockOut.TxArray {
+		if item.InHash.Equals(txID) {
+			refundItem = item
+			foundRefundItem = true
+			break
+		}
+	}
+	c.Assert(foundRefundItem, Equals, true)
+
+	// The regression assertion: a raw vault balance check would have kept
+	// observedVault, but the effective balance check must route the refund to
+	// availableVault instead.
+	c.Assert(refundItem.InHash.Equals(txID), Equals, true)
+	c.Assert(refundItem.GetMemo(), Equals, NewRefundMemo(txID).String())
+	c.Assert(refundItem.VaultPubKey.Equals(availableVault.PubKey), Equals, true)
+}
+
+func (HelperSuite) TestRefundTxKeepsInactiveObservedVaultWithExactRefundFunds(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	var err error
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(1_000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1_000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.BTCChain, NewNetworkFee(common.BTCChain, 1000, 10)), IsNil)
+
+	// Inactive-vault refund recovery is intentionally pinned to the observed
+	// vault when that vault can fund the total refund spend. For gas-asset
+	// refunds the txout layer deducts MaxGas from the refund coin amount, so a
+	// 100000 BTC refund with 10000 BTC MaxGas spends 90000 as value and 10000 as
+	// gas. Requiring 110000 here would incorrectly reroute away from the
+	// originating inactive vault.
+	observedVault := NewVault(ctx.BlockHeight(), InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	observedVault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100_000)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, observedVault), IsNil)
+
+	// A larger active vault exists and would be selected by normal txout
+	// discovery if refundTx cleared observedVault. The assertion below confirms
+	// the inactive origin vault remains selected instead.
+	availableVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	availableVault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(1_000_000)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, availableVault), IsNil)
+
+	txID := GetRandomTxHash()
+	fromAddr := GetRandomBTCAddress()
+	var toAddr common.Address
+	toAddr, err = observedVault.GetAddress(common.BTCChain)
+	c.Assert(err, IsNil)
+	tx := common.NewTx(
+		txID,
+		fromAddr,
+		toAddr,
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(100_000))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1_000))},
+		"ADD:BTC.BTC",
+	)
+	observedTx := ObservedTx{
+		Tx:             tx,
+		ObservedPubKey: observedVault.PubKey,
+		BlockHeight:    ctx.BlockHeight(),
+	}
+	voter := NewObservedTxVoter(txID, nil)
+	voter.Tx = observedTx
+	mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+
+	c.Assert(refundTx(ctx, observedTx, mgr, CodeSwapFail, "inactive vault", ""), IsNil)
+
+	voter, err = mgr.Keeper().GetObservedTxInVoter(ctx, txID)
+	c.Assert(err, IsNil)
+	c.Assert(voter.OutboundHeight > 0, Equals, true)
+	var blockOut *TxOut
+	blockOut, err = mgr.Keeper().GetTxOut(ctx, voter.OutboundHeight)
+	c.Assert(err, IsNil)
+
+	var refundItem TxOutItem
+	foundRefundItem := false
+	for _, item := range blockOut.TxArray {
+		if item.InHash.Equals(txID) {
+			refundItem = item
+			foundRefundItem = true
+			break
+		}
+	}
+	c.Assert(foundRefundItem, Equals, true)
+
+	c.Assert(refundItem.VaultPubKey.Equals(observedVault.PubKey), Equals, true)
+	c.Assert(refundItem.Coin.Asset.Equals(common.BTCAsset), Equals, true)
+	c.Assert(refundItem.Coin.Amount.Add(refundItem.MaxGas[0].Amount).Equal(cosmos.NewUint(100_000)), Equals, true)
+}
+
+// TestRefundTxReroutePreventsObservedOutboundClamp extends the prevention test
+// through outbound observation. It uses the fixed refundTx path to create the
+// refund, then observes both L1 outbounds:
+//   - the older outbound drains the original observed vault balance
+//   - the refund outbound is observed from the replacement vault selected by
+//     txout discovery
+//   - no Vault.SubFunds clamp happens and HaltSigningETH/HaltETHTrading stay unset
+//
+// This demonstrates the practical fix: once refundTx stops forcing the refund
+// from the effectively-drained observed vault, the later L1 observation no
+// longer creates the accounting gap reproduced in the outbound-handler test.
+func (HelperSuite) TestRefundTxReroutePreventsObservedOutboundClamp(c *C) {
+	// This test uses the real keeper-backed manager because it needs both sides
+	// of the prevention story: refundTx scheduling and later outbound
+	// observation. The companion outbound-handler test seeds a bad txout
+	// directly; this one lets the fixed refundTx create the refund txout.
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	k := mgr.Keeper()
+	var err error
+
+	// A single active validator is enough to reach outbound observation
+	// consensus in this fixture while still exercising the real
+	// MsgObservedTxOut handler path.
+	na := GetRandomValidatorNode(NodeActive)
+	na.Bond = cosmos.NewUint(1_000_000 * common.One)
+	na.Version = mgr.GetVersion().String()
+	c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+
+	// Make ETH refundable and observable through the standard pool/gas path.
+	// The exact pool depth is not important; it keeps fee handling from
+	// short-circuiting the test.
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(1_000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1_000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	// The original observed vault starts with enough raw vault balance to cover
+	// the refund. The bug was that refundTx used this raw vault balance and did
+	// not account for pending outbounds already assigned to the same vault.
+	observedVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	observedVault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+	observedVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, observedVault), IsNil)
+
+	// This vault is the intended safe replacement. If refundTx clears the
+	// observed vault, normal txout discovery should route the refund here.
+	availableVault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	availableVault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+	availableVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(500*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, availableVault), IsNil)
+
+	var observedVaultAddr common.Address
+	observedVaultAddr, err = observedVault.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+
+	// Keep the amounts aligned with the incident-path test:
+	//   - drainAmount reduces observedVault to 16.60108653 ETH after gas
+	//   - refundAmount is 169.23065786 ETH
+	// If the refund stayed on observedVault, observing it after the drain would
+	// hit the Vault.SubFunds clamp. The fix should route it to availableVault.
+	drainInHash := GetRandomTxHash()
+	refundInHash := GetRandomTxHash()
+	drainAmount := cosmos.NewUint(18_339_891_346)  // Leaves 16.60108653 ETH after 1 wei gas.
+	refundAmount := cosmos.NewUint(16_923_065_786) // 169.23065786 ETH.
+	l1Gas := cosmos.NewUint(1)
+
+	// Seed the older pending outbound first. refundTx must treat this amount as
+	// already committed from observedVault even though the vault balance has not
+	// been debited yet.
+	drainItem := TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      drainInHash,
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: observedVault.PubKey,
+		Coin:        common.NewCoin(common.ETHAsset, drainAmount),
+		Memo:        NewOutboundMemo(drainInHash).String(),
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, l1Gas),
+		},
+	}
+	txOut := NewTxOut(ctx.BlockHeight())
+	txOut.TxArray = append(txOut.TxArray, drainItem)
+	c.Assert(k.SetTxOut(ctx, txOut), IsNil)
+
+	// Link the seeded older outbound to an inbound voter so that, when its L1
+	// tx is later observed, CommonOutboundTxHandler treats it as a valid
+	// scheduled outbound and writes the OutHash instead of slashing it.
+	drainVoter := NewObservedTxVoter(drainInHash, nil)
+	drainVoter.Height = ctx.BlockHeight()
+	drainVoter.OutboundHeight = ctx.BlockHeight()
+	drainVoter.Actions = []TxOutItem{drainItem}
+	drainVoter.Tx = common.ObservedTx{
+		Tx: common.Tx{
+			ID:          drainInHash,
+			Chain:       common.ETHChain,
+			FromAddress: drainItem.ToAddress,
+			ToAddress:   observedVaultAddr,
+			Coins:       common.NewCoins(drainItem.Coin),
+			Memo:        "SWAP:BTC.BTC",
+		},
+		ObservedPubKey: observedVault.PubKey,
+		BlockHeight:    ctx.BlockHeight(),
+	}
+	k.SetObservedTxInVoter(ctx, drainVoter)
+
+	// Create the inbound that will be refunded from observedVault. Its raw vault
+	// balance is enough for the refund, but its effective vault balance after the
+	// pending drainItem is not. The fixed refundTx should therefore clear
+	// observedVault and let txout discovery choose availableVault.
+	refundTxIn := common.NewTx(
+		refundInHash,
+		GetRandomETHAddress(),
+		observedVaultAddr,
+		common.Coins{common.NewCoin(common.ETHAsset, refundAmount)},
+		common.Gas{common.NewCoin(common.ETHAsset, l1Gas)},
+		"SWAP:BTC.BTC",
+	)
+	refundObservedTx := ObservedTx{
+		Tx:             refundTxIn,
+		ObservedPubKey: observedVault.PubKey,
+		BlockHeight:    ctx.BlockHeight(),
+	}
+	refundVoter := NewObservedTxVoter(refundInHash, nil)
+	refundVoter.Tx = refundObservedTx
+	k.SetObservedTxInVoter(ctx, refundVoter)
+
+	// This is the prevention point. The pending drainItem makes observedVault's
+	// effective available vault balance insufficient, so fixed refundTx should
+	// not force the refund from observedVault even though its raw vault balance
+	// still looks large enough.
+	c.Assert(refundTx(ctx, refundObservedTx, mgr, CodeSwapFail, "incident simulation", ""), IsNil)
+
+	// Read back the outbound generated by refundTx. A delayed txout height is
+	// possible, so use the height stored on the inbound voter.
+	refundVoter, err = k.GetObservedTxInVoter(ctx, refundInHash)
+	c.Assert(err, IsNil)
+	refundOutboundHeight := ctx.BlockHeight()
+	if refundVoter.OutboundHeight > refundOutboundHeight {
+		refundOutboundHeight = refundVoter.OutboundHeight
+	}
+	var refundBlockOut *TxOut
+	refundBlockOut, err = k.GetTxOut(ctx, refundOutboundHeight)
+	c.Assert(err, IsNil)
+
+	var refundItem TxOutItem
+	foundRefundItem := false
+	for _, item := range refundBlockOut.TxArray {
+		if item.InHash.Equals(refundInHash) {
+			refundItem = item
+			foundRefundItem = true
+			break
+		}
+	}
+	c.Assert(foundRefundItem, Equals, true)
+	c.Assert(refundItem.GetMemo(), Equals, NewRefundMemo(refundInHash).String())
+	// The core fix assertion: the generated refund is scheduled from the
+	// available replacement vault, not from the observed vault that has already
+	// committed most of its vault balance to pending outbounds.
+	c.Assert(refundItem.VaultPubKey.Equals(availableVault.PubKey), Equals, true)
+
+	handler := NewObservedTxOutHandler(mgr)
+	observeOutbound := func(observeCtx cosmos.Context, item TxOutItem) {
+		// Unit-test stand-in for "the L1 tx was broadcast and then observed".
+		// The from address is derived from the item vault so MsgObservedTxOut
+		// validates as an outbound from the selected vault.
+		var vault Vault
+		vault, err = k.GetVault(observeCtx, item.VaultPubKey)
+		c.Assert(err, IsNil)
+		var fromAddr common.Address
+		fromAddr, err = vault.GetAddress(item.Chain)
+		c.Assert(err, IsNil)
+
+		observedTx := common.NewObservedTx(common.Tx{
+			ID:          GetRandomTxHash(),
+			Chain:       item.Chain,
+			FromAddress: fromAddr,
+			ToAddress:   item.ToAddress,
+			Coins:       common.NewCoins(item.Coin),
+			Gas: common.Gas{
+				common.NewCoin(item.Chain.GetGasAsset(), l1Gas),
+			},
+			Memo: item.Memo,
+		}, observeCtx.BlockHeight(), item.VaultPubKey, observeCtx.BlockHeight())
+
+		// Use the real outbound observation handler to run consensus, outbound
+		// matching, gas accounting, clamp detection, and vault balance debit.
+		msg := NewMsgObservedTxOut(ObservedTxs{observedTx}, na.NodeAddress)
+		_, err = handler.handle(observeCtx, *msg)
+		c.Assert(err, IsNil)
+	}
+
+	// Observe the older outbound first. This reproduces the live ordering where
+	// another L1 outbound drained the observed vault before the refund was
+	// observed.
+	observeOutbound(ctx, drainItem)
+	var vaultAfterDrain Vault
+	vaultAfterDrain, err = k.GetVault(ctx, observedVault.PubKey)
+	c.Assert(err, IsNil)
+	// 200 ETH vault balance - 183.39891346 ETH drain - 1 wei gas.
+	// The observed vault is now below the refund amount, but the refund is no
+	// longer assigned to this vault.
+	c.Assert(vaultAfterDrain.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(1_660_108_653)), Equals, true)
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	// Draining the observed vault is not itself a clamp. The chain should still
+	// be unhalted before the rerouted refund is observed.
+	c.Assert(haltSigning <= 0, Equals, true)
+	c.Assert(haltTrading <= 0, Equals, true)
+
+	// Observe the refund after the drain. If refundTx had scheduled this from
+	// observedVault, this is where SafeSub would clamp and the incident-path test
+	// would halt. Since it was rerouted to availableVault, it should account
+	// normally.
+	ctx = ctx.WithBlockHeight(refundOutboundHeight)
+	if ctx.BlockHeight() <= 100 {
+		ctx = ctx.WithBlockHeight(101)
+	}
+	observeOutbound(ctx, refundItem)
+
+	haltSigning, err = k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	haltTrading, err = k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	// The key end-to-end assertion: observing the refund produced by fixed
+	// refundTx does not trigger MR 4802's clamp detector.
+	c.Assert(haltSigning <= 0, Equals, true)
+	c.Assert(haltTrading <= 0, Equals, true)
+
+	var vaultAfterRefund Vault
+	vaultAfterRefund, err = k.GetVault(ctx, availableVault.PubKey)
+	c.Assert(err, IsNil)
+	// The replacement vault had enough vault balance, so after refund amount and
+	// gas are debited it remains positive rather than being clamped to zero.
+	c.Assert(vaultAfterRefund.GetCoin(common.ETHAsset).Amount.IsZero(), Equals, false)
+}
+
+// TestHandleRefundOutboundWithDrainedVaultBalanceRecreatesIncidentPath models
+// the THORNode-side lifecycle of the ETH refund incident.
+//
+// A unit test cannot broadcast a real Ethereum transaction. Instead, the L1
+// broadcast is represented by a scheduled TxOutItem and then a later
+// MsgObservedTxOut carrying the L1 tx hash. That is the point where THORNode
+// learns that the L1 wallet balance was sufficient and the transaction really
+// left the wallet.
+//
+// The fixture intentionally seeds the bad refund TxOutItem directly rather than
+// calling refundTx. With the refundTx fix in helpers.go, this bad preselection
+// should no longer be created for new refunds. Seeding it here simulates a
+// pre-fix or already-in-flight outbound and verifies the later observation path:
+//   - vault balance starts at 200 ETH
+//   - a 169.23065786 ETH refund is already scheduled from the observed vault
+//   - another outbound is observed first and drains the vault balance to about
+//     16.60108653 ETH
+//   - the refund L1 tx is observed later
+//   - addGasFees deducts gas, then Vault.SubFunds tries to debit 169.23065786
+//     ETH from only 16.60108652 ETH
+//   - SafeSub clamps the vault balance to zero
+//   - the MR 4802 clamp detector sets HaltSigningETH and HaltETHTrading so the
+//     accounting gap is surfaced instead of silently persisting
+func (HelperSuite) TestHandleRefundOutboundWithDrainedVaultBalanceRecreatesIncidentPath(c *C) {
+	// Use the real manager/keeper stack here instead of the lightweight dummy
+	// keeper used by some handler tests. This test needs persistent TxOut,
+	// ObservedTxVoter, vault, pool, and mimir state so it can exercise the same
+	// accounting path that live observations use.
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	k := mgr.Keeper()
+	var err error
+
+	// One active node is enough for final outbound consensus in this unit test:
+	// HasSuperMajority(1, 1) is true. That keeps the fixture small while still
+	// going through MsgObservedTxOut -> processTxOutAttestation ->
+	// handleObservedTxOutQuorum.
+	na := GetRandomValidatorNode(NodeActive)
+	na.Bond = cosmos.NewUint(1_000_000 * common.One)
+	na.Version = mgr.GetVersion().String()
+	c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+
+	// Make ETH a known available pool so outbound handling can process gas and
+	// fees normally. The exact pool depths are not the incident focus; they just
+	// keep the handler on the standard successful accounting path.
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(1_000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1_000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	// Start from a calm internal state: the vault balance says the observed vault
+	// has 200 ETH. The test does not store L1 wallet balance, but the later
+	// observed refund tx represents that the L1 wallet balance was high enough
+	// to broadcast the refund.
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+	vault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	var vaultAddr common.Address
+	vaultAddr, err = vault.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+
+	// Use values close to the live incident:
+	//   - refundAmount is the 169.23065786 ETH refund size
+	//   - drainAmount is chosen so that, after a 1 wei gas debit, vault balance
+	//     becomes 16.60108653 ETH
+	//   - the refund observation then pays another 1 wei gas first, leaving
+	//     16.60108652 ETH available for the 169.23065786 ETH coin debit
+	drainInHash := GetRandomTxHash()
+	refundInHash := GetRandomTxHash()
+	drainAmount := cosmos.NewUint(18_339_891_346)  // Leaves 16.60108653 ETH after 1 wei gas.
+	refundAmount := cosmos.NewUint(16_923_065_786) // 169.23065786 ETH.
+	l1Gas := cosmos.NewUint(1)
+
+	// This first scheduled outbound stands in for the other vault activity that
+	// was observed before the refund. Once observed, it lowers the vault balance
+	// enough that the refund can no longer be fully debited from accounting.
+	drainItem := TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      drainInHash,
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: vault.PubKey,
+		Coin:        common.NewCoin(common.ETHAsset, drainAmount),
+		Memo:        NewOutboundMemo(drainInHash).String(),
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, l1Gas),
+		},
+	}
+
+	// This is the bad, pre-fix scheduled refund. It represents the state after
+	// refundTx wrongly forced the observed vault and Bifrost had an outbound
+	// ready to sign/broadcast from that vault.
+	refundItem := TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      refundInHash,
+		ToAddress:   GetRandomETHAddress(),
+		VaultPubKey: vault.PubKey,
+		Coin:        common.NewCoin(common.ETHAsset, refundAmount),
+		Memo:        NewRefundMemo(refundInHash).String(),
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, l1Gas),
+		},
+	}
+
+	txOut := NewTxOut(ctx.BlockHeight())
+	txOut.TxArray = append(txOut.TxArray, drainItem, refundItem)
+	c.Assert(k.SetTxOut(ctx, txOut), IsNil)
+
+	// The inbound voters link observed L1 outbounds back to their scheduled
+	// actions. CommonOutboundTxHandler uses these actions to mark each TxOutItem
+	// with the observed L1 tx hash. This matters because the live issue was not
+	// just a vault balance subtraction. The outbound also needed to be recognized
+	// as a valid, scheduled tx rather than a malicious extra send.
+	for _, item := range []TxOutItem{drainItem, refundItem} {
+		inboundVoter := NewObservedTxVoter(item.InHash, nil)
+		inboundVoter.Height = ctx.BlockHeight()
+		inboundVoter.OutboundHeight = ctx.BlockHeight()
+		inboundVoter.Actions = []TxOutItem{item}
+		// The inbound tx details are only used here to give the outbound handler
+		// an action list and correlation point. The outbound observation below is
+		// the simulated L1 transaction that actually spends from the vault.
+		inboundVoter.Tx = common.ObservedTx{
+			Tx: common.Tx{
+				ID:          item.InHash,
+				Chain:       common.ETHChain,
+				FromAddress: item.ToAddress,
+				ToAddress:   vaultAddr,
+				Coins:       common.NewCoins(item.Coin),
+				Memo:        "SWAP:BTC.BTC",
+			},
+			ObservedPubKey: vault.PubKey,
+			BlockHeight:    ctx.BlockHeight(),
+		}
+		k.SetObservedTxInVoter(ctx, inboundVoter)
+	}
+
+	handler := NewObservedTxOutHandler(mgr)
+	observeOutbound := func(observeCtx cosmos.Context, item TxOutItem) common.TxID {
+		// This helper is the unit-test stand-in for "the ETH tx was broadcast on
+		// L1 and later observed by nodes". A fresh outHash is the L1 tx hash that
+		// CommonOutboundTxHandler will write into the scheduled TxOutItem.
+		outHash := GetRandomTxHash()
+		observedTx := common.NewObservedTx(common.Tx{
+			ID:          outHash,
+			Chain:       common.ETHChain,
+			FromAddress: vaultAddr,
+			ToAddress:   item.ToAddress,
+			Coins:       common.NewCoins(item.Coin),
+			Gas: common.Gas{
+				common.NewCoin(common.ETHAsset, l1Gas),
+			},
+			Memo: item.Memo,
+		}, observeCtx.BlockHeight(), vault.PubKey, observeCtx.BlockHeight())
+
+		// Calling the handler, instead of directly calling Vault.SubFunds, keeps
+		// the test on the real path: consensus processing, outbound matching,
+		// gas accounting, clamp detection, coin debit, and txout OutHash update.
+		msg := NewMsgObservedTxOut(ObservedTxs{observedTx}, na.NodeAddress)
+		_, err = handler.handle(observeCtx, *msg)
+		c.Assert(err, IsNil)
+		return outHash
+	}
+
+	// First L1 observation: another outbound from the same vault is observed
+	// before the refund. This debits the vault balance and creates the live
+	// incident shape: the refund is still pending, but the vault balance is now
+	// far below the refund amount.
+	drainOutHash := observeOutbound(ctx, drainItem)
+
+	var vaultAfterDrain Vault
+	vaultAfterDrain, err = k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	// 200 ETH vault balance - 183.39891346 ETH drain - 1 wei gas
+	// = 16.60108653 ETH. This is still positive, so no clamp or signing/trading
+	// halt should happen on the first outbound observation.
+	c.Assert(vaultAfterDrain.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(1_660_108_653)), Equals, true)
+	// The refund is still pending, but the vault balance is now much lower than
+	// the refund amount. This is the fragile in-flight state from the incident.
+	c.Assert(vaultAfterDrain.GetCoin(common.ETHAsset).Amount.LT(refundAmount), Equals, true)
+
+	haltSigning, err := k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	haltTrading, err := k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	// No clamp has happened yet. A low vault balance while the refund is still
+	// pending is not enough by itself. The bug surfaces when the refund L1 tx is
+	// later observed and accounting tries to debit it.
+	c.Assert(haltSigning <= 0, Equals, true)
+	c.Assert(haltTrading <= 0, Equals, true)
+
+	// Second L1 observation: the refund has now really left the L1 wallet and
+	// is observed by THORNode. This is where addGasFees and Vault.SubFunds run
+	// against an already-drained vault balance.
+	//
+	// This call is also where the test models the "extra funds in the L1 wallet"
+	// condition from the incident. The unit test does not track an unobserved
+	// inbound that temporarily increased the external wallet; observing the
+	// refund outbound here is the proof that the L1 wallet balance was sufficient
+	// to sign and broadcast the tx even though the vault balance was already too
+	// low for THORNode accounting to debit it cleanly.
+	ctx = ctx.WithBlockHeight(101)
+	var vaultBeforeRefund Vault
+	vaultBeforeRefund, err = k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	// Capture the pre-refund vault balance so the test can explicitly calculate
+	// the final accounting gap created by SafeSub clamping.
+	vaultBalanceBeforeRefund := vaultBeforeRefund.GetCoin(common.ETHAsset).Amount
+
+	refundOutHash := observeOutbound(ctx, refundItem)
+
+	var vaultAfterRefund Vault
+	vaultAfterRefund, err = k.GetVault(ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	// This is the historical bad behavior of Vault.SubFunds: it clamps instead
+	// of recording debt. The MR 4802 behavior does not change the clamp, it
+	// detects the clamp and halts so operators can reconcile the phantom credit.
+	c.Assert(vaultAfterRefund.GetCoin(common.ETHAsset).Amount.IsZero(), Equals, true)
+
+	// addGasFees debits gas before the coin debit. The accounting gap is the
+	// refund coin amount that Vault.SubFunds could not subtract because only the
+	// remaining post-gas vault balance was available.
+	availableForRefundCoinDebit := common.SafeSub(vaultBalanceBeforeRefund, l1Gas)
+	accountingGap := common.SafeSub(refundAmount, availableForRefundCoinDebit)
+	c.Assert(accountingGap.Equal(cosmos.NewUint(15_262_957_134)), Equals, true)
+
+	// The critical assertion for MR 4802: once the clamp would happen, signing
+	// and trading are halted while Bifrost can continue observing the chain.
+	haltSigning, err = k.GetMimir(ctx, "HaltSigningETH")
+	c.Assert(err, IsNil)
+	c.Assert(haltSigning, Equals, ctx.BlockHeight())
+	haltTrading, err = k.GetMimir(ctx, "HaltETHTrading")
+	c.Assert(err, IsNil)
+	c.Assert(haltTrading, Equals, ctx.BlockHeight())
+
+	// Both scheduled outbounds were matched to observed L1 tx hashes. This proves
+	// the test did not create an unrecognized/malicious outbound path. It followed
+	// normal outbound observation and accounting for scheduled txouts.
+	var txOutAfter *TxOut
+	txOutAfter, err = k.GetTxOut(ctx, 100)
+	c.Assert(err, IsNil)
+	c.Assert(txOutAfter.TxArray, HasLen, 2)
+	c.Assert(txOutAfter.TxArray[0].OutHash.Equals(drainOutHash), Equals, true)
+	c.Assert(txOutAfter.TxArray[1].OutHash.Equals(refundOutHash), Equals, true)
+}
+
 func (s *HelperSuite) TestSettleSwapLimitSwapBasic(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
