@@ -66,6 +66,7 @@ func init() {
 		TCYStakeSystemIncomeBps:             0,
 		MultipleAffiliatesMaxCount:          5,
 		BankSendEnabled:                     1,
+		MaxAbsentKeygenReporters:            0,
 	}
 	boolOverrides = map[ConstantName]bool{
 		StrictBondLiquidityRatio: false,

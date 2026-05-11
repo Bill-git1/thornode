@@ -437,20 +437,26 @@ func (h TssHandler) handle(ctx cosmos.Context, msg *MsgTssPool) error {
 		// those who haven't agreed with a consensus success message incur FailKeygenSlashPoints until agreement.
 		judgeLateSigner(ctx, h.mgr, msg, voter)
 
-		shouldFinalizeVault := voter.HasCompleteConsensus()
+		// Finalize once at least len(PubKeys) - MaxAbsentKeygenReporters members have reported
+		// success. During churn, when ready nodes are being promoted into the new vault,
+		// finalize on first supermajority so one delayed ready-node observation does not stall
+		// rotation forever. The dedicated XMR monovault also finalizes on first supermajority.
+		// The VaultExists check is the re-entry guard: late reporters arriving after
+		// finalization must not re-create the vault or re-trigger churn.
+		maxAbsent := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxAbsentKeygenReporters)
+		if maxAbsent < 0 {
+			maxAbsent = 0
+		}
+		reportsRequired := int64(len(voter.PubKeys)) - maxAbsent
+		shouldFinalizeVault := int64(len(voter.Signers)) >= reportsRequired
 		if msg.KeygenType == AsgardKeygen && voter.HasConsensus() && !asgardKeygenRequiresCompleteConsensus(ctx, h.mgr.Keeper(), voter) {
 			shouldFinalizeVault = true
 		}
-		if msg.KeygenType == XMRMonovaultKeygen && voter.HasConsensus() && !h.mgr.Keeper().VaultExists(ctx, voter.PoolPubKey) {
+		if msg.KeygenType == XMRMonovaultKeygen && voter.HasConsensus() {
 			shouldFinalizeVault = true
 		}
 
-		// Regular Asgard keygens still require complete consensus when all members
-		// are already active. During churn, when ready nodes are being promoted
-		// into the new vault, finalize on first supermajority so one delayed
-		// ready-node observation does not stall rotation forever. The dedicated
-		// XMR monovault also finalizes on first supermajority.
-		if shouldFinalizeVault {
+		if shouldFinalizeVault && !h.mgr.Keeper().VaultExists(ctx, voter.PoolPubKey) {
 			ctx.Logger().Info(
 				"tss keygen results success",
 				"height", msg.Height,

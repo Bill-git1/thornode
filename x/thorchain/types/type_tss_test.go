@@ -88,12 +88,10 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	tss := NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for _, member := range members {
-		c.Check(tss.HasCompleteConsensus(), Equals, false)
 		addr, err := common.PubKey(member).GetThorAddress()
 		c.Assert(err, IsNil)
 		tss.Sign(addr, []string{common.ETHChain.String()}, "foo")
 	}
-	c.Check(tss.HasCompleteConsensus(), Equals, true)
 	sig, ok := tss.ConsensusCheckSignature()
 	c.Check(ok, Equals, true)
 	c.Check(sig, Equals, "foo")
@@ -102,7 +100,6 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
-		c.Check(tss.HasCompleteConsensus(), Equals, false)
 		_, ok = tss.ConsensusCheckSignature()
 		c.Check(ok, Equals, false)
 		addr, err := common.PubKey(member).GetThorAddress()
@@ -115,7 +112,6 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 
 		tss.Sign(addr, []string{common.ETHChain.String()}, signature)
 	}
-	c.Check(tss.HasCompleteConsensus(), Equals, true)
 	sig, ok = tss.ConsensusCheckSignature()
 	c.Check(ok, Equals, true)
 	c.Check(sig, Equals, "foo")
@@ -124,7 +120,6 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
-		c.Check(tss.HasCompleteConsensus(), Equals, false)
 		_, ok = tss.ConsensusCheckSignature()
 		c.Check(ok, Equals, false)
 		addr, err := common.PubKey(member).GetThorAddress()
@@ -137,7 +132,6 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 
 		tss.Sign(addr, []string{common.ETHChain.String()}, signature)
 	}
-	c.Check(tss.HasCompleteConsensus(), Equals, true)
 	sig, ok = tss.ConsensusCheckSignature()
 	c.Check(ok, Equals, false)
 	c.Check(sig, Equals, "")
@@ -146,7 +140,6 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
-		c.Check(tss.HasCompleteConsensus(), Equals, false)
 		_, ok = tss.ConsensusCheckSignature()
 		c.Check(ok, Equals, false)
 		addr, err := common.PubKey(member).GetThorAddress()
@@ -159,7 +152,6 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 
 		tss.Sign(addr, []string{common.ETHChain.String()}, signature)
 	}
-	c.Check(tss.HasCompleteConsensus(), Equals, true)
 	sig, ok = tss.ConsensusCheckSignature()
 	c.Check(ok, Equals, true)
 	c.Check(sig, Equals, "foo")
@@ -168,14 +160,12 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for _, member := range members {
-		c.Check(tss.HasCompleteConsensus(), Equals, false)
 		_, ok = tss.ConsensusCheckSignature()
 		c.Check(ok, Equals, false)
 		addr, err := common.PubKey(member).GetThorAddress()
 		c.Assert(err, IsNil)
 		tss.Sign(addr, []string{common.ETHChain.String()}, "")
 	}
-	c.Check(tss.HasCompleteConsensus(), Equals, true)
 	sig, ok = tss.ConsensusCheckSignature()
 	c.Check(ok, Equals, false)
 	c.Check(sig, Equals, "")
@@ -184,14 +174,12 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
-		c.Check(tss.HasCompleteConsensus(), Equals, false)
 		_, ok = tss.ConsensusCheckSignature()
 		c.Check(ok, Equals, false)
 		addr, err := common.PubKey(member).GetThorAddress()
 		c.Assert(err, IsNil)
 		tss.Sign(addr, []string{common.ETHChain.String()}, strconv.Itoa(i))
 	}
-	c.Check(tss.HasCompleteConsensus(), Equals, true)
 	sig, ok = tss.ConsensusCheckSignature()
 	c.Check(ok, Equals, false)
 	c.Check(sig, Equals, "")

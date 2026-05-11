@@ -1268,6 +1268,114 @@ func (s *HandlerTssSuite) TestAsgardKeygenAllActiveStillWaitsForCompleteConsensu
 	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, false)
 }
 
+// keygenCheckSig is a non-empty placeholder check signature used to satisfy
+// ConsensusCheckSignature quorum in tests; signature-verification is bypassed
+// via the verifySecp256K1Signature override.
+var keygenCheckSig = []byte("fakeCheckSignature")
+
+func (s *HandlerTssSuite) TestKeygenSuccessHandlerBufferDefault(c *C) {
+	verifySecp256K1Signature = func(_ common.PubKey, _ []byte) error { return nil }
+
+	helper := newTssHandlerTestHelper(c)
+	for _, member := range helper.members {
+		setKeygenMemberNodeAccount(c, helper, member, NodeActive)
+	}
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	keygenTime := int64(1024)
+	poolPubKey := GetRandomPubKey()
+	poolEddsaPubKey := GetRandomPubKey()
+
+	// With the default mocknet buffer of 0, the vault must not exist until every
+	// member reports; the final reporter triggers vault creation.
+	for idx, item := range helper.members {
+		thorAddr, err := item.GetThorAddress()
+		c.Assert(err, IsNil)
+		tssMsg, err := NewMsgTssPoolV2(helper.members.Strings(), poolPubKey, keygenCheckSig, nil, AsgardKeygen, helper.ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), thorAddr, keygenTime, poolEddsaPubKey, nil, nil, common.EmptyPubKey)
+		c.Assert(err, IsNil)
+		c.Assert(handler.handle(helper.ctx, tssMsg), IsNil)
+		if idx < len(helper.members)-1 {
+			c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, false, Commentf("vault should not exist after %d/%d reports with buffer=0", idx+1, len(helper.members)))
+		}
+	}
+	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, true)
+}
+
+func (s *HandlerTssSuite) TestKeygenSuccessHandlerBufferOne(c *C) {
+	verifySecp256K1Signature = func(_ common.PubKey, _ []byte) error { return nil }
+
+	helper := newTssHandlerTestHelper(c)
+	for _, member := range helper.members {
+		setKeygenMemberNodeAccount(c, helper, member, NodeActive)
+	}
+	helper.keeper.SetMimir(helper.ctx, constants.MaxAbsentKeygenReporters.String(), 1)
+
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	keygenTime := int64(1024)
+	poolPubKey := GetRandomPubKey()
+	poolEddsaPubKey := GetRandomPubKey()
+
+	// First n-2 reports should not yet finalize the vault.
+	for i := 0; i < len(helper.members)-2; i++ {
+		thorAddr, err := helper.members[i].GetThorAddress()
+		c.Assert(err, IsNil)
+		tssMsg, err := NewMsgTssPoolV2(helper.members.Strings(), poolPubKey, keygenCheckSig, nil, AsgardKeygen, helper.ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), thorAddr, keygenTime, poolEddsaPubKey, nil, nil, common.EmptyPubKey)
+		c.Assert(err, IsNil)
+		c.Assert(handler.handle(helper.ctx, tssMsg), IsNil)
+		c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, false)
+	}
+
+	// The (n-1)th report crosses the buffered threshold and creates the vault.
+	penultimate := helper.members[len(helper.members)-2]
+	penultimateAddr, err := penultimate.GetThorAddress()
+	c.Assert(err, IsNil)
+	penultimateMsg, err := NewMsgTssPoolV2(helper.members.Strings(), poolPubKey, keygenCheckSig, nil, AsgardKeygen, helper.ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), penultimateAddr, keygenTime, poolEddsaPubKey, nil, nil, common.EmptyPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(handler.handle(helper.ctx, penultimateMsg), IsNil)
+	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, true)
+
+	createdVault, err := helper.keeper.GetVault(helper.ctx, poolPubKey)
+	c.Assert(err, IsNil)
+	createdHeight := createdVault.BlockHeight
+	// Membership must be the full keygen list, not just the reporters.
+	c.Assert(createdVault.Membership, HasLen, len(helper.members))
+
+	// Re-entry guard: the late reporter must not re-create or modify the vault.
+	lastAddr, err := helper.members[len(helper.members)-1].GetThorAddress()
+	c.Assert(err, IsNil)
+	lastMsg, err := NewMsgTssPoolV2(helper.members.Strings(), poolPubKey, keygenCheckSig, nil, AsgardKeygen, helper.ctx.BlockHeight()+5, nil, common.Chains{common.RuneAsset().Chain}.Strings(), lastAddr, keygenTime, poolEddsaPubKey, nil, nil, common.EmptyPubKey)
+	c.Assert(err, IsNil)
+	lateCtx := helper.ctx.WithBlockHeight(helper.ctx.BlockHeight() + 5)
+	c.Assert(handler.handle(lateCtx, lastMsg), IsNil)
+	postVault, err := helper.keeper.GetVault(lateCtx, poolPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(postVault.BlockHeight, Equals, createdHeight, Commentf("vault BlockHeight must not change on late reporter"))
+}
+
+func (s *HandlerTssSuite) TestKeygenSuccessHandlerBufferNegativeClamped(c *C) {
+	verifySecp256K1Signature = func(_ common.PubKey, _ []byte) error { return nil }
+
+	helper := newTssHandlerTestHelper(c)
+	for _, member := range helper.members {
+		setKeygenMemberNodeAccount(c, helper, member, NodeActive)
+	}
+	helper.keeper.SetMimir(helper.ctx, constants.MaxAbsentKeygenReporters.String(), -5)
+
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	keygenTime := int64(1024)
+	poolPubKey := GetRandomPubKey()
+	poolEddsaPubKey := GetRandomPubKey()
+
+	// Negative buffers must clamp to 0, behaving like the unbuffered default.
+	for i := 0; i < len(helper.members)-1; i++ {
+		thorAddr, err := helper.members[i].GetThorAddress()
+		c.Assert(err, IsNil)
+		tssMsg, err := NewMsgTssPoolV2(helper.members.Strings(), poolPubKey, keygenCheckSig, nil, AsgardKeygen, helper.ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), thorAddr, keygenTime, poolEddsaPubKey, nil, nil, common.EmptyPubKey)
+		c.Assert(err, IsNil)
+		c.Assert(handler.handle(helper.ctx, tssMsg), IsNil)
+	}
+	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, false)
+}
+
 func (s *HandlerTssSuite) TestObservingSlashing(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	height := int64(1024)
