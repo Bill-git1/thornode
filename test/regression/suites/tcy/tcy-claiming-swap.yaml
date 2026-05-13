@@ -118,6 +118,12 @@ asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "tcy")|.amount|tonumber == 36363636363636
 ---
+# No claimer records exist in this suite, so all TCY in the claim module is protocol-owned.
+type: check
+endpoint: http://localhost:1317/thorchain/tcy_protocol_owned
+asserts:
+  - .amount|tonumber == 36363636363636
+---
 type: create-blocks
 count: 5
 ---
@@ -145,6 +151,12 @@ asserts:
   - .balances|length == 2
   - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${CLAIM_SWAP_TCY_AMT}
   - .balances[]|select(.denom == "rune")|.amount|tonumber == ${SWAP_FEES=3636363}
+---
+# RUNE swap fees accumulating in the claim module don't change protocol-owned TCY.
+type: check
+endpoint: http://localhost:1317/thorchain/tcy_protocol_owned
+asserts:
+  - .amount|tonumber == ${CLAIM_SWAP_TCY_AMT}
 ---
 # Swap TCY -> RUNE and verify fees goes to Claiming module
 type: tx-deposit

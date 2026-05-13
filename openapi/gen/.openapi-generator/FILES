@@ -171,6 +171,7 @@ docs/SwapperCloutResponse.md
 docs/TCYClaimer.md
 docs/TCYClaimerSummary.md
 docs/TCYClaimersApi.md
+docs/TCYProtocolOwnedResponse.md
 docs/TCYStaker.md
 docs/TCYStakerSummary.md
 docs/TCYStakersApi.md
@@ -309,6 +310,7 @@ model_swap_status.go
 model_swapper_clout_response.go
 model_tcy_claimer.go
 model_tcy_claimer_summary.go
+model_tcy_protocol_owned_response.go
 model_tcy_staker.go
 model_tcy_staker_summary.go
 model_thorname.go

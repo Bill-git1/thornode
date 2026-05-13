@@ -3784,6 +3784,29 @@ func (qs queryServer) queryTCYClaimer(ctx cosmos.Context, req *types.QueryTCYCla
 	return &types.QueryTCYClaimerResponse{TcyClaimer: claimsRes}, nil
 }
 
+// queryTCYProtocolOwned returns the amount of TCY held by the claim module
+// in excess of the outstanding TCYClaimer entitlements. This surplus is
+// accumulated by claimingSwapRuneToTCY each distribution cycle: RUNE rewards
+// earmarked for the claim module's own TCY balance (plus the pool's TCY
+// depth and unaccounted supply) are swapped back into TCY against the pool,
+// and the resulting TCY accumulates in the claim module on top of the
+// unclaimed-entitlement backing.
+func (qs queryServer) queryTCYProtocolOwned(ctx cosmos.Context, _ *types.QueryTCYProtocolOwnedRequest) (*types.QueryTCYProtocolOwnedResponse, error) {
+	claimBalance := qs.mgr.Keeper().GetBalanceOfModule(ctx, TCYClaimingName, common.TCY.Native())
+
+	unclaimed := cosmos.ZeroUint()
+	iterator := qs.mgr.Keeper().GetTCYClaimerIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var claimer TCYClaimer
+		qs.mgr.Keeper().Cdc().MustUnmarshal(iterator.Value(), &claimer)
+		unclaimed = unclaimed.Add(claimer.Amount)
+	}
+
+	protocolOwned := common.SafeSub(claimBalance, unclaimed)
+	return &types.QueryTCYProtocolOwnedResponse{Amount: protocolOwned.String()}, nil
+}
+
 // queryOraclePrices
 func (qs queryServer) queryOraclePrices(ctx cosmos.Context, _ *types.QueryOraclePricesRequest) (*types.QueryOraclePricesResponse, error) {
 	var prices []*OraclePrice

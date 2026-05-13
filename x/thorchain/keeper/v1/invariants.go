@@ -17,6 +17,7 @@ func (k KVStore) InvariantRoutes() []common.InvariantRoute {
 		common.NewInvariantRoute("pools", PoolsInvariant(k)),
 		common.NewInvariantRoute("streaming_swaps", StreamingSwapsInvariant(k)),
 		common.NewInvariantRoute("runepool", RUNEPoolInvariant(k)),
+		common.NewInvariantRoute("tcy_claim", TCYClaimInvariant(k)),
 	}
 }
 
@@ -437,6 +438,33 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 					stream.In.String(),
 					stream.Deposit.String()))
 			}
+		}
+
+		return msg, broken
+	}
+}
+
+// TCYClaimInvariant the tcy_claim module must hold at least enough TCY to back
+// every outstanding TCYClaimer entitlement. Any surplus is protocol-owned TCY
+// accumulated by claimingSwapRuneToTCY and is not flagged.
+func TCYClaimInvariant(k KVStore) common.Invariant {
+	return func(ctx cosmos.Context) (msg []string, broken bool) {
+		moduleTCY := k.GetBalanceOfModule(ctx, TCYClaimingName, common.TCY.Native())
+
+		claimerSum := cosmos.ZeroUint()
+		iter := k.GetTCYClaimerIterator(ctx)
+		defer iter.Close()
+		for ; iter.Valid(); iter.Next() {
+			var claimer TCYClaimer
+			k.Cdc().MustUnmarshal(iter.Value(), &claimer)
+			claimerSum = claimerSum.Add(claimer.Amount)
+		}
+
+		if claimerSum.GT(moduleTCY) {
+			diff := claimerSum.Sub(moduleTCY)
+			coin, _ := common.NewCoin(common.TCY, diff).Native()
+			msg = append(msg, fmt.Sprintf("insolvent: %s", coin))
+			broken = true
 		}
 
 		return msg, broken

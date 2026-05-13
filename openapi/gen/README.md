@@ -146,6 +146,7 @@ Class | Method | HTTP request | Description
 *SwapApi* | [**SwapDetails**](docs/SwapApi.md#swapdetails) | **Get** /thorchain/queue/swap/details/{tx_id} | 
 *TCYClaimersApi* | [**TcyClaimer**](docs/TCYClaimersApi.md#tcyclaimer) | **Get** /thorchain/tcy_claimer/{address} | 
 *TCYClaimersApi* | [**TcyClaimers**](docs/TCYClaimersApi.md#tcyclaimers) | **Get** /thorchain/tcy_claimers | 
+*TCYClaimersApi* | [**TcyProtocolOwned**](docs/TCYClaimersApi.md#tcyprotocolowned) | **Get** /thorchain/tcy_protocol_owned | 
 *TCYStakersApi* | [**TcyStaker**](docs/TCYStakersApi.md#tcystaker) | **Get** /thorchain/tcy_staker/{address} | 
 *TCYStakersApi* | [**TcyStakers**](docs/TCYStakersApi.md#tcystakers) | **Get** /thorchain/tcy_stakers | 
 *TSSApi* | [**KeygenPubkey**](docs/TSSApi.md#keygenpubkey) | **Get** /thorchain/keygen/{height}/{pubkey} | 
@@ -272,6 +273,7 @@ Class | Method | HTTP request | Description
  - [SwapperCloutResponse](docs/SwapperCloutResponse.md)
  - [TCYClaimer](docs/TCYClaimer.md)
  - [TCYClaimerSummary](docs/TCYClaimerSummary.md)
+ - [TCYProtocolOwnedResponse](docs/TCYProtocolOwnedResponse.md)
  - [TCYStaker](docs/TCYStaker.md)
  - [TCYStakerSummary](docs/TCYStakerSummary.md)
  - [Thorname](docs/Thorname.md)

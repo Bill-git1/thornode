@@ -673,6 +673,14 @@ func (s *queryServer) TCYClaimers(c context.Context, req *types.QueryTCYClaimers
 	return s.queryTCYClaimers(ctx, req)
 }
 
+func (s *queryServer) TCYProtocolOwned(c context.Context, req *types.QueryTCYProtocolOwnedRequest) (*types.QueryTCYProtocolOwnedResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryTCYProtocolOwned(ctx, req)
+}
+
 func (s *queryServer) OraclePrices(c context.Context, req *types.QueryOraclePricesRequest) (*types.QueryOraclePricesResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

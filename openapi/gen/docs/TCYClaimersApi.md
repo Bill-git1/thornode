@@ -6,6 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**TcyClaimer**](TCYClaimersApi.md#TcyClaimer) | **Get** /thorchain/tcy_claimer/{address} | 
 [**TcyClaimers**](TCYClaimersApi.md#TcyClaimers) | **Get** /thorchain/tcy_claimers | 
+[**TcyProtocolOwned**](TCYClaimersApi.md#TcyProtocolOwned) | **Get** /thorchain/tcy_protocol_owned | 
 
 
 
@@ -132,6 +133,72 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**[]TCYClaimerSummary**](TCYClaimerSummary.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## TcyProtocolOwned
+
+> TCYProtocolOwnedResponse TcyProtocolOwned(ctx).Height(height).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.TCYClaimersApi.TcyProtocolOwned(context.Background()).Height(height).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `TCYClaimersApi.TcyProtocolOwned``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `TcyProtocolOwned`: TCYProtocolOwnedResponse
+    fmt.Fprintf(os.Stdout, "Response from `TCYClaimersApi.TcyProtocolOwned`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiTcyProtocolOwnedRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **height** | **int64** | optional block height, defaults to current tip | 
+
+### Return type
+
+[**TCYProtocolOwnedResponse**](TCYProtocolOwnedResponse.md)
 
 ### Authorization
 

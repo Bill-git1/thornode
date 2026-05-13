@@ -117,6 +117,12 @@ asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${BAL_TCY_STAKE}
 ---
+# protocol-owned TCY = claim-module balance minus outstanding claimer entitlements
+type: check
+endpoint: http://localhost:1317/thorchain/tcy_protocol_owned
+asserts:
+  - .amount|tonumber == ${BAL_TCY_STAKE}-${PIG_TCY}-${GOAT_TCY}-${FROG_TCY_PART_1}-${FROG_TCY_PART_2}-${WOLF_TCY}-${FISH_TCY}
+---
 type: check
 endpoint: http://localhost:1317/thorchain/tcy_staker/{{ addr_thor_pig }}
 status: 400
@@ -266,6 +272,13 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_module_tcy_
 asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${BAL_TCY_STAKE}-${PIG_TCY}-${GOAT_TCY}-${FROG_TCY_PART_1}-${FROG_TCY_PART_2}-${WOLF_TCY}-${FISH_TCY}
+---
+# protocol-owned TCY is invariant under claiming: claiming reduces both the
+# claim-module balance and the outstanding claimer sum by the same amount.
+type: check
+endpoint: http://localhost:1317/thorchain/tcy_protocol_owned
+asserts:
+  - .amount|tonumber == ${BAL_TCY_STAKE}-${PIG_TCY}-${GOAT_TCY}-${FROG_TCY_PART_1}-${FROG_TCY_PART_2}-${WOLF_TCY}-${FISH_TCY}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_module_tcy_stake }}

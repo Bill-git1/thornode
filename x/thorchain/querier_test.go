@@ -1706,3 +1706,46 @@ func (s *QuerierSuite) TestNetwork(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(resp.TorPriceHalted, Equals, false)
 }
+
+func (s *QuerierSuite) TestQueryTCYProtocolOwned(c *C) {
+	// empty state: no module balance, no claimers -> "0"
+	result, err := s.queryServer.TCYProtocolOwned(s.ctx, &types.QueryTCYProtocolOwnedRequest{})
+	c.Assert(err, IsNil)
+	c.Assert(result.Amount, Equals, "0")
+
+	// mint TCY into the claim module with no claimer records -> full balance is protocol-owned
+	balance := cosmos.NewUint(24_709_358_02962795)
+	c.Assert(s.k.MintToModule(s.ctx, ModuleName, common.NewCoin(common.TCY, balance)), IsNil)
+	c.Assert(s.k.SendFromModuleToModule(s.ctx, ModuleName, TCYClaimingName, common.NewCoins(common.NewCoin(common.TCY, balance))), IsNil)
+
+	result, err = s.queryServer.TCYProtocolOwned(s.ctx, &types.QueryTCYProtocolOwnedRequest{})
+	c.Assert(err, IsNil)
+	c.Assert(result.Amount, Equals, balance.String())
+
+	// add claimer records whose sum is less than the module balance ->
+	// protocol_owned = balance - sum(claimers)
+	claimer1 := types.NewTCYClaimer(GetRandomETHAddress(), common.ETHAsset, cosmos.NewUint(1_030_525_950))
+	claimer2 := types.NewTCYClaimer(GetRandomETHAddress(), common.ETHAsset, cosmos.NewUint(19_318_987_899))
+	usdtAsset, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
+	c.Assert(err, IsNil)
+	claimer3 := types.NewTCYClaimer(GetRandomETHAddress(), usdtAsset, cosmos.NewUint(895_756_041))
+
+	c.Assert(s.k.SetTCYClaimer(s.ctx, claimer1), IsNil)
+	c.Assert(s.k.SetTCYClaimer(s.ctx, claimer2), IsNil)
+	c.Assert(s.k.SetTCYClaimer(s.ctx, claimer3), IsNil)
+
+	claimerSum := claimer1.Amount.Add(claimer2.Amount).Add(claimer3.Amount)
+	expected := common.SafeSub(balance, claimerSum)
+
+	result, err = s.queryServer.TCYProtocolOwned(s.ctx, &types.QueryTCYProtocolOwnedRequest{})
+	c.Assert(err, IsNil)
+	c.Assert(result.Amount, Equals, expected.String())
+
+	// claimers exceeding module balance -> SafeSub floors at 0
+	huge := types.NewTCYClaimer(GetRandomETHAddress(), common.ETHAsset, balance.Add(cosmos.NewUint(1)))
+	c.Assert(s.k.SetTCYClaimer(s.ctx, huge), IsNil)
+
+	result, err = s.queryServer.TCYProtocolOwned(s.ctx, &types.QueryTCYProtocolOwnedRequest{})
+	c.Assert(err, IsNil)
+	c.Assert(result.Amount, Equals, "0")
+}

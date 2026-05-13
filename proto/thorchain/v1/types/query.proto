@@ -51,6 +51,7 @@ import "types/query_bank.proto";
 import "types/query_secured_asset.proto";
 import "types/query_tcy_stakers.proto";
 import "types/query_tcy_claimers.proto";
+import "types/query_tcy_protocol_owned.proto";
 import "types/query_codes.proto";
 import "types/query_oracle_price.proto";
 import "types/query_eip712.proto";
@@ -420,6 +421,11 @@ service Query {
 
   rpc TCYClaimers(QueryTCYClaimersRequest) returns (QueryTCYClaimersResponse) {
     option (google.api.http).get = "/thorchain/tcy_claimers";
+  }
+
+  rpc TCYProtocolOwned(QueryTCYProtocolOwnedRequest)
+      returns (QueryTCYProtocolOwnedResponse) {
+    option (google.api.http).get = "/thorchain/tcy_protocol_owned";
   }
 
   rpc OraclePrices(QueryOraclePricesRequest)

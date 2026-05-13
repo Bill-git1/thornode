@@ -148,6 +148,52 @@ func (s *InvariantsSuite) TestTHORChainInvariant(c *C) {
 	c.Assert(msg[0], Equals, "oversolvent: 1rune")
 }
 
+func (s *InvariantsSuite) TestTCYClaimInvariant(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	invariant := TCYClaimInvariant(k)
+
+	// empty state: no module balance, no claimers -> not broken
+	msg, broken := invariant(ctx)
+	c.Assert(broken, Equals, false)
+	c.Assert(msg, IsNil)
+
+	// fund the claim module with TCY but no claimer records ->
+	// fully protocol-owned, not broken (surplus is expected, not flagged)
+	balance := cosmos.NewUint(1000)
+	tcyCoin := common.NewCoin(common.TCY, balance)
+	c.Assert(k.MintToModule(ctx, ModuleName, tcyCoin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, TCYClaimingName, common.NewCoins(tcyCoin)), IsNil)
+
+	msg, broken = invariant(ctx)
+	c.Assert(broken, Equals, false)
+	c.Assert(msg, IsNil)
+
+	// add claimer records summing to less than the module balance ->
+	// the difference is protocol-owned, still not broken
+	c.Assert(k.SetTCYClaimer(ctx, types.NewTCYClaimer(GetRandomETHAddress(), common.ETHAsset, cosmos.NewUint(400))), IsNil)
+	c.Assert(k.SetTCYClaimer(ctx, types.NewTCYClaimer(GetRandomETHAddress(), common.ETHAsset, cosmos.NewUint(500))), IsNil)
+
+	msg, broken = invariant(ctx)
+	c.Assert(broken, Equals, false)
+	c.Assert(msg, IsNil)
+
+	// equality (sum == balance) -> still not broken
+	c.Assert(k.SetTCYClaimer(ctx, types.NewTCYClaimer(GetRandomETHAddress(), common.ETHAsset, cosmos.NewUint(100))), IsNil)
+
+	msg, broken = invariant(ctx)
+	c.Assert(broken, Equals, false)
+	c.Assert(msg, IsNil)
+
+	// claimer sum exceeds module balance by 50 -> insolvent
+	c.Assert(k.SetTCYClaimer(ctx, types.NewTCYClaimer(GetRandomBTCAddress(), common.BTCAsset, cosmos.NewUint(50))), IsNil)
+
+	msg, broken = invariant(ctx)
+	c.Assert(broken, Equals, true)
+	c.Assert(len(msg), Equals, 1)
+	c.Assert(msg[0], Equals, "insolvent: 50tcy")
+}
+
 func (s *InvariantsSuite) TestStreamingSwapsInvariant(c *C) {
 	ctx, k := setupKeeperForTest(c)
 

@@ -517,6 +517,32 @@ paths:
           description: OK
       tags:
       - TCY Claimers
+  /thorchain/tcy_protocol_owned:
+    get:
+      description: Returns the amount of TCY held by the claim module in excess of
+        the outstanding tcy_claimer entitlements (protocol-owned TCY accumulated by
+        the claim-module rune→TCY swap cycle).
+      operationId: tcyProtocolOwned
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TCYProtocolOwnedResponse'
+          description: OK
+      tags:
+      - TCY Claimers
   /thorchain/runepool:
     get:
       description: Returns the pool information for the RUNE pool.
@@ -5103,6 +5129,18 @@ components:
       type: array
     TCYClaimerResponse:
       $ref: '#/components/schemas/TCYClaimer'
+    TCYProtocolOwnedResponse:
+      example:
+        amount: "3096016855586000"
+      properties:
+        amount:
+          description: protocol-owned TCY in 1e8 base units (claim module tcy balance
+            minus the sum of outstanding tcy_claimer entitlements)
+          example: "3096016855586000"
+          type: string
+      required:
+      - amount
+      type: object
     SaverResponse:
       $ref: '#/components/schemas/Saver'
     SaversResponse:
