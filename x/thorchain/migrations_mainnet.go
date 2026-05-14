@@ -220,15 +220,21 @@ func (m Migrator) Migrate6to7(ctx sdk.Context) error {
 
 // makeFakeTxInObservation accepts an array of unobserved inbounds, queries for active
 // node accounts, and makes a fake observation for each validator and unobserved TxIn.
+// Returns an error if there are no active validators or if every per-validator handler
+// invocation failed, so that callers can distinguish total failure from success.
 func makeFakeTxInObservation(ctx cosmos.Context, mgr Manager, txs ObservedTxs) error {
 	activeNodes, err := mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		ctx.Logger().Error("Failed to get active nodes", "err", err)
 		return err
 	}
+	if len(activeNodes) == 0 {
+		return fmt.Errorf("no active validators to record fake observation")
+	}
 
 	handler := NewObservedTxInHandler(mgr)
 
+	successCount := 0
 	for _, na := range activeNodes {
 		txInMsg := NewMsgObservedTxIn(txs, na.NodeAddress)
 		_, err := handler.handle(ctx, *txInMsg)
@@ -236,6 +242,11 @@ func makeFakeTxInObservation(ctx cosmos.Context, mgr Manager, txs ObservedTxs) e
 			ctx.Logger().Error("failed ObservedTxIn handler", "error", err)
 			continue
 		}
+		successCount++
+	}
+
+	if successCount == 0 {
+		return fmt.Errorf("all %d ObservedTxIn handler invocations failed", len(activeNodes))
 	}
 
 	return nil

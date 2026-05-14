@@ -21,7 +21,8 @@ func (m *ScheduledMigrationMgr) EndBlock(ctx cosmos.Context, mgr Manager) error 
 	// check if current height matches the scheduled migration height
 	scheduledHeight, err := m.mgr.Keeper().GetMimir(ctx, constants.MimirKeyScheduledMigration)
 	if err != nil {
-		return nil
+		ctx.Logger().Error("fail to get scheduled migration mimir", "error", err)
+		return err
 	}
 
 	if ctx.BlockHeight() != scheduledHeight {
