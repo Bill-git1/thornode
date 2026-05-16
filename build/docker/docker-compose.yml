@@ -604,7 +604,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-28.0.1
+    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-29.0.0
     restart: unless-stopped
     environment:
       RPC_PORT: "28443"

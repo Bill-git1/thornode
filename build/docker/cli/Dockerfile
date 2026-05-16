@@ -1,5 +1,5 @@
 FROM registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-29.1 as bitcoin
-FROM registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-28.0.1 as bitcoin-cash
+FROM registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-29.0.0 as bitcoin-cash
 FROM registry.gitlab.com/thorchain/devops/node-launcher:dogecoin-daemon-1.14.9 as dogecoin
 FROM registry.gitlab.com/thorchain/devops/node-launcher:litecoin-daemon-0.21.4 as litecoin
 
