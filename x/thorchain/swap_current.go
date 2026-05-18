@@ -3,6 +3,7 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
@@ -452,6 +453,38 @@ func (s *SwapperImpl) swapOne(ctx cosmos.Context,
 				if err := keeper.AddToLiquidityFees(ctx, pool.Asset, swapEvt.LiquidityFeeInRune); err != nil {
 					return cosmos.ZeroUint(), evt, fmt.Errorf("fail to add to liquidity fees: %w", err)
 				}
+				// Skip REVSHARE attribution for protocol-internal affiliate-fee
+				// conversion swaps. affiliateSwapToRune schedules these to
+				// convert a user-side affiliate cut into RUNE, routing to one
+				// of two destinations:
+				//   - the AffiliateCollector module address (preferred-asset case), or
+				//   - the resolved thorname's THORChain alias, or owner if no
+				//     alias is set (non-PA case).
+				// Their fees come from a fee-bearing user-issued swap and
+				// should not double-credit the affiliate. The non-PA case is
+				// further gated by `target == RUNE` so a user-issued swap to
+				// RUNE with affiliate=X and destination=X.alias|X.owner (a rare
+				// and effectively self-payment scenario) is the only false-
+				// negative; normal user-to-RUNE swaps stay attributable.
+				if attributeThorname, ok := resolveFirstAffiliateTHORName(ctx, keeper, tx.Memo); ok {
+					skip := false
+					if affColAddr, err := keeper.GetModuleAddress(AffiliateCollectorName); err == nil && destination.Equals(affColAddr) {
+						skip = true
+					}
+					if !skip && target.Equals(common.RuneAsset()) {
+						if tn, tnErr := keeper.GetTHORName(ctx, attributeThorname); tnErr == nil && !tn.Owner.Empty() {
+							if destination.String() == tn.Owner.String() || destination.Equals(tn.GetAlias(common.THORChain)) {
+								skip = true
+							}
+						}
+					}
+					if !skip {
+						if err := keeper.AddAffiliateLiquidityFee(ctx, attributeThorname, swapEvt.LiquidityFeeInRune); err != nil {
+							ctx.Logger().Error("fail to attribute affiliate liquidity fee", "thorname", attributeThorname, "error", err)
+							// non-fatal — attribution failure must not fail the swap
+						}
+					}
+				}
 			}
 		}
 
@@ -588,4 +621,37 @@ func (s *SwapperImpl) GetSwapCalc(X, x, Y, slipBps, minSlipBps cosmos.Uint) (emi
 		slip = slipBps
 	}
 	return
+}
+
+// resolveFirstAffiliateTHORName parses memo as a SwapMemo and returns the
+// first affiliate name if it resolves to an existing, non-expired THORName.
+// Returns ("", false) when the memo isn't a swap memo, has no affiliates,
+// or the first affiliate is a raw address or an expired/missing thorname.
+// Used by the swap fee-recording path to attribute liquidity fees to the
+// first memo affiliate for the affiliate revenue share accumulator.
+//
+// The name is upper-cased so in-memory comparisons and log lines line up
+// with the canonical form used by the rev-share accumulator and
+// `REVSHARE-%s` mimir keys (both go through `KVStore.GetKey`, which
+// upper-cases). THORName lookups are case-insensitive (lower-cased
+// base64), so owner resolution is unaffected.
+func resolveFirstAffiliateTHORName(ctx cosmos.Context, k keeper.Keeper, memoStr string) (string, bool) {
+	parsed, err := ParseMemoWithTHORNames(ctx, k, memoStr)
+	if err != nil {
+		return "", false
+	}
+	sm, ok := parsed.(SwapMemo)
+	if !ok {
+		return "", false
+	}
+	affiliates := sm.GetAffiliates()
+	if len(affiliates) == 0 {
+		return "", false
+	}
+	first := affiliates[0]
+	if !k.THORNameExists(ctx, first) {
+		return "", false
+	}
+	// THORNameExists checks active-at-this-height; that's sufficient.
+	return strings.ToUpper(first), true
 }

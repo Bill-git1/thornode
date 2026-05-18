@@ -136,6 +136,21 @@ message EventAffiliateFee {
   ];
 }
 
+message EventRevShare {
+  string thorname = 1;
+  bytes owner = 2 [ (gogoproto.casttype) =
+                        "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
+  string accrued_fee = 3 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
+  int64 bps = 4;
+  string payout = 5 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
+}
+
 message EventAddLiquidity {
   common.Asset pool = 1 [
     (gogoproto.nullable) = false,

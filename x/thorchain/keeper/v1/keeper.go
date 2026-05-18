@@ -92,6 +92,7 @@ const (
 	prefixSolvencyVoter             types.DbPrefix = "solvency_voter/"
 	prefixTHORName                  types.DbPrefix = "thorname/"
 	prefixAffiliateCollector        types.DbPrefix = "affcol/"
+	prefixAffiliateLiquidityFee     types.DbPrefix = "affiliate_liquidity_fee/"
 	prefixReferenceMemo             types.DbPrefix = "refm/"
 	prefixReferenceMemoIndex        types.DbPrefix = "refmi/"
 	prefixReferenceMemoHash         types.DbPrefix = "refmh/"

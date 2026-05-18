@@ -439,6 +439,16 @@ func (k KVStoreDummy) GetEffectivePoolLiquidityFee(ctx cosmos.Context, asset com
 	return 0, kaboom
 }
 
+func (k KVStoreDummy) AddAffiliateLiquidityFee(ctx cosmos.Context, thorname string, fee cosmos.Uint) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) GetAffiliateLiquidityFees(ctx cosmos.Context) []AffiliateLiquidityFee {
+	return nil
+}
+
+func (k KVStoreDummy) DeleteAffiliateLiquidityFees(ctx cosmos.Context) {}
+
 func (k KVStoreDummy) GetChains(_ cosmos.Context) (common.Chains, error) { return nil, kaboom }
 func (k KVStoreDummy) SetChains(_ cosmos.Context, _ common.Chains)       {}
 func (k KVStoreDummy) AddToSwapSlip(ctx cosmos.Context, asset common.Asset, amt cosmos.Int) error {

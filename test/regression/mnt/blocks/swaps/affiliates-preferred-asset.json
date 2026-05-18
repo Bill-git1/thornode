@@ -1239,6 +1239,15 @@
         "type": "outbound"
       },
       {
+        "accrued_fee": "226763410",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
+      },
+      {
         "amount": "218975419rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -1543,6 +1552,15 @@
         "to_address": "bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal",
         "type": "scheduled_outbound",
         "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+      },
+      {
+        "accrued_fee": "261209321",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
       },
       {
         "amount": "251816529rune",
@@ -2312,6 +2330,15 @@
         "to_address": "bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal",
         "type": "scheduled_outbound",
         "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+      },
+      {
+        "accrued_fee": "21394788329",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
       },
       {
         "amount": "20416805449rune",
@@ -3117,6 +3144,15 @@
         "type": "outbound"
       },
       {
+        "accrued_fee": "519939022",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
+      },
+      {
         "amount": "496203124rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -3893,6 +3929,15 @@
         "type": "outbound"
       },
       {
+        "accrued_fee": "468108157",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
+      },
+      {
         "amount": "447246682rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -4441,6 +4486,15 @@
         "to_address": "0x1b03d088612a00df0049634e9cc8684d622cada2",
         "type": "scheduled_outbound",
         "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+      },
+      {
+        "accrued_fee": "21427834975",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
       },
       {
         "amount": "20301589549rune",
@@ -5097,6 +5151,15 @@
         "mode": "EndBlock",
         "to": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "outbound"
+      },
+      {
+        "accrued_fee": "44746061261",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
       },
       {
         "amount": "42966488933rune",
@@ -5791,6 +5854,15 @@
         "mode": "EndBlock",
         "to": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "outbound"
+      },
+      {
+        "accrued_fee": "13697601332",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
       },
       {
         "amount": "13140924133rune",
@@ -6498,6 +6570,15 @@
         "mode": "EndBlock",
         "to": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "outbound"
+      },
+      {
+        "accrued_fee": "396009291",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "TEST",
+        "type": "rev_share"
       },
       {
         "amount": "380485379rune",

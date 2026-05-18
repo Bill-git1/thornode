@@ -90,6 +90,10 @@ $$
 
 See the [Affiliate Fee Guide](../affiliate-guide/affiliate-fee-guide.md) for more information.
 
+```admonish info
+Affiliates may also earn a share of the protocol's own swap liquidity fees, paid from the Reserve, via the per-thorname [`REVSHARE-<thorname>`](../mimir.md#fee-management) operational mimir. This is on top of the user-side affiliate fee and does not change what the user pays. See [Revenue Share (REVSHARE)](../affiliate-guide/affiliate-fee-guide.md#revenue-share-revshare).
+```
+
 ## 4. Outbound Fee
 
 The Outbound Fee is what THORChain charges to deliver the final asset to the user on the destination chain. It covers the actual L1 gas costs (paid by nodes), and helps sustain the network's infrastructure — including TSS signing, compute, and state management.

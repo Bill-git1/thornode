@@ -3607,6 +3607,15 @@
         "type": "outbound"
       },
       {
+        "accrued_fee": "9517558",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "XX",
+        "type": "rev_share"
+      },
+      {
         "amount": "9995283rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",

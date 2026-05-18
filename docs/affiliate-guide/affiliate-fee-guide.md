@@ -61,3 +61,22 @@ The network deducts a fee for each valid affiliate defined in the memo. Alternat
 
 - `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5/t6:10`  
   _(Too many affiliates defined)_
+
+## Revenue Share (REVSHARE)
+
+In addition to the user-side affiliate fee described above, an affiliate's THORName may also be configured to receive a share of the **protocol's own swap liquidity fees** for swaps it routes. This is paid out of the reserve at end of block, on top of any user-side affiliate fee, and does not change what the user pays.
+
+- The dial is the operational mimir `REVSHARE-<thorname>`, in basis points, capped at **5000 (50%)**.
+- Attribution is **strict-first-affiliate**: only the **first** entry in the swap memo's affiliate list earns rev share, and only if it resolves to an active THORName (raw addresses and expired thornames are ignored).
+- Liquidity fees attributable to the affiliate accumulate across **streaming sub-swaps** within the same block.
+- At end of block the network pays `bps × accrued_liquidity_fee / 10,000` from the reserve to the THORName's `AffiliateCollector` balance, and emits a `rev_share` event with attributes `thorname`, `owner`, `accrued_fee`, `bps`, `payout`. The event is emitted for every attributed thorname even when `bps == 0`, so indexers can track gross attribution independently of payout configuration.
+- Payouts flow through the same `AffiliateCollector` mechanics as the user-side fee, so any preferred-asset configuration on the THORName applies to rev-share payouts as well.
+
+### Eligibility
+
+REVSHARE is opt-in by node operators on a per-affiliate basis (low-quorum operational mimir, churned out like other operational keys). To be eligible:
+
+1. Register a THORName whose name uses only `[a-zA-Z0-9-]`. Thornames containing `_` or `+` register cleanly but cannot have a `REVSHARE-<thorname>` mimir set, because mimir keys do not accept those characters.
+2. Coordinate with node operators (e.g. via 9R) to set `REVSHARE-<thorname>` to your agreed basis points.
+
+See [ADR 027](../architecture/adr-027-affiliate-revshare.md) for the full rationale and design.

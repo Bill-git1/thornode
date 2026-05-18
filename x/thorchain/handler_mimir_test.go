@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type HandlerMimirSuite struct{}
@@ -129,4 +130,51 @@ func (s *HandlerMimirSuite) TestMimirHandle(c *C) {
 	val, err = keeper.GetMimir(ctx, "HaltSigning")
 	c.Assert(err, IsNil)
 	c.Assert(val, Equals, int64(1))
+}
+
+func (HandlerMimirSuite) TestRevShareValidation(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	h := NewMimirHandler(mgr)
+
+	// Signer must be an active validator so validateMimirAuth passes.
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+
+	// Create a thorname so the validation passes for existence checks.
+	name := types.NewTHORName("foobar", 1000, []types.THORNameAlias{{Chain: common.THORChain, Address: GetRandomTHORAddress()}})
+	k.SetTHORName(ctx, name)
+
+	mkMsg := func(key string, value int64) MsgMimir {
+		return MsgMimir{Key: key, Value: value, Signer: na.NodeAddress}
+	}
+
+	// 1. Non-existent thorname -> reject
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-nobody", 100)), NotNil)
+
+	// 2. Existing thorname, valid value -> accept
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foobar", 100)), IsNil)
+
+	// 2b. Value of 0 (disable) -> accept (inclusive lower bound)
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foobar", 0)), IsNil)
+
+	// 3. Value at cap -> accept
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foobar", constants.RevShareMaxBps)), IsNil)
+
+	// 4. Value over cap -> reject
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foobar", constants.RevShareMaxBps+1)), NotNil)
+
+	// 5. Negative value -> reject
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foobar", -1)), NotNil)
+
+	// 6. REVSHARE key with invalid thorname characters -> targeted error
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foo_bar", 100)), NotNil)
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foo+bar", 100)), NotNil)
+}
+
+func (HandlerMimirSuite) TestRevShareIsOperational(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	_ = ctx
+	c.Assert(mgr.Keeper().IsOperationalMimir("REVSHARE-foobar"), Equals, true)
+	c.Assert(mgr.Keeper().IsOperationalMimir("revshare-foobar"), Equals, true) // case-insensitive
 }

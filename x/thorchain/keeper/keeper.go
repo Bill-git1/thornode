@@ -64,6 +64,7 @@ type Keeper interface {
 	KeeperObservedTx
 	KeeperTxOut
 	KeeperLiquidityFees
+	KeeperAffiliateLiquidityFees
 	KeeperOutboundFees
 	KeeperSwapSlip
 	KeeperVault
@@ -231,6 +232,27 @@ type KeeperLiquidityFees interface {
 	SavePrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset, fee uint64)
 	GetPrevCyclePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error)
 	GetEffectivePoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error)
+}
+
+// AffiliateLiquidityFee is a single accumulator entry returned by
+// GetAffiliateLiquidityFees, sorted by Thorname.
+type AffiliateLiquidityFee struct {
+	Thorname string
+	Fee      cosmos.Uint
+}
+
+// KeeperAffiliateLiquidityFees is the per-block REVSHARE accumulator surface.
+//
+// CONSENSUS-CRITICAL: GetAffiliateLiquidityFees MUST return a slice (not a map)
+// sorted by Thorname. The end-of-block payout loop in NetworkMgr.processRevShare
+// iterates the result in slice order and emits rev_share events in that order;
+// any non-deterministic ordering would diverge state across nodes. Returning
+// `map[string]cosmos.Uint` would silently break consensus because Go map
+// iteration is randomized — do not change the return type.
+type KeeperAffiliateLiquidityFees interface {
+	AddAffiliateLiquidityFee(ctx cosmos.Context, thorname string, fee cosmos.Uint) error
+	GetAffiliateLiquidityFees(ctx cosmos.Context) []AffiliateLiquidityFee
+	DeleteAffiliateLiquidityFees(ctx cosmos.Context)
 }
 
 type KeeperOutboundFees interface {

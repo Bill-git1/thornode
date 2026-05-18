@@ -239,7 +239,7 @@ func (am AppModule) EndBlock(goCtx context.Context) ([]abci.ValidatorUpdate, err
 	am.mgr.ObMgr().EndBlock(ctx, am.mgr.Keeper())
 
 	// update network data to account for block rewards and reward units
-	if err := am.mgr.NetworkMgr().UpdateNetwork(ctx, am.mgr.GetConstants(), am.mgr.GasMgr(), am.mgr.EventMgr()); err != nil {
+	if err := am.mgr.NetworkMgr().UpdateNetwork(ctx, am.mgr); err != nil {
 		ctx.Logger().Error("fail to update network data", "error", err)
 	}
 

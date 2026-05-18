@@ -103,6 +103,7 @@
     - [ADR 018: Core Protocol Sustainability](architecture/adr-018-core-protocol-sustainability.md)
     - [ADR 019: AutoBond](architecture/adr-019-auto-bond.md)
     - [ADR 021: Marketing Fund Allocation](architecture/ADR-021-marketing-fund-allocation.md)
+    - [ADR 027: Affiliate Revenue Share (REVSHARE)](architecture/adr-027-affiliate-revshare.md)
 
 - [Archived](archived/archived.md)
 

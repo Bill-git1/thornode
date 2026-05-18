@@ -129,7 +129,7 @@ type NetworkManager interface {
 	RotateVault(ctx cosmos.Context, vault Vault) error
 	BeginBlock(ctx cosmos.Context, mgr Manager) error
 	EndBlock(ctx cosmos.Context, mgr Manager) error
-	UpdateNetwork(ctx cosmos.Context, constAccessor constants.ConstantValues, gasManager GasManager, eventMgr EventManager) error
+	UpdateNetwork(ctx cosmos.Context, mgr Manager) error
 	SpawnDerivedAsset(ctx cosmos.Context, asset common.Asset, mgr Manager)
 	CalcAnchor(_ cosmos.Context, _ Manager, _ common.Asset) (cosmos.Uint, cosmos.Uint, cosmos.Uint)
 	SwapToOverSolvencyIncome(ctx cosmos.Context, mgr Manager, coin common.Coin) error

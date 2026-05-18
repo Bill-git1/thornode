@@ -1811,11 +1811,19 @@ func (vm *NetworkMgr) withdrawLiquidity(ctx cosmos.Context, pool Pool, na NodeAc
 }
 
 // UpdateNetwork Update the network data to reflect changing in this block
-func (vm *NetworkMgr) UpdateNetwork(ctx cosmos.Context, constAccessor constants.ConstantValues, gasManager GasManager, eventMgr EventManager) error {
+func (vm *NetworkMgr) UpdateNetwork(ctx cosmos.Context, mgr Manager) error {
+	constAccessor := mgr.GetConstants()
+	eventMgr := mgr.EventMgr()
 	network, err := vm.k.GetNetwork(ctx)
 	if err != nil {
 		return fmt.Errorf("fail to get existing network data: %w", err)
 	}
+
+	// Drain the per-block REVSHARE accumulator unconditionally, BEFORE any
+	// early-return guards below. Leaving entries in the accumulator across
+	// blocks would violate the per-block-only invariant and could cause
+	// double-payment or stale-bps payouts in later blocks.
+	totalRevShare := vm.processRevShare(ctx, mgr)
 
 	totalReserve := vm.k.GetRuneBalanceOfModule(ctx, ReserveName)
 
@@ -1871,7 +1879,7 @@ func (vm *NetworkMgr) UpdateNetwork(ctx cosmos.Context, constAccessor constants.
 	blocksPerYear := constAccessor.GetInt64Value(constants.BlocksPerYear)
 	bondReward, totalPoolRewards, lpShare, devFundDeduct, systemIncomeBurnDeduct, tcyStakeDeduct, marketingFundDeduct, polReserveDeduct := vm.calcBlockRewards(ctx,
 		availablePoolsRune, vaultsLiquidityRune, effectiveSecurityBond,
-		totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve,
+		totalEffectiveBond, totalReserve, totalLiquidityFees, totalRevShare, emissionCurve,
 		blocksPerYear, devFundSystemIncomeBps, systemIncomeBurnRateBps, tcyStakeSystemIncomeBps, marketingFundSystemIncomeBps, polReserveSystemIncomeBps)
 
 	if !devFundDeduct.IsZero() {
@@ -2004,6 +2012,92 @@ func (vm *NetworkMgr) UpdateNetwork(ctx cosmos.Context, constAccessor constants.
 	return vm.k.SetNetwork(ctx, network)
 }
 
+// processRevShare drains the per-block affiliate liquidity fee accumulator,
+// paying out REVSHARE_bps * accrued / 10_000 from the Reserve to the
+// AffiliateCollector module (credited to the thorname owner's collector entry)
+// and emitting a rev_share event per thorname. Returns the total RUNE paid
+// out, which the caller subtracts from systemIncome before splits.
+//
+// Invariants:
+//   - The accumulator is always cleared after iteration, even on internal
+//     errors, so entries never persist across blocks (per-block-only spec).
+//   - A rev_share event is emitted for every entry in the accumulator,
+//     including entries whose thorname is missing or expired (emitted with
+//     empty owner and zero payout) so indexers never undercount.
+//   - Payout + collector state changes are skipped when the thorname is
+//     missing or expired to avoid orphaning RUNE under an empty owner
+//     address.
+func (vm *NetworkMgr) processRevShare(ctx cosmos.Context, mgr Manager) cosmos.Uint {
+	accrued := vm.k.GetAffiliateLiquidityFees(ctx)
+	totalRevShare := cosmos.ZeroUint()
+	for _, entry := range accrued {
+		tn, err := vm.k.GetTHORName(ctx, entry.Thorname)
+		var owner cosmos.AccAddress
+		// thorname may have gone away between attribution and payout (missing
+		// or expired); in that case we still emit the event (with empty
+		// owner) but skip the payout so RUNE isn't orphaned.
+		canPay := err == nil && !tn.Owner.Empty()
+		if canPay {
+			owner = tn.Owner
+		}
+		bps, _ := vm.k.GetMimirWithRef(ctx, constants.MimirTemplateRevShareThorName, entry.Thorname)
+		payout := cosmos.ZeroUint()
+		var col AffiliateFeeCollector
+		if canPay && bps > 0 {
+			payout = common.GetSafeShare(cosmos.NewUint(uint64(bps)), cosmos.NewUint(10_000), entry.Fee)
+			if !payout.IsZero() {
+				col, _ = vm.k.GetAffiliateCollector(ctx, owner)
+				col.RuneAmount = col.RuneAmount.Add(payout)
+				vm.k.SetAffiliateCollector(ctx, col)
+				if sendErr := vm.k.SendFromModuleToModule(ctx, ReserveName, AffiliateCollectorName,
+					common.NewCoins(common.NewCoin(common.RuneAsset(), payout))); sendErr != nil {
+					ctx.Logger().Error("fail to transfer revshare", "thorname", entry.Thorname, "error", sendErr)
+					// roll back the collector change so state stays consistent.
+					col.RuneAmount = common.SafeSub(col.RuneAmount, payout)
+					vm.k.SetAffiliateCollector(ctx, col)
+					payout = cosmos.ZeroUint()
+				} else {
+					totalRevShare = totalRevShare.Add(payout)
+				}
+			}
+		}
+		// After a successful REVSHARE credit, mirror the threshold check from
+		// addRuneToAffiliateCollector so a thorname that ONLY receives REVSHARE
+		// (no user-side affiliate cuts) still flushes to its preferred asset.
+		// processRevShare otherwise bypasses the threshold check and would let
+		// the collector accumulate indefinitely. The rollback path zeroes
+		// payout, so !payout.IsZero() correctly excludes it.
+		if canPay && !payout.IsZero() && !tn.PreferredAsset.IsEmpty() {
+			ofRune, ofErr := mgr.GasMgr().GetAssetOutboundFee(ctx, tn.PreferredAsset, true)
+			if ofErr != nil {
+				ctx.Logger().Error("failed to get outbound fee for preferred asset, skipping flush from revshare",
+					"thorname", entry.Thorname, "asset", tn.PreferredAsset, "error", ofErr)
+			} else {
+				multiplier := getEffectiveMultiplier(ctx, mgr, tn)
+				threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
+				if col.RuneAmount.GT(threshold) {
+					// triggerPreferredAssetSwap builds the swap-queue key from
+					// (txID, queueIndex) where txID is sha256(name|coin|height) —
+					// already unique per thorname per block, so queueIndex=0 is
+					// safe and cannot collide with skim-path items (which use
+					// the user-tx ID).
+					if triggerErr := triggerPreferredAssetSwap(ctx, mgr, common.NoAddress, "", tn, col, 0); triggerErr != nil {
+						ctx.Logger().Error("fail to trigger preferred asset swap from revshare",
+							"thorname", entry.Thorname, "err", triggerErr)
+					}
+				}
+			}
+		}
+		if emitErr := vm.eventMgr.EmitEvent(ctx, NewEventRevShare(entry.Thorname, owner, entry.Fee, bps, payout)); emitErr != nil {
+			ctx.Logger().Error("fail to emit rev_share event", "error", emitErr)
+		}
+	}
+	// Always drain the accumulator, even on internal errors, so entries never
+	// persist across blocks.
+	vm.k.DeleteAffiliateLiquidityFees(ctx)
+	return totalRevShare
+}
+
 // Pays out Rewards
 func (vm *NetworkMgr) payPoolRewards(ctx cosmos.Context, poolRewards []cosmos.Uint, pools Pools) error {
 	for i, reward := range poolRewards {
@@ -2035,7 +2129,8 @@ func (vm *NetworkMgr) calcBlockRewards(
 	effectiveSecurityBond,
 	totalEffectiveBond,
 	totalReserve,
-	totalLiquidityFees cosmos.Uint,
+	totalLiquidityFees,
+	totalRevShare cosmos.Uint,
 	emissionCurve int64,
 	blocksPerYear int64,
 	devFundSystemIncomeBps int64,
@@ -2067,6 +2162,16 @@ func (vm *NetworkMgr) calcBlockRewards(
 	blockReward := cosmos.NewUint(uint64((blockRewardD).RoundInt64()))
 
 	systemIncome := blockReward.Add(totalLiquidityFees) // Get total system income for block
+
+	// Subtract REVSHARE payouts from systemIncome so all subsequent splits
+	// (dev fund, burn, TCY stake, marketing, POL reserve, pool/bond) work
+	// against the reduced base. The actual REVSHARE drain + payouts + events
+	// are performed by processRevShare(ctx) inside UpdateNetwork *before*
+	// its totalReserve / availablePoolsRune early-return guards, so payouts
+	// and rev_share events still fire even when those guards skip the
+	// remainder of UpdateNetwork (and therefore this calcBlockRewards call).
+	systemIncome = common.SafeSub(systemIncome, totalRevShare)
+
 	devFundSystemIncomeBpsUint := cosmos.SafeUintFromInt64(devFundSystemIncomeBps)
 	systemIncomeBurnRateBpsUint := cosmos.SafeUintFromInt64(systemIncomeBurnRateBps)
 	tcyStakeSystemIncomeBpsUint := cosmos.SafeUintFromInt64(tcyStakeSystemIncomeBps)

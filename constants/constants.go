@@ -24,6 +24,10 @@ var SWVersion, _ = semver.Make(Version)
 // max basis points
 const MaxBasisPts = uint64(10_000)
 
+// RevShareMaxBps is the maximum basis points a single REVSHARE-<thorname>
+// operational mimir may be set to (50% of any attributed liquidity fee).
+const RevShareMaxBps = 5000
+
 // MaxMemoSize Maximum Memo Size
 const MaxMemoSize = 250
 

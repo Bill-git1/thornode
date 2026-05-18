@@ -146,6 +146,7 @@ var (
 	NewMsgPriceFeedQuorumBatch     = types.NewMsgPriceFeedQuorumBatch
 	NewTxOut                       = types.NewTxOut
 	NewEventRewards                = types.NewEventRewards
+	NewEventRevShare               = types.NewEventRevShare
 	NewEventPOLReserveDeploy       = types.NewEventPOLReserveDeploy
 	NewEventPool                   = types.NewEventPool
 	NewEventDonate                 = types.NewEventDonate

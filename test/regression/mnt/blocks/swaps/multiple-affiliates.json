@@ -3153,6 +3153,15 @@
         "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
       },
       {
+        "accrued_fee": "835909217",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "T",
+        "type": "rev_share"
+      },
+      {
         "amount": "798849272rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -4182,6 +4191,15 @@
         "mode": "EndBlock",
         "to": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "outbound"
+      },
+      {
+        "accrued_fee": "19143399634",
+        "bps": "0",
+        "mode": "EndBlock",
+        "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "payout": "0",
+        "thorname": "T",
+        "type": "rev_share"
       },
       {
         "amount": "18459410517rune",

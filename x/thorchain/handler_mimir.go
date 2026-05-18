@@ -52,11 +52,35 @@ func (h MimirHandler) validate(ctx cosmos.Context, msg MsgMimir) error {
 		return err
 	}
 
+	// Normalize the key once so the prefix check and the thorname slice
+	// agree on casing without recomputing ToUpper at each touch point.
+	upperKey := strings.ToUpper(msg.Key)
+	isRevShare := strings.HasPrefix(upperKey, "REVSHARE-")
+
+	// REVSHARE-<thorname> keys must be MimirKey-regex-compatible. Detect
+	// REVSHARE-prefixed keys that would fail the generic regex check below
+	// and return a targeted error so operators understand the cause.
+	if isRevShare && !mimirValidKey(msg.Key) {
+		return cosmos.ErrUnknownRequest("REVSHARE thorname must contain only alphanumerics or hyphens (no '_' or '+')")
+	}
+
 	if !mimirValidKey(msg.Key) || len(msg.Key) > constants.MaxMimirLength {
 		return cosmos.ErrUnknownRequest("invalid mimir key")
 	}
 	if _, err := validateMimirAuth(ctx, h.mgr.Keeper(), msg); err != nil {
 		return err
+	}
+
+	// REVSHARE-<thorname> operational mimir validation.
+	if isRevShare {
+		thornameName := upperKey[len("REVSHARE-"):]
+		if !h.mgr.Keeper().THORNameExists(ctx, thornameName) {
+			return cosmos.ErrUnknownRequest("REVSHARE mimir requires existing thorname")
+		}
+		if msg.Value < 0 || msg.Value > constants.RevShareMaxBps {
+			return cosmos.ErrUnknownRequest(fmt.Sprintf("REVSHARE value must be between 0 and %d bps", constants.RevShareMaxBps))
+		}
+		return nil
 	}
 
 	// nothing else to verify if this is not a min slip mimir

@@ -3,7 +3,6 @@ package thorchain
 import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
-	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 type NetworkMgrDummy struct {
@@ -47,7 +46,7 @@ func (vm *NetworkMgrDummy) RotateVault(ctx cosmos.Context, vault Vault) error {
 	return nil
 }
 
-func (vm *NetworkMgrDummy) UpdateNetwork(ctx cosmos.Context, constAccessor constants.ConstantValues, gasManager GasManager, eventMgr EventManager) error {
+func (vm *NetworkMgrDummy) UpdateNetwork(ctx cosmos.Context, mgr Manager) error {
 	return nil
 }
 

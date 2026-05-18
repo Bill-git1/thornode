@@ -8,7 +8,23 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
+
+// addAffLiqFeeErrKeeper wraps a real keeper but forces
+// AddAffiliateLiquidityFee to return an error. Used to verify the swap
+// path treats attribution failure as non-fatal.
+type addAffLiqFeeErrKeeper struct {
+	keeper.Keeper
+	called *bool
+}
+
+func (k addAffLiqFeeErrKeeper) AddAffiliateLiquidityFee(_ cosmos.Context, _ string, _ cosmos.Uint) error {
+	if k.called != nil {
+		*k.called = true
+	}
+	return errors.New("forced attribution failure")
+}
 
 type SwapSuite struct{}
 
@@ -644,4 +660,267 @@ func (s *SwapSuite) TestSwap_GetSwapCalc(c *C) {
 		c.Check(liquidityFee.Uint64(), Equals, item.expectedFee.Uint64(),
 			Commentf("Actual: %s Exp: %s", liquidityFee.String(), item.expectedFee.String()))
 	}
+}
+
+func (s *SwapSuite) TestResolveFirstAffiliateTHORName(c *C) {
+	// resolveFirstAffiliateTHORName is the integrity boundary between memo
+	// parsing and the rev-share accumulator. Each false branch must keep
+	// raw addresses, expired names, and non-swap memos out of the
+	// accumulator; the true branch must return the resolved name verbatim.
+
+	// 1. Non-swap memo (ADD parses to AddLiquidityMemo, not SwapMemo).
+	{
+		ctx, mgr := setupManagerForTest(c)
+		// Pool needed so ADD memo parses without an unrelated error.
+		pool := NewPool()
+		pool.Asset = common.BTCAsset
+		pool.BalanceRune = cosmos.NewUint(100 * common.One)
+		pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+		pool.Status = PoolAvailable
+		c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+		got, ok := resolveFirstAffiliateTHORName(ctx, mgr.Keeper(), "+:BTC.BTC")
+		c.Check(ok, Equals, false, Commentf("non-swap memo must not resolve"))
+		c.Check(got, Equals, "")
+	}
+
+	// 2. Swap memo with no affiliates at all.
+	{
+		ctx, mgr := setupManagerForTest(c)
+		dest := GetRandomTHORAddress()
+		got, ok := resolveFirstAffiliateTHORName(ctx, mgr.Keeper(), "=:r:"+dest.String())
+		c.Check(ok, Equals, false, Commentf("swap memo without affiliates must not resolve"))
+		c.Check(got, Equals, "")
+	}
+
+	// 3. First affiliate is a raw address (not a registered thorname).
+	{
+		ctx, mgr := setupManagerForTest(c)
+		dest := GetRandomTHORAddress()
+		rawAffiliate := GetRandomTHORAddress()
+		memo := "=:r:" + dest.String() + "::" + rawAffiliate.String() + ":100"
+		got, ok := resolveFirstAffiliateTHORName(ctx, mgr.Keeper(), memo)
+		c.Check(ok, Equals, false, Commentf("raw-address first affiliate must not resolve"))
+		c.Check(got, Equals, "")
+	}
+
+	// 4. Affiliate names a thorname whose ExpireBlockHeight is in the past.
+	{
+		ctx, mgr := setupManagerForTest(c)
+		ctx = ctx.WithBlockHeight(1000)
+		// Register a thorname that expired before the current block height.
+		expired := NewTHORName("oldname", 100, []THORNameAlias{{Chain: common.THORChain, Address: GetRandomTHORAddress()}})
+		mgr.Keeper().SetTHORName(ctx, expired)
+		// Sanity-check the precondition: THORNameExists is the gate.
+		c.Assert(mgr.Keeper().THORNameExists(ctx, "oldname"), Equals, false)
+
+		dest := GetRandomTHORAddress()
+		memo := "=:r:" + dest.String() + "::oldname:100"
+		got, ok := resolveFirstAffiliateTHORName(ctx, mgr.Keeper(), memo)
+		c.Check(ok, Equals, false, Commentf("expired thorname must not resolve"))
+		c.Check(got, Equals, "")
+	}
+
+	// 4b. Affiliate names a thorname that was never registered.
+	{
+		ctx, mgr := setupManagerForTest(c)
+		dest := GetRandomTHORAddress()
+		memo := "=:r:" + dest.String() + "::neverreg:100"
+		got, ok := resolveFirstAffiliateTHORName(ctx, mgr.Keeper(), memo)
+		c.Check(ok, Equals, false, Commentf("missing thorname must not resolve"))
+		c.Check(got, Equals, "")
+	}
+
+	// 5. Happy path: registered, non-expired thorname is returned upper-cased
+	// so the in-memory value matches the canonical form used by the rev-share
+	// accumulator and REVSHARE-%s mimir keys (both pass through
+	// KVStore.GetKey, which upper-cases). THORName lookups remain case-
+	// insensitive (lower-cased base64 key), so the upper-cased return value
+	// still resolves owner state correctly.
+	{
+		ctx, mgr := setupManagerForTest(c)
+		ctx = ctx.WithBlockHeight(100)
+		alive := NewTHORName("affx", 1000, []THORNameAlias{{Chain: common.THORChain, Address: GetRandomTHORAddress()}})
+		mgr.Keeper().SetTHORName(ctx, alive)
+
+		dest := GetRandomTHORAddress()
+		memo := "=:r:" + dest.String() + "::affx:100"
+		got, ok := resolveFirstAffiliateTHORName(ctx, mgr.Keeper(), memo)
+		c.Check(ok, Equals, true, Commentf("registered active thorname must resolve"))
+		c.Check(got, Equals, "AFFX")
+	}
+}
+
+func (s *SwapSuite) TestSwapSurvivesAffiliateAttributionFailure(c *C) {
+	// swap_current.go intentionally swallows AddAffiliateLiquidityFee
+	// errors so attribution failures cannot fail a swap. This test wraps
+	// the keeper to force AddAffiliateLiquidityFee to error and asserts
+	// the swap still succeeds. Locks the consensus-critical "swap survives
+	// attribution failure" guarantee against future regressions.
+	ctx, mgr := setupManagerForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.LPUnits = pool.BalanceRune
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	thorAddr := GetRandomTHORAddress()
+	name := NewTHORName("affx", 1000, []THORNameAlias{{Chain: common.THORChain, Address: thorAddr}})
+	mgr.Keeper().SetTHORName(ctx, name)
+
+	destination := GetRandomTHORAddress()
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomBTCAddress(),
+		GetRandomBTCAddress(),
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))},
+		"=:r:"+destination.String()+"::affx:100",
+	)
+	tx.Chain = common.BTCChain
+
+	called := false
+	wrapped := addAffLiqFeeErrKeeper{Keeper: mgr.Keeper(), called: &called}
+	// swapOne reads keeper from mgr.Keeper(), not from the Swap parameter,
+	// so the wrapper must be installed on the manager.
+	mgr.K = wrapped
+
+	_, _, err := newSwapper().Swap(ctx, wrapped, tx, common.RuneAsset(), destination, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr, nil, nil)
+	c.Assert(err, IsNil, Commentf("swap must succeed even when affiliate attribution fails"))
+	c.Assert(called, Equals, true, Commentf("AddAffiliateLiquidityFee must have been invoked; otherwise the test does not exercise the failure path"))
+
+	// And no entry should have been written for this thorname — the keeper
+	// returned an error before writing, and the swap path swallowed it.
+	got := mgr.Keeper().GetAffiliateLiquidityFees(ctx)
+	c.Assert(got, HasLen, 0, Commentf("attribution failure must leave the accumulator untouched"))
+}
+
+func (s *SwapSuite) TestAffiliateAttribution(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// set up a BTC pool so a swap can produce a non-zero liquidity fee.
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.LPUnits = pool.BalanceRune
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// set up a thorname that will receive attribution
+	thorAddr := GetRandomTHORAddress()
+	name := NewTHORName("affx", 1000, []THORNameAlias{{Chain: common.THORChain, Address: thorAddr}})
+	mgr.Keeper().SetTHORName(ctx, name)
+
+	// construct a BTC -> RUNE swap tx with memo that names "affx" first
+	destination := GetRandomTHORAddress()
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomBTCAddress(),
+		GetRandomBTCAddress(),
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))},
+		"=:r:"+destination.String()+"::affx:100",
+	)
+	tx.Chain = common.BTCChain
+
+	_, _, err := newSwapper().Swap(ctx, mgr.Keeper(), tx, common.RuneAsset(), destination, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr, nil, nil)
+	c.Assert(err, IsNil)
+
+	got := mgr.Keeper().GetAffiliateLiquidityFees(ctx)
+	c.Assert(got, HasLen, 1, Commentf("expected accumulator to contain an attribution entry"))
+	c.Assert(got[0].Thorname, Equals, "AFFX")
+	c.Assert(got[0].Fee.IsZero(), Equals, false)
+}
+
+func (s *SwapSuite) TestAffiliateAttributionSkippedForAffiliateCollectorDestination(c *C) {
+	// Protocol-internal affiliate-fee conversion swaps (scheduled by
+	// affiliateSwapToRune) target the AffiliateCollector module address
+	// as their destination. The REVSHARE attribution hook must skip
+	// those swaps so the same thorname is not double-credited for the
+	// liquidity fee on the conversion swap. This test sets the swap
+	// destination to the AffiliateCollector module address and asserts
+	// no attribution entry is written even though the memo names a
+	// registered first affiliate.
+	ctx, mgr := setupManagerForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.LPUnits = pool.BalanceRune
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	thorAddr := GetRandomTHORAddress()
+	name := NewTHORName("affx", 1000, []THORNameAlias{{Chain: common.THORChain, Address: thorAddr}})
+	mgr.Keeper().SetTHORName(ctx, name)
+
+	// Use the AffiliateCollector module address as destination — this
+	// is exactly what affiliateSwapToRune does for internal conversion
+	// swaps.
+	destination, err := mgr.Keeper().GetModuleAddress(AffiliateCollectorName)
+	c.Assert(err, IsNil)
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomBTCAddress(),
+		GetRandomBTCAddress(),
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))},
+		"=:r:"+destination.String()+"::affx:100",
+	)
+	tx.Chain = common.BTCChain
+
+	_, _, err = newSwapper().Swap(ctx, mgr.Keeper(), tx, common.RuneAsset(), destination, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr, nil, nil)
+	c.Assert(err, IsNil)
+
+	got := mgr.Keeper().GetAffiliateLiquidityFees(ctx)
+	c.Assert(got, HasLen, 0, Commentf("expected no attribution entries when destination is AffiliateCollector module"))
+}
+
+func (s *SwapSuite) TestAffiliateAttributionSkippedForThornameAliasDestination(c *C) {
+	// In the non-preferred-asset path, affiliateSwapToRune sets the
+	// conversion swap's destination to the thorname's THORChain alias
+	// (see helpers_affiliates.go). The REVSHARE attribution hook must
+	// skip those swaps so the same thorname is not double-credited.
+	ctx, mgr := setupManagerForTest(c)
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.LPUnits = pool.BalanceRune
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	thorAddr := GetRandomTHORAddress()
+	name := NewTHORName("affx", 1000, []THORNameAlias{{Chain: common.THORChain, Address: thorAddr}})
+	owner, err := GetRandomTHORAddress().AccAddress()
+	c.Assert(err, IsNil)
+	name.Owner = owner
+	mgr.Keeper().SetTHORName(ctx, name)
+
+	// Destination is the thorname's THORChain alias — exactly what
+	// affiliateSwapToRune sets for the non-PA conversion case.
+	destination := thorAddr
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomBTCAddress(),
+		GetRandomBTCAddress(),
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))},
+		"=:r:"+destination.String()+"::affx:100",
+	)
+	tx.Chain = common.BTCChain
+
+	_, _, err = newSwapper().Swap(ctx, mgr.Keeper(), tx, common.RuneAsset(), destination, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr, nil, nil)
+	c.Assert(err, IsNil)
+
+	got := mgr.Keeper().GetAffiliateLiquidityFees(ctx)
+	c.Assert(got, HasLen, 0, Commentf("expected no attribution entries when destination is the thorname THORChain alias"))
 }

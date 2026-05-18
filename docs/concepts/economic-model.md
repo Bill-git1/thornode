@@ -97,6 +97,7 @@ See [Constants and Mimirs](../mimir.md#economics) for current network settings.
    - **Non-Churn Gas Reimbursements**: Reimburses gas for external-chain outbound transactions. Over time, total outbound fees collected for a given coin are designed to equal total reimbursements for that coin.
 2. **Reserve Adding to POL**: If undeployed RUNE in RUNEPool is insufficient to cover a withdrawal, the Reserve contributes. If RUNEPool has enough, no Reserve contribution is needed.
 3. **Block Rewards**: Paid to node operators and liquidity providers.
+4. **Affiliate Revenue Share (REVSHARE)**: A configurable share of the swap liquidity fees attributed to a given affiliate THORName is paid from the Reserve to that affiliate's `AffiliateCollector` balance at end of block. The deduction is taken off the top of `systemIncome` **before** any other split (dev fund, burn, TCY, marketing, POL, bond/LP pendulum) runs. The dial is the per-thorname operational mimir [`REVSHARE-<thorname>`](../mimir.md#fee-management) (basis points, capped at 5000). See [ADR 027](../architecture/adr-027-affiliate-revshare.md).
 
 ### Additional Points
 

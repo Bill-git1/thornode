@@ -132,6 +132,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `MaxOutboundFeeMultiplierBasisPoints`\*: Maximum outbound fee multiplier in basis points
 - `MinOutboundFeeMultiplierBasisPoints`\*: Minimum outbound fee multiplier in basis points
 - `PreferredAssetOutboundFeeMultiplier`\*: Multiplier of preferred asset outbound fee for triggering preferred asset swaps
+- `REVSHARE-<thorname>`#: Per-thorname share (in basis points, capped at 5000) of attributed swap liquidity fees that the protocol pays from the reserve to the affiliate's `AffiliateCollector` balance at end of block. Operational mimir; only valid for existing thornames whose name uses characters `[a-zA-Z0-9-]`. See [ADR 027](./architecture/adr-027-affiliate-revshare.md) and the [Affiliate Fee Guide](./affiliate-guide/affiliate-fee-guide.md#revenue-share-revshare).
 
 ### Solvency Checker
 

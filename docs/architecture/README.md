@@ -78,6 +78,7 @@ None
 - [009 - Reserve Income and Fee Overhaul](./adr-009-reserve-income-fee-overhaul.md)
 - [019 - AutoBond](./adr-019-auto-bond.md)
 - [025 - Migrate Dev Fund Address](./adr-025-migrate-dev-fund-address.md)
+- [027 - Affiliate Revenue Share (REVSHARE)](./adr-027-affiliate-revshare.md)
 
 ### On Pause
 

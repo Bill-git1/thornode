@@ -36,6 +36,7 @@ const (
 	StreamingSwapEventType          = "streaming_swap"
 	SwapEventType                   = "swap"
 	AffiliateFeeEventType           = "affiliate_fee"
+	RevShareEventType               = "rev_share"
 	LimitSwapEventType              = "limit_swap"
 	ModifyLimitSwapEventType        = "limit_swap_mod"
 	LimitSwapCloseEventType         = "limit_swap_close"
@@ -267,6 +268,43 @@ func (m *EventAffiliateFee) Events() (cosmos.Events, error) {
 			cosmos.NewAttribute("gross_amount", m.GrossAmount.String()),
 			cosmos.NewAttribute("fee_bps", strconv.FormatUint(m.FeeBps, 10)),
 			cosmos.NewAttribute("fee_amount", m.FeeAmount.String()),
+		),
+	}, nil
+}
+
+// NewEventRevShare creates a new rev_share event. accruedFee is the raw
+// liquidity fee attributed to the thorname this block. bps is the
+// REVSHARE-<thorname> mimir value applied (0 if unset). payout is the RUNE
+// moved from reserve to AffiliateCollector (0 if no payout).
+//
+// Negative bps values (e.g. the GetMimirWithRef "unset" sentinel of -1)
+// are normalised to 0 so the contract above holds for every caller and
+// indexers never see a negative attribute.
+func NewEventRevShare(thorname string, owner cosmos.AccAddress, accruedFee cosmos.Uint, bps int64, payout cosmos.Uint) *EventRevShare {
+	if bps < 0 {
+		bps = 0
+	}
+	return &EventRevShare{
+		Thorname:   thorname,
+		Owner:      owner,
+		AccruedFee: accruedFee,
+		Bps:        bps,
+		Payout:     payout,
+	}
+}
+
+func (m *EventRevShare) Type() string {
+	return RevShareEventType
+}
+
+func (m *EventRevShare) Events() (cosmos.Events, error) {
+	return cosmos.Events{
+		cosmos.NewEvent(m.Type(),
+			cosmos.NewAttribute("thorname", m.Thorname),
+			cosmos.NewAttribute("owner", m.Owner.String()),
+			cosmos.NewAttribute("accrued_fee", m.AccruedFee.String()),
+			cosmos.NewAttribute("bps", strconv.FormatInt(m.Bps, 10)),
+			cosmos.NewAttribute("payout", m.Payout.String()),
 		),
 	}, nil
 }
