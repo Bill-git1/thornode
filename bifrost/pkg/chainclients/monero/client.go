@@ -31,6 +31,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/monero/sidecar"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/runners"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signing"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
@@ -683,6 +684,13 @@ func (c *Client) runConsolidationPass() error {
 		return fmt.Errorf("fail to get node status for xmr consolidation: %w", err)
 	}
 	if nodeStatus != ttypes.NodeStatus_Active {
+		return nil
+	}
+
+	// Skip when HALTSIGNING / HaltSigning<Chain> is active. The shared helper is also
+	// invoked from SignTx, so this entry-point check is a cheap fast-path that avoids
+	// the GetAsgards round-trip below when the network has halted.
+	if signing.IsSigningHalted(c.thorchainBridge, c.chain, c.logger) {
 		return nil
 	}
 

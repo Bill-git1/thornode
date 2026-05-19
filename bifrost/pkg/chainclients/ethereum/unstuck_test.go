@@ -89,6 +89,10 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 		case "/thorchain/mimir/key/EVMDisableContractWhitelist":
 			_, err = rw.Write([]byte(`1`))
 			c.Assert(err, IsNil)
+		case "/thorchain/mimir/key/HALTSIGNING",
+			"/thorchain/mimir/key/HaltSigningETH":
+			_, err = rw.Write([]byte(`0`))
+			c.Assert(err, IsNil)
 		case thorclient.PubKeysEndpoint:
 			var content []byte
 			content, err = os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")

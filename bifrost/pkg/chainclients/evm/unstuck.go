@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 
 	evmtypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/evm/types"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signing"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
@@ -37,6 +38,13 @@ func (c *EVMClient) unstuck() {
 }
 
 func (c *EVMClient) unstuckAction() {
+	// Honour HALTSIGNING / HaltSigning<Chain> before starting an unstuck pass.
+	// unstuckTx builds and TSS-signs a fresh cancel transaction, which would
+	// otherwise bypass signer/sign.go's halt gating.
+	if signing.IsSigningHalted(c.bridge, c.cfg.ChainID, c.logger) {
+		return
+	}
+
 	height, err := c.bridge.GetBlockHeight()
 	if err != nil {
 		c.logger.Err(err).Msg("failed to get THORChain block height")

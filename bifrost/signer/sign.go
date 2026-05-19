@@ -27,6 +27,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/observer"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signing"
 	chainclienttypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
@@ -963,24 +964,17 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		s.logger.Error().Err(err).Msgf("not supported %s", tx.Chain.String())
 		return nil, nil, err
 	}
-	mimirKey := "HALTSIGNING"
-	haltSigningGlobalMimir, err := s.thorchainBridge.GetMimir(mimirKey)
+	halted, global, err := signing.CheckSigningHalt(s.thorchainBridge, tx.Chain, blockHeight)
 	if err != nil {
-		s.logger.Err(err).Msgf("fail to get %s", mimirKey)
+		s.logger.Err(err).Msg("fail to check signing halt")
 		return nil, nil, err
 	}
-	if haltSigningGlobalMimir > 0 && haltSigningGlobalMimir <= blockHeight {
-		s.logger.Info().Msg("signing has been halted globally")
-		return nil, nil, nil
-	}
-	mimirKey = fmt.Sprintf(constants.MimirTemplateHaltSigning, tx.Chain)
-	haltSigningMimir, err := s.thorchainBridge.GetMimir(mimirKey)
-	if err != nil {
-		s.logger.Err(err).Msgf("fail to get %s", mimirKey)
-		return nil, nil, err
-	}
-	if haltSigningMimir > 0 && haltSigningMimir <= blockHeight {
-		s.logger.Info().Msgf("signing for %s is halted", tx.Chain)
+	if halted {
+		if global {
+			s.logger.Info().Msg("signing has been halted globally")
+		} else {
+			s.logger.Info().Msgf("signing for %s is halted", tx.Chain)
+		}
 		return nil, nil, nil
 	}
 	if !s.shouldSign(tx) {

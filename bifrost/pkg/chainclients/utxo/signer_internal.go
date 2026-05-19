@@ -12,6 +12,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 
 	"github.com/eager7/dogutil"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signing"
 	dogetxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/dogd-txscript"
 	"gitlab.com/thorchain/thornode/v3/constants"
 
@@ -795,6 +796,9 @@ func (c *Client) consolidateUTXOs() {
 	}
 	if nodeStatus != types.NodeStatus_Active {
 		c.log.Info().Msgf("node is not active , doesn't need to consolidate utxos")
+		return
+	}
+	if signing.IsSigningHalted(c.bridge, c.cfg.ChainID, c.log) {
 		return
 	}
 	vaults, err := c.bridge.GetAsgards()
