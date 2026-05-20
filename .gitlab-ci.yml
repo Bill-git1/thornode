@@ -199,7 +199,19 @@ proto-lint:
     - make proto-lint
 
 proto-check-breaking:
-  rules: *rules
+  # Compares this branch's protos against upstream `develop` via `buf breaking`.
+  # The long-lived deployment branches (mainnet/stagenet/chainnet) intentionally
+  # lag develop's schema and will report upstream-only additions as "deletions".
+  # On those branches the result is informational, not gating; on MRs and
+  # develop itself the check must block.
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
+      when: never
+    - if: $CI_COMMIT_BRANCH =~ /^(mainnet|stagenet|chainnet)$/
+      when: on_success
+      allow_failure: true
+    - if: $CI == "true"
+      when: on_success
   stage: protobuf
   <<: *use_dind
   before_script:
