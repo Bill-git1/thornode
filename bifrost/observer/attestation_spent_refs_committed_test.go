@@ -54,7 +54,7 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Finalized: tx.IsFinal(),
 		}
 		ag.mu.Lock()
-		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&tx)
+		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: &tx, inbound: false})
 		ag.mu.Unlock()
 
 		ag.handleQuorumTxCommitted(&ebifrost.EventNotification{
@@ -100,7 +100,7 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Finalized: tx.IsFinal(),
 		}
 		ag.mu.Lock()
-		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&tx)
+		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: &tx, inbound: false})
 		ag.mu.Unlock()
 
 		ag.handleQuorumTxCommitted(&ebifrost.EventNotification{
@@ -143,7 +143,7 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Finalized: tx.IsFinal(),
 		}
 		ag.mu.Lock()
-		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&tx)
+		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: &tx, inbound: true})
 		ag.mu.Unlock()
 
 		ag.handleQuorumTxCommitted(&ebifrost.EventNotification{
@@ -184,7 +184,7 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Finalized: tx.IsFinal(),
 		}
 		ag.mu.Lock()
-		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&tx)
+		ag.observedTxs[k] = ag.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: &tx, inbound: false})
 		ag.mu.Unlock()
 
 		ag.handleQuorumTxCommitted(&ebifrost.EventNotification{

@@ -79,7 +79,7 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 		ots.mu.Lock()
 
 		quorumTxs := &common.QuorumTx{
-			ObsTx:                  *ots.Item,
+			ObsTx:                  *ots.Item.ObservedTx,
 			Inbound:                k.Inbound,
 			AllowFutureObservation: k.AllowFutureObservation,
 			Attestations:           ots.AttestationsCopy(),

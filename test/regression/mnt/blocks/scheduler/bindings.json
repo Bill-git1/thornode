@@ -647,15 +647,7 @@
     },
     "finalize_block_events": [],
     "begin_block_events": [],
-    "end_block_events": [
-      {
-        "error": "Error parsing into type test::msg::ExecuteMsg: unknown variant `do`, expected `any`: execute wasm contract failed",
-        "mode": "EndBlock",
-        "msg": "{\"do\":\"something\"}",
-        "sender": "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f",
-        "type": "schedule_execute_error"
-      }
-    ],
+    "end_block_events": [],
     "txs": []
   },
   {
@@ -865,6 +857,12 @@
     "begin_block_events": [],
     "end_block_events": [
       {
+        "mode": "EndBlock",
+        "msg": "{\"any\":{\"type_url\": \"/thorchain.scheduler.v1.MsgScheduleExecuteContract\",\"value\": \"CkB0dGhvcjE0aGoydGF2cThmcGVzZHd4eGN1NDRydHkzaGg5MHZodWpydmNtc3RsNHpyM3R4bWZ2dzlzdzU4dTlmEAEaEnsiZG8iOiJzb21ldGhpbmcifQ==\"}}",
+        "sender": "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f",
+        "type": "schedule_start"
+      },
+      {
         "_contract_address": "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f",
         "mode": "EndBlock",
         "type": "execute"
@@ -876,6 +874,10 @@
         "msg": "{\"do\":\"something\"}",
         "sender": "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f",
         "type": "schedule_add"
+      },
+      {
+        "mode": "EndBlock",
+        "type": "schedule_end"
       }
     ],
     "txs": []

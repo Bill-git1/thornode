@@ -43,8 +43,10 @@ func nodeWithPrivKey(c *C, k keeper.Keeper, ctx cosmos.Context) (NodeAccount, se
 }
 
 // attestObservedTx creates an attestation for an observed tx using the given private key.
-func attestObservedTx(c *C, privKey secp256k1.PrivKey, obsTx common.ObservedTx) *common.Attestation {
-	data, err := obsTx.GetSignablePayload()
+// inbound must match the QuorumTx.Inbound the attestation will be aggregated into;
+// it is included in the signed payload to prevent a proposer from flipping the bit.
+func attestObservedTx(c *C, privKey secp256k1.PrivKey, obsTx common.ObservedTx, inbound bool) *common.Attestation {
+	data, err := obsTx.GetSignablePayloadWithInbound(inbound)
 	c.Assert(err, IsNil)
 
 	signature, err := privKey.Sign(data)
@@ -178,7 +180,7 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleInboundVaultNotFound(c *C) {
 		1024, vaultPubKey, 1024,
 	)
 
-	att := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx)
+	att := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx, true)
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
 		Inbound:      true,
@@ -216,7 +218,7 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleOutboundVaultNotFound(c *C) {
 		1024, vaultPubKey, 1024,
 	)
 
-	att := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx)
+	att := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx, false)
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
 		Inbound:      false,
@@ -259,7 +261,7 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleInboundInvalidAttestations(c *C
 	)
 
 	// Attestation with bad signature (random key, not an active node)
-	badAtt := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx)
+	badAtt := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx, true)
 
 	// Attestation with empty signature
 	emptyAtt := &common.Attestation{
@@ -314,9 +316,9 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleInboundValidAttestations(c *C) 
 	)
 
 	// Create valid attestations from 3 nodes (enough for 2/3 consensus with 4 nodes)
-	att1 := attestObservedTx(c, privKey1, obsTx)
-	att2 := attestObservedTx(c, privKey2, obsTx)
-	att3 := attestObservedTx(c, privKey3, obsTx)
+	att1 := attestObservedTx(c, privKey1, obsTx, true)
+	att2 := attestObservedTx(c, privKey2, obsTx, true)
+	att3 := attestObservedTx(c, privKey3, obsTx, true)
 
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
@@ -368,9 +370,9 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleOutboundValidAttestations(c *C)
 	)
 
 	// Create valid attestations from 3 nodes (enough for 2/3 consensus)
-	att1 := attestObservedTx(c, privKey1, obsTx)
-	att2 := attestObservedTx(c, privKey2, obsTx)
-	att3 := attestObservedTx(c, privKey3, obsTx)
+	att1 := attestObservedTx(c, privKey1, obsTx, false)
+	att2 := attestObservedTx(c, privKey2, obsTx, false)
+	att3 := attestObservedTx(c, privKey3, obsTx, false)
 
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
@@ -424,7 +426,7 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleInboundNoQuorum(c *C) {
 	)
 
 	// Only 1 attestation, not enough for quorum
-	att1 := attestObservedTx(c, privKey1, obsTx)
+	att1 := attestObservedTx(c, privKey1, obsTx, true)
 
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
@@ -468,7 +470,7 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleDuplicateAttestations(c *C) {
 	)
 
 	// Duplicate attestations from same key should be deduplicated
-	att := attestObservedTx(c, privKey1, obsTx)
+	att := attestObservedTx(c, privKey1, obsTx, true)
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
 		Inbound:      true,
@@ -513,10 +515,10 @@ func (s *HandlerObservedTxQuorumSuite) TestHandleMixedValidInvalidAttestations(c
 	)
 
 	// Mix of valid and invalid attestations
-	att1 := attestObservedTx(c, privKey1, obsTx)
-	att2 := attestObservedTx(c, privKey2, obsTx)
-	att3 := attestObservedTx(c, privKey3, obsTx)
-	badAtt := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx) // not active node
+	att1 := attestObservedTx(c, privKey1, obsTx, true)
+	att2 := attestObservedTx(c, privKey2, obsTx, true)
+	att3 := attestObservedTx(c, privKey3, obsTx, true)
+	badAtt := attestObservedTx(c, secp256k1.GenPrivKey(), obsTx, true) // not active node
 
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
@@ -562,9 +564,9 @@ func (s *HandlerObservedTxQuorumSuite) TestRunFullInboundFlow(c *C) {
 		1024, vaultPubKey, 1024,
 	)
 
-	att1 := attestObservedTx(c, privKey1, obsTx)
-	att2 := attestObservedTx(c, privKey2, obsTx)
-	att3 := attestObservedTx(c, privKey3, obsTx)
+	att1 := attestObservedTx(c, privKey1, obsTx, true)
+	att2 := attestObservedTx(c, privKey2, obsTx, true)
+	att3 := attestObservedTx(c, privKey3, obsTx, true)
 
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,
@@ -610,9 +612,9 @@ func (s *HandlerObservedTxQuorumSuite) TestRunFullOutboundFlow(c *C) {
 		1024, vaultPubKey, 1024,
 	)
 
-	att1 := attestObservedTx(c, privKey1, obsTx)
-	att2 := attestObservedTx(c, privKey2, obsTx)
-	att3 := attestObservedTx(c, privKey3, obsTx)
+	att1 := attestObservedTx(c, privKey1, obsTx, false)
+	att2 := attestObservedTx(c, privKey2, obsTx, false)
+	att3 := attestObservedTx(c, privKey3, obsTx, false)
 
 	quoTx := &common.QuorumTx{
 		ObsTx:        obsTx,

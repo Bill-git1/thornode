@@ -98,6 +98,23 @@ func observedTxKey(obsTx common.ObservedTx, inbound, allowFutureObservation bool
 	}
 }
 
+// attestableObservedTx binds an ObservedTx to its inbound/outbound classification
+// so GetSignablePayload produces the same bytes the observer signed (which include
+// the inbound bit). Without this wrapper, AttestationState could not verify
+// observer signatures because *common.ObservedTx alone doesn't carry the bit.
+type attestableObservedTx struct {
+	*common.ObservedTx
+	inbound bool
+}
+
+func (a *attestableObservedTx) GetSignablePayload() ([]byte, error) {
+	return a.ObservedTx.GetSignablePayloadWithInbound(a.inbound)
+}
+
+func (a *attestableObservedTx) IsValid() bool {
+	return a != nil && a.ObservedTx != nil
+}
+
 type KeysInterface interface {
 	GetPrivateKey() (*secp256k1.PrivKey, error)
 }
@@ -123,14 +140,14 @@ type AttestationGossip struct {
 	config config.BifrostAttestationGossipConfig
 
 	// Generic maps for different attestation types
-	observedTxs map[txKey]*AttestationState[*common.ObservedTx]
+	observedTxs map[txKey]*AttestationState[*attestableObservedTx]
 	networkFees map[common.NetworkFee]*AttestationState[*common.NetworkFee]
 	solvencies  map[common.TxID]*AttestationState[*common.Solvency]
 	errataTxs   map[common.ErrataTx]*AttestationState[*common.ErrataTx]
 	priceFeeds  map[string]*AttestationState[*common.PriceFeed]
 	mu          sync.Mutex
 
-	observedTxsPool *AttestationStatePool[*common.ObservedTx]
+	observedTxsPool *AttestationStatePool[*attestableObservedTx]
 	networkFeesPool *AttestationStatePool[*common.NetworkFee]
 	solvenciesPool  *AttestationStatePool[*common.Solvency]
 	errataTxsPool   *AttestationStatePool[*common.ErrataTx]
@@ -201,7 +218,7 @@ func NewAttestationGossip(
 		eventClient: eventClient,
 
 		// Initialize generic maps
-		observedTxs: make(map[txKey]*AttestationState[*common.ObservedTx]),
+		observedTxs: make(map[txKey]*AttestationState[*attestableObservedTx]),
 		networkFees: make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
 		solvencies:  make(map[common.TxID]*AttestationState[*common.Solvency]),
 		errataTxs:   make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
@@ -209,7 +226,7 @@ func NewAttestationGossip(
 
 		peerMgr: newPeerManager(logger, config.PeerConcurrentReceives),
 
-		observedTxsPool: NewAttestationStatePool[*common.ObservedTx](),
+		observedTxsPool: NewAttestationStatePool[*attestableObservedTx](),
 		networkFeesPool: NewAttestationStatePool[*common.NetworkFee](),
 		solvenciesPool:  NewAttestationStatePool[*common.Solvency](),
 		errataTxsPool:   NewAttestationStatePool[*common.ErrataTx](),
@@ -515,8 +532,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
 					s.logger.Debug().Msg("sending late observed tx attestations")
 
-					obsTx := state.Item
-					s.sendObservedTxAttestationsToThornode(ctx, *obsTx, state, k.Inbound, k.AllowFutureObservation, false)
+					s.sendObservedTxAttestationsToThornode(ctx, *state.Item.ObservedTx, state, k.Inbound, k.AllowFutureObservation, false)
 				}
 				state.mu.Unlock()
 			}

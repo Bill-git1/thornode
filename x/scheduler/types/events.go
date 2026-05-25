@@ -4,9 +4,10 @@ package types
 //
 //nolint:gosec
 const (
-	EventScheduleMsg     = "schedule_add"
-	EventExecuteMsg      = "schedule_execute"
-	EventExecuteErrorMsg = "schedule_execute_error"
+	EventScheduleMsg  = "schedule_add"
+	EventExecuteMsg   = "schedule_execute"
+	EventExecuteStart = "schedule_start"
+	EventExecuteEnd   = "schedule_end"
 
 	AttributeAfter  = "after"
 	AttributeHeight = "height"

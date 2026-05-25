@@ -67,11 +67,17 @@ func TestAttestMessageInterface(t *testing.T) {
 
 	// Test GetSignablePayload for each type
 	t.Run("GetSignablePayload returns marshaled data", func(t *testing.T) {
-		// ObservedTx
+		// ObservedTx — payload covers the full wrapper (with KeysignMs zeroed)
+		// plus the inbound bit, so a proposer cannot mutate FinaliseHeight,
+		// BlockHeight, or QuorumTx.Inbound without invalidating signatures.
 		txPayload, err := attestTx.GetSignablePayload()
 		require.NoError(t, err)
-		expectedTxPayload, err := tx.Marshal()
+		canonical := obsTx
+		canonical.KeysignMs = 0
+		expectedTxPayload, err := canonical.Marshal()
 		require.NoError(t, err)
+		// AttestTx.Inbound defaults to false here; trailing byte is 0.
+		expectedTxPayload = append(expectedTxPayload, 0)
 		assert.Equal(t, expectedTxPayload, txPayload)
 
 		// NetworkFee
@@ -225,7 +231,7 @@ func TestSendAttestationsToThornode(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := ag.observedTxsPool.NewAttestationState(obsTx)
+	state := ag.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: obsTx})
 
 	// Add two attestations
 	state.attestations = []attestationSentState{
@@ -611,7 +617,7 @@ func TestXMRNonSignerDoesNotBlindCoAttest(t *testing.T) {
 
 	// Simulate a signing peer sending its attestation to the non-signer.
 	signerKey := secp256k1.GenPrivKey()
-	signBz, err := obsTx.GetSignablePayload()
+	signBz, err := obsTx.GetSignablePayloadWithInbound(false)
 	require.NoError(t, err)
 	signerSig, err := signerKey.Sign(signBz)
 	require.NoError(t, err)
@@ -670,7 +676,7 @@ func TestXMRBlindCoAttestationSkipsNonXMR(t *testing.T) {
 	}
 
 	signerKey := secp256k1.GenPrivKey()
-	signBz, err := obsTx.GetSignablePayload()
+	signBz, err := obsTx.GetSignablePayloadWithInbound(false)
 	require.NoError(t, err)
 	signerSig, err := signerKey.Sign(signBz)
 	require.NoError(t, err)
@@ -730,7 +736,7 @@ func TestXMRBlindCoAttestationIdempotent(t *testing.T) {
 	}
 
 	signerKey := secp256k1.GenPrivKey()
-	signBz, err := obsTx.GetSignablePayload()
+	signBz, err := obsTx.GetSignablePayloadWithInbound(false)
 	require.NoError(t, err)
 	signerSig, err := signerKey.Sign(signBz)
 	require.NoError(t, err)
@@ -791,11 +797,11 @@ func TestXMRObservedTxAttestationsWithDifferentSpentRefsUseDifferentBuckets(t *t
 	}
 
 	signerKey := secp256k1.GenPrivKey()
-	signBzA, err := obsTxA.GetSignablePayload()
+	signBzA, err := obsTxA.GetSignablePayloadWithInbound(false)
 	require.NoError(t, err)
 	sigA, err := signerKey.Sign(signBzA)
 	require.NoError(t, err)
-	signBzB, err := obsTxB.GetSignablePayload()
+	signBzB, err := obsTxB.GetSignablePayloadWithInbound(false)
 	require.NoError(t, err)
 	sigB, err := signerKey.Sign(signBzB)
 	require.NoError(t, err)

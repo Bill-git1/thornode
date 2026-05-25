@@ -21,7 +21,10 @@ func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx 
 	s.mu.Lock()
 	state, ok := s.observedTxs[k]
 	if !ok {
-		state = s.observedTxsPool.NewAttestationState(&obsTx)
+		state = s.observedTxsPool.NewAttestationState(&attestableObservedTx{
+			ObservedTx: &obsTx,
+			inbound:    tx.Inbound,
+		})
 		s.observedTxs[k] = state
 	}
 
@@ -90,7 +93,7 @@ func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx 
 func (s *AttestationGossip) sendObservedTxAttestationsToThornode(
 	ctx context.Context,
 	tx common.ObservedTx,
-	state *AttestationState[*common.ObservedTx],
+	state *AttestationState[*attestableObservedTx],
 	inbound, allowFutureObservation, isQuorum bool,
 ) {
 	unsent := state.UnsentAttestations()

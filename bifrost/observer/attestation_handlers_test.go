@@ -64,7 +64,7 @@ func TestHandleStreamBatchedAttestations(t *testing.T) {
 			ID: "tx-id",
 		},
 	}
-	obsTxSignBz, err := observedTx.GetSignablePayload()
+	obsTxSignBz, err := observedTx.GetSignablePayloadWithInbound(true)
 	require.NoError(t, err, "Should be able to get signable payload")
 
 	// 2. NetworkFee
@@ -137,6 +137,7 @@ func TestHandleStreamBatchedAttestations(t *testing.T) {
 	// Create attestation messages for Val1
 	val1AttestTx := &common.AttestTx{
 		ObsTx:       *observedTx,
+		Inbound:     true,
 		Attestation: val1ObsTxAttestation,
 	}
 	val1AttestNF := &common.AttestNetworkFee{
@@ -253,7 +254,7 @@ func TestHandleStreamBatchedAttestations(t *testing.T) {
 	require.NoError(t, err, "Should be able to marshal oversized batch")
 
 	// Reset Val2's data
-	agVal2.observedTxs = make(map[txKey]*AttestationState[*common.ObservedTx])
+	agVal2.observedTxs = make(map[txKey]*AttestationState[*attestableObservedTx])
 	agVal2.networkFees = make(map[common.NetworkFee]*AttestationState[*common.NetworkFee])
 	agVal2.solvencies = make(map[common.TxID]*AttestationState[*common.Solvency])
 	agVal2.errataTxs = make(map[common.ErrataTx]*AttestationState[*common.ErrataTx])

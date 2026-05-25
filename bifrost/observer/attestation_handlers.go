@@ -19,7 +19,7 @@ func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.
 		return fmt.Errorf("skipping attest observed tx: not active")
 	}
 
-	signBz, err := obsTx.GetSignablePayload()
+	signBz, err := obsTx.GetSignablePayloadWithInbound(inbound)
 	if err != nil {
 		return fmt.Errorf("fail to marshal tx sign payload: %w", err)
 	}

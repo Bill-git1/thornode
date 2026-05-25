@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"errors"
 
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -27,6 +28,30 @@ type ErrorWasmKeeper struct {
 }
 
 func (m *ErrorWasmKeeper) Execute(ctx sdk.Context, contractAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+	return nil, m.err
+}
+
+type EventfulErrorWasmKeeper struct {
+	storeKey *storetypes.KVStoreKey
+	err      error
+}
+
+var failedWasmCommitKey = []byte("failed-wasm-commit")
+
+func (m *EventfulErrorWasmKeeper) Execute(ctx sdk.Context, contractAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+	ctx.KVStore(m.storeKey).Set(failedWasmCommitKey, []byte("committed"))
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			"wasm",
+			sdk.NewAttribute("_contract_address", contractAddress.String()),
+			sdk.NewAttribute("action", "before_failure"),
+		),
+		sdk.NewEvent(
+			"contract_event",
+			sdk.NewAttribute("_contract_address", contractAddress.String()),
+			sdk.NewAttribute("phase", "before_failure"),
+		),
+	})
 	return nil, m.err
 }
 
@@ -71,8 +96,7 @@ func (s *KeeperTestSuite) TestExecuteSchedule_WithMsgs(c *C) {
 	c.Assert(res.Msgs, HasLen, 0)
 }
 
-func (s *KeeperTestSuite) TestExecuteSchedule_WasmErrorEmitsEvent(c *C) {
-	// Build a keeper with ErrorWasmKeeper to test the error-event path
+func (s *KeeperTestSuite) TestExecuteSchedule_WasmErrorLogsAndRemovesSchedule(c *C) {
 	sdkCtx := sdk.UnwrapSDKContext(s.ctx)
 
 	errKeeper := setupKeeperWithWasm(s, &ErrorWasmKeeper{err: errors.New("contract execution failed")})
@@ -91,19 +115,40 @@ func (s *KeeperTestSuite) TestExecuteSchedule_WasmErrorEmitsEvent(c *C) {
 
 	sdkCtx = sdkCtx.WithBlockHeight(int64(height))
 	err = errKeeper.ExecuteSchedule(sdkCtx)
-	c.Assert(err, IsNil) // errors are logged as events, not returned
-
-	// Verify the error event was emitted
-	found := false
-	for _, e := range sdkCtx.EventManager().Events() {
-		if e.Type == types.EventExecuteErrorMsg {
-			found = true
-			break
-		}
-	}
-	c.Assert(found, Equals, true)
+	c.Assert(err, IsNil) // errors are logged, not returned
 
 	// Check that the schedule was removed
+	res, err := errKeeper.GetSchedule(sdkCtx, height)
+	c.Assert(err, IsNil)
+	c.Assert(res.Msgs, HasLen, 0)
+}
+
+func (s *KeeperTestSuite) TestExecuteSchedule_WasmErrorDiscardsEventsAndState(c *C) {
+	sdkCtx := sdk.UnwrapSDKContext(s.ctx)
+	errKeeper := setupKeeperWithWasm(s, &EventfulErrorWasmKeeper{
+		storeKey: s.storeKeys[types.StoreKey],
+		err:      errors.New("contract dispatch failed"),
+	})
+
+	height := uint64(sdkCtx.BlockHeight()) + 1
+	err := errKeeper.SetSchedule(sdkCtx, types.Schedule{
+		Height: height,
+		Msgs: []types.MsgScheduleExecuteContract{
+			{
+				Sender: accAddrs[0].String(),
+				Msg:    []byte(`{"do":"fail_after_events"}`),
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+
+	sdkCtx = sdkCtx.WithBlockHeight(int64(height))
+	err = errKeeper.ExecuteSchedule(sdkCtx)
+	c.Assert(err, IsNil)
+
+	// Failed wasm execution must not commit contract events or state writes, but
+	// the scheduler bookkeeping still completes on the parent context.
+	c.Assert(sdkCtx.KVStore(s.storeKeys[types.StoreKey]).Get(failedWasmCommitKey), IsNil)
 	res, err := errKeeper.GetSchedule(sdkCtx, height)
 	c.Assert(err, IsNil)
 	c.Assert(res.Msgs, HasLen, 0)

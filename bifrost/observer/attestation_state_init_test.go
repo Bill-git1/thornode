@@ -126,11 +126,11 @@ func TestSendAttestationStateSingleBatch(t *testing.T) {
 			Tx: *tx,
 		}
 
-		signBz, err := obsTx.GetSignablePayload()
+		signBz, err := obsTx.GetSignablePayloadWithInbound(false)
 		require.NoError(t, err, "Should be able to get signable payload")
 
 		// Create attestation state
-		state := ag.observedTxsPool.NewAttestationState(obsTx)
+		state := ag.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: obsTx})
 
 		for j := 0; j < numVals; j++ {
 			sig, err := valPrivs[j].Sign(signBz)
@@ -284,9 +284,9 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 		}
 
 		// Create attestation state
-		state := ag.observedTxsPool.NewAttestationState(obsTx)
+		state := ag.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: obsTx})
 
-		signBz, err := obsTx.GetSignablePayload()
+		signBz, err := obsTx.GetSignablePayloadWithInbound(false)
 		require.NoError(t, err, "Should be able to get signable payload")
 
 		// Create attestations
@@ -475,7 +475,8 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 			},
 		}
 
-		signBz, err := obsTx.GetSignablePayload()
+		inbound := i%2 == 0 // Alternate inbound/outbound
+		signBz, err := obsTx.GetSignablePayloadWithInbound(inbound)
 		require.NoError(t, err, "Should be able to get signable payload")
 
 		atts := make([]*common.Attestation, numVals)
@@ -492,7 +493,7 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 		// Create quorum tx
 		txs[i] = &common.QuorumTx{
 			ObsTx:        obsTx,
-			Inbound:      i%2 == 0, // Alternate inbound/outbound
+			Inbound:      inbound,
 			Attestations: atts,
 		}
 	}
@@ -730,9 +731,9 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 		}
 
 		// Create attestation state
-		state := agSender.observedTxsPool.NewAttestationState(obsTx)
+		state := agSender.observedTxsPool.NewAttestationState(&attestableObservedTx{ObservedTx: obsTx})
 
-		signBz, err := obsTx.GetSignablePayload()
+		signBz, err := obsTx.GetSignablePayloadWithInbound(false)
 		require.NoError(t, err, "Should be able to get signable payload")
 
 		// Create attestations
