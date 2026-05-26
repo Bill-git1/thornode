@@ -21,6 +21,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -1261,6 +1262,55 @@ func (s *QuerierSuite) TestQueryInboundAddressesAcceptsXMRCapableVault(c *C) {
 
 	c.Assert(ethPubKey, Equals, regularPubKey.String())
 	c.Assert(xmrPubKey, Equals, hybrid.PubKeyFrost.String())
+}
+
+func (s *QuerierSuite) TestQueryInboundAddressesExcludesCompromisedVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Compromised vault handles BTC only; safe vault handles ETH only.
+	// Separate chains ensure each vault is the sole candidate for its chain,
+	// so selectActiveVaultForChain is deterministic in both WASM and non-WASM paths.
+	compromisedPubKey := GetRandomPubKey()
+	mgr.Keeper().SetMimir(ctx, fmt.Sprintf("CompromisedVault-%s", compromisedPubKey.String()), 1)
+	compromised := NewVault(ctx.BlockHeight()-1, ActiveVault, AsgardVault, compromisedPubKey, common.Chains{common.BTCChain}.Strings(), nil)
+	c.Assert(mgr.Keeper().SetVault(ctx, compromised), IsNil)
+
+	safePubKey := GetRandomPubKey()
+	safeVault := NewVault(ctx.BlockHeight()-1, ActiveVault, AsgardVault, safePubKey, common.Chains{common.ETHChain}.Strings(), nil)
+	c.Assert(mgr.Keeper().SetVault(ctx, safeVault), IsNil)
+
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
+
+	// Non-WASM path: BTC must be absent; ETH must show the safe vault.
+	resp, err := queryServer.InboundAddresses(ctx, &types.QueryInboundAddressesRequest{})
+	c.Assert(err, IsNil)
+	for _, inbound := range resp.InboundAddresses {
+		c.Assert(inbound.Chain, Not(Equals), common.BTCChain.String(), Commentf("compromised vault's chain must be absent from non-WASM /inbound_addresses"))
+	}
+	var ethPubKey string
+	for _, inbound := range resp.InboundAddresses {
+		if inbound.Chain == common.ETHChain.String() {
+			ethPubKey = inbound.PubKey
+			break
+		}
+	}
+	c.Assert(ethPubKey, Equals, safePubKey.String())
+
+	// WASM path: the filter must be skipped so the compromised vault's chain
+	// appears, preserving deterministic contract responses.
+	wasmCtx := ctx.WithValue(constants.CtxWASMQuery, true)
+	wasmResp, err := queryServer.InboundAddresses(wasmCtx, &types.QueryInboundAddressesRequest{})
+	c.Assert(err, IsNil)
+	var btcPubKey string
+	for _, inbound := range wasmResp.InboundAddresses {
+		if inbound.Chain == common.BTCChain.String() {
+			btcPubKey = inbound.PubKey
+			break
+		}
+	}
+	c.Assert(btcPubKey, Equals, compromisedPubKey.String(), Commentf("WASM path must expose the compromised vault unchanged"))
 }
 
 func (s *QuerierSuite) TestQueryAsgardVault(c *C) {

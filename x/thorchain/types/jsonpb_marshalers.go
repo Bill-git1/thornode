@@ -145,6 +145,9 @@ func (m *QueryDerivedPoolsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, 
 }
 
 func (m *QueryInboundAddressesResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
+	if m.InboundAddresses == nil {
+		return []byte("[]"), nil
+	}
 	return jsonify(m.InboundAddresses)
 }
 

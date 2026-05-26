@@ -598,6 +598,28 @@ func getXMRActiveVaultReady(ctx cosmos.Context, k keeper.Keeper) (bool, error) {
 	return false, nil
 }
 
+// filterCompromisedVaults removes any vault whose CompromisedVault-<pubkey>
+// mimir is set to a positive value. On KV error the vault is excluded
+// (fail-closed): we can't confirm safety, so we treat it as compromised.
+// Only called for non-WASM paths; WASM contracts must see a deterministic,
+// unfiltered response to avoid consensus divergence mid-upgrade.
+func filterCompromisedVaults(ctx cosmos.Context, k keeper.Keeper, active Vaults) Vaults {
+	safe := make(Vaults, 0, len(active))
+	for _, v := range active {
+		flagged, err := k.GetMimirWithRef(ctx, "CompromisedVault-%s", v.PubKey.String())
+		if err != nil {
+			ctx.Logger().Error("failed to read CompromisedVault mimir, excluding vault", "pub_key", v.PubKey.String(), "error", err)
+			continue
+		}
+		if flagged > 0 {
+			ctx.Logger().Info("excluding compromised vault", "pub_key", v.PubKey.String())
+			continue
+		}
+		safe = append(safe, v)
+	}
+	return safe
+}
+
 func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryInboundAddressesRequest) (*types.QueryInboundAddressesResponse, error) {
 	active, err := qs.mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
 	if err != nil {
@@ -605,7 +627,12 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 		return nil, fmt.Errorf("fail to get active vaults: %w", err)
 	}
 
-	var resp []*types.QueryInboundAddressResponse
+	isWasm, _ := ctx.Value(constants.CtxWASMQuery).(bool)
+	if !isWasm {
+		active = filterCompromisedVaults(ctx, qs.mgr.Keeper(), active)
+	}
+
+	resp := make([]*types.QueryInboundAddressResponse, 0)
 	constAccessor := qs.mgr.GetConstants()
 	signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
 

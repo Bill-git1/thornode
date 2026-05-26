@@ -373,6 +373,13 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 		if err != nil {
 			return common.NoAddress, common.NoAddress, 0, err
 		}
+		// Filter compromised vaults only for non-WASM callers. WASM contracts rely
+		// on a deterministic response; changing it mid-upgrade would break consensus
+		// for any contract that has already committed to the raw grpc output.
+		isWasm, _ := ctx.Value(constants.CtxWASMQuery).(bool)
+		if !isWasm {
+			active = filterCompromisedVaults(ctx, mgr.Keeper(), active)
+		}
 		constAccessor := mgr.GetConstants()
 		signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
 		var vault Vault
