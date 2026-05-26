@@ -216,16 +216,18 @@ func quoteConvertAsset(ctx cosmos.Context, mgr *Mgrs, fromAsset common.Asset, am
 }
 
 func quoteReverseFuzzyAsset(ctx cosmos.Context, mgr *Mgrs, asset common.Asset) (common.Asset, error) {
+	// return the asset if no symbol to shorten - checked before fetching pools to
+	// avoid a full pool-store scan for the common case (native gas assets, RUNE,
+	// and any asset without a symbol suffix to disambiguate).
+	aSplit := strings.Split(asset.Symbol.String(), "-")
+	if len(aSplit) == 1 {
+		return asset, nil
+	}
+
 	// get all pools
 	pools, err := mgr.Keeper().GetPools(ctx)
 	if err != nil {
 		return asset, fmt.Errorf("failed to get pools: %w", err)
-	}
-
-	// return the asset if no symbol to shorten
-	aSplit := strings.Split(asset.Symbol.String(), "-")
-	if len(aSplit) == 1 {
-		return asset, nil
 	}
 
 	// find all other assets that match the chain and ticker
@@ -1058,7 +1060,13 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	if autoStreamingQuantity {
 		streamingQuantity = maxSwapQuantity
 	}
-	if shouldQuoteStreaming && streamingQuantity > 0 {
+	// Only re-simulate for streaming when the quantity is greater than 1. With a
+	// streaming quantity of 1 the streaming simulation is identical to the
+	// non-streaming simulation above (same msg, same amount, fresh cache store),
+	// so the second simulate() - including its end-block loop - would be pure
+	// redundant work. res/emitAmount from the quantity-1 simulation already hold
+	// the correct values.
+	if shouldQuoteStreaming && streamingQuantity > 1 {
 		if autoStreamingQuantity && streamingInterval == 0 && streamingQuantity > 1 {
 			memo.StreamQuantity = streamingQuantity
 			memoString = memo.ShortString()
