@@ -481,12 +481,13 @@ func (c *TronClient) SignTx(
 			return nil, nil, nil, err
 		}
 
+		nativeFeeLimit := c.config.ChainID.ThorchainToNativeGas(txOutItem.MaxGas[0].Amount)
 		tronTx, err = c.createTrc20Transaction(
 			fromAddress,
 			txOutItem.ToAddress.String(),
 			contract,
 			*amount,
-			*txOutItem.MaxGas[0].Amount.BigInt(), // 1e8 -> 1e6
+			*nativeFeeLimit.BigInt(),
 		)
 		if err != nil {
 			c.logger.Err(err).Msg("failed to create trc20 tx")
@@ -568,10 +569,7 @@ func (c *TronClient) SignTx(
 		return nil, nil, nil, err
 	}
 
-	gasCoin := common.NewCoin(
-		common.TRXAsset,
-		cosmos.NewUint(uint64(txOutItem.GasRate)),
-	)
+	gasCoin := c.config.ChainID.NativeGasToThorCoin(cosmos.NewUint(uint64(txOutItem.GasRate)))
 
 	txIn := types.NewTxInItem(
 		currentHeight,

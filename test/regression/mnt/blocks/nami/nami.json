@@ -387,7 +387,6 @@
                     "observed_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                     "out_hashes": [],
                     "signers": [],
-                    "spent_output_refs": [],
                     "status": "incomplete",
                     "tx": {
                       "chain": "GAIA",
@@ -836,7 +835,6 @@
                     "observed_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                     "out_hashes": [],
                     "signers": [],
-                    "spent_output_refs": [],
                     "status": "incomplete",
                     "tx": {
                       "chain": "GAIA",
@@ -944,7 +942,7 @@
               "coin_decimals": "0",
               "gas_rate": "15",
               "in_hash": "0000000000000000000000000000000000000000000000000000000000000002",
-              "max_gas_amount_0": "15000",
+              "max_gas_amount_0": "1500000",
               "max_gas_asset_0": "GAIA.ATOM",
               "max_gas_decimals_0": "6",
               "memo": "",

@@ -413,6 +413,9 @@ func (s *TronTestSuite) TestSignTxUsesOriginalMemoForMemolessOutbounds(c *C) {
 	c.Assert(signed, NotNil)
 	c.Assert(obs, NotNil)
 	c.Assert(obs.Memo, Equals, outboundMemo)
+	c.Assert(obs.Gas, HasLen, 1)
+	c.Assert(obs.Gas[0].Amount.Uint64(), Equals, uint64(100))
+	c.Assert(obs.Gas[0].Decimals, Equals, int64(6))
 
 	var tx api.Transaction
 	err = json.Unmarshal(signed, &tx)

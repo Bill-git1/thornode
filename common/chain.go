@@ -298,7 +298,9 @@ func (c Chain) ThorchainToNativeGas(thorchain cosmos.Uint) cosmos.Uint {
 	return thorchain.Mul(gasRateUnitsPerOne).QuoUint64(One)
 }
 
-// NativeGasToThorCoin converts native gas units to Coin with THORChain units (1e8).
+// NativeGasToThorCoin converts native gas units to Coin with THORChain units
+// (1e8). The coin Decimals field records the chain gas-asset precision
+// metadata; it does not describe the precision of the Amount field.
 func (c Chain) NativeGasToThorCoin(native cosmos.Uint) Coin {
 	coin := NewCoin(c.GetGasAsset(), c.NativeGasToThorchain(native))
 	coin.Decimals = c.GetGasAssetDecimal()
@@ -326,8 +328,7 @@ func (c Chain) NativeGasToThorCoinCeil(native cosmos.Uint) Coin {
 	return coin
 }
 
-// GetGasAssetDecimal returns the precision THORNode uses when storing gas-asset amounts.
-// External chains are normalized to 1e8 unless they use fewer decimals natively.
+// GetGasAssetDecimal returns the external precision of the chain gas asset.
 func (c Chain) GetGasAssetDecimal() int64 {
 	switch c {
 	case GAIAChain, NOBLEChain, TRONChain, ADAChain:

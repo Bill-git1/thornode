@@ -447,7 +447,6 @@
           "asset": "BTC.BTC"
         }
       ],
-      "pol_reserve_deposits": [],
       "pools": [
         {
           "LP_units": "100397379725",

@@ -238,7 +238,6 @@
                     "observed_pub_key": "tthorpub1addwnpepqw4clxzn0qlmpx3wqzwputnza4gdvpgh2musd9zzv6zhyr5zm6y820cgv83",
                     "out_hashes": [],
                     "signers": [],
-                    "spent_output_refs": [],
                     "status": "incomplete",
                     "tx": {
                       "chain": "BTC",
@@ -470,7 +469,6 @@
                     "observed_pub_key": "tthorpub1addwnpepqw4clxzn0qlmpx3wqzwputnza4gdvpgh2musd9zzv6zhyr5zm6y820cgv83",
                     "out_hashes": [],
                     "signers": [],
-                    "spent_output_refs": [],
                     "status": "incomplete",
                     "tx": {
                       "chain": "BTC",

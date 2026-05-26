@@ -2,7 +2,6 @@ package thorchain
 
 import (
 	"fmt"
-	"math/big"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -30,10 +29,6 @@ func newGasMgr(constantsAccessor constants.ConstantValues, k keeper.Keeper) *Gas
 		constantsAccessor: constantsAccessor,
 		keeper:            k,
 	}
-}
-
-func gasAssetPrecisionFactor(chain common.Chain) cosmos.Uint {
-	return cosmos.NewUintFromBigInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(chain.GetGasAssetDecimal()), nil))
 }
 
 func (gm *GasMgr) reset() {
@@ -151,8 +146,8 @@ func (gm *GasMgr) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, in
 	minMultiplierBasisPoints := gm.keeper.GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)
 
 	// Calculate outbound fee based on current fee multiplier
-	_, gasRateUnitsPerOne := asset.GetChain().GetGasUnits()
-	chainBaseFee := cosmos.NewUint(chainOutboundFee.TransactionSize).MulUint64(chainOutboundFee.TransactionFeeRate).Mul(gasAssetPrecisionFactor(asset.GetChain())).Quo(gasRateUnitsPerOne)
+	nativeChainBaseFee := cosmos.NewUint(chainOutboundFee.TransactionSize).MulUint64(chainOutboundFee.TransactionFeeRate)
+	chainBaseFee := asset.GetChain().NativeGasToThorchain(nativeChainBaseFee)
 	feeMultiplierBps := gm.CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), outboundFeeSpentRune, outboundFeeWithheldRune, cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
 	finalFee := common.GetUncappedShare(feeMultiplierBps, cosmos.NewUint(constants.MaxBasisPts), chainBaseFee)
 
@@ -236,15 +231,9 @@ func (gm *GasMgr) GetGasDetails(ctx cosmos.Context, chain common.Chain) (common.
 		// to increase the likelihood of transaction acceptance.
 		gasRate = gasRate.MulUint64(3).QuoUint64(2)
 	}
-	chainGasAssetPrecision := chain.GetGasAssetDecimal()
 
-	// convert to the gas asset's tracked precision for the max gas coin
-	_, gasRateUnitsPerOne := chain.GetGasUnits()
 	maxGasAmount := gasRate.MulUint64(networkFee.TransactionSize)
-	maxGasAmountForChain := maxGasAmount.Mul(gasAssetPrecisionFactor(chain)).Quo(gasRateUnitsPerOne)
-
-	maxGasCoin := common.NewCoin(chain.GetGasAsset(), maxGasAmountForChain)
-	maxGasCoin.Decimals = chainGasAssetPrecision
+	maxGasCoin := chain.NativeGasToThorCoinCeil(maxGasAmount)
 
 	return maxGasCoin, int64(gasRate.Uint64()), nil
 }

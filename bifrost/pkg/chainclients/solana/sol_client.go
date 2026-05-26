@@ -297,7 +297,8 @@ func (c *SOLClient) ReportSolvency(height int64) error {
 		return fmt.Errorf("fail to get asgards, err: %w", err)
 	}
 
-	currentFeeRate := cosmos.NewUint(3 * c.cfg.BlockScanner.MaxGasLimit * c.solScanner.lastFeeRate)
+	nativeCurrentFee := cosmos.NewUint(3).MulUint64(c.cfg.BlockScanner.MaxGasLimit).MulUint64(c.solScanner.lastFeeRate)
+	currentFeeRate := c.cfg.ChainID.NativeGasToThorchain(nativeCurrentFee)
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent
@@ -466,6 +467,7 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		return checkPointBytes, nil, nil, fmt.Errorf("fail to get vault address: %w", err)
 	}
 
+	gasCoin := tx.Chain.NativeGasToThorCoin(cosmos.NewUint(baseFeePerSigLamports))
 	txIn := stypes.NewTxInItem(
 		height,
 		base58.Encode(signedTx.Signatures[0]),
@@ -473,7 +475,7 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		fromAddr.String(),
 		tx.ToAddress.String(),
 		tx.Coins,
-		common.Gas([]common.Coin{{Asset: common.SOLAsset, Amount: cosmos.NewUint(5000), Decimals: 9}}),
+		common.Gas([]common.Coin{gasCoin}),
 		tx.VaultPubKeyEddsa,
 		"",
 		"",

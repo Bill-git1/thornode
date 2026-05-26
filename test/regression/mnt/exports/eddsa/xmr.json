@@ -130,7 +130,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200098182528",
+              "amount": "200103191824",
               "denom": "rune"
             }
           ]
@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000005680267",
+              "amount": "35000000670970",
               "denom": "rune"
             }
           ]
@@ -166,7 +166,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "4999998137205",
+              "amount": "4999998137206",
               "denom": "rune"
             }
           ]
@@ -245,7 +245,7 @@
       "network": {
         "LPIncomeSplit": "9600",
         "NodeIncomeSplit": "400",
-        "bond_reward_rune": "137205",
+        "bond_reward_rune": "137206",
         "total_bond_units": "3"
       },
       "network_fees": [
@@ -287,14 +287,14 @@
             {
               "chain": "XMR",
               "coin": {
-                "amount": "947992384",
+                "amount": "997987384",
                 "asset": "XMR.XMR"
               },
               "gas_rate": "15000",
               "in_hash": "421CFCFD4F6DF5FF09CD32C68E458391AA08BC6505E1A2C0CE0859FE3A01135D",
               "max_gas": [
                 {
-                  "amount": "75000000",
+                  "amount": "7500",
                   "asset": "XMR.XMR",
                   "decimals": "12"
                 }
@@ -350,7 +350,7 @@
       "outbound_fee_spent_rune": [],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "689660182212",
+          "amount": "689655172915",
           "asset": "XMR.XMR"
         }
       ],
@@ -369,8 +369,8 @@
         {
           "LP_units": "100000000000",
           "asset": "XMR.XMR",
-          "balance_asset": "999052007616",
-          "balance_rune": "100097117078",
+          "balance_asset": "999002012616",
+          "balance_rune": "100102126374",
           "decimals": "12",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -411,14 +411,14 @@
               "chain": "XMR",
               "clout_spent": "0",
               "coin": {
-                "amount": "947992384",
+                "amount": "997987384",
                 "asset": "XMR.XMR"
               },
               "gas_rate": "15000",
               "in_hash": "421CFCFD4F6DF5FF09CD32C68E458391AA08BC6505E1A2C0CE0859FE3A01135D",
               "max_gas": [
                 {
-                  "amount": "75000000",
+                  "amount": "7500",
                   "asset": "XMR.XMR",
                   "decimals": "12"
                 }

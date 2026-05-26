@@ -1161,6 +1161,39 @@ func (s *ClientBackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults
 	}
 }
 
+func (s *ClientBackfillSuite) TestReportSolvencyConvertsLamportFeeToThorchainUnits(c *C) {
+	server := makeSolRPCServer(c, map[string]string{
+		"getSlot":    `{"jsonrpc":"2.0","result":11,"id":1}`,
+		"getBalance": `{"jsonrpc":"2.0","result":{"context":{"slot":11},"value":10000000000},"id":1}`,
+	})
+	defer server.Close()
+
+	client := s.makeClient(c, server)
+	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
+	client.solScanner.lastFeeRate = 1
+
+	solVault := types2.Vault{
+		PubKey:      types2.GetRandomPubKey(),
+		PubKeyEddsa: types2.GetRandomEd25519PubKey(),
+		Coins:       common.NewCoins(common.NewCoin(common.SOLAsset, cosmos.NewUint(1_000_100_000))),
+	}
+	client.bridge = &mockSOLSolvencyBridge{
+		asgards: types2.Vaults{solVault},
+	}
+
+	err := client.ReportSolvency(11)
+	c.Assert(err, IsNil)
+
+	select {
+	case msg := <-client.globalSolvencyQueue:
+		c.Assert(msg.Height, Equals, int64(10))
+		c.Assert(msg.Chain, Equals, common.SOLChain)
+		c.Assert(msg.PubKey.Equals(solVault.PubKey), Equals, true)
+	case <-time.After(time.Second):
+		c.Fatal("expected insolvency report when SOL fee buffer is converted to THORChain units")
+	}
+}
+
 // Note: Full ReportSolvency with vault fetching requires bridge to be pointed at test server.
 // The bridge is created once in SetUpSuite and can't be easily repointed. We test the simpler paths above.
 

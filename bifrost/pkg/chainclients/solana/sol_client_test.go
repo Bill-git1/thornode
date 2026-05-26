@@ -270,7 +270,7 @@ func (s *SolTestSuite) TestSignSOLTx(c *C) {
 	e.solScanner.recentBlockHash = "asdfasdf"
 
 	// Valid outbound
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:            common.SOLChain,
 		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
 		VaultPubKey:      pubkeys[0],
@@ -287,6 +287,10 @@ func (s *SolTestSuite) TestSignSOLTx(c *C) {
 
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	c.Assert(obs.Gas, HasLen, 1)
+	c.Assert(obs.Gas[0].Amount.Uint64(), Equals, uint64(500))
+	c.Assert(obs.Gas[0].Decimals, Equals, int64(9))
 
 	// Already signed — signer cache should suppress re-signing
 	txOut := stypes.TxOutItem{

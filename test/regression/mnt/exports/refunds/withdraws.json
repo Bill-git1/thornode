@@ -371,7 +371,6 @@
           "asset": "ETH.ETH"
         }
       ],
-      "pol_reserve_deposits": [],
       "pools": [
         {
           "LP_units": "133333333333",
