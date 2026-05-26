@@ -1077,6 +1077,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/SwapQueueResponse"
 
+  /thorchain/queue/swap/paginated:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+          default: 0
+        description: Number of items to skip
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+          default: 100
+          maximum: 1000
+        description: Number of items to return
+    get:
+      description: Returns the swap queue with pagination.
+      operationId: queueSwapPaginated
+      tags:
+        - Queue
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SwapQueuePaginatedResponse"
+
   /thorchain/queue/limit_swaps:
     parameters:
       - $ref: "#/components/parameters/queryHeight"
@@ -4252,6 +4285,17 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/MsgSwap"
+
+    SwapQueuePaginatedResponse:
+      type: object
+      properties:
+        swap_queue:
+          type: array
+          items:
+            $ref: "#/components/schemas/MsgSwap"
+          description: Array of queued swaps
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
 
     SwapDetailsResponse:
       type: object

@@ -3178,16 +3178,54 @@ func (qs queryServer) queryPendingOutbound(ctx cosmos.Context, _ *types.QueryPen
 
 func (qs queryServer) querySwapQueue(ctx cosmos.Context, _ *types.QuerySwapQueueRequest) (*types.QuerySwapQueueResponse, error) {
 	result := make([]*MsgSwap, 0)
+	qs.iterSwapQueue(ctx, func(msg *MsgSwap) { result = append(result, msg) })
 
+	return &types.QuerySwapQueueResponse{SwapQueue: result}, nil
+}
+
+func (qs queryServer) querySwapQueuePaginated(ctx cosmos.Context, req *types.QuerySwapQueuePaginatedRequest) (*types.QuerySwapQueuePaginatedResponse, error) {
+	offset := req.Offset
+	limit := req.Limit
+	if limit == 0 {
+		limit = config.GetThornode().API.Pagination.DefaultPageSize
+	}
+	if limit > config.GetThornode().API.Pagination.MaxPageSize {
+		limit = config.GetThornode().API.Pagination.MaxPageSize
+	}
+
+	result := make([]*MsgSwap, 0)
+	var total uint64
+	// TODO: If swap queue pagination starts showing performance issues, avoid
+	// unmarshalling entries outside the requested page window.
+	qs.iterSwapQueue(ctx, func(msg *MsgSwap) {
+		if total >= offset && uint64(len(result)) < limit {
+			result = append(result, msg)
+		}
+		total++
+	})
+
+	return &types.QuerySwapQueuePaginatedResponse{
+		SwapQueue: result,
+		Pagination: &types.PaginationMeta{
+			Offset:  offset,
+			Limit:   limit,
+			Total:   total,
+			HasNext: total > offset && total-offset > limit,
+			HasPrev: offset > 0,
+		},
+	}, nil
+}
+
+func (qs queryServer) iterSwapQueue(ctx cosmos.Context, handle func(*MsgSwap)) {
 	// Add items from regular swap queue
 	iterator := qs.mgr.Keeper().GetSwapQueueIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
-		var msg MsgSwap
-		if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
+		msg := &MsgSwap{}
+		if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), msg); err != nil {
 			continue
 		}
-		result = append(result, &msg)
+		handle(msg)
 	}
 
 	// Add items from advanced swap queue if enabled
@@ -3195,15 +3233,13 @@ func (qs queryServer) querySwapQueue(ctx cosmos.Context, _ *types.QuerySwapQueue
 		advIterator := qs.mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
 		defer advIterator.Close()
 		for ; advIterator.Valid(); advIterator.Next() {
-			var msg MsgSwap
-			if err := qs.mgr.Keeper().Cdc().Unmarshal(advIterator.Value(), &msg); err != nil {
+			msg := &MsgSwap{}
+			if err := qs.mgr.Keeper().Cdc().Unmarshal(advIterator.Value(), msg); err != nil {
 				continue
 			}
-			result = append(result, &msg)
+			handle(msg)
 		}
 	}
-
-	return &types.QuerySwapQueueResponse{SwapQueue: result}, nil
 }
 
 func (qs queryServer) querySwapDetails(ctx cosmos.Context, req *types.QuerySwapDetailsRequest) (*types.QuerySwapDetailsResponse, error) {

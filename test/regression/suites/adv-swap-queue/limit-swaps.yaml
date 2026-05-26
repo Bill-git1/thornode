@@ -92,6 +92,41 @@ asserts:
   - .pagination.has_next == false
   - .pagination.has_prev == false
 ---
+########################################################################################
+# Test swap queue API response shapes
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/queue/swap
+asserts:
+  - type == "array"
+  - .|length == 1
+  - .[0].tx.coins[0].asset == "THOR.RUNE"
+  - .[0].target_asset == "BTC.BTC"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/swap/paginated?limit=1
+asserts:
+  - type == "object"
+  - .swap_queue|length == 1
+  - .swap_queue[0].tx.coins[0].asset == "THOR.RUNE"
+  - .swap_queue[0].target_asset == "BTC.BTC"
+  - .pagination.total == 1
+  - .pagination.offset == 0
+  - .pagination.limit == 1
+  - .pagination.has_next == false
+  - .pagination.has_prev == false
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/swap/paginated?offset=1&limit=1
+asserts:
+  - type == "object"
+  - .swap_queue|length == 0
+  - .pagination.total == 1
+  - .pagination.offset == 1
+  - .pagination.limit == 1
+  - .pagination.has_next == false
+  - .pagination.has_prev == true
+---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary
 asserts:

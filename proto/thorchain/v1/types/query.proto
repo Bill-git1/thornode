@@ -283,6 +283,11 @@ service Query {
     option (google.api.http).get = "/thorchain/queue/swap";
   }
 
+  rpc SwapQueuePaginated(QuerySwapQueuePaginatedRequest)
+      returns (QuerySwapQueuePaginatedResponse) {
+    option (google.api.http).get = "/thorchain/queue/swap/paginated";
+  }
+
   rpc SwapDetails(QuerySwapDetailsRequest) returns (QuerySwapDetailsResponse) {
     option (google.api.http).get = "/thorchain/queue/swap/details/{tx_id}";
   }

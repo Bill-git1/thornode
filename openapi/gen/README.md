@@ -126,6 +126,7 @@ Class | Method | HTTP request | Description
 *QueueApi* | [**QueueOutbound**](docs/QueueApi.md#queueoutbound) | **Get** /thorchain/queue/outbound | 
 *QueueApi* | [**QueueScheduled**](docs/QueueApi.md#queuescheduled) | **Get** /thorchain/queue/scheduled | 
 *QueueApi* | [**QueueSwap**](docs/QueueApi.md#queueswap) | **Get** /thorchain/queue/swap | 
+*QueueApi* | [**QueueSwapPaginated**](docs/QueueApi.md#queueswappaginated) | **Get** /thorchain/queue/swap/paginated | 
 *QuoteApi* | [**Quoteswap**](docs/QuoteApi.md#quoteswap) | **Get** /thorchain/quote/swap | 
 *RUNEPoolApi* | [**RunePool**](docs/RUNEPoolApi.md#runepool) | **Get** /thorchain/runepool | 
 *RUNEPoolApi* | [**RuneProvider**](docs/RUNEPoolApi.md#runeprovider) | **Get** /thorchain/rune_provider/{address} | 
@@ -268,6 +269,7 @@ Class | Method | HTTP request | Description
  - [SupplyResponse](docs/SupplyResponse.md)
  - [SwapDetailsResponse](docs/SwapDetailsResponse.md)
  - [SwapFinalisedStage](docs/SwapFinalisedStage.md)
+ - [SwapQueuePaginatedResponse](docs/SwapQueuePaginatedResponse.md)
  - [SwapState](docs/SwapState.md)
  - [SwapStatus](docs/SwapStatus.md)
  - [SwapperCloutResponse](docs/SwapperCloutResponse.md)

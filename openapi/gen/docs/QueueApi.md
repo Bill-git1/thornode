@@ -10,6 +10,7 @@ Method | HTTP request | Description
 [**QueueOutbound**](QueueApi.md#QueueOutbound) | **Get** /thorchain/queue/outbound | 
 [**QueueScheduled**](QueueApi.md#QueueScheduled) | **Get** /thorchain/queue/scheduled | 
 [**QueueSwap**](QueueApi.md#QueueSwap) | **Get** /thorchain/queue/swap | 
+[**QueueSwapPaginated**](QueueApi.md#QueueSwapPaginated) | **Get** /thorchain/queue/swap/paginated | 
 
 
 
@@ -412,6 +413,76 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**[]MsgSwap**](MsgSwap.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## QueueSwapPaginated
+
+> SwapQueuePaginatedResponse QueueSwapPaginated(ctx).Height(height).Offset(offset).Limit(limit).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+    offset := int64(789) // int64 | Number of items to skip (optional) (default to 0)
+    limit := int64(789) // int64 | Number of items to return (optional) (default to 100)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.QueueApi.QueueSwapPaginated(context.Background()).Height(height).Offset(offset).Limit(limit).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `QueueApi.QueueSwapPaginated``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `QueueSwapPaginated`: SwapQueuePaginatedResponse
+    fmt.Fprintf(os.Stdout, "Response from `QueueApi.QueueSwapPaginated`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiQueueSwapPaginatedRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **height** | **int64** | optional block height, defaults to current tip | 
+ **offset** | **int64** | Number of items to skip | [default to 0]
+ **limit** | **int64** | Number of items to return | [default to 100]
+
+### Return type
+
+[**SwapQueuePaginatedResponse**](SwapQueuePaginatedResponse.md)
 
 ### Authorization
 

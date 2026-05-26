@@ -765,3 +765,132 @@ func (a *QueueApiService) QueueSwapExecute(r ApiQueueSwapRequest) ([]MsgSwap, *h
 
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
+
+type ApiQueueSwapPaginatedRequest struct {
+	ctx context.Context
+	ApiService *QueueApiService
+	height *int64
+	offset *int64
+	limit *int64
+}
+
+// optional block height, defaults to current tip
+func (r ApiQueueSwapPaginatedRequest) Height(height int64) ApiQueueSwapPaginatedRequest {
+	r.height = &height
+	return r
+}
+
+// Number of items to skip
+func (r ApiQueueSwapPaginatedRequest) Offset(offset int64) ApiQueueSwapPaginatedRequest {
+	r.offset = &offset
+	return r
+}
+
+// Number of items to return
+func (r ApiQueueSwapPaginatedRequest) Limit(limit int64) ApiQueueSwapPaginatedRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiQueueSwapPaginatedRequest) Execute() (*SwapQueuePaginatedResponse, *http.Response, error) {
+	return r.ApiService.QueueSwapPaginatedExecute(r)
+}
+
+/*
+QueueSwapPaginated Method for QueueSwapPaginated
+
+Returns the swap queue with pagination.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiQueueSwapPaginatedRequest
+*/
+func (a *QueueApiService) QueueSwapPaginated(ctx context.Context) ApiQueueSwapPaginatedRequest {
+	return ApiQueueSwapPaginatedRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return SwapQueuePaginatedResponse
+func (a *QueueApiService) QueueSwapPaginatedExecute(r ApiQueueSwapPaginatedRequest) (*SwapQueuePaginatedResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *SwapQueuePaginatedResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "QueueApiService.QueueSwapPaginated")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/thorchain/queue/swap/paginated"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.height != nil {
+		localVarQueryParams.Add("height", parameterToString(*r.height, ""))
+	}
+	if r.offset != nil {
+		localVarQueryParams.Add("offset", parameterToString(*r.offset, ""))
+	}
+	if r.limit != nil {
+		localVarQueryParams.Add("limit", parameterToString(*r.limit, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}

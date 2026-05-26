@@ -165,6 +165,7 @@ docs/SupplyResponse.md
 docs/SwapApi.md
 docs/SwapDetailsResponse.md
 docs/SwapFinalisedStage.md
+docs/SwapQueuePaginatedResponse.md
 docs/SwapState.md
 docs/SwapStatus.md
 docs/SwapperCloutResponse.md
@@ -305,6 +306,7 @@ model_streaming_swap.go
 model_supply_response.go
 model_swap_details_response.go
 model_swap_finalised_stage.go
+model_swap_queue_paginated_response.go
 model_swap_state.go
 model_swap_status.go
 model_swapper_clout_response.go

@@ -66,6 +66,7 @@ const (
 	Query_QuoteLimit_FullMethodName              = "/types.Query/QuoteLimit"
 	Query_ConstantValues_FullMethodName          = "/types.Query/ConstantValues"
 	Query_SwapQueue_FullMethodName               = "/types.Query/SwapQueue"
+	Query_SwapQueuePaginated_FullMethodName      = "/types.Query/SwapQueuePaginated"
 	Query_SwapDetails_FullMethodName             = "/types.Query/SwapDetails"
 	Query_LimitSwaps_FullMethodName              = "/types.Query/LimitSwaps"
 	Query_LimitSwapsSummary_FullMethodName       = "/types.Query/LimitSwapsSummary"
@@ -173,6 +174,7 @@ type QueryClient interface {
 	QuoteLimit(ctx context.Context, in *QueryQuoteLimitRequest, opts ...grpc.CallOption) (*QueryQuoteLimitResponse, error)
 	ConstantValues(ctx context.Context, in *QueryConstantValuesRequest, opts ...grpc.CallOption) (*QueryConstantValuesResponse, error)
 	SwapQueue(ctx context.Context, in *QuerySwapQueueRequest, opts ...grpc.CallOption) (*QuerySwapQueueResponse, error)
+	SwapQueuePaginated(ctx context.Context, in *QuerySwapQueuePaginatedRequest, opts ...grpc.CallOption) (*QuerySwapQueuePaginatedResponse, error)
 	SwapDetails(ctx context.Context, in *QuerySwapDetailsRequest, opts ...grpc.CallOption) (*QuerySwapDetailsResponse, error)
 	LimitSwaps(ctx context.Context, in *QueryLimitSwapsRequest, opts ...grpc.CallOption) (*QueryLimitSwapsResponse, error)
 	LimitSwapsSummary(ctx context.Context, in *QueryLimitSwapsSummaryRequest, opts ...grpc.CallOption) (*QueryLimitSwapsSummaryResponse, error)
@@ -651,6 +653,15 @@ func (c *queryClient) SwapQueue(ctx context.Context, in *QuerySwapQueueRequest, 
 	return out, nil
 }
 
+func (c *queryClient) SwapQueuePaginated(ctx context.Context, in *QuerySwapQueuePaginatedRequest, opts ...grpc.CallOption) (*QuerySwapQueuePaginatedResponse, error) {
+	out := new(QuerySwapQueuePaginatedResponse)
+	err := c.cc.Invoke(ctx, Query_SwapQueuePaginated_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) SwapDetails(ctx context.Context, in *QuerySwapDetailsRequest, opts ...grpc.CallOption) (*QuerySwapDetailsResponse, error) {
 	out := new(QuerySwapDetailsResponse)
 	err := c.cc.Invoke(ctx, Query_SwapDetails_FullMethodName, in, out, opts...)
@@ -1116,6 +1127,7 @@ type QueryServer interface {
 	QuoteLimit(context.Context, *QueryQuoteLimitRequest) (*QueryQuoteLimitResponse, error)
 	ConstantValues(context.Context, *QueryConstantValuesRequest) (*QueryConstantValuesResponse, error)
 	SwapQueue(context.Context, *QuerySwapQueueRequest) (*QuerySwapQueueResponse, error)
+	SwapQueuePaginated(context.Context, *QuerySwapQueuePaginatedRequest) (*QuerySwapQueuePaginatedResponse, error)
 	SwapDetails(context.Context, *QuerySwapDetailsRequest) (*QuerySwapDetailsResponse, error)
 	LimitSwaps(context.Context, *QueryLimitSwapsRequest) (*QueryLimitSwapsResponse, error)
 	LimitSwapsSummary(context.Context, *QueryLimitSwapsSummaryRequest) (*QueryLimitSwapsSummaryResponse, error)
@@ -1308,6 +1320,9 @@ func (UnimplementedQueryServer) ConstantValues(context.Context, *QueryConstantVa
 }
 func (UnimplementedQueryServer) SwapQueue(context.Context, *QuerySwapQueueRequest) (*QuerySwapQueueResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SwapQueue not implemented")
+}
+func (UnimplementedQueryServer) SwapQueuePaginated(context.Context, *QuerySwapQueuePaginatedRequest) (*QuerySwapQueuePaginatedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SwapQueuePaginated not implemented")
 }
 func (UnimplementedQueryServer) SwapDetails(context.Context, *QuerySwapDetailsRequest) (*QuerySwapDetailsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SwapDetails not implemented")
@@ -2299,6 +2314,24 @@ func _Query_SwapQueue_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).SwapQueue(ctx, req.(*QuerySwapQueueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_SwapQueuePaginated_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySwapQueuePaginatedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).SwapQueuePaginated(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_SwapQueuePaginated_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).SwapQueuePaginated(ctx, req.(*QuerySwapQueuePaginatedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3307,6 +3340,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SwapQueue",
 			Handler:    _Query_SwapQueue_Handler,
+		},
+		{
+			MethodName: "SwapQueuePaginated",
+			Handler:    _Query_SwapQueuePaginated_Handler,
 		},
 		{
 			MethodName: "SwapDetails",

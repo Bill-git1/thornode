@@ -1743,6 +1743,53 @@ paths:
           description: OK
       tags:
       - Queue
+  /thorchain/queue/swap/paginated:
+    get:
+      description: Returns the swap queue with pagination.
+      operationId: queueSwapPaginated
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - description: Number of items to skip
+        explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - description: Number of items to return
+        explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          format: int64
+          maximum: 1000
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwapQueuePaginatedResponse'
+          description: OK
+      tags:
+      - Queue
   /thorchain/queue/limit_swaps:
     get:
       description: Returns limit swaps with pagination and filtering.
@@ -6290,6 +6337,126 @@ components:
       items:
         $ref: '#/components/schemas/MsgSwap'
       type: array
+    SwapQueuePaginatedResponse:
+      example:
+        swap_queue:
+        - aggregator_target_address: aggregator_target_address
+          tx:
+            chain: BTC
+            coins:
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            gas:
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            memo: ADD:BTC.BTC:thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+            to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
+            id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
+            from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
+          trade_target: trade_target
+          aggregator: aggregator
+          destination: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          affiliate_basis_points: affiliate_basis_points
+          index: 2
+          aggregator_target_limit: aggregator_target_limit
+          initial_block_height: 1
+          version: version
+          swap_type: swap_type
+          stream_quantity: 0
+          target_asset: ETH.ETH
+          stream_interval: 6
+          affiliate_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          state:
+            failed_swaps:
+            - 3
+            - 3
+            quantity: 5
+            in: in
+            count: 7
+            withdrawn: withdrawn
+            deposit: deposit
+            interval: 5
+            failed_swap_reasons:
+            - failed_swap_reasons
+            - failed_swap_reasons
+            ttl: 2
+            last_height: 9
+            out: out
+          signer: signer
+        - aggregator_target_address: aggregator_target_address
+          tx:
+            chain: BTC
+            coins:
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            gas:
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            - amount: "100000"
+              decimals: 6
+              asset: BTC.BTC
+            memo: ADD:BTC.BTC:thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+            to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
+            id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
+            from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
+          trade_target: trade_target
+          aggregator: aggregator
+          destination: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          affiliate_basis_points: affiliate_basis_points
+          index: 2
+          aggregator_target_limit: aggregator_target_limit
+          initial_block_height: 1
+          version: version
+          swap_type: swap_type
+          stream_quantity: 0
+          target_asset: ETH.ETH
+          stream_interval: 6
+          affiliate_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          state:
+            failed_swaps:
+            - 3
+            - 3
+            quantity: 5
+            in: in
+            count: 7
+            withdrawn: withdrawn
+            deposit: deposit
+            interval: 5
+            failed_swap_reasons:
+            - failed_swap_reasons
+            - failed_swap_reasons
+            ttl: 2
+            last_height: 9
+            out: out
+          signer: signer
+        pagination:
+          total: 1247
+          offset: 0
+          limit: 100
+          has_next: true
+          has_prev: false
+      properties:
+        swap_queue:
+          description: Array of queued swaps
+          items:
+            $ref: '#/components/schemas/MsgSwap'
+          type: array
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      type: object
     SwapDetailsResponse:
       example:
         queue_type: advanced
