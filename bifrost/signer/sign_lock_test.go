@@ -20,9 +20,11 @@ func (m *mockChainNoVaultLock) IsBlockScannerHealthy() bool { return true }
 func (m *mockChainNoVaultLock) SignTx(thtypes.TxOutItem, int64) ([]byte, []byte, *thtypes.TxInItem, error) {
 	return nil, nil, nil, nil
 }
+
 func (m *mockChainNoVaultLock) BroadcastTx(thtypes.TxOutItem, []byte) (string, error) { return "", nil }
-func (m *mockChainNoVaultLock) GetHeight() (int64, error)                             { return 0, nil }
-func (m *mockChainNoVaultLock) GetAddress(common.PubKey) string                       { return "" }
+
+func (m *mockChainNoVaultLock) GetHeight() (int64, error)       { return 0, nil }
+func (m *mockChainNoVaultLock) GetAddress(common.PubKey) string { return "" }
 func (m *mockChainNoVaultLock) GetAccount(common.PubKey, *big.Int) (common.Account, error) {
 	return common.Account{}, nil
 }

@@ -31,6 +31,15 @@ BRANCH?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GITREF?=$(shell git rev-parse --short HEAD 2>/dev/null)
 BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
+# Forward CI_JOB_TOKEN into docker builds as a BuildKit secret so the
+# in-image `go mod download` can fetch tss-lib-private. Empty when running
+# locally without the token (Dockerfile mount is required=false).
+ifneq ($(strip $(CI_JOB_TOKEN)),)
+DOCKER_BUILD_SECRETS := --secret id=ci_job_token,env=CI_JOB_TOKEN
+else
+DOCKER_BUILD_SECRETS :=
+endif
+
 # compiler flags
 VERSION:=$(shell cat version)
 TAG?=mocknet
@@ -325,7 +334,8 @@ build-test-regression:
 		-t thornode-regtest \
 		-f ci/Dockerfile.regtest \
 		--build-arg COMMIT=$(COMMIT) \
-		--build-arg DOCKER_MIRROR
+		--build-arg DOCKER_MIRROR \
+		$(DOCKER_BUILD_SECRETS)
 
 test-regression-coverage:
 	@go tool cover -html=test/regression/mnt/coverage/coverage.txt
@@ -378,7 +388,8 @@ build-test-simulation:
 		-t thornode-simtest \
 		-f ci/Dockerfile.simtest \
 		--build-arg COMMIT=$(COMMIT) \
-		--build-arg DOCKER_MIRROR
+		--build-arg DOCKER_MIRROR \
+		$(DOCKER_BUILD_SECRETS)
 
 test-simulation-events:
 	@docker compose $(DOCKER_COMPOSE_FILES) run --rm events
@@ -478,13 +489,14 @@ docker-gitlab-push:
 	docker push registry.gitlab.com/thorchain/thornode:${GITREF}
 
 docker-gitlab-build:
-	docker build . \
+	DOCKER_BUILDKIT=1 docker build . \
 		-f build/docker/Dockerfile \
 		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version)) \
 		-t registry.gitlab.com/thorchain/thornode:${GITREF} \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg TAG=$(BUILDTAG) \
-		--build-arg DOCKER_MIRROR
+		--build-arg DOCKER_MIRROR \
+		$(DOCKER_BUILD_SECRETS)
 
 ########################################################################################
 # Tools
@@ -499,10 +511,11 @@ thorscan-gitlab-push: docker-gitlab-login
 		| xargs -n1 | grep registry | xargs -n1 docker push
 
 events-build:
-	@docker build . -f tools/events/Dockerfile \
+	@DOCKER_BUILDKIT=1 docker build . -f tools/events/Dockerfile \
 		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode events-${BRANCH} $(shell cat version)) \
 		--build-arg TAG=$(BUILDTAG) \
-		--build-arg DOCKER_MIRROR
+		--build-arg DOCKER_MIRROR \
+		$(DOCKER_BUILD_SECRETS)
 
 events-gitlab-push: docker-gitlab-login
 	@./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode events-${BRANCH} $(shell cat version) \

@@ -130,9 +130,13 @@ func (m *mockBridgeForKeysign) GetBlockHeight() (int64, error) {
 func (m *mockBridgeForKeysign) GetBlockTimestamp(int64) (time.Time, error) {
 	return time.Time{}, nil
 }
+
 func (m *mockBridgeForKeysign) GetLastObservedInHeight(common.Chain) (int64, error) { return 0, nil }
-func (m *mockBridgeForKeysign) GetLastSignedOutHeight(common.Chain) (int64, error)  { return 0, nil }
-func (m *mockBridgeForKeysign) Broadcast(...sdk.Msg) (common.TxID, error)           { return "", nil }
+
+func (m *mockBridgeForKeysign) GetLastSignedOutHeight(common.Chain) (int64, error) { return 0, nil }
+
+func (m *mockBridgeForKeysign) Broadcast(...sdk.Msg) (common.TxID, error) { return "", nil }
+
 func (m *mockBridgeForKeysign) BroadcastWithBlocking(...sdk.Msg) (common.TxID, error) {
 	return "", nil
 }
@@ -140,7 +144,9 @@ func (m *mockBridgeForKeysign) BroadcastWithBlocking(...sdk.Msg) (common.TxID, e
 func (m *mockBridgeForKeysign) GetKeysign(int64, string) (tctypes.TxOut, error) {
 	return tctypes.TxOut{}, nil
 }
+
 func (m *mockBridgeForKeysign) GetNodeAccount(string) (*stypes.NodeAccount, error) { return nil, nil }
+
 func (m *mockBridgeForKeysign) GetNodeAccounts() ([]*stypes.QueryNodeResponse, error) {
 	return nil, nil
 }
@@ -183,15 +189,23 @@ func (s *KeysignErrorSuite) TestKeysignErrorString(c *C) {
 	c.Assert(errStr, Matches, ".*something went wrong.*round2.*pk1.*pk2.*")
 }
 
-func (s *KeysignErrorSuite) TestIsRound7(c *C) {
-	ke := NewKeysignError(stypes.Blame{Round: "SignRound7Message"})
-	c.Assert(ke.IsRound7(), Equals, true)
+func (s *KeysignErrorSuite) TestIsTerminalRound(c *C) {
+	// IsTerminalRound is true only for the v3 secp256k1 terminal round
+	// (SignRound9Message) and the ed25519 terminal round (SignRound3Message).
+	// v1's SignRound7Message is no longer accepted — a v3 node will never
+	// emit it for its own terminal failure, and legacy on-chain markers are
+	// not consumed by the per-signer retry path.
+	ke := NewKeysignError(stypes.Blame{Round: "SignRound9Message"})
+	c.Assert(ke.IsTerminalRound(), Equals, true)
 
-	ke2 := NewKeysignError(stypes.Blame{Round: "SignRound3Message"})
-	c.Assert(ke2.IsRound7(), Equals, false)
+	ke2 := NewKeysignError(stypes.Blame{Round: "SignRound7Message"})
+	c.Assert(ke2.IsTerminalRound(), Equals, false)
 
-	ke3 := NewKeysignError(stypes.Blame{})
-	c.Assert(ke3.IsRound7(), Equals, false)
+	ke3 := NewKeysignError(stypes.Blame{Round: "SignRound3Message"})
+	c.Assert(ke3.IsTerminalRound(), Equals, false)
+
+	ke4 := NewKeysignError(stypes.Blame{})
+	c.Assert(ke4.IsTerminalRound(), Equals, false)
 }
 
 // ---------------------------------------------------------------------------

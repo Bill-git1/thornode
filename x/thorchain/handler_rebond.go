@@ -22,7 +22,8 @@ func (h ReBondHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, er
 		return nil, errInvalidMessage
 	}
 
-	ctx.Logger().Info("receive MsgRebond",
+	ctx.Logger().Info(
+		"receive MsgRebond",
 		"node_address", msg.NodeAddress,
 		"request_hash", msg.TxIn.ID,
 		"new_address", msg.NewBondProviderAddress,

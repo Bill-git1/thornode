@@ -384,7 +384,8 @@ func (m Migrator) Migrate11to12(ctx sdk.Context) error {
 
 		// remove the record
 		m.mgr.Keeper().RemoveLiquidityProvider(ctx, lp)
-		ctx.Logger().Info("removed bad liquidity provider record",
+		ctx.Logger().Info(
+			"removed bad liquidity provider record",
 			"asset", avaxUSDC.String(),
 			"rune_address", lp.RuneAddress,
 			"asset_address", lp.AssetAddress,

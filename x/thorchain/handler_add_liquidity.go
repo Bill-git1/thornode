@@ -307,7 +307,8 @@ func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) err
 			assetAddress,
 			msg.Tx.ID,
 			stage,
-			h.mgr.GetConstants())
+			h.mgr.GetConstants(),
+		)
 	}
 
 	// add liquidity has an affiliate fee, add liquidity for both the user and their affiliate
@@ -456,7 +457,7 @@ func calculatePoolUnits(oldPoolUnits, poolRune, poolAsset, addRune, addAsset cos
 	a := cosmos.NewDecFromBigInt(addAsset.BigInt())
 
 	// r*A + a*R
-	cross := (r.Mul(A)).Add(a.Mul(R))
+	cross := r.Mul(A).Add(a.Mul(R))
 
 	// P * (r*A + a*R + 2*r*a)
 	numerator := P.Mul(cross.Add(cosmos.NewDec(2).Mul(r).Mul(a)))
@@ -512,7 +513,8 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 			requestedAmount := addAssetAmount
 			var coins common.Coin
 			coins, err = h.mgr.SecuredAssetManager().Withdraw(
-				ctx, asset, addAssetAmount, accAddr, common.NoAddress, requestTxHash)
+				ctx, asset, addAssetAmount, accAddr, common.NoAddress, requestTxHash,
+			)
 			if err != nil {
 				return err
 			}

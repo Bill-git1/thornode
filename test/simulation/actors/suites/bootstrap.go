@@ -55,32 +55,33 @@ func Bootstrap(rng *rand.Rand) *Actor {
 
 	// verify pools
 	verify := NewActor("Bootstrap-Verify", rng)
-	verify.Ops = append(verify.Ops, func(config *OpConfig) OpResult {
-		pools, err = thornode.GetPools()
-		if err != nil {
-			return OpResult{Finish: true, Error: err}
-		}
+	verify.Ops = append(
+		verify.Ops, func(config *OpConfig) OpResult {
+			pools, err = thornode.GetPools()
+			if err != nil {
+				return OpResult{Finish: true, Error: err}
+			}
 
-		// all pools should be available
-		for _, pool := range pools {
-			if pool.Status != "Available" {
-				return OpResult{
-					Finish: true,
-					Error:  fmt.Errorf("pool %s not available", pool.Asset),
+			// all pools should be available
+			for _, pool := range pools {
+				if pool.Status != "Available" {
+					return OpResult{
+						Finish: true,
+						Error:  fmt.Errorf("pool %s not available", pool.Asset),
+					}
 				}
 			}
-		}
 
-		// all chains should have pools
-		if len(pools) != count {
-			return OpResult{
-				Finish: true,
-				Error:  fmt.Errorf("expected %d pools, got %d", count, len(pools)),
+			// all chains should have pools
+			if len(pools) != count {
+				return OpResult{
+					Finish: true,
+					Error:  fmt.Errorf("expected %d pools, got %d", count, len(pools)),
+				}
 			}
-		}
 
-		return OpResult{Finish: true}
-	},
+			return OpResult{Finish: true}
+		},
 	)
 	a.Append(verify)
 

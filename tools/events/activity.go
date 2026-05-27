@@ -195,14 +195,16 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 			fields.Set("Hash", tx.Tx.ID.String())
 			fields.Set("Memo", formattedMemo)
 			fields.Set("Confirmation Time", util.FormatDuration(confirmDuration))
-			fields.Set("Amount", fmt.Sprintf(
-				"%f %s (%s)",
-				float64(tx.Tx.Coins[0].Amount.Uint64())/common.One,
-				tx.Tx.Coins[0].Asset,
-				util.USDValueString(priceHeight, tx.Tx.Coins[0]),
-			),
+			fields.Set(
+				"Amount", fmt.Sprintf(
+					"%f %s (%s)",
+					float64(tx.Tx.Coins[0].Amount.Uint64())/common.One,
+					tx.Tx.Coins[0].Asset,
+					util.USDValueString(priceHeight, tx.Tx.Coins[0]),
+				),
 			)
-			fields.Set(fmt.Sprintf("Clout (%s)", tx.Tx.FromAddress),
+			fields.Set(
+				fmt.Sprintf("Clout (%s)", tx.Tx.FromAddress),
 				fmt.Sprintf(
 					"%f RUNE (%s)",
 					float64(fromClout.Amount.Uint64())/common.One,

@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	bkg "github.com/binance-chain/tss-lib/ecdsa/keygen"
-	btss "github.com/binance-chain/tss-lib/tss"
 	"github.com/libp2p/go-libp2p-core/peer"
+	bkg "gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
@@ -53,7 +53,7 @@ func (p *policyTestSuite) SetUpTest(c *C) {
 	err = conversion.SetupIDMaps(partyIDMap, p.blameMgr.PartyIDtoP2PID)
 	c.Assert(err, IsNil)
 	outCh := make(chan btss.Message, len(partiesID))
-	endCh := make(chan bkg.LocalPartySaveData, len(partiesID))
+	endCh := make(chan *bkg.LocalPartySaveData, len(partiesID))
 	ctx := btss.NewPeerContext(partiesID)
 	params := btss.NewParameters(btss.S256(), ctx, localPartyID, len(partiesID), 3)
 	keyGenParty := bkg.NewLocalParty(params, outCh, endCh)

@@ -8790,20 +8790,20 @@ var (
 	file_Tron_proto_enumTypes = make([]protoimpl.EnumInfo, 14)
 	file_Tron_proto_msgTypes  = make([]protoimpl.MessageInfo, 87)
 	file_Tron_proto_goTypes   = []any{
-		(AccountType)(0),                          // 0: protocol.AccountType
-		(ReasonCode)(0),                           // 1: protocol.ReasonCode
-		(Proposal_State)(0),                       // 2: protocol.Proposal.State
-		(MarketOrder_State)(0),                    // 3: protocol.MarketOrder.State
-		(Permission_PermissionType)(0),            // 4: protocol.Permission.PermissionType
-		(Transaction_Contract_ContractType)(0),    // 5: protocol.Transaction.Contract.ContractType
-		(Transaction_ResultCode)(0),               // 6: protocol.Transaction.Result.code
-		(Transaction_ResultContractResult)(0),     // 7: protocol.Transaction.Result.contractResult
-		(TransactionInfoCode)(0),                  // 8: protocol.TransactionInfo.code
-		(BlockInventory_Type)(0),                  // 9: protocol.BlockInventory.Type
-		(Inventory_InventoryType)(0),              // 10: protocol.Inventory.InventoryType
-		(Items_ItemType)(0),                       // 11: protocol.Items.ItemType
-		(PBFTMessage_MsgType)(0),                  // 12: protocol.PBFTMessage.MsgType
-		(PBFTMessage_DataType)(0),                 // 13: protocol.PBFTMessage.DataType
+		AccountType(0),                            // 0: protocol.AccountType
+		ReasonCode(0),                             // 1: protocol.ReasonCode
+		Proposal_State(0),                         // 2: protocol.Proposal.State
+		MarketOrder_State(0),                      // 3: protocol.MarketOrder.State
+		Permission_PermissionType(0),              // 4: protocol.Permission.PermissionType
+		Transaction_Contract_ContractType(0),      // 5: protocol.Transaction.Contract.ContractType
+		Transaction_ResultCode(0),                 // 6: protocol.Transaction.Result.code
+		Transaction_ResultContractResult(0),       // 7: protocol.Transaction.Result.contractResult
+		TransactionInfoCode(0),                    // 8: protocol.TransactionInfo.code
+		BlockInventory_Type(0),                    // 9: protocol.BlockInventory.Type
+		Inventory_InventoryType(0),                // 10: protocol.Inventory.InventoryType
+		Items_ItemType(0),                         // 11: protocol.Items.ItemType
+		PBFTMessage_MsgType(0),                    // 12: protocol.PBFTMessage.MsgType
+		PBFTMessage_DataType(0),                   // 13: protocol.PBFTMessage.DataType
 		(*AccountId)(nil),                         // 14: protocol.AccountId
 		(*Vote)(nil),                              // 15: protocol.Vote
 		(*Proposal)(nil),                          // 16: protocol.Proposal
@@ -8892,7 +8892,7 @@ var (
 		(*MetricsInfo_NetInfo_LatencyInfo_LatencyDetailInfo)(nil), // 99: protocol.MetricsInfo.NetInfo.LatencyInfo.LatencyDetailInfo
 		(*PBFTMessage_Raw)(nil),                                   // 100: protocol.PBFTMessage.Raw
 		(*Endpoint)(nil),                                          // 101: protocol.Endpoint
-		(ResourceCode)(0),                                         // 102: protocol.ResourceCode
+		ResourceCode(0),                                           // 102: protocol.ResourceCode
 		(*anypb.Any)(nil),                                         // 103: google.protobuf.Any
 	}
 )

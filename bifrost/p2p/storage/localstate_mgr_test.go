@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/binance-chain/tss-lib/ecdsa/keygen"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/addr"
 	tnet "github.com/libp2p/go-libp2p-testing/net"
 	maddr "github.com/multiformats/go-multiaddr"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"

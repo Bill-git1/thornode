@@ -383,13 +383,15 @@ func NewChainApp(
 	grpcQuerier := wasmkeeper.AcceptListGrpcQuerier(
 		wasmAcceptedQueries,
 		app.BaseApp.GRPCQueryRouter(),
-		app.appCodec)
+		app.appCodec,
+	)
 	wrappedGrpcQuerier := func(ctx sdk.Context, request *wasmvmtypes.GrpcQuery) (proto.Message, error) {
 		ctx = ctx.WithValue(constants.CtxWASMQuery, true)
 		return grpcQuerier(ctx, request)
 	}
 
-	wasmOpts = append(wasmOpts,
+	wasmOpts = append(
+		wasmOpts,
 		wasmkeeper.WithQueryPlugins(
 			&wasmkeeper.QueryPlugins{
 				Grpc: wrappedGrpcQuerier,

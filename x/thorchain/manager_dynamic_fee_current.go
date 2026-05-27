@@ -341,7 +341,8 @@ func (m *DynamicFeeMgr) sealEpochForRecord(ctx cosmos.Context, acc types.Dynamic
 
 	if newBps != oldBps {
 		ctx.EventManager().EmitEvent(
-			cosmos.NewEvent(types.DynamicL1FeeUpdateEventType,
+			cosmos.NewEvent(
+				types.DynamicL1FeeUpdateEventType,
 				cosmos.NewAttribute("thorname", acc.Thorname),
 				cosmos.NewAttribute("pair", fmt.Sprintf("%s|%s", acc.PairAssetA, acc.PairAssetB)),
 				cosmos.NewAttribute("epoch", fmt.Sprintf("%d", currentEpoch)),

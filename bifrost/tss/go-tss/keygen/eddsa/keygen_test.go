@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/binance-chain/tss-lib/crypto"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
 
-	btss "github.com/binance-chain/tss-lib/tss"
 	maddr "github.com/multiformats/go-multiaddr"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
@@ -172,7 +172,8 @@ func (s *EddsaKeygenTestSuite) TestGenerateNewKey(c *C) {
 				comm.BroadcastMsgChan,
 				stopChan,
 				messageID,
-				s.stateMgrs[idx], s.nodePrivKeys[idx], s.comms[idx])
+				s.stateMgrs[idx], s.nodePrivKeys[idx], s.comms[idx],
+			)
 			c.Assert(keygenInstance, NotNil)
 			keygenMsgChannel := keygenInstance.GetTssKeyGenChannels()
 			comm.SetSubscribe(messages.TSSKeyGenMsg, messageID, keygenMsgChannel)

@@ -14,8 +14,6 @@ import (
 
 	"github.com/decred/dcrd/dcrec/edwards/v2"
 
-	"github.com/binance-chain/tss-lib/crypto"
-	btss "github.com/binance-chain/tss-lib/tss"
 	"github.com/btcsuite/btcd/btcec"
 	cosedkey "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	coskey "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
@@ -23,6 +21,8 @@ import (
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )

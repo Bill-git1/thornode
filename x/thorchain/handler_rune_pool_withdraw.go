@@ -29,7 +29,8 @@ func (h RunePoolWithdrawHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.
 	if !ok {
 		return nil, errInvalidMessage
 	}
-	ctx.Logger().Info("receive MsgRunePoolWithdraw",
+	ctx.Logger().Info(
+		"receive MsgRunePoolWithdraw",
 		"tx_id", msg.Tx.ID,
 		"signer", msg.Signer,
 		"basis_points", msg.BasisPoints,

@@ -993,7 +993,8 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 		e.logger.Debug().Stringer("txid", tx.Hash()).Uint64("status", receipt.Status).Msg("tx failed")
 		return nil, nil
 	}
-	p := evm.NewSmartContractLogParser(e.isToValidContractAddress,
+	p := evm.NewSmartContractLogParser(
+		e.isToValidContractAddress,
 		e.tokenManager.GetAssetFromTokenAddress,
 		e.tokenManager.GetTokenDecimalsForTHORChain,
 		e.tokenManager.ConvertAmount,

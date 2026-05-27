@@ -155,7 +155,8 @@ func (h LeaveHandler) handle(ctx cosmos.Context, msg MsgLeave) error {
 		cosmos.NewEvent("validator_request_leave",
 			cosmos.NewAttribute("signer", msg.Tx.FromAddress.String()),
 			cosmos.NewAttribute("node", msg.NodeAddress.String()),
-			cosmos.NewAttribute("txid", msg.Tx.ID.String())))
+			cosmos.NewAttribute("txid", msg.Tx.ID.String())),
+	)
 
 	return nil
 }

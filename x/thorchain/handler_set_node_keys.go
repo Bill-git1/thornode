@@ -83,7 +83,8 @@ func (h SetNodeKeysHandler) handle(ctx cosmos.Context, msg MsgSetNodeKeys) (*cos
 			cosmos.NewAttribute("node_address", msg.Signer.String()),
 			cosmos.NewAttribute("node_secp256k1_pubkey", msg.PubKeySetSet.Secp256k1.String()),
 			cosmos.NewAttribute("node_ed25519_pubkey", msg.PubKeySetSet.Ed25519.String()),
-			cosmos.NewAttribute("validator_consensus_pub_key", msg.ValidatorConsPubKey)))
+			cosmos.NewAttribute("validator_consensus_pub_key", msg.ValidatorConsPubKey)),
+	)
 
 	return &cosmos.Result{}, nil
 }

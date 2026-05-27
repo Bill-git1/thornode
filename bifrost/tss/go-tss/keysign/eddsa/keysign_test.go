@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	tsslibcommon "github.com/binance-chain/tss-lib/common"
-	btss "github.com/binance-chain/tss-lib/tss"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/addr"
 	maddr "github.com/multiformats/go-multiaddr"
+	tsslibcommon "gitlab.com/thorchain/tss/tss-lib-private.git/v3/common"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
@@ -226,13 +226,13 @@ func (s *EddsaKeysignTestSuite) TestSignMessage(c *C) {
 	for _, item := range keysignResult {
 		if len(signatures) == 0 {
 			for _, each := range item {
-				signatures = append(signatures, string(each.GetSignature().Signature))
+				signatures = append(signatures, string(each.GetSignature()))
 			}
 			continue
 		}
 		var targetSignatures []string
 		for _, each := range item {
-			targetSignatures = append(targetSignatures, string(each.GetSignature().Signature))
+			targetSignatures = append(targetSignatures, string(each.GetSignature()))
 		}
 		c.Assert(signatures, DeepEquals, targetSignatures)
 	}
@@ -319,7 +319,7 @@ func (s *EddsaKeysignTestSuite) TestProcessKeySignErrChan(c *C) {
 
 	errCh := make(chan struct{})
 	outCh := make(chan btss.Message, 10)
-	endCh := make(chan tsslibcommon.SignatureData, 10)
+	endCh := make(chan *tsslibcommon.SignatureData, 10)
 
 	// Close errCh to simulate error during party start
 	close(errCh)
@@ -339,7 +339,7 @@ func (s *EddsaKeysignTestSuite) TestProcessKeySignStopChan(c *C) {
 
 	errCh := make(chan struct{})
 	outCh := make(chan btss.Message, 10)
-	endCh := make(chan tsslibcommon.SignatureData, 10)
+	endCh := make(chan *tsslibcommon.SignatureData, 10)
 
 	// Close stopChan to simulate exit signal
 	close(stopChan)
@@ -359,7 +359,7 @@ func (s *EddsaKeysignTestSuite) TestProcessKeySignTimeout(c *C) {
 
 	errCh := make(chan struct{})
 	outCh := make(chan btss.Message, 10)
-	endCh := make(chan tsslibcommon.SignatureData, 10)
+	endCh := make(chan *tsslibcommon.SignatureData, 10)
 
 	// With no lastMsg, should return ErrTssTimeOut directly
 	result, err := ks.processKeySign(1, errCh, outCh, endCh)
@@ -377,12 +377,12 @@ func (s *EddsaKeysignTestSuite) TestProcessKeySignEndCh(c *C) {
 
 	errCh := make(chan struct{})
 	outCh := make(chan btss.Message, 10)
-	endCh := make(chan tsslibcommon.SignatureData, 10)
+	endCh := make(chan *tsslibcommon.SignatureData, 10)
 
 	// Send a SignatureData to endCh before calling processKeySign
 	sigData := tsslibcommon.SignatureData{}
 	go func() {
-		endCh <- sigData
+		endCh <- &sigData
 	}()
 
 	// reqNum=1, so receiving 1 signature should complete

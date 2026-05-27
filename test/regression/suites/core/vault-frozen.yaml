@@ -28,18 +28,18 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# round 7 failure should freeze the vault
+# round 9 failure should freeze the vault (v3 tss-lib terminal round)
 ########################################################################################
 type: tx-tss-keysign
 signer: {{ addr_thor_dog }}
 pub_key: tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4
-id: 59e027442da9ca2ca3a05995451cf5c3b36bea49398c817dc69f0b92ae6fc4e4
+id: 9de8ffc4a9249e7e54666e1a507c81cb0f09ff42bc8f2304c3835cb18dae9e40
 memo: OUT:D96B553D63BCC6DB749B184F566BF0B37B595B026E9AA7B35B5C7D654237C965
 coins:
   - amount: "8250426"
     asset: "BTC.BTC"
 blame:
-  round: "SignRound7Message"
+  round: "SignRound9Message"
   fail_reason: "yolo"
   blame_nodes:
     - pubkey: {{ pubkey_dog }}

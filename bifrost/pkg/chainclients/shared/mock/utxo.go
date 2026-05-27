@@ -78,7 +78,7 @@ func handleUtxo(chain common.Chain, r *http.Request) []byte {
 				panic("no params for getaddressutxos provided")
 			}
 			address, ok := req.Params[0].(string)
-			if !(ok) {
+			if !ok {
 				panic("param is no string")
 			}
 			address = address[:8]

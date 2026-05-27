@@ -513,7 +513,8 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	observedTx := []common.ObservedTx{
 		common.NewObservedTx(
 			tx,
-			1024, observedPubKey, 1024),
+			1024, observedPubKey, 1024,
+		),
 	}
 	txOutVoter := NewObservedTxVoter(txID, observedTx)
 	helper.Keeper.SetObservedTxOutVoter(ctx, txOutVoter)
@@ -583,7 +584,8 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	observedTxInbound := []common.ObservedTx{
 		NewObservedTx(
 			txInbound,
-			1024, observedPubKey, 1024),
+			1024, observedPubKey, 1024,
+		),
 	}
 	txInVoter := NewObservedTxVoter(txInID, observedTxInbound)
 	helper.Keeper.SetObservedTxInVoter(ctx, txInVoter)
@@ -674,7 +676,8 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx_EnsureFundsAreCreditedT
 	observedTx := []common.ObservedTx{
 		common.NewObservedTx(
 			migrateTx,
-			1024, retiredPubKey, 1024),
+			1024, retiredPubKey, 1024,
+		),
 	}
 	txOutVoter := NewObservedTxVoter(txID1, observedTx)
 	txOutVoter.Add(observedTx[0], node2.NodeAddress)
@@ -693,7 +696,8 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx_EnsureFundsAreCreditedT
 		common.NewObservedTx(
 
 			migrateTx,
-			1024, retiredPubKey, 1024),
+			1024, retiredPubKey, 1024,
+		),
 	}
 	txInVoter := NewObservedTxVoter(txID1, observedTx)
 	txInVoter.Add(observedInboundTx[0], node2.NodeAddress)

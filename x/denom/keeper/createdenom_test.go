@@ -25,14 +25,16 @@ func (s *KeeperTestSuite) TestMsgCreateDenom() {
 
 	// Make sure that a second version of the same denom can't be recreated
 	_, err = s.msgServer.CreateDenom(s.ctx,
-		types.NewMsgCreateDenom(accAddrs[0].String(),
+		types.NewMsgCreateDenom(
+			accAddrs[0].String(),
 			"bitcoin",
 		))
 	s.Require().Error(err)
 
 	// Creating a second denom should work
 	res, err = s.msgServer.CreateDenom(s.ctx,
-		types.NewMsgCreateDenom(accAddrs[0].String(),
+		types.NewMsgCreateDenom(
+			accAddrs[0].String(),
 			"litecoin",
 		))
 	s.Require().NoError(err)
@@ -40,7 +42,8 @@ func (s *KeeperTestSuite) TestMsgCreateDenom() {
 
 	// Make sure that a second account can't create a denom with the same nonce
 	_, err = s.msgServer.CreateDenom(s.ctx,
-		types.NewMsgCreateDenom(accAddrs[1].String(),
+		types.NewMsgCreateDenom(
+			accAddrs[1].String(),
 			"bitcoin",
 		))
 	s.Require().Error(err)

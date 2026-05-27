@@ -16,6 +16,9 @@ variables:
   DOCKER_CERT_PATH: $DOCKER_TLS_CERTDIR/client
   GOMODCACHE: /go-mod-cache
   GOCACHE: /go-build-cache
+  # tss-lib-private is a private GitLab subgroup repo; skip proxy.golang.org / sumdb
+  # and resolve directly so the per-job git auth below takes effect.
+  GOPRIVATE: gitlab.com/thorchain/tss/tss-lib-private.git
   SAST_EXCLUDED_ANALYZERS: eslint,bandit,semgrep
   SAST_EXCLUDED_PATHS: spec, test, tests, tmp, .cache
 
@@ -23,6 +26,14 @@ variables:
   image: docker:28.5.2
   services:
     - docker:28.5.2-dind
+
+# Authenticate git to gitlab.com using the per-pipeline CI_JOB_TOKEN so
+# `go mod download` can fetch private modules (tss-lib-private). Include with
+# `!reference [.go-private-auth, before_script]` in any job that resolves
+# Go modules outside of a docker build.
+.go-private-auth:
+  before_script:
+    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
 
 stages:
   - .pre
@@ -111,6 +122,7 @@ generate:
   <<: *use_dind
   before_script:
     - apk -U add bash curl findutils git go jq make protoc sed wget python3
+    - !reference [.go-private-auth, before_script]
     - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
     - |
       if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
@@ -135,6 +147,7 @@ unit-tests:
   stage: test
   coverage: /total:\s+\(statements\)\s+(\d+.\d+\%)/
   before_script:
+    - !reference [.go-private-auth, before_script]
     - go get github.com/boumenot/gocover-cobertura@v1.4.0
     - go get gotest.tools/gotestsum@v1.12.3
   script:
@@ -155,6 +168,8 @@ xmr-e2e-gates:
       when: never
     - *rules
   stage: test
+  before_script:
+    - !reference [.go-private-auth, before_script]
   script:
     - make test-xmr-e2e
 
@@ -177,6 +192,7 @@ lint:
     XDG_CACHE_HOME: /trunk-cache
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends jq
+    - !reference [.go-private-auth, before_script]
   script:
     - make lint-ci
 
@@ -282,6 +298,8 @@ go-tss:
         paths:
           - bifrost/tss/go-tss/**/*
   stage: test
+  before_script:
+    - !reference [.go-private-auth, before_script]
   script:
     - make test-go-tss
 

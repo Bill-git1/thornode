@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	tsslibcommon "github.com/binance-chain/tss-lib/common"
+	tsslibcommon "gitlab.com/thorchain/tss/tss-lib-private.git/v3/common"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
@@ -392,10 +392,8 @@ func (t *TssServer) batchSignatures(algo tcommon.SigningAlgo, sigs []*tsslibcomm
 	var signatures []keysign.Signature
 	// Pair signatures with messages using the M field (message hash)
 	for _, sig := range sigs {
-		sigg := sig.GetSignature()
-
 		// Find the original message that matches this signature's hash
-		sigHashInt := new(big.Int).SetBytes(sigg.M)
+		sigHashInt := new(big.Int).SetBytes(sig.M)
 		sigHashKey := sigHashInt.String()
 		originalMsg, found := msgMap[sigHashKey]
 		if !found {
@@ -412,13 +410,13 @@ func (t *TssServer) batchSignatures(algo tcommon.SigningAlgo, sigs []*tsslibcomm
 		switch algo {
 		case tcommon.SigningAlgoSecp256k1:
 			msg := base64.StdEncoding.EncodeToString(originalMsg)
-			r := base64.StdEncoding.EncodeToString(sigg.R)
-			s := base64.StdEncoding.EncodeToString(sigg.S)
-			recovery := base64.StdEncoding.EncodeToString(sigg.GetSignatureRecovery())
+			r := base64.StdEncoding.EncodeToString(sig.R)
+			s := base64.StdEncoding.EncodeToString(sig.S)
+			recovery := base64.StdEncoding.EncodeToString(sig.SignatureRecovery)
 			signature = keysign.NewSignature(msg, r, s, recovery)
 		case tcommon.SigningAlgoEd25519:
 			msg := base64.StdEncoding.EncodeToString(originalMsg)
-			s := base64.StdEncoding.EncodeToString(sigg.Signature)
+			s := base64.StdEncoding.EncodeToString(sig.Signature)
 			signature = keysign.NewSignature(msg, "", s, "")
 		}
 		signatures = append(signatures, signature)

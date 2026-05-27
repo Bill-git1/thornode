@@ -68,7 +68,8 @@ func (h IPAddressHandler) handle(ctx cosmos.Context, msg MsgSetIPAddress) error 
 	ctx.EventManager().EmitEvent(
 		cosmos.NewEvent("set_ip_address",
 			cosmos.NewAttribute("thor_address", msg.Signer.String()),
-			cosmos.NewAttribute("address", msg.IPAddress)))
+			cosmos.NewAttribute("address", msg.IPAddress)),
+	)
 
 	return nil
 }

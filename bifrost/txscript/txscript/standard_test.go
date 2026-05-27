@@ -346,7 +346,8 @@ func TestExtractPkScriptAddrs(t *testing.T) {
 				"053eefc637f8b046e389b636766bdc7d1f676f8"),
 			addrs: []btcutil.Address{newAddressTaproot(
 				hexToBytes("1a82f7457a9ba6ab1074e9f50053eefc6" +
-					"37f8b046e389b636766bdc7d1f676f8"))},
+					"37f8b046e389b636766bdc7d1f676f8"),
+			)},
 			reqSigs: 1,
 			class:   WitnessV1TaprootTy,
 		},
@@ -369,7 +370,8 @@ func TestExtractPkScriptAddrs(t *testing.T) {
 	t.Logf("Running %d tests.", len(tests))
 	for i, test := range tests {
 		class, addrs, reqSigs, err := ExtractPkScriptAddrs(
-			test.script, &chaincfg.MainNetParams)
+			test.script, &chaincfg.MainNetParams,
+		)
 		if err != nil {
 		}
 

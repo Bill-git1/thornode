@@ -119,7 +119,8 @@ func NewMetric() *Metric {
 				Subsystem: "Tss",
 				Name:      "joinparty_time",
 				Help:      "the time spend for the latest keysign/keygen join party",
-			}, []string{"type"}),
+			}, []string{"type"},
+		),
 
 		logger: log.With().Str("module", "tssMonitor").Logger(),
 	}

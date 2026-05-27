@@ -236,11 +236,14 @@ func newFakeTss(msg string, succeedOnly bool) *fakeTssServer {
 		}
 	}
 
+	// tss-lib v3 terminal ECDSA keysign round is KEYSIGN9 (was KEYSIGN7 under v1).
+	// The Round7Retry checkpoint name is historical; the trigger is the terminal
+	// round, whatever it currently is.
 	results := make(map[int]keysign.Response)
 	results[1] = keysign.Response{
 		Status: 2, // 2 is fail
 		Blame: blame.Blame{
-			Round: tssMessages.KEYSIGN7,
+			Round: tssMessages.KEYSIGN9,
 			BlameNodes: []blame.Node{
 				{Pubkey: "node1"},
 			},
@@ -249,14 +252,14 @@ func newFakeTss(msg string, succeedOnly bool) *fakeTssServer {
 	results[2] = keysign.Response{
 		Status: 2, // 2 is fail
 		Blame: blame.Blame{
-			Round: tssMessages.KEYSIGN7,
+			Round: tssMessages.KEYSIGN9,
 			BlameNodes: []blame.Node{
 				{Pubkey: "node2"},
 			},
 		},
 	}
 	results[3] = keysign.Response{
-		Status: 2, // 2 is fail, as non-round7
+		Status: 2, // 2 is fail, non-terminal round
 		Blame: blame.Blame{
 			Round: tssMessages.KEYSIGN3,
 			BlameNodes: []blame.Node{
@@ -267,7 +270,7 @@ func newFakeTss(msg string, succeedOnly bool) *fakeTssServer {
 	results[4] = keysign.Response{
 		Status: 2, // 2 is fail
 		Blame: blame.Blame{
-			Round: tssMessages.KEYSIGN7,
+			Round: tssMessages.KEYSIGN9,
 			BlameNodes: []blame.Node{
 				{Pubkey: "node3"},
 			},
@@ -514,7 +517,8 @@ func (s *SignSuite) SetUpSuite(c *C) {
 				_, err := rw.Write([]byte(`{}`))
 				c.Assert(err, IsNil)
 			}
-		}))
+		}),
+	)
 
 	split := strings.SplitAfter(server.URL, ":")
 	s.rpcHost = split[len(split)-1]

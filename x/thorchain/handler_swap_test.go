@@ -368,7 +368,8 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+dogeAddr.String()+":121800000")
 	c.Assert(err, IsNil)
 	txIn := NewObservedTx(
-		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
+		common.NewTx(
+			GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
 			common.Coins{
 				common.NewCoin(tCanAsset, cosmos.NewUint(20000000)),
 			},
@@ -565,7 +566,8 @@ func (s *HandlerSwapSuite) TestSwapSynthERC20(c *C) {
 	c.Assert(ok, Equals, true)
 	swapM.Asset = fuzzyAssetMatch(ctx, mgr.K, swapM.Asset)
 	txIn := NewObservedTx(
-		common.NewTx("832B575FC2E92057BE1E1D69277B5AF690ADDF3E98E76FFC67232F846D87CB45", "0xd58610f89265a2fb637ac40edf59141ff873b266", "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
+		common.NewTx(
+			"832B575FC2E92057BE1E1D69277B5AF690ADDF3E98E76FFC67232F846D87CB45", "0xd58610f89265a2fb637ac40edf59141ff873b266", "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			common.Coins{
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(20000000)),
 			},
@@ -618,7 +620,8 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+signerDOGEAddr.String())
 	c.Assert(err, IsNil)
 	txIn := NewObservedTx(
-		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
+		common.NewTx(
+			GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
 			common.Coins{
 				common.NewCoin(tCanAsset, cosmos.NewUint(20000000)),
 			},
@@ -649,7 +652,8 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 	m1, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+testnetDOGEAddr.String())
 	c.Assert(err, IsNil)
 	txIn1 := NewObservedTx(
-		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
+		common.NewTx(
+			GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
 			common.Coins{
 				common.NewCoin(tCanAsset, cosmos.NewUint(10000)),
 			},
@@ -699,7 +703,8 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	c.Assert(err, IsNil)
 
 	txIn := NewObservedTx(
-		common.NewTx(GetRandomTxHash(), GetRandomTHORAddress(), GetRandomTHORAddress(),
+		common.NewTx(
+			GetRandomTxHash(), GetRandomTHORAddress(), GetRandomTHORAddress(),
 			common.Coins{
 				common.NewCoin(common.RuneNative, cosmos.NewUint(2000000000)),
 			},
@@ -848,7 +853,8 @@ func (s *HandlerSwapSuite) TestSwapDynamicFeeIntegration(c *C) {
 	affiliateBps := []cosmos.Uint{cosmos.NewUint(100)}
 
 	// --- Epoch 1 (block 10) ---
-	mgr.DynamicFeeMgr().CreditSwap(ctx, affiliates, affiliateBps,
+	mgr.DynamicFeeMgr().CreditSwap(
+		ctx, affiliates, affiliateBps,
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(10*common.One), cosmos.NewUint(100),
 	)
@@ -866,7 +872,8 @@ func (s *HandlerSwapSuite) TestSwapDynamicFeeIntegration(c *C) {
 		Commentf("epoch 1 seals as cold_start_probe from floor=1"))
 
 	// --- Epoch 2 (block 20) ---
-	mgr.DynamicFeeMgr().CreditSwap(ctx, affiliates, affiliateBps,
+	mgr.DynamicFeeMgr().CreditSwap(
+		ctx, affiliates, affiliateBps,
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(20*common.One), cosmos.NewUint(300),
 	)

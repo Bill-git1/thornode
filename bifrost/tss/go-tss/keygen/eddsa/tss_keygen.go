@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	bcrypto "github.com/binance-chain/tss-lib/crypto"
-	eddsakg "github.com/binance-chain/tss-lib/eddsa/keygen"
-	"github.com/binance-chain/tss-lib/tss"
-	btss "github.com/binance-chain/tss-lib/tss"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	bcrypto "gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
+	eddsakg "gitlab.com/thorchain/tss/tss-lib-private.git/v3/eddsa/keygen"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
@@ -87,7 +87,7 @@ func (tKeyGen *EDDSAKeyGen) GenerateNewKey(keygenReq keygen.Request) (*bcrypto.E
 	params := btss.NewParameters(tss.Edwards(), ctx, localPartyID, len(partiesID), threshold)
 	bufferSize := len(partiesID) * 10 // buffer size for outCh and endCh
 	outCh := make(chan btss.Message, bufferSize)
-	endCh := make(chan eddsakg.LocalPartySaveData, bufferSize)
+	endCh := make(chan *eddsakg.LocalPartySaveData, bufferSize)
 	errChan := make(chan struct{})
 
 	blameMgr := tKeyGen.tssCommonStruct.GetBlameMgr()
@@ -143,7 +143,7 @@ func (tKeyGen *EDDSAKeyGen) GenerateNewKey(keygenReq keygen.Request) (*bcrypto.E
 
 func (tKeyGen *EDDSAKeyGen) processKeyGen(errChan chan struct{},
 	outCh <-chan btss.Message,
-	endCh <-chan eddsakg.LocalPartySaveData,
+	endCh <-chan *eddsakg.LocalPartySaveData,
 	keyGenLocalStateItem storage.KeygenLocalState,
 ) (*bcrypto.ECPoint, error) {
 	defer tKeyGen.logger.Debug().Msg("finished keygen process")

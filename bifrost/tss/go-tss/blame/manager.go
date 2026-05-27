@@ -3,10 +3,10 @@ package blame
 import (
 	"sync"
 
-	btss "github.com/binance-chain/tss-lib/tss"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 )
 
 type Manager struct {

@@ -222,7 +222,8 @@ func UpdateActiveValidatorVersions(
 		ctx.EventManager().EmitEvent(
 			cosmos.NewEvent("set_version",
 				cosmos.NewAttribute("thor_address", v.NodeAddress.String()),
-				cosmos.NewAttribute("version", version)))
+				cosmos.NewAttribute("version", version)),
+		)
 	}
 
 	// update min join version to the fork version

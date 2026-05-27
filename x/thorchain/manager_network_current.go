@@ -1175,7 +1175,8 @@ func (vm *NetworkMgr) POLReserveCycle(ctx cosmos.Context, mgr Manager) error {
 
 	commit()
 
-	ctx.Logger().Info("POL Reserve deployed",
+	ctx.Logger().Info(
+		"POL Reserve deployed",
 		"pool", bestPool.Asset.String(),
 		"amount", runeAmt.String(),
 	)
@@ -1534,7 +1535,8 @@ func (vm *NetworkMgr) RotateVault(ctx cosmos.Context, vault Vault) error {
 
 		ctx.EventManager().EmitEvent(
 			cosmos.NewEvent(EventTypeInactiveVault,
-				cosmos.NewAttribute("set asgard vault to inactive", asgard.PubKey.String())))
+				cosmos.NewAttribute("set asgard vault to inactive", asgard.PubKey.String())),
+		)
 	}
 
 	// Update Node account membership
@@ -1559,7 +1561,8 @@ func (vm *NetworkMgr) RotateVault(ctx cosmos.Context, vault Vault) error {
 
 	ctx.EventManager().EmitEvent(
 		cosmos.NewEvent(EventTypeActiveVault,
-			cosmos.NewAttribute("add new asgard vault", vault.PubKey.String())))
+			cosmos.NewAttribute("add new asgard vault", vault.PubKey.String())),
+	)
 	if err := vm.cleanupAsgardIndex(ctx); err != nil {
 		ctx.Logger().Error("fail to clean up asgard index", "error", err)
 	}
@@ -2159,7 +2162,7 @@ func (vm *NetworkMgr) calcBlockRewards(
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint()
 	}
 	blockRewardD := trD.Quo(ecD).Quo(bpyD)
-	blockReward := cosmos.NewUint(uint64((blockRewardD).RoundInt64()))
+	blockReward := cosmos.NewUint(uint64(blockRewardD.RoundInt64()))
 
 	systemIncome := blockReward.Add(totalLiquidityFees) // Get total system income for block
 
@@ -2185,7 +2188,8 @@ func (vm *NetworkMgr) calcBlockRewards(
 
 	totalBps := devFundSystemIncomeBpsUint.Add(systemIncomeBurnRateBpsUint).Add(tcyStakeSystemIncomeBpsUint).Add(marketingFundSystemIncomeBpsUint).Add(polReserveSystemIncomeBpsUint)
 	if totalBps.GT(cosmos.NewUint(10_000)) {
-		ctx.Logger().Error("total system income BPS exceeds 10000, deductions will be clamped",
+		ctx.Logger().Error(
+			"total system income BPS exceeds 10000, deductions will be clamped",
 			"total_bps", totalBps.String(),
 			"dev_fund_bps", devFundSystemIncomeBpsUint.String(),
 			"burn_bps", systemIncomeBurnRateBpsUint.String(),
@@ -3145,7 +3149,8 @@ func (vm *NetworkMgr) createSwapToOverSolvency(ctx cosmos.Context, mgr Manager, 
 		},
 	}
 
-	ctx.Logger().Info("creating over-solvency swap",
+	ctx.Logger().Info(
+		"creating over-solvency swap",
 		"txID", txID,
 		"asset", asset,
 		"amount", amount,
@@ -3193,7 +3198,8 @@ func (vm *NetworkMgr) SwapToOverSolvencyIncome(ctx cosmos.Context, mgr Manager, 
 		return fmt.Errorf("fail to create swap to over-solvency address: %w", err)
 	}
 
-	ctx.Logger().Info("processed asset income to over-solvency address",
+	ctx.Logger().Info(
+		"processed asset income to over-solvency address",
 		"asset", coin.Asset,
 		"amount", coin.Amount,
 	)

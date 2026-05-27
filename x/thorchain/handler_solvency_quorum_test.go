@@ -103,7 +103,8 @@ func (s *HandlerSolvencyQuorumSuite) TestValidateValidMsg(c *C) {
 	handler := NewSolvencyQuorumHandler(mgr)
 
 	privKey := secp256k1.GenPrivKey()
-	sol := makeSolvency(c, common.ETHChain, GetRandomPubKey(),
+	sol := makeSolvency(
+		c, common.ETHChain, GetRandomPubKey(),
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
 		1024,
 	)
@@ -160,7 +161,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleFailListActiveValidators(c *C) {
 	mgr.K = failKeeper
 	handler := NewSolvencyQuorumHandler(mgr)
 
-	sol := makeSolvency(c, common.ETHChain, GetRandomPubKey(),
+	sol := makeSolvency(
+		c, common.ETHChain, GetRandomPubKey(),
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
 		1024,
 	)
@@ -188,7 +190,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleFailGetSolvencyVoter(c *C) {
 	na := GetRandomValidatorNode(NodeActive)
 	c.Assert(failKeeper.Keeper.SetNodeAccount(ctx, na), IsNil)
 
-	sol := makeSolvency(c, common.ETHChain, GetRandomPubKey(),
+	sol := makeSolvency(
+		c, common.ETHChain, GetRandomPubKey(),
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
 		1024,
 	)
@@ -210,7 +213,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleInvalidAttestations(c *C) {
 	na, _ := nodeWithPrivKey(c, mgr.Keeper(), ctx)
 
 	vaultPubKey := GetRandomPubKey()
-	sol := makeSolvency(c, common.ETHChain, vaultPubKey,
+	sol := makeSolvency(
+		c, common.ETHChain, vaultPubKey,
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
 		1024,
 	)
@@ -263,7 +267,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleValidAttestations(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
 	mgr.Keeper().SetMimir(ctx, "DollarsPerRune", 5_00000000)
 
-	sol := makeSolvency(c, common.ETHChain, vaultPubKey,
+	sol := makeSolvency(
+		c, common.ETHChain, vaultPubKey,
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One))),
 		1024,
 	)
@@ -314,7 +319,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleDuplicateAttestations(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
 	mgr.Keeper().SetMimir(ctx, "DollarsPerRune", 5_00000000)
 
-	sol := makeSolvency(c, common.ETHChain, vaultPubKey,
+	sol := makeSolvency(
+		c, common.ETHChain, vaultPubKey,
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
 		1024,
 	)
@@ -358,7 +364,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleMixedValidInvalidAttestations(c *
 	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
 	mgr.Keeper().SetMimir(ctx, "DollarsPerRune", 5_00000000)
 
-	sol := makeSolvency(c, common.ETHChain, vaultPubKey,
+	sol := makeSolvency(
+		c, common.ETHChain, vaultPubKey,
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One))),
 		1024,
 	)
@@ -406,7 +413,8 @@ func (s *HandlerSolvencyQuorumSuite) TestRunFullFlow(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
 	mgr.Keeper().SetMimir(ctx, "DollarsPerRune", 5_00000000)
 
-	sol := makeSolvency(c, common.ETHChain, vaultPubKey,
+	sol := makeSolvency(
+		c, common.ETHChain, vaultPubKey,
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One))),
 		1024,
 	)
@@ -470,7 +478,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleEmptyVoterCreatesNew(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
 	mgr.Keeper().SetMimir(ctx, "DollarsPerRune", 5_00000000)
 
-	sol := makeSolvency(c, common.ETHChain, vaultPubKey,
+	sol := makeSolvency(
+		c, common.ETHChain, vaultPubKey,
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
 		1024,
 	)
@@ -505,7 +514,8 @@ func (s *HandlerSolvencyQuorumSuite) TestHandleNoAttestations(c *C) {
 
 	na1, _ := nodeWithPrivKey(c, mgr.Keeper(), ctx)
 
-	sol := makeSolvency(c, common.ETHChain, GetRandomPubKey(),
+	sol := makeSolvency(
+		c, common.ETHChain, GetRandomPubKey(),
 		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
 		1024,
 	)

@@ -78,6 +78,10 @@ func canonicalSecp256k1TssRound(round string) string {
 		return tssMessages.KEYSIGN6
 	case round == tssMessages.KEYSIGN7 || strings.HasSuffix(round, "SignRound7Message"):
 		return tssMessages.KEYSIGN7
+	case round == tssMessages.KEYSIGN8 || strings.HasSuffix(round, "SignRound8Message"):
+		return tssMessages.KEYSIGN8
+	case round == tssMessages.KEYSIGN9 || strings.HasSuffix(round, "SignRound9Message"):
+		return tssMessages.KEYSIGN9
 	default:
 		return round
 	}

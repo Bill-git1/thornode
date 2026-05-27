@@ -835,17 +835,18 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 
 	affAddr := GetRandomTHORAddress()
 
-	msg := NewMsgSwap(common.Tx{
-		ID:          common.TxID("5E1DF027321F1FE37CA19B9ECB11C2B4ABEC0D8322199D335D9CE4C39F85F115"),
-		FromAddress: GetRandomETHAddress(),
-		ToAddress:   GetRandomETHAddress(),
-		Gas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
-		},
-		Chain: common.ETHChain,
-		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One))},
-		Memo:  "=:THOR.RUNE:" + GetRandomTHORAddress().String() + "::" + affAddr.String() + ":1000",
-	}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000),
+	msg := NewMsgSwap(
+		common.Tx{
+			ID:          common.TxID("5E1DF027321F1FE37CA19B9ECB11C2B4ABEC0D8322199D335D9CE4C39F85F115"),
+			FromAddress: GetRandomETHAddress(),
+			ToAddress:   GetRandomETHAddress(),
+			Gas: common.Gas{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+			},
+			Chain: common.ETHChain,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One))},
+			Memo:  "=:THOR.RUNE:" + GetRandomTHORAddress().String() + "::" + affAddr.String() + ":1000",
+		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000),
 		"",
 		"", nil,
 		types.SwapType_market,
@@ -894,15 +895,16 @@ func (s HandlerObservedTxInSuite) TestAddSwapEmitsLimitEventOnlyForLimitSwaps(c 
 	limitSwapEventsBefore := countEvents(types.LimitSwapEventType)
 
 	// V2 market swap should not emit a limit_swap event.
-	marketMsg := NewMsgSwap(common.Tx{
-		ID:          GetRandomTxHash(),
-		FromAddress: GetRandomTHORAddress(),
-		ToAddress:   GetRandomTHORAddress(),
-		Gas:         common.Gas{},
-		Chain:       common.THORChain,
-		Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
-		Memo:        "=:BTC.BTC:" + GetRandomBTCAddress().String(),
-	}, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+	marketMsg := NewMsgSwap(
+		common.Tx{
+			ID:          GetRandomTxHash(),
+			FromAddress: GetRandomTHORAddress(),
+			ToAddress:   GetRandomTHORAddress(),
+			Gas:         common.Gas{},
+			Chain:       common.THORChain,
+			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
+			Memo:        "=:BTC.BTC:" + GetRandomBTCAddress().String(),
+		}, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 		"",
 		"", nil,
 		types.SwapType_market,
@@ -912,15 +914,16 @@ func (s HandlerObservedTxInSuite) TestAddSwapEmitsLimitEventOnlyForLimitSwaps(c 
 	c.Assert(countEvents(types.LimitSwapEventType), Equals, limitSwapEventsBefore)
 
 	// V2 limit swap should emit exactly one limit_swap event.
-	limitMsg := NewMsgSwap(common.Tx{
-		ID:          GetRandomTxHash(),
-		FromAddress: GetRandomTHORAddress(),
-		ToAddress:   GetRandomTHORAddress(),
-		Gas:         common.Gas{},
-		Chain:       common.THORChain,
-		Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
-		Memo:        "=<:BTC.BTC:" + GetRandomBTCAddress().String() + ":1",
-	}, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(1), common.NoAddress, cosmos.ZeroUint(),
+	limitMsg := NewMsgSwap(
+		common.Tx{
+			ID:          GetRandomTxHash(),
+			FromAddress: GetRandomTHORAddress(),
+			ToAddress:   GetRandomTHORAddress(),
+			Gas:         common.Gas{},
+			Chain:       common.THORChain,
+			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
+			Memo:        "=<:BTC.BTC:" + GetRandomBTCAddress().String() + ":1",
+		}, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(1), common.NoAddress, cosmos.ZeroUint(),
 		"",
 		"", nil,
 		types.SwapType_limit,
@@ -956,15 +959,16 @@ func (s HandlerObservedTxInSuite) TestAddSwapDoesNotEmitLimitEventWhenQueueInser
 
 	limitSwapEventsBefore := countEvents(types.LimitSwapEventType)
 
-	limitMsg := NewMsgSwap(common.Tx{
-		ID:          GetRandomTxHash(),
-		FromAddress: GetRandomTHORAddress(),
-		ToAddress:   GetRandomTHORAddress(),
-		Gas:         common.Gas{},
-		Chain:       common.THORChain,
-		Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
-		Memo:        "=<:BTC.BTC:" + GetRandomBTCAddress().String() + ":1",
-	}, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(1), common.NoAddress, cosmos.ZeroUint(),
+	limitMsg := NewMsgSwap(
+		common.Tx{
+			ID:          GetRandomTxHash(),
+			FromAddress: GetRandomTHORAddress(),
+			ToAddress:   GetRandomTHORAddress(),
+			Gas:         common.Gas{},
+			Chain:       common.THORChain,
+			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
+			Memo:        "=<:BTC.BTC:" + GetRandomBTCAddress().String() + ":1",
+		}, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(1), common.NoAddress, cosmos.ZeroUint(),
 		"",
 		"", nil,
 		types.SwapType_limit,

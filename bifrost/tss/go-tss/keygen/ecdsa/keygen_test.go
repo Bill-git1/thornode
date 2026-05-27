@@ -16,14 +16,14 @@ import (
 
 	"github.com/ipfs/go-log"
 
-	"github.com/binance-chain/tss-lib/crypto"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
 
-	btsskeygen "github.com/binance-chain/tss-lib/ecdsa/keygen"
-	btss "github.com/binance-chain/tss-lib/tss"
 	maddr "github.com/multiformats/go-multiaddr"
+	btsskeygen "gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
@@ -194,7 +194,8 @@ func (s *TssECDSAKeygenTestSuite) TestGenerateNewKey(c *C) {
 				stopChan,
 				s.preParams[idx],
 				messageID,
-				s.stateMgrs[idx], s.nodePrivKeys[idx], s.comms[idx])
+				s.stateMgrs[idx], s.nodePrivKeys[idx], s.comms[idx],
+			)
 			c.Assert(keygenInstance, NotNil)
 			keygenMsgChannel := keygenInstance.GetTssKeyGenChannels()
 			comm.SetSubscribe(messages.TSSKeyGenMsg, messageID, keygenMsgChannel)
@@ -249,7 +250,8 @@ func (s *TssECDSAKeygenTestSuite) TestGenerateNewKeyWithStop(c *C) {
 				s.preParams[idx],
 				messageID,
 				s.stateMgrs[idx],
-				s.nodePrivKeys[idx], s.comms[idx])
+				s.nodePrivKeys[idx], s.comms[idx],
+			)
 			c.Assert(keygenInstance, NotNil)
 			keygenMsgChannel := keygenInstance.GetTssKeyGenChannels()
 			comm.SetSubscribe(messages.TSSKeyGenMsg, messageID, keygenMsgChannel)

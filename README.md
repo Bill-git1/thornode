@@ -6,7 +6,7 @@
 
 # THORChain
 
-THORChain is a decentralised liquidity network built with [CosmosSDK](https://cosmos.network) and [TSS-lib](https://github.com/bnb-chain/tss-lib)
+THORChain is a decentralised liquidity network built with [CosmosSDK](https://cosmos.network) and [tss-lib-private](https://gitlab.com/thorchain/tss/tss-lib-private)
 
 ## Repository Line
 

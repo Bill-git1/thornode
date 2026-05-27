@@ -113,7 +113,8 @@ func (h MaintHandler) handle(ctx cosmos.Context, msg types.MsgMaint) error {
 	ctx.EventManager().EmitEvent(
 		cosmos.NewEvent("toggle_maintenance",
 			cosmos.NewAttribute("node_address", msg.NodeAddress.String()),
-			cosmos.NewAttribute("maintenance", maintStatus)))
+			cosmos.NewAttribute("maintenance", maintStatus)),
+	)
 
 	return nil
 }

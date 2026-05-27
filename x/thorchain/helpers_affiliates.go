@@ -277,7 +277,8 @@ func skimAffiliateFees(ctx cosmos.Context, mgr Manager, mainTx common.Tx, signer
 				coin.Asset,
 				feeBps.Uint64(),
 				coin.Amount,
-				affCoin.Amount)
+				affCoin.Amount,
+			)
 
 			feeEvents = append(feeEvents, feeEvent)
 			totalFee = totalFee.Add(affAmt)

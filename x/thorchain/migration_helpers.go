@@ -254,7 +254,8 @@ func fixVaultClamps_v3_18_0(ctx cosmos.Context, mgr *Mgrs, fixes []vaultClampFix
 				"vault", fix.pubKey, "error", err)
 			continue
 		}
-		ctx.Logger().Info("vault clamp fix: reconciled phantom credit",
+		ctx.Logger().Info(
+			"vault clamp fix: reconciled phantom credit",
 			"vault", fix.pubKey,
 			"amount", amount.String(),
 			"before", before.String(),

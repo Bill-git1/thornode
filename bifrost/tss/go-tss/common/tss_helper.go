@@ -13,16 +13,16 @@ import (
 	"os"
 	"strings"
 
-	ecdsaKeygen "github.com/binance-chain/tss-lib/ecdsa/keygen"
-	ecdsaKeySign "github.com/binance-chain/tss-lib/ecdsa/signing"
-	eddsaKeygen "github.com/binance-chain/tss-lib/eddsa/keygen"
-	eddsaSigning "github.com/binance-chain/tss-lib/eddsa/signing"
-	btss "github.com/binance-chain/tss-lib/tss"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/eager7/dogd/btcec"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	ecdsaKeygen "gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	ecdsaKeySign "gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/signing"
+	eddsaKeygen "gitlab.com/thorchain/tss/tss-lib-private.git/v3/eddsa/keygen"
+	eddsaSigning "gitlab.com/thorchain/tss/tss-lib-private.git/v3/eddsa/signing"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
@@ -231,6 +231,16 @@ func GetMsgRound(msg []byte, partyID *btss.PartyID, isBroadcast bool) (blame.Rou
 		return blame.RoundInfo{
 			Index:    7,
 			RoundMsg: messages.KEYSIGN7,
+		}, nil
+	case *ecdsaKeySign.SignRound8Message:
+		return blame.RoundInfo{
+			Index:    8,
+			RoundMsg: messages.KEYSIGN8,
+		}, nil
+	case *ecdsaKeySign.SignRound9Message:
+		return blame.RoundInfo{
+			Index:    9,
+			RoundMsg: messages.KEYSIGN9,
 		}, nil
 
 	// EDDSA -- Keygen

@@ -204,7 +204,8 @@ func (m Migrator) CommonMigrate8to9(ctx sdk.Context) error {
 
 		equilibriumSurplus := m.mgr.Keeper().GetSurplusForTargetMultiplier(ctx, targetMultiplier)
 		if before.multiplier.LTE(targetMultiplier) {
-			ctx.Logger().Info("multiplier is less than 100%; no adjustment needed",
+			ctx.Logger().Info(
+				"multiplier is less than 100%; no adjustment needed",
 				"asset", asset,
 				"multiplier", before.multiplier,
 				"surplus", before.surplus,
@@ -229,7 +230,8 @@ func (m Migrator) CommonMigrate8to9(ctx sdk.Context) error {
 			return err
 		}
 
-		ctx.Logger().Info("multiplier was greater than target; adjusted",
+		ctx.Logger().Info(
+			"multiplier was greater than target; adjusted",
 			"asset", asset,
 			"before_withheld", before.withheld,
 			"before_surplus", before.surplus,

@@ -531,10 +531,12 @@ func (s *SwapSuite) TestSynthSwap_AssetSynth(c *C) {
 	balanceAsset2 := balanceAsset1
 	assetFee := cosmos.NewUint(
 		uint64(QuoUint(nativeRuneFee.Mul(balanceAsset2),
-			balanceRune2).RoundInt64()))
+			balanceRune2).RoundInt64()),
+	)
 	runeDisbursement := cosmos.NewUint(
 		uint64(QuoUint(assetFee.Mul(balanceRune2),
-			balanceAsset2.Add(assetFee)).RoundInt64()))
+			balanceAsset2.Add(assetFee)).RoundInt64()),
+	)
 	expBalanceRune := balanceRune2.Sub(runeDisbursement) // BalanceRune after the second swap (rune->synth)
 	expBalanceAsset := balanceAsset2
 

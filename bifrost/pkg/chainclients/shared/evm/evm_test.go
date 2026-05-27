@@ -298,7 +298,7 @@ func (s *SmartContractLogParserTestSuite) TestGetTxInItem_TransferOutMemoless(c 
 	txInItem := &btypes.TxInItem{
 		Sender: "0x3fd2D4cE97B082d4BcE3f9fee2A3D60668D2f473",
 	}
-	logItem := (s).getTransferOutEvent(
+	logItem := s.getTransferOutEvent(
 		"0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44",
 		"0x6c4a2eeb8531e3c18bca51104df7eb2377708263",
 		"0x9eca25ee04fdcc9d9cdff377aa8da019dba38437",
@@ -329,7 +329,7 @@ func (s *SmartContractLogParserTestSuite) TestGetTxInItem_TransferOutEmptyAsset(
 	txInItem := &btypes.TxInItem{
 		Sender: "0x3fd2D4cE97B082d4BcE3f9fee2A3D60668D2f473",
 	}
-	logItem := (s).getTransferOutEvent(
+	logItem := s.getTransferOutEvent(
 		"0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44",
 		"0x6c4a2eeb8531e3c18bca51104df7eb2377708263",
 		"0x9eca25ee04fdcc9d9cdff377aa8da019dba38437",
@@ -357,7 +357,7 @@ func (s *SmartContractLogParserTestSuite) TestGetTxInItem_DepositEmptyAsset(c *C
 		Sender: "0x3fd2d4ce97b082d4bce3f9fee2a3d60668d2f473",
 	}
 	isVaultTransfer, err := parser.GetTxInItem([]*etypes.Log{
-		(s).getDepositEvent("0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44", "0x6c4a2eeb8531e3c18bca51104df7eb2377708263", NativeTokenAddr, big.NewInt(1024000), "ADD:ETH.ETH"),
+		s.getDepositEvent("0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44", "0x6c4a2eeb8531e3c18bca51104df7eb2377708263", NativeTokenAddr, big.NewInt(1024000), "ADD:ETH.ETH"),
 	}, txInItem)
 	c.Assert(err, IsNil)
 	c.Assert(isVaultTransfer, Equals, false)

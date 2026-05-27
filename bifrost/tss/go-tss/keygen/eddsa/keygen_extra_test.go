@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	bcrypto "github.com/binance-chain/tss-lib/crypto"
-	eddsakg "github.com/binance-chain/tss-lib/eddsa/keygen"
-	"github.com/binance-chain/tss-lib/tss"
-	btss "github.com/binance-chain/tss-lib/tss"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/addr"
+	bcrypto "gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
+	eddsakg "gitlab.com/thorchain/tss/tss-lib-private.git/v3/eddsa/keygen"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
@@ -90,7 +90,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenErrChan(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	close(errChan)
@@ -112,7 +112,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenStopChan(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	close(stopChan)
@@ -133,7 +133,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenTimeoutNilLastMsg(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// No messages - will timeout with nil lastMsg
@@ -162,7 +162,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenEndChWithSaveError(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// Create valid ECPoint on Edwards curve
@@ -170,7 +170,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenEndChWithSaveError(c *C) {
 	ecPoint, err := bcrypto.NewECPoint(curve, curve.Params().Gx, curve.Params().Gy)
 	c.Assert(err, IsNil)
 
-	endCh <- eddsakg.LocalPartySaveData{EDDSAPub: ecPoint}
+	endCh <- &eddsakg.LocalPartySaveData{EDDSAPub: ecPoint}
 
 	result, err := instance.processKeyGen(errChan, outCh, endCh, localState)
 	c.Assert(err, NotNil)
@@ -231,7 +231,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenTimeoutWithBlame(c *C) {
 	ctx := btss.NewPeerContext(partiesID)
 	params := btss.NewParameters(tss.Edwards(), ctx, localPartyID, len(partiesID), threshold)
 	outChParty := make(chan btss.Message, len(partiesID)*10)
-	endChParty := make(chan eddsakg.LocalPartySaveData, len(partiesID)*10)
+	endChParty := make(chan *eddsakg.LocalPartySaveData, len(partiesID)*10)
 	keyGenParty := eddsakg.NewLocalParty(params, outChParty, endChParty)
 
 	partyMap := new(sync.Map)
@@ -253,7 +253,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenTimeoutWithBlame(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// Will timeout and go through blame logic with non-nil lastMsg
@@ -283,7 +283,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenEndChInvalidEddsaPub(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// Create ECPoint on secp256k1 curve (NOT Edwards) - should fail GetTssPubKeyEDDSA
@@ -291,7 +291,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenEndChInvalidEddsaPub(c *C) {
 	ecPoint, err := bcrypto.NewECPoint(curve, curve.Params().Gx, curve.Params().Gy)
 	c.Assert(err, IsNil)
 
-	endCh <- eddsakg.LocalPartySaveData{EDDSAPub: ecPoint}
+	endCh <- &eddsakg.LocalPartySaveData{EDDSAPub: ecPoint}
 
 	result, err := instance.processKeyGen(errChan, outCh, endCh, localState)
 	c.Assert(err, NotNil)
@@ -309,7 +309,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenEndChClosed(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	close(endCh)
@@ -330,7 +330,7 @@ func (s *TssEDDSAKeygenExtraSuite) TestProcessKeyGenOutChClosed(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan eddsakg.LocalPartySaveData, 1)
+	endCh := make(chan *eddsakg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	close(outCh)

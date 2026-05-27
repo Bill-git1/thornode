@@ -396,7 +396,8 @@ func (vm *ValidatorMgr) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Validat
 			cosmos.NewEvent("UpdateNodeAccountStatus",
 				cosmos.NewAttribute("Address", na.NodeAddress.String()),
 				cosmos.NewAttribute("Former:", na.Status.String()),
-				cosmos.NewAttribute("Current:", NodeActive.String())))
+				cosmos.NewAttribute("Current:", NodeActive.String())),
+		)
 		na.UpdateStatus(NodeActive, height)
 		na.LeaveScore = 0
 		na.RequestedToLeave = false
@@ -435,7 +436,8 @@ func (vm *ValidatorMgr) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Validat
 			cosmos.NewEvent("UpdateNodeAccountStatus",
 				cosmos.NewAttribute("Address", nodeRemove.NodeAddress.String()),
 				cosmos.NewAttribute("Former:", nodeRemove.Status.String()),
-				cosmos.NewAttribute("Current:", status.String())))
+				cosmos.NewAttribute("Current:", status.String())),
+		)
 		nodeRemove.UpdateStatus(status, height)
 		if err = vm.k.SetNodeAccount(ctx, nodeRemove); err != nil {
 			ctx.Logger().Error("fail to save node account", "error", err)

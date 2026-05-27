@@ -217,7 +217,8 @@ func NewMetrics(cfg config.BifrostMetricsConfiguration) (*Metrics, error) {
 	// create a new mux server
 	server := http.NewServeMux()
 	// register a new handler for the /metrics endpoint
-	server.Handle("/metrics",
+	server.Handle(
+		"/metrics",
 		promhttp.InstrumentMetricHandler(
 			prometheus.DefaultRegisterer,
 			promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{

@@ -25,9 +25,17 @@ func (k KeysignError) Error() string {
 	return fmt.Sprintf("fail to complete TSS keysign, reason:%s, round:%s, culprit:%+v", k.Blame.FailReason, k.Blame.Round, k.Blame.BlameNodes)
 }
 
-func (k KeysignError) IsRound7() bool {
+// IsTerminalRound reports whether the blame round was the terminal keysign
+// phase for the algo — secp256k1 KEYSIGN9 (the round that emits the signature
+// share in tss-lib v3) or ed25519 EDDSAKEYSIGN3. Only the terminal round
+// matters for the signer's vault-stick retry path: a withholding-exploit
+// node has the signature at hand only after the terminal-round message has
+// been computed locally, so failures earlier in the protocol can safely
+// reschedule to a different vault. Pre-v3 KEYSIGN7 blames are not accepted
+// — a node running v3 will only ever emit KEYSIGN9 for its own terminal
+// failures, and on-chain history with KEYSIGN7 markers is consumed by the
+// chain-side freeze handler, not the per-signer retry path.
+func (k KeysignError) IsTerminalRound() bool {
 	round := types.CanonicalTssRound(k.Blame.Round, "")
-	// Ed25519 reaches its terminal keysign phase at round 3, which is handled the
-	// same way as secp256k1 round 7 by the retry/freeze paths.
-	return round == tssMessages.KEYSIGN7 || round == tssMessages.EDDSAKEYSIGN3
+	return round == tssMessages.KEYSIGN9 || round == tssMessages.EDDSAKEYSIGN3
 }

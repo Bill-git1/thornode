@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	crand "crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,15 +13,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/binance-chain/tss-lib/common"
-	"github.com/binance-chain/tss-lib/ecdsa/keygen"
-	"github.com/binance-chain/tss-lib/ecdsa/signing"
-	"github.com/binance-chain/tss-lib/test"
-	"github.com/binance-chain/tss-lib/tss"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ipfs/go-log"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/common"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/signing"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/test"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -119,7 +120,7 @@ func runSign(dir string, t int) {
 		panic(fmt.Errorf("wanted %d keys but got %d keys and %d signPIDs", q, len(keys), len(signPIDs)))
 	}
 
-	msg := common.GetRandomPrimeInt(256)
+	msg := common.GetRandomPrimeInt(crand.Reader, 256)
 	p2pCtx := tss.NewPeerContext(signPIDs)
 	parties := make([]*signing.LocalParty, 0, len(signPIDs))
 
@@ -175,8 +176,8 @@ outer:
 					X:     pkX,
 					Y:     pkY,
 				}
-				r := new(big.Int).SetBytes(data.GetSignature().GetR())
-				s := new(big.Int).SetBytes(data.GetSignature().GetS())
+				r := new(big.Int).SetBytes(data.R)
+				s := new(big.Int).SetBytes(data.S)
 				var ok bool
 				if ok = ecdsa.Verify(
 					&pk,

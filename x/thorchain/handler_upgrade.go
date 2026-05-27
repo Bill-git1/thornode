@@ -121,7 +121,8 @@ func (h ProposeUpgradeHandler) handle(ctx cosmos.Context, msg *MsgProposeUpgrade
 	}
 
 	ctx.EventManager().EmitEvent(
-		cosmos.NewEvent("propose_upgrade",
+		cosmos.NewEvent(
+			"propose_upgrade",
 			cosmos.NewAttribute("thor_address", msg.Signer.String()),
 			cosmos.NewAttribute("name", name),
 			cosmos.NewAttribute("height", strconv.FormatInt(u.Height, 10)),
@@ -132,7 +133,8 @@ func (h ProposeUpgradeHandler) handle(ctx cosmos.Context, msg *MsgProposeUpgrade
 	k.ApproveUpgrade(ctx, msg.Signer, name)
 
 	ctx.EventManager().EmitEvent(
-		cosmos.NewEvent("approve_upgrade",
+		cosmos.NewEvent(
+			"approve_upgrade",
 			cosmos.NewAttribute("thor_address", msg.Signer.String()),
 			cosmos.NewAttribute("name", name),
 		),
@@ -215,7 +217,8 @@ func (h ApproveUpgradeHandler) handle(ctx cosmos.Context, msg *MsgApproveUpgrade
 	k.ApproveUpgrade(ctx, msg.Signer, name)
 
 	ctx.EventManager().EmitEvent(
-		cosmos.NewEvent("approve_upgrade",
+		cosmos.NewEvent(
+			"approve_upgrade",
 			cosmos.NewAttribute("thor_address", msg.Signer.String()),
 			cosmos.NewAttribute("name", name),
 		),
@@ -294,7 +297,8 @@ func (h RejectUpgradeHandler) handle(ctx cosmos.Context, msg *MsgRejectUpgrade) 
 	k.RejectUpgrade(ctx, msg.Signer, name)
 
 	ctx.EventManager().EmitEvent(
-		cosmos.NewEvent("reject_upgrade",
+		cosmos.NewEvent(
+			"reject_upgrade",
 			cosmos.NewAttribute("thor_address", msg.Signer.String()),
 			cosmos.NewAttribute("name", name),
 		),

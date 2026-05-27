@@ -394,7 +394,8 @@ func (s TxOutStoreSuite) TestAddOutTxItem(c *C) {
 
 	// outbound originating from a pool should pay fee from asgard to reserve
 	FundModule(c, w.ctx, w.keeper, AsgardName, 1000*common.One)
-	testAndCheckModuleBalances(c, w.ctx, w.keeper,
+	testAndCheckModuleBalances(
+		c, w.ctx, w.keeper,
 		func() {
 			item = TxOutItem{
 				Chain:     common.THORChain,
@@ -418,7 +419,8 @@ func (s TxOutStoreSuite) TestAddOutTxItem(c *C) {
 
 	// outbound originating from bond should pay fee from bond to reserve
 	FundModule(c, w.ctx, w.keeper, BondName, 1000*common.One)
-	testAndCheckModuleBalances(c, w.ctx, w.keeper,
+	testAndCheckModuleBalances(
+		c, w.ctx, w.keeper,
 		func() {
 			item = TxOutItem{
 				ModuleName: BondName,

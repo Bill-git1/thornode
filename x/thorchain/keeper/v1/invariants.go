@@ -334,7 +334,8 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 					"%s: swap.coin %s != state.deposit %s",
 					swap.Tx.ID.String(),
 					swap.Tx.Coins[0].Amount,
-					swap.State.Deposit.String()))
+					swap.State.Deposit.String(),
+				))
 			}
 
 			// Check count doesn't exceed quantity
@@ -356,7 +357,8 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 					swap.Tx.ID.String(),
 					countLabel,
 					countToCheck,
-					swap.State.Quantity))
+					swap.State.Quantity,
+				))
 			}
 
 			// Check In doesn't exceed Deposit
@@ -366,7 +368,8 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 					"%s: state.in %s > state.deposit %s",
 					swap.Tx.ID.String(),
 					swap.State.In.String(),
-					swap.State.Deposit.String()))
+					swap.State.Deposit.String(),
+				))
 			}
 		}
 
@@ -420,7 +423,8 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 					"%s: swap.coin %s != stream.deposit %s",
 					stream.TxID.String(),
 					swap.Tx.Coins[0].Amount,
-					stream.Deposit.String()))
+					stream.Deposit.String(),
+				))
 			}
 			if stream.Count > stream.Quantity {
 				broken = true
@@ -428,7 +432,8 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 					"%s: stream.count %d > stream.quantity %d",
 					stream.TxID.String(),
 					stream.Count,
-					stream.Quantity))
+					stream.Quantity,
+				))
 			}
 			if stream.In.GT(stream.Deposit) {
 				broken = true
@@ -436,7 +441,8 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 					"%s: stream.in %s > stream.deposit %s",
 					stream.TxID.String(),
 					stream.In.String(),
-					stream.Deposit.String()))
+					stream.Deposit.String(),
+				))
 			}
 		}
 

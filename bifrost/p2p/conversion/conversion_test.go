@@ -6,11 +6,11 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/binance-chain/tss-lib/crypto"
 	"github.com/btcsuite/btcd/btcec"
 	coskey "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint:staticcheck
 	"github.com/libp2p/go-libp2p-core/peer"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
 	. "gopkg.in/check.v1"
 )
 

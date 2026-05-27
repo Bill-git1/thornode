@@ -18,7 +18,9 @@ func TestCanonicalTssRoundSecp256k1(t *testing.T) {
 		"thorchain.tsslib.ecdsa.signing.SignRound2Message":  tssMessages.KEYSIGN2Unicast,
 		tssMessages.KEYSIGN7:                                tssMessages.KEYSIGN7,
 		"thorchain.tsslib.ecdsa.signing.SignRound7Message":  tssMessages.KEYSIGN7,
-		"unrelated-round":                                   "unrelated-round",
+		"thorchain.tsslib.ecdsa.signing.SignRound8Message":  tssMessages.KEYSIGN8,
+		"thorchain.tsslib.ecdsa.signing.SignRound9Message":  tssMessages.KEYSIGN9,
+		"unrelated-round": "unrelated-round",
 	}
 
 	for in, want := range tests {
@@ -47,9 +49,11 @@ func TestCanonicalTssRoundEd25519(t *testing.T) {
 	}
 }
 
-// TestKeysignErrorIsRound7 verifies the signer retry path recognizes both the
-// canonical and raw final-round names for secp256k1 and ed25519 keysigns.
-func TestKeysignErrorIsRound7(t *testing.T) {
+// TestKeysignErrorIsTerminalRound verifies the signer retry path recognises
+// both the canonical and raw final-round names for secp256k1 (v3 KEYSIGN9
+// only) and ed25519 (EDDSAKEYSIGN3). The legacy v1 KEYSIGN7 marker is
+// intentionally not accepted on the signer side.
+func TestKeysignErrorIsTerminalRound(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -58,13 +62,14 @@ func TestKeysignErrorIsRound7(t *testing.T) {
 		want  bool
 	}{
 		{
-			name:  "canonical secp round 7",
-			round: tssMessages.KEYSIGN7,
+			// tss-lib v3 terminal ECDSA keysign round.
+			name:  "canonical secp v3 terminal round",
+			round: tssMessages.KEYSIGN9,
 			want:  true,
 		},
 		{
-			name:  "raw secp round 7",
-			round: "thorchain.tsslib.ecdsa.signing.SignRound7Message",
+			name:  "raw secp v3 terminal round",
+			round: "thorchain.tsslib.ecdsa.signing.SignRound9Message",
 			want:  true,
 		},
 		{
@@ -78,6 +83,17 @@ func TestKeysignErrorIsRound7(t *testing.T) {
 			want:  true,
 		},
 		{
+			// v1 terminal round — not accepted on the signer side.
+			name:  "non-terminal secp v1 round 7",
+			round: tssMessages.KEYSIGN7,
+			want:  false,
+		},
+		{
+			name:  "non-terminal raw secp round 7",
+			round: "thorchain.tsslib.ecdsa.signing.SignRound7Message",
+			want:  false,
+		},
+		{
 			name:  "non-terminal round",
 			round: tssMessages.KEYSIGN5,
 			want:  false,
@@ -89,8 +105,8 @@ func TestKeysignErrorIsRound7(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			err := NewKeysignError(thorchaintypes.Blame{Round: tc.round})
-			if got := err.IsRound7(); got != tc.want {
-				t.Fatalf("IsRound7(%q) = %v, want %v", tc.round, got, tc.want)
+			if got := err.IsTerminalRound(); got != tc.want {
+				t.Fatalf("IsTerminalRound(%q) = %v, want %v", tc.round, got, tc.want)
 			}
 		})
 	}

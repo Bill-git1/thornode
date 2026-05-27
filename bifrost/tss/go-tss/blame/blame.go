@@ -41,14 +41,29 @@ func (b Blame) String() string {
 	return sb.String()
 }
 
-// SetBlame update the field values of Blame
+// SetBlame updates the field values of Blame, appending only new nodes (by
+// pubkey+signature equality, the same equality AddBlameNodes uses). This is
+// important under tss-lib v3 where multiple in-flight signing messages can
+// each trigger SetBlame with the same offending peer set — without dedup the
+// resulting BlameNodes slice would grow several entries per actual culprit.
 func (b *Blame) SetBlame(reason string, nodes []Node, isUnicast bool, round string) {
 	b.blameLock.Lock()
 	defer b.blameLock.Unlock()
 	b.FailReason = reason
 	b.IsUnicast = isUnicast
 	b.Round = round
-	b.BlameNodes = append(b.BlameNodes, nodes...)
+	for _, node := range nodes {
+		found := false
+		for _, el := range b.BlameNodes {
+			if node.Equal(el) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			b.BlameNodes = append(b.BlameNodes, node)
+		}
+	}
 }
 
 func (b *Blame) AlreadyBlame() bool {

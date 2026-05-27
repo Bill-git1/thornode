@@ -449,7 +449,8 @@ func (b *EnshrinedBifrost) MarkQuorumTxAttestationsConfirmed(ctx context.Context
 
 	if !found {
 		cmpObsTx := qtx.ObsTx
-		b.logger.Debug("Failed to find quorum tx to mark attestations confirmed",
+		b.logger.Debug(
+			"Failed to find quorum tx to mark attestations confirmed",
 			"chain", cmpObsTx.Tx.Chain,
 			"hash", cmpObsTx.Tx.ID,
 		)
@@ -502,7 +503,8 @@ func (b *EnshrinedBifrost) MarkQuorumNetworkFeeAttestationsConfirmed(ctx context
 
 	if !found {
 		cmpNf := qnf.NetworkFee
-		b.logger.Debug("Failed to find quorum network fee to mark attestations confirmed",
+		b.logger.Debug(
+			"Failed to find quorum network fee to mark attestations confirmed",
 			"chain", cmpNf.Chain,
 			"height", cmpNf.Height,
 			"tx_size", cmpNf.TransactionSize,
@@ -557,7 +559,8 @@ func (b *EnshrinedBifrost) MarkQuorumSolvencyAttestationsConfirmed(ctx context.C
 
 	if !found {
 		cmpS := qs.Solvency
-		b.logger.Debug("Failed to find quorum solvency to mark attestations confirmed",
+		b.logger.Debug(
+			"Failed to find quorum solvency to mark attestations confirmed",
 			"chain", cmpS.Chain,
 			"height", cmpS.Height,
 			"coins", cmpS.Coins,
@@ -610,7 +613,8 @@ func (b *EnshrinedBifrost) MarkQuorumErrataTxAttestationsConfirmed(ctx context.C
 
 	if !found {
 		cmpEr := qe.ErrataTx
-		b.logger.Debug("Failed to find quorum errata to mark attestations confirmed",
+		b.logger.Debug(
+			"Failed to find quorum errata to mark attestations confirmed",
 			"chain", cmpEr.Chain,
 			"id", cmpEr.Id,
 		)

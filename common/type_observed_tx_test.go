@@ -143,7 +143,8 @@ func (s ObservedTxSuite) TestEqualsConsensus_OneRefDiffers(c *C) {
 func (s ObservedTxSuite) TestEqualsConsensus_BothNonXMREmpty(c *C) {
 	id, err := NewTxID(testSpendTxHash)
 	c.Assert(err, IsNil)
-	tx := NewTx(id,
+	tx := NewTx(
+		id,
 		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
 		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635b"),
 		Coins{NewCoin(ETHAsset, cosmos.NewUint(5*One))},
@@ -160,7 +161,8 @@ func (s ObservedTxSuite) TestEqualsConsensus_BothNonXMREmpty(c *C) {
 func (s ObservedTxSuite) TestAttestationUniqueHash_NonXMREqualsBase(c *C) {
 	id, err := NewTxID(testSpendTxHash)
 	c.Assert(err, IsNil)
-	tx := NewTx(id,
+	tx := NewTx(
+		id,
 		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
 		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635b"),
 		Coins{NewCoin(ETHAsset, cosmos.NewUint(5*One))},

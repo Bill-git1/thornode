@@ -63,7 +63,8 @@ func (k Keeper) ExecuteSchedule(ctx sdk.Context) error {
 					)
 				}
 			}()
-			_, execErr := k.wasmKeeper.Execute(execCtx,
+			_, execErr := k.wasmKeeper.Execute(
+				execCtx,
 				sender,
 				authtypes.NewModuleAddress(types.ModuleName),
 				msg.Msg,

@@ -145,9 +145,11 @@ func (h BondHandler) handle(ctx cosmos.Context, msg MsgBond) (err error) {
 		// white list the given bep address
 		nodeAccount = NewNodeAccount(msg.NodeAddress, NodeWhiteListed, emptyPubKeySet, "", cosmos.ZeroUint(), msg.BondAddress, ctx.BlockHeight())
 		ctx.EventManager().EmitEvent(
-			cosmos.NewEvent("new_node",
+			cosmos.NewEvent(
+				"new_node",
 				cosmos.NewAttribute("address", msg.NodeAddress.String()),
-			))
+			),
+		)
 	}
 
 	// Get the bond providers initially in order before adding the msg.Bond to the original bond.

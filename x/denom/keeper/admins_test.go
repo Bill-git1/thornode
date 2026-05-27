@@ -12,7 +12,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	addr0bal := int64(0)
 	addr1bal := int64(0)
 	// Create a denom
-	res, err := s.msgServer.CreateDenom(s.ctx,
+	res, err := s.msgServer.CreateDenom(
+		s.ctx,
 		types.NewMsgCreateDenom(
 			accAddrs[0].String(),
 			"bitcoin",
@@ -33,7 +34,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	)
 
 	// Test minting to admins own account
-	_, err = s.msgServer.MintTokens(s.ctx,
+	_, err = s.msgServer.MintTokens(
+		s.ctx,
 		types.NewMsgMintTokens(
 			accAddrs[0].String(),
 			sdk.NewInt64Coin(denom, 10),
@@ -48,7 +50,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	)
 
 	// Test burning from own account
-	_, err = s.msgServer.BurnTokens(s.ctx,
+	_, err = s.msgServer.BurnTokens(
+		s.ctx,
 		types.NewMsgBurnTokens(
 			accAddrs[0].String(),
 			sdk.NewInt64Coin(denom, 5),
@@ -61,14 +64,17 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	)
 
 	// Test Change Admin
-	_, err = s.msgServer.ChangeDenomAdmin(s.ctx,
-		types.NewMsgChangeDenomAdmin(accAddrs[0].String(),
+	_, err = s.msgServer.ChangeDenomAdmin(
+		s.ctx,
+		types.NewMsgChangeDenomAdmin(
+			accAddrs[0].String(),
 			denom,
 			accAddrs[1].String(),
 		),
 	)
 	s.Require().NoError(err)
-	queryRes, err = s.queryClient.DenomAdmin(s.ctx,
+	queryRes, err = s.queryClient.DenomAdmin(
+		s.ctx,
 		&types.QueryDenomAdminRequest{
 			Denom: res.GetNewTokenDenom(),
 		},
@@ -80,7 +86,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	)
 
 	// Make sure old admin can no longer do actions
-	_, err = s.msgServer.MintTokens(s.ctx,
+	_, err = s.msgServer.MintTokens(
+		s.ctx,
 		types.NewMsgMintTokens(
 			accAddrs[0].String(),
 			sdk.NewInt64Coin(denom, 5),
@@ -89,7 +96,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	)
 	s.Require().Error(err)
 
-	_, err = s.msgServer.BurnTokens(s.ctx,
+	_, err = s.msgServer.BurnTokens(
+		s.ctx,
 		types.NewMsgBurnTokens(
 			accAddrs[0].String(),
 			sdk.NewInt64Coin(denom, 5),
@@ -98,7 +106,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	s.Require().Error(err)
 
 	// Make sure the new admin works
-	_, err = s.msgServer.MintTokens(s.ctx,
+	_, err = s.msgServer.MintTokens(
+		s.ctx,
 		types.NewMsgMintTokens(
 			accAddrs[1].String(),
 			sdk.NewInt64Coin(denom, 5),
@@ -113,7 +122,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 	)
 
 	// Try setting admin to empty
-	_, err = s.msgServer.ChangeDenomAdmin(s.ctx,
+	_, err = s.msgServer.ChangeDenomAdmin(
+		s.ctx,
 		types.NewMsgChangeDenomAdmin(
 			accAddrs[1].String(),
 			denom,
@@ -121,7 +131,8 @@ func (s *KeeperTestSuite) TestAdminMsgs() {
 		),
 	)
 	s.Require().NoError(err)
-	queryRes, err = s.queryClient.DenomAdmin(s.ctx,
+	queryRes, err = s.queryClient.DenomAdmin(
+		s.ctx,
 		&types.QueryDenomAdminRequest{
 			Denom: res.GetNewTokenDenom(),
 		},

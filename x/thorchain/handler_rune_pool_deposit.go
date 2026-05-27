@@ -33,7 +33,8 @@ func (h RunePoolDepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.R
 		ctx.Logger().Error("msg rune pool deposit failed validation", "error", err)
 		return nil, err
 	}
-	ctx.Logger().Info("receive MsgRunePoolDeposit",
+	ctx.Logger().Info(
+		"receive MsgRunePoolDeposit",
 		"tx_id", msg.Tx.ID,
 		"rune_address", msg.Signer,
 		"deposit_asset", msg.Tx.Coins[0].Asset,

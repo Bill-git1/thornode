@@ -600,7 +600,8 @@ func (s AdvSwapQueueSuite) TestEndBlock(c *C) {
 		affilAddr, cosmos.NewUint(1_000),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	market.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -615,7 +616,8 @@ func (s AdvSwapQueueSuite) TestEndBlock(c *C) {
 		affilAddr, cosmos.NewUint(1_000),
 		"", "", nil,
 		types.SwapType_limit,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	limit1.InitialBlockHeight = ctx.BlockHeight() - 10
 	limit1.State = &types.SwapState{
 		Quantity:   1,
@@ -1528,7 +1530,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapMultipleIterations(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	streamingSwap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -1576,7 +1579,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapMultipleIterations(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		marketSwap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -1657,7 +1661,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEarlyExit(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	singleSwap.State = &types.SwapState{
 		Quantity: 1, // Only 1 swap, will complete in first iteration
 		Count:    0,
@@ -1680,7 +1685,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEarlyExit(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	streamingSwap.State = &types.SwapState{
 		Quantity:   2, // 2 swaps total
 		Count:      0,
@@ -1714,7 +1720,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEarlyExit(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		marketSwap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -1816,7 +1823,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapTodoListPassing(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	streamingSwap.State = &types.SwapState{
 		Quantity:   3,
 		Count:      0,
@@ -1916,7 +1924,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapIterationCountLogging(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	singleSwap.State = &types.SwapState{
 		Quantity: 1, // Single swap, will complete in first iteration
 		Count:    0,
@@ -1941,7 +1950,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapIterationCountLogging(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	streamingSwap.State = &types.SwapState{
 		Quantity:   3, // 3 sub-swaps
 		Count:      0,
@@ -1971,7 +1981,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapIterationCountLogging(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		marketSwap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2038,7 +2049,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		marketSwap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2076,7 +2088,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		marketSwap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2196,7 +2209,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	marketSwap.State = &types.SwapState{
 		Quantity: 1, // Single swap
 		Count:    0,
@@ -2226,7 +2240,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	streamingSwap.State = &types.SwapState{
 		Quantity:   3, // 3 sub-swaps
 		Count:      0,
@@ -2267,7 +2282,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2285,7 +2301,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	streamingSwap2.State = &types.SwapState{
 		Quantity:   2, // 2 sub-swaps
 		Count:      0,
@@ -2323,7 +2340,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	crossAssetSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2351,7 +2369,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2386,7 +2405,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	todoSwap.State = &types.SwapState{
 		Quantity:   2, // 2 sub-swaps for todo list testing
 		Count:      0,
@@ -2422,7 +2442,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapEndToEndScenarios(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 
 		if i < 3 {
 			// Market swaps
@@ -2494,7 +2515,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	largeSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2520,7 +2542,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	invalidSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2543,7 +2566,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	validSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2560,7 +2584,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	zeroSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2580,7 +2605,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	streamingSwap.State = &types.SwapState{
 		Quantity:   3, // 3 sub-swaps
 		Count:      0,
@@ -2604,7 +2630,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	// Intentionally create inconsistent state
 	corruptedSwap.State = &types.SwapState{
 		Quantity: 1,
@@ -2626,7 +2653,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	poolSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2661,7 +2689,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	mimirTestSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2693,7 +2722,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	fetchErrorSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2717,7 +2747,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	recoverySwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -2761,7 +2792,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapErrorHandling(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2829,7 +2861,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2861,7 +2894,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2899,7 +2933,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2925,7 +2960,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -2964,7 +3000,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	intervalSwap.State = &types.SwapState{
 		Quantity:   4, // 4 sub-swaps
 		Count:      0,
@@ -3003,7 +3040,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	synthSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -3031,7 +3069,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -3056,7 +3095,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	zeroLimitSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -3089,7 +3129,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity: 1,
 			Count:    0,
@@ -3164,7 +3205,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			swapType,
-			0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+		)
 
 		state := &types.SwapState{
 			Quantity: quantity,
@@ -4475,7 +4517,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedMarketSwapSkip(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	failingSwap.State = &types.SwapState{
 		Quantity:   5, // Streaming swap with 5 subswaps
 		Count:      0,
@@ -4496,7 +4539,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedMarketSwapSkip(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	partnerSwap.State = &types.SwapState{
 		Quantity:   1,
 		Count:      0,
@@ -5313,7 +5357,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapIntervalBlocksMultiExecution(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -5382,7 +5427,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapStateAccumulation(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -5404,7 +5450,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapStateAccumulation(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -5480,7 +5527,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapMaxZero(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -5536,7 +5584,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotConsumeBudget(c *C) 
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity:   10,
 			Count:      0,
@@ -5562,7 +5611,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotConsumeBudget(c *C) 
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity:   10,
 			Count:      0,
@@ -5640,7 +5690,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapLimitSwapBypassesDirectionSkip(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	marketSwap.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -5664,7 +5715,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapLimitSwapBypassesDirectionSkip(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	partnerSwap.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -5686,7 +5738,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapLimitSwapBypassesDirectionSkip(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_limit,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	limitSwap.InitialBlockHeight = ctx.BlockHeight() - 10
 	limitSwap.State = &types.SwapState{
 		Quantity:   5,
@@ -5753,7 +5806,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapPoolBalanceChangesAcrossIterations(c *C)
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -5774,7 +5828,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapPoolBalanceChangesAcrossIterations(c *C)
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -5836,7 +5891,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettleMidIterationNoInterference(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -5856,7 +5912,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettleMidIterationNoInterference(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -5876,7 +5933,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettleMidIterationNoInterference(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapC.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -5899,7 +5957,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettleMidIterationNoInterference(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapD.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -5966,7 +6025,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedSwapSkipMarketOnlyLogic(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	failingMarket.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -5987,7 +6047,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedSwapSkipMarketOnlyLogic(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	partner.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -6049,7 +6110,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapMixedIntervalZeroAndNonZero(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6072,7 +6134,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapMixedIntervalZeroAndNonZero(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6139,7 +6202,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettledSwapDirectionBlocksSameDir(c *C) 
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapS.State = &types.SwapState{
 		Quantity: 1, // settles after 1 execution
 		Count:    0,
@@ -6159,7 +6223,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettledSwapDirectionBlocksSameDir(c *C) 
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapR.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6181,7 +6246,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettledSwapDirectionBlocksSameDir(c *C) 
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	counterC1.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6202,7 +6268,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettledSwapDirectionBlocksSameDir(c *C) 
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	counterC2.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6267,7 +6334,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionResetsAcrossBlocks(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6288,7 +6356,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionResetsAcrossBlocks(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6384,7 +6453,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotBuildTodo(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	counterC1.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6405,7 +6475,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotBuildTodo(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	counterC2.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6427,7 +6498,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotBuildTodo(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	ethSwap.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6495,7 +6567,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapNextSizeProgressionAcrossIterations(c *C
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6517,7 +6590,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapNextSizeProgressionAcrossIterations(c *C
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6603,7 +6677,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapNegativeMaxFallsBackToDefault(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -6690,7 +6765,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapTelemetryExcludesDirectionSkips(c *C) {
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity:   10,
 			Count:      0,
@@ -6714,7 +6790,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapTelemetryExcludesDirectionSkips(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	counterC1.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6735,7 +6812,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapTelemetryExcludesDirectionSkips(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	counterC2.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -6809,7 +6887,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapCacheContextRollbackOnFailure(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -6880,7 +6959,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapCacheContextCommitOnSuccess(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -6968,7 +7048,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedLimitSwapCountsOnAllIterations(c *
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	failingSwap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -6991,7 +7072,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedLimitSwapCountsOnAllIterations(c *
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	partnerA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7013,7 +7095,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapFailedLimitSwapCountsOnAllIterations(c *
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	partnerB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7095,7 +7178,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionTrackingDoubleSwapEndToEnd(c *C
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7117,7 +7201,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionTrackingDoubleSwapEndToEnd(c *C
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7139,7 +7224,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionTrackingDoubleSwapEndToEnd(c *C
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapC.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7203,7 +7289,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSimulationModeSkips(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	marketSwap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -7273,7 +7360,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapOriginalAmountRestoredBeforeSave(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -7335,7 +7423,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapStateCountIncrementOnBothPaths(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	successSwap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -7358,7 +7447,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapStateCountIncrementOnBothPaths(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	failSwap.State = &types.SwapState{
 		Quantity:   5,
 		Count:      0,
@@ -7429,7 +7519,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionReversalWithinBlock(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7451,7 +7542,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionReversalWithinBlock(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7510,7 +7602,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettleMidLoopNotReprocessed(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapA.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,
@@ -7530,7 +7623,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapSettleMidLoopNotReprocessed(c *C) {
 		"", cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+	)
 	swapB.State = &types.SwapState{
 		Quantity:   10,
 		Count:      0,
@@ -7601,7 +7695,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapGetTodoNumFreshBudgetPerIteration(c *C) 
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity:   10,
 			Count:      0,
@@ -7627,7 +7722,8 @@ func (s AdvSwapQueueSuite) TestRapidSwapGetTodoNumFreshBudgetPerIteration(c *C) 
 			"", cosmos.ZeroUint(),
 			"", "", nil,
 			types.SwapType_market,
-			0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+			0, 0, types.SwapVersion_v2, GetRandomBech32Addr(),
+		)
 		swap.State = &types.SwapState{
 			Quantity:   10,
 			Count:      0,
@@ -7707,7 +7803,8 @@ func (s AdvSwapQueueSuite) TestEndBlockSetAdvSwapQueueItemFailureDiscardsBookkee
 		common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
-		0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
+	)
 	market.State = &types.SwapState{
 		Quantity: 1,
 		Count:    0,

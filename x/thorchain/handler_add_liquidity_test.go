@@ -368,7 +368,8 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler_NoPool_ShouldCreateNe
 		runeAddr,
 		ethAddr,
 		common.NoAddress, cosmos.ZeroUint(),
-		activeNodeAccount.NodeAddress)
+		activeNodeAccount.NodeAddress,
+	)
 	_, err = addHandler.Run(ctx, msg)
 	c.Assert(err, IsNil)
 	postLiquidityPool, err := k.GetPool(ctx, common.ETHAsset)
@@ -608,7 +609,8 @@ func (s *HandlerAddLiquiditySuite) TestHandlerAddLiquidityFailScenario(c *C) {
 			runeAddr,
 			ethAddr,
 			common.NoAddress, cosmos.ZeroUint(),
-			activeNodeAccount.NodeAddress)
+			activeNodeAccount.NodeAddress,
+		)
 		ctx, mgr := setupManagerForTest(c)
 		mgr.K = tc.k
 		addHandler := NewAddLiquidityHandler(mgr)
@@ -1472,7 +1474,8 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityPOL(c *C) {
 		polAddr,
 		GetRandomETHAddress(),
 		common.NoAddress, cosmos.ZeroUint(),
-		activeNodeAccount.NodeAddress)
+		activeNodeAccount.NodeAddress,
+	)
 
 	_, err = addHandler.Run(ctx, msg)
 	c.Assert(err, NotNil, Commentf("pol add with asset addr should fail"))

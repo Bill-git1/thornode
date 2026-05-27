@@ -251,7 +251,8 @@ func handleObservedTxInQuorum(
 		return nil
 	}
 
-	ctx.Logger().Debug("tx in finalized and has consensus",
+	ctx.Logger().Debug(
+		"tx in finalized and has consensus",
 		"id", tx.Tx.ID.String(),
 		"chain", tx.Tx.Chain.String(),
 		"height", tx.BlockHeight,
@@ -417,7 +418,8 @@ func processTxOutAttestation(
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = *voter.GetTx(nas)
 
-			ctx.Logger().Debug("tx out finalized and has consensus",
+			ctx.Logger().Debug(
+				"tx out finalized and has consensus",
 				"id", tx.Tx.ID.String(),
 				"chain", tx.Tx.Chain.String(),
 				"height", tx.BlockHeight,
@@ -585,7 +587,8 @@ func correctOutboundGas(ctx cosmos.Context, mgr Manager, consensusTx common.Obse
 		mgr.GasMgr().AddGasAsset(outAsset, additionalGas, false)
 	}
 
-	ctx.Logger().Info("corrected outbound gas after reorg",
+	ctx.Logger().Info(
+		"corrected outbound gas after reorg",
 		"txid", correctedTx.Tx.ID,
 		"old_gas", common.Coins(oldGas).String(),
 		"new_gas", common.Coins(newGas).String(),

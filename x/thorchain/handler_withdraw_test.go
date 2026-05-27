@@ -587,7 +587,8 @@ func (HandlerWithdrawSuite) TestWithdrawHandler_outboundFailures(c *C) {
 		cosmos.NewUint(1000),
 		asset,
 		common.RuneAsset(),
-		na.NodeAddress)
+		na.NodeAddress,
+	)
 
 	c.Assert(msg.ValidateBasic(), IsNil)
 
@@ -674,7 +675,8 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 		common.NoAddress,
 		avaxAddr,
 		common.NoAddress, cosmos.ZeroUint(),
-		activeNodeAccount.NodeAddress)
+		activeNodeAccount.NodeAddress,
+	)
 	err = addHandler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	bkeygen "github.com/binance-chain/tss-lib/ecdsa/keygen"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	coskey "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32"
@@ -15,6 +14,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	bkeygen "gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"

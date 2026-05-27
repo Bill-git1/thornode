@@ -111,16 +111,28 @@ func LastRoundFailures(block *thorscan.BlockResponse) {
 					continue
 				}
 
-				// skip failures except for round 7
-				if msgKeysignFail.Blame.Round != "SignRound7Message" && msgKeysignFail.Blame.Round != "EDDSASignRound3Message" {
+				// skip failures except for the terminal keysign round. tss-lib v3
+				// added two ECDSA signing rounds (8 and 9), so the secp256k1
+				// terminal round moved from SignRound7Message to SignRound9Message.
+				// This tool scans historical thorchain blocks, including blocks
+				// produced before the v3 upgrade, so SignRound7Message is kept
+				// to surface alerts on pre-upgrade KEYSIGN7 records. The chain-
+				// side handler and the per-signer retry path (bifrost/tss/
+				// keysign_error.go::IsTerminalRound) are stricter and accept
+				// only v3 KEYSIGN9 + EDDSAKEYSIGN3 going forward. Withholding
+				// the terminal-round message after computing the signature
+				// share is the exploit pattern this alert exists to surface.
+				if msgKeysignFail.Blame.Round != "SignRound7Message" &&
+					msgKeysignFail.Blame.Round != "SignRound9Message" &&
+					msgKeysignFail.Blame.Round != "EDDSASignRound3Message" {
 					continue
 				}
 
-				// skip seen round 7 failures
+				// skip seen last-round failures
 				seen := map[string]bool{}
 				err := util.Load("lastRound", &seen)
 				if err != nil {
-					log.Error().Err(err).Msg("unable to load round 7 failures")
+					log.Error().Err(err).Msg("unable to load last-round failures")
 				}
 				if seen[msgKeysignFail.Memo] {
 					continue
@@ -139,7 +151,7 @@ func LastRoundFailures(block *thorscan.BlockResponse) {
 				fields.Set("Transaction", fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", config.Get().Links.Thornode, tx.Hash))
 				notify.Notify(config.Get().Notifications.Security, title, block.Header.Height, nil, notify.Warning, fields)
 
-				// save seen round 7 failures
+				// save seen last-round failures
 				seen[msgKeysignFail.Memo] = true
 				err = util.Store("lastRound", seen)
 				if err != nil {

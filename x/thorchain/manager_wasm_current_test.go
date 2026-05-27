@@ -19,7 +19,8 @@ func (s WasmManagerSuite) TestStoreCode(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
 
-	_, _, err := mgr.WasmManager().StoreCode(ctx,
+	_, _, err := mgr.WasmManager().StoreCode(
+		ctx,
 		GetRandomBech32Addr(),
 		s.loadWasm(c, "simple.wasm"),
 	)
@@ -31,19 +32,22 @@ func (s WasmManagerSuite) TestInstantiateContract(c *C) {
 	ctx = ctx.WithBlockTime(time.Unix(1, 0))
 	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
 
-	_, _, err := mgr.WasmManager().StoreCode(ctx,
+	_, _, err := mgr.WasmManager().StoreCode(
+		ctx,
 		GetRandomBech32Addr(),
 		s.loadWasm(c, "counter.wasm"),
 	)
 	c.Assert(err, IsNil)
 
-	_, _, err = mgr.WasmManager().StoreCode(ctx,
+	_, _, err = mgr.WasmManager().StoreCode(
+		ctx,
 		GetRandomBech32Addr(),
 		s.loadWasm(c, "extended.wasm"),
 	)
 	c.Assert(err, IsNil)
 
-	_, _, err = mgr.WasmManager().InstantiateContract(ctx,
+	_, _, err = mgr.WasmManager().InstantiateContract(
+		ctx,
 		1,
 		GetRandomBech32Addr(),
 		nil,
@@ -53,7 +57,8 @@ func (s WasmManagerSuite) TestInstantiateContract(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	_, _, err = mgr.WasmManager().InstantiateContract(ctx,
+	_, _, err = mgr.WasmManager().InstantiateContract(
+		ctx,
 		1,
 		GetRandomBech32Addr(),
 		nil,
@@ -63,7 +68,8 @@ func (s WasmManagerSuite) TestInstantiateContract(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	_, _, err = mgr.WasmManager().InstantiateContract(ctx,
+	_, _, err = mgr.WasmManager().InstantiateContract(
+		ctx,
 		2,
 		GetRandomBech32Addr(),
 		nil,
@@ -73,7 +79,8 @@ func (s WasmManagerSuite) TestInstantiateContract(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	_, _, err = mgr.WasmManager().InstantiateContract(ctx,
+	_, _, err = mgr.WasmManager().InstantiateContract(
+		ctx,
 		2,
 		GetRandomBech32Addr(),
 		nil,
@@ -89,20 +96,23 @@ func (s WasmManagerSuite) TestMigrateCode(c *C) {
 	ctx = ctx.WithBlockTime(time.Unix(1, 0))
 	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
 
-	_, _, err := mgr.WasmManager().StoreCode(ctx,
+	_, _, err := mgr.WasmManager().StoreCode(
+		ctx,
 		GetRandomBech32Addr(),
 		s.loadWasm(c, "simple.wasm"),
 	)
 	c.Assert(err, IsNil)
 
-	_, _, err = mgr.WasmManager().StoreCode(ctx,
+	_, _, err = mgr.WasmManager().StoreCode(
+		ctx,
 		GetRandomBech32Addr(),
 		s.loadWasm(c, "extended.wasm"),
 	)
 	c.Assert(err, IsNil)
 
 	admin := GetRandomBech32Addr()
-	contractAddr, _, err := mgr.WasmManager().InstantiateContract(ctx,
+	contractAddr, _, err := mgr.WasmManager().InstantiateContract(
+		ctx,
 		1,
 		admin,
 		admin,
@@ -112,7 +122,8 @@ func (s WasmManagerSuite) TestMigrateCode(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	_, err = mgr.WasmManager().MigrateContract(ctx,
+	_, err = mgr.WasmManager().MigrateContract(
+		ctx,
 		contractAddr,
 		admin,
 		2,

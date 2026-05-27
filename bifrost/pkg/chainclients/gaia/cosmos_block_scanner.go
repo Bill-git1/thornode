@@ -548,8 +548,10 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 			// THORChain only supports gas paid in ATOM, if gas is paid in another asset
 			// then fake gas as `0.000001 ATOM`, the fee is not used but cannot be empty
 			if gasFees.IsEmpty() {
-				gasFees = append(gasFees, common.NewCoin(
-					c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1)),
+				gasFees = append(
+					gasFees, common.NewCoin(
+						c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1),
+					),
 				)
 			}
 

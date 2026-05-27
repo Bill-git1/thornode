@@ -135,7 +135,10 @@ func (h TssKeysignHandler) handle(ctx cosmos.Context, msg MsgTssKeysignFail) (*c
 	// still participate in keysign during churn after leaving the active set,
 	// so using IsNodeKeys here would undercount final-round reports and could
 	// miss freezing a vault that is still failing at the terminal round.
-	if msg.Blame.Round == tssMessages.KEYSIGN7 || msg.Blame.Round == tssMessages.EDDSAKEYSIGN3 {
+	// tss-lib v3 changed the ECDSA terminal round from KEYSIGN7 to KEYSIGN9.
+	// No backward compatibility with pre-v3 round-7 records is needed: once
+	// this version is adopted, nodes sign exclusively under the v3 schema.
+	if (msg.Blame.Round == tssMessages.KEYSIGN9 || msg.Blame.Round == tssMessages.EDDSAKEYSIGN3) && len(msg.Blame.BlameNodes) > 0 {
 		for _, na := range vaultMemberNodes {
 			if msg.Signer.Equals(na.NodeAddress) {
 				voter.LastRoundCount++

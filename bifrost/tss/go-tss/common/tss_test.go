@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	btsskeygen "github.com/binance-chain/tss-lib/ecdsa/keygen"
-	btss "github.com/binance-chain/tss-lib/tss"
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	coskey "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32"
+	btsskeygen "gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
@@ -202,7 +202,7 @@ func setupProcessVerMsgEnv(c *C, privKey tcrypto.PrivKey, keyPool []string, part
 	ctx := btss.NewPeerContext(partiesID)
 	params := btss.NewParameters(btss.S256(), ctx, localPartyID, len(partiesID), 2)
 	outCh := make(chan btss.Message, len(partiesID))
-	endCh := make(chan btsskeygen.LocalPartySaveData, len(partiesID))
+	endCh := make(chan *btsskeygen.LocalPartySaveData, len(partiesID))
 	keyGenParty := btsskeygen.NewLocalParty(params, outCh, endCh)
 	partyMap := new(sync.Map)
 	partyMap.Store("tester", keyGenParty)
@@ -479,4 +479,27 @@ func (t *TssTestSuite) TestProcessInvalidMsgBlame(c *C) {
 	}
 	// for the last one, since we do not store the msg before hand, it should return no record of this party
 	c.Assert(blameResult.BlameNodes[2].BlameData, HasLen, 0)
+}
+
+// TestProcessInvalidMsgBlameEmptyCulprits pins the behavior that tss-lib v3
+// errors arriving with no culprits (e.g. round-9/10 finalize aborts where the
+// fork's identifiable-abort attribution was dropped) do not panic and produce
+// a Blame with an empty BlameNodes list and TssBrokenMsg as the reason. The
+// caller (timeout/missing-share path) is responsible for any further
+// attribution.
+func (t *TssTestSuite) TestProcessInvalidMsgBlameEmptyCulprits(c *C) {
+	tssCommonStruct, _, partiesID := setupProcessVerMsgEnv(c, t.privKey, testBlamePubKeys, 4)
+	sender := findSender(partiesID)
+	roundInfo := "round emptyCulprits"
+
+	// no culprits — simulates v3's finalize-stage abort
+	fakeErr := btss.NewError(errors.New("signature verification failed"), "ecdsa-signing", 10, sender)
+	c.Assert(fakeErr.Culprits(), HasLen, 0)
+
+	err := tssCommonStruct.processInvalidMsgBlame(roundInfo, blame.RoundInfo{RoundMsg: roundInfo}, fakeErr)
+	c.Assert(err, NotNil) // original cause is preserved as wrapped error
+
+	blameResult := tssCommonStruct.GetBlameMgr().GetBlame()
+	c.Assert(blameResult.BlameNodes, HasLen, 0)
+	c.Assert(blameResult.FailReason, Equals, blame.TssBrokenMsg)
 }

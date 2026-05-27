@@ -2,6 +2,18 @@
 # Config
 ########################################################################################
 
+# tss-lib-private is a private GitLab subgroup repo. The Dockerfiles that fetch
+# Go modules (build/docker/Dockerfile, build/docker/cli/Dockerfile,
+# tools/events/Dockerfile, ci/Dockerfile.simtest, ci/Dockerfile.regtest) use
+# `--mount=type=secret,id=ci_job_token,required=false`. Pipe CI_JOB_TOKEN
+# through to every `docker compose build` here so cache-miss rebuilds work in
+# CI. Local builds without CI_JOB_TOKEN set will still work because the mount
+# is optional and falls back to anonymous fetch (which is fine for non-private
+# repos, and the dev presumably has their own git auth for the private one).
+secrets:
+  ci_job_token:
+    environment: CI_JOB_TOKEN
+
 volumes:
   cli: {}
   thornode: {}
@@ -56,6 +68,8 @@ services:
       dockerfile: ./build/docker/cli/Dockerfile
       args:
         DOCKER_MIRROR: ${DOCKER_MIRROR:-}
+      secrets:
+        - ci_job_token
     environment:
       <<: *thorchain-environment
     entrypoint: /bin/bash
@@ -76,6 +90,8 @@ services:
       args:
         TAG: mocknet
         DOCKER_MIRROR: ${DOCKER_MIRROR:-}
+      secrets:
+        - ci_job_token
     environment:
       CONSOLE: 1
       ENDPOINTS_THORNODE: http://thornode:1317
@@ -162,6 +178,8 @@ services:
       args:
         TAG: mocknet
         DOCKER_MIRROR: ${DOCKER_MIRROR:-}
+      secrets:
+        - ci_job_token
     profiles:
       - thornode
       - mocknet

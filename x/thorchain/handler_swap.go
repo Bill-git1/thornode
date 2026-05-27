@@ -268,7 +268,8 @@ func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Re
 	}
 
 	if msg.State != nil {
-		logFields = append(logFields,
+		logFields = append(
+			logFields,
 			"interval", msg.State.Interval,
 			"quantity", msg.State.Quantity,
 			"count", msg.State.Count,
@@ -383,7 +384,8 @@ func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Re
 		swp,
 		synthVirtualDepthMult,
 		h.mgr,
-		swapAffiliates, swapAffiliateBps)
+		swapAffiliates, swapAffiliateBps,
+	)
 	if swapErr != nil {
 		return nil, cosmos.ZeroUint(), swapErr
 	}

@@ -164,7 +164,8 @@ func (h PriceFeedQuorumBatchHandler) handle(ctx cosmos.Context, msg types.MsgPri
 		if !HasSuperMajority(len(priceByNode), len(activeNodes)) {
 			ctx.Logger().Error(
 				"not enough prices for asset", "asset", symbol,
-				"num_prices", len(priceByNode), "num_nodes", len(activeNodes))
+				"num_prices", len(priceByNode), "num_nodes", len(activeNodes),
+			)
 			continue
 		}
 

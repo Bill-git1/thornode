@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/binance-chain/tss-lib/crypto"
 	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/decred/dcrd/dcrec/edwards/v2"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"

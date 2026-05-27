@@ -82,7 +82,9 @@ func (s *ObserverSuite) ResetMockClient(c *C) {
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x7"}`))
 					c.Assert(err, IsNil)
 				}
-			}))
+			},
+		),
+	)
 
 	httpRequestTimeout, _ := time.ParseDuration("5s")
 
@@ -161,7 +163,8 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 			default:
 				c.Errorf("invalid server query: %s", req.RequestURI)
 			}
-		}))
+		}),
+	)
 
 	s.metrics = getSharedTestMetrics()
 	c.Assert(s.metrics, NotNil)

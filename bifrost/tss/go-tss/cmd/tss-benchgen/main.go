@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/binance-chain/tss-lib/common"
-	"github.com/binance-chain/tss-lib/ecdsa/keygen"
-	"github.com/binance-chain/tss-lib/test"
-	"github.com/binance-chain/tss-lib/tss"
 	"github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/common"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/test"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -129,14 +129,13 @@ func runKeyGen(dir string, t, n int) {
 
 	errCh := make(chan *tss.Error, len(pIDs))
 	outCh := make(chan tss.Message, len(pIDs))
-	endCh := make(chan keygen.LocalPartySaveData, len(pIDs))
+	endCh := make(chan *keygen.LocalPartySaveData, len(pIDs))
 
 	updater := test.SharedPartyUpdater
 
 	// init the parties
 	for i := 0; i < len(pIDs); i++ {
 		params := tss.NewParameters(tss.S256(), p2pCtx, pIDs[i], len(pIDs), t)
-		params.UNSAFE_setKGIgnoreH1H2Dupes(true)
 		P := keygen.NewLocalParty(params, outCh, endCh, preParamTestData).(*keygen.LocalParty)
 		parties = append(parties, P)
 		go func(P *keygen.LocalParty) {
@@ -179,7 +178,7 @@ outer:
 			if err != nil {
 				panic(err)
 			}
-			tryWriteKeyGenDataFile(dir, index, save)
+			tryWriteKeyGenDataFile(dir, index, *save)
 
 			atomic.AddInt32(&ended, 1)
 			if atomic.LoadInt32(&ended) == int32(len(pIDs)) {

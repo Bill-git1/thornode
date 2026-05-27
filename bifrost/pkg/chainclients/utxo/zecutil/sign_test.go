@@ -96,7 +96,8 @@ func TestSign(t *testing.T) {
 		}),
 		nil,
 		nil,
-		0)
+		0,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

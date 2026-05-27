@@ -492,14 +492,16 @@ func notifyChurnStarted(height, keygenHeight int64, keyshareBackups map[string]m
 		}
 		pk := *vault.PubKey
 		eddsaPk := *vault.PubKeyEddsa
-		keyshareBackupLines = append(keyshareBackupLines,
+		keyshareBackupLines = append(
+			keyshareBackupLines,
 			fmt.Sprintf(
 				"`%s` (ECDSA): %d/%d (%.2f%%)",
 				pk[len(pk)-4:], len(keyshareBackups[pk]), len(vault.Membership),
 				100*float64(len(keyshareBackups[pk]))/float64(len(vault.Membership)),
 			),
 		)
-		keyshareBackupLines = append(keyshareBackupLines,
+		keyshareBackupLines = append(
+			keyshareBackupLines,
 			fmt.Sprintf(
 				"`%s` (EDDSA): %d/%d (%.2f%%)",
 				eddsaPk[len(eddsaPk)-4:], len(keyshareBackups[eddsaPk]), len(vault.Membership),

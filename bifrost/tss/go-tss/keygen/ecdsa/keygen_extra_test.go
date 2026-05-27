@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	bcrypto "github.com/binance-chain/tss-lib/crypto"
-	bkg "github.com/binance-chain/tss-lib/ecdsa/keygen"
-	btss "github.com/binance-chain/tss-lib/tss"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/addr"
+	bcrypto "gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
+	bkg "gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	btss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
@@ -104,7 +104,7 @@ func (s *TssECDSAKeygenExtraSuite) TestProcessKeyGenErrChan(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan bkg.LocalPartySaveData, 1)
+	endCh := make(chan *bkg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// Close errChan immediately to trigger the error path
@@ -127,7 +127,7 @@ func (s *TssECDSAKeygenExtraSuite) TestProcessKeyGenStopChan(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan bkg.LocalPartySaveData, 1)
+	endCh := make(chan *bkg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// Close stopChan to trigger the stop path
@@ -149,7 +149,7 @@ func (s *TssECDSAKeygenExtraSuite) TestProcessKeyGenTimeout(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan bkg.LocalPartySaveData, 1)
+	endCh := make(chan *bkg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// No messages on any channel - will timeout
@@ -180,7 +180,7 @@ func (s *TssECDSAKeygenExtraSuite) TestProcessKeyGenEndChSaveError(c *C) {
 
 	errChan := make(chan struct{})
 	outCh := make(chan btss.Message, 1)
-	endCh := make(chan bkg.LocalPartySaveData, 1)
+	endCh := make(chan *bkg.LocalPartySaveData, 1)
 	localState := storage.KeygenLocalState{}
 
 	// Create a valid ECPoint on the secp256k1 curve (generator point)
@@ -189,7 +189,7 @@ func (s *TssECDSAKeygenExtraSuite) TestProcessKeyGenEndChSaveError(c *C) {
 	c.Assert(err, IsNil)
 
 	// Send LocalPartySaveData with valid ECDSAPub
-	endCh <- bkg.LocalPartySaveData{ECDSAPub: ecPoint}
+	endCh <- &bkg.LocalPartySaveData{ECDSAPub: ecPoint}
 
 	result, err := instance.processKeyGen(errChan, outCh, endCh, localState)
 	c.Assert(err, NotNil)

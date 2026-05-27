@@ -84,7 +84,8 @@ func (h VersionHandler) handle(ctx cosmos.Context, msg MsgSetVersion) error {
 	ctx.EventManager().EmitEvent(
 		cosmos.NewEvent("set_version",
 			cosmos.NewAttribute("thor_address", msg.Signer.String()),
-			cosmos.NewAttribute("version", msg.Version)))
+			cosmos.NewAttribute("version", msg.Version)),
+	)
 
 	if nodeAccount.Status == NodeActive {
 		// This could affect the MinJoinVersion, so update it.

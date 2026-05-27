@@ -29,8 +29,13 @@ const (
 	KEYSIGN5         = "SignRound5Message"
 	KEYSIGN6         = "SignRound6Message"
 	KEYSIGN7         = "SignRound7Message"
+	KEYSIGN8         = "SignRound8Message"
+	KEYSIGN9         = "SignRound9Message"
 	TSSKEYGENROUNDS  = 4
-	TSSKEYSIGNROUNDS = 7
+	// TSSKEYSIGNROUNDS is sized to fit every ECDSA keysign message index
+	// (round 1 splits into Message1/Message2, then rounds 2..9 add one each),
+	// i.e. max blame.RoundInfo.Index + 1 = 10. tss-lib v3 added rounds 8 and 9.
+	TSSKEYSIGNROUNDS = 10
 
 	ECDSAKEYGEN Algo = iota
 	ECDSAKEYSIGN
@@ -50,6 +55,8 @@ var ValidTssKeysignRounds = map[string]bool{
 	KEYSIGN5:         true,
 	KEYSIGN6:         true,
 	KEYSIGN7:         true,
+	KEYSIGN8:         true,
+	KEYSIGN9:         true,
 	EDDSAKEYSIGN1:    true,
 	EDDSAKEYSIGN2:    true,
 	EDDSAKEYSIGN3:    true,

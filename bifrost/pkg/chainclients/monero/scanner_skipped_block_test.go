@@ -40,7 +40,8 @@ func TestVaultRegistrationFailurePropagatesError(t *testing.T) {
 		if r.URL.Path == "/v1/monero/vaults/register" {
 			// Sidecar rejects: this vault_pub_key was already registered
 			// with a different group_key (the frost key's group_key).
-			http.Error(w,
+			http.Error(
+				w,
 				`{"error":"vault is already registered with a different mapping"}`,
 				http.StatusInternalServerError,
 			)
@@ -95,7 +96,8 @@ func TestRegistrationFailureSkipsOnlyBadVault(t *testing.T) {
 
 			// First vault succeeds, second vault fails.
 			if req.VaultPubKey == badKey.String() {
-				http.Error(w,
+				http.Error(
+					w,
 					`{"error":"already registered with different mapping"}`,
 					http.StatusInternalServerError,
 				)

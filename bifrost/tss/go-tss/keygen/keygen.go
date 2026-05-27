@@ -1,7 +1,7 @@
 package keygen
 
 import (
-	bcrypto "github.com/binance-chain/tss-lib/crypto"
+	bcrypto "gitlab.com/thorchain/tss/tss-lib-private.git/v3/crypto"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"

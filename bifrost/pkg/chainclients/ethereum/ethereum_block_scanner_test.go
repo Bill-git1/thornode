@@ -567,7 +567,8 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 
 	// add thorchain router
 	useWhitelistSmartContract = true
-	whitelistSmartContractAddress = append(whitelistSmartContractAddress,
+	whitelistSmartContractAddress = append(
+		whitelistSmartContractAddress,
 		"0xd37bbe5744d730a1d98d8dc97c42f0ca46ad7146",
 	)
 
@@ -706,7 +707,8 @@ func (s *BlockScannerTestSuite) TestRouterValidation(c *C) {
 
 	// Ensure both router addresses pass the log parser's address validator.
 	useWhitelistSmartContract = true
-	whitelistSmartContractAddress = append(whitelistSmartContractAddress,
+	whitelistSmartContractAddress = append(
+		whitelistSmartContractAddress,
 		thorcommon.Address(correctRouter),
 		thorcommon.Address(wrongRouter),
 	)

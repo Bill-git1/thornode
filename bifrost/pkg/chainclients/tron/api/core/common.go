@@ -101,7 +101,7 @@ func file_core_contract_common_proto_rawDescGZIP() []byte {
 var (
 	file_core_contract_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 	file_core_contract_common_proto_goTypes   = []any{
-		(ResourceCode)(0), // 0: protocol.ResourceCode
+		ResourceCode(0), // 0: protocol.ResourceCode
 	}
 )
 

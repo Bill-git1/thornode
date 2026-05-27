@@ -73,7 +73,8 @@ func TestObserverRoundTrip(t *testing.T) {
 			default:
 				t.Fatalf("invalid server query: %s", req.RequestURI)
 			}
-		}))
+		}),
+	)
 
 	cfg := config.BifrostClientConfiguration{
 		ChainID:      "thorchain",

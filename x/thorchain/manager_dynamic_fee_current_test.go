@@ -54,7 +54,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapDisabled(c *C) {
 
 	registerThorname(ctx, k, "mytn", 1)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1000), cosmos.NewUint(10),
@@ -79,7 +80,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapNonL1Asset(c *C) {
 	synthBTC, err := common.NewAsset("BTC/BTC")
 	c.Assert(err, IsNil)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		synthBTC, common.RuneAsset(),
 		cosmos.NewUint(1000), cosmos.NewUint(10),
@@ -109,7 +111,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapBasicFlow(c *C) {
 	volume := cosmos.NewUint(500_000)
 	fees := cosmos.NewUint(5_000)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		volume, fees,
@@ -128,7 +131,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapBasicFlow(c *C) {
 	c.Assert(rec.DynamicBps, Equals, uint64(1)) // L1DynamicFeeFloorBPS = 1
 
 	// Credit again to verify accumulation
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		volume, fees,
@@ -158,7 +162,8 @@ func (s *DynamicFeeMgrSuite) TestGetDynamicBpsBasic(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, rec), IsNil)
 
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 	)
@@ -178,7 +183,8 @@ func (s *DynamicFeeMgrSuite) TestGetDynamicBpsMonitorMode(c *C) {
 	pairA, pairB, ok := dynamicFeePairKey(common.BTCAsset, common.RuneAsset())
 	c.Assert(ok, Equals, true)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"montn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(500_000), cosmos.NewUint(5_000),
@@ -196,7 +202,8 @@ func (s *DynamicFeeMgrSuite) TestGetDynamicBpsMonitorMode(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, rec), IsNil)
 
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"montn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 	)
@@ -234,7 +241,8 @@ func (s *DynamicFeeMgrSuite) TestGetDynamicBpsMultiAffiliate(c *C) {
 	c.Assert(k.SetDynamicFeeRecord(ctx, recSmall), IsNil)
 	c.Assert(k.SetDynamicFeeRecord(ctx, recLarge), IsNil)
 
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"small", "large"},
 		[]cosmos.Uint{cosmos.NewUint(100), cosmos.NewUint(300)},
 		common.BTCAsset, common.RuneAsset(),
@@ -252,7 +260,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockEpochBoundary(c *C) {
 
 	registerThorname(ctx, k, "mytn", 1)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -289,7 +298,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockColdStartProbesUp(c *C) {
 	c.Assert(ok, Equals, true)
 
 	// --- Epoch 1 at block 20 ---
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -301,7 +311,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockColdStartProbesUp(c *C) {
 
 	// --- Epoch 2 at block 30 --- another cold-start probe since no prior
 	// change has been recorded yet (the first epoch is its own starting point).
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -336,7 +347,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockContinueUpOnFeeRise(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, pre), IsNil)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(10_000), cosmos.NewUint(200),
@@ -371,7 +383,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockReverseDownOnFeeFall(c *C) {
 	c.Assert(k.SetDynamicFeeRecord(ctx, pre), IsNil)
 
 	// This epoch shows fees = 50 (75% drop) under bps=8.
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(10_000), cosmos.NewUint(50),
@@ -404,7 +417,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockContinueDownOnFeeRise(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, pre), IsNil)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(10_000), cosmos.NewUint(150),
@@ -439,7 +453,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockHoldInDeadband(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, pre), IsNil)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(10_000), cosmos.NewUint(105), // 5% increase
@@ -532,7 +547,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockFloorClamp(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, pre), IsNil)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(10_000), cosmos.NewUint(500),
@@ -567,7 +583,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockCeilingClamp(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, pre), IsNil)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(10_000), cosmos.NewUint(500),
@@ -592,7 +609,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockSoloOnPair(c *C) {
 	pairA, pairB, _ := dynamicFeePairKey(common.BTCAsset, common.RuneAsset())
 
 	for epoch := int64(1); epoch <= 3; epoch++ {
-		dfm.CreditSwap(ctx,
+		dfm.CreditSwap(
+			ctx,
 			[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 			common.BTCAsset, common.RuneAsset(),
 			cosmos.NewUint(1_000_000), cosmos.NewUint(uint64(100*epoch)),
@@ -616,7 +634,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockWhitelistRemovalCleanup(c *C) {
 
 	registerThorname(ctx, k, "mytn", 1)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(500_000), cosmos.NewUint(5_000),
@@ -668,13 +687,15 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapDoubleSwapPerLegKeys(c *C) {
 	legFees := cosmos.NewUint(5_000)
 
 	// Leg 1: BTC → RUNE
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		legVolume, legFees,
 	)
 	// Leg 2: RUNE → ETH
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.RuneAsset(), common.ETHAsset,
 		legVolume, legFees,
@@ -713,12 +734,14 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapDoubleSwapPerLegKeys(c *C) {
 	c.Assert(ethRuneRec.DynamicBps, Equals, uint64(1),
 		Commentf("ETH/RUNE record should be lazily created at floor"))
 
-	btcRuneBps := dfm.GetDynamicBps(ctx,
+	btcRuneBps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 	)
 	c.Assert(btcRuneBps, Equals, uint64(1))
-	ethRuneBps := dfm.GetDynamicBps(ctx,
+	ethRuneBps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.ETHAsset, common.RuneAsset(),
 	)
@@ -739,7 +762,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapDominantOnly(c *C) {
 	registerThorname(ctx, k, "small", 1)
 	registerThorname(ctx, k, "large", 1)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"small", "large"},
 		[]cosmos.Uint{cosmos.NewUint(100), cosmos.NewUint(300)},
 		common.BTCAsset, common.RuneAsset(),
@@ -789,7 +813,8 @@ func (s *DynamicFeeMgrSuite) TestDominantEligibleAffiliateBypass(c *C) {
 
 	// `qqqqqq` is neither a registered THORName nor a parseable address, but
 	// its 500 bps would dominate strict largest-bps selection.
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"xdefi", "qqqqqq"},
 		[]cosmos.Uint{cosmos.NewUint(1), cosmos.NewUint(500)},
 		common.BTCAsset, common.RuneAsset(),
@@ -797,7 +822,8 @@ func (s *DynamicFeeMgrSuite) TestDominantEligibleAffiliateBypass(c *C) {
 	c.Assert(bps, Equals, uint64(50),
 		Commentf("ineligible high-bps secondary must not collapse the floor to static"))
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"xdefi", "qqqqqq"},
 		[]cosmos.Uint{cosmos.NewUint(1), cosmos.NewUint(500)},
 		common.BTCAsset, common.RuneAsset(),
@@ -832,7 +858,8 @@ func (s *DynamicFeeMgrSuite) TestDominantEligibleAffiliateAddressForm(c *C) {
 	c.Assert(k.SetDynamicFeeRecord(ctx, rec), IsNil)
 
 	addr := GetRandomTHORAddress().String()
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"xdefi", addr},
 		[]cosmos.Uint{cosmos.NewUint(50), cosmos.NewUint(450)},
 		common.BTCAsset, common.RuneAsset(),
@@ -864,7 +891,8 @@ func (s *DynamicFeeMgrSuite) TestDominantEligibleAffiliateUnwhitelisted(c *C) {
 	}
 	c.Assert(k.SetDynamicFeeRecord(ctx, rec), IsNil)
 
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"xdefi", "rando"},
 		[]cosmos.Uint{cosmos.NewUint(10), cosmos.NewUint(900)},
 		common.BTCAsset, common.RuneAsset(),
@@ -901,7 +929,8 @@ func (s *DynamicFeeMgrSuite) TestDominantEligibleAffiliateMonitorVsActive(c *C) 
 
 	// GetDynamicBps allows only state 1 → picks "active" even though
 	// "monitor" has higher bps.
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"active", "monitor"},
 		[]cosmos.Uint{cosmos.NewUint(100), cosmos.NewUint(900)},
 		common.BTCAsset, common.RuneAsset(),
@@ -909,7 +938,8 @@ func (s *DynamicFeeMgrSuite) TestDominantEligibleAffiliateMonitorVsActive(c *C) 
 	c.Assert(bps, Equals, uint64(17))
 
 	// CreditSwap allows state 1 or 2 → picks "monitor" by largest bps.
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"active", "monitor"},
 		[]cosmos.Uint{cosmos.NewUint(100), cosmos.NewUint(900)},
 		common.BTCAsset, common.RuneAsset(),
@@ -937,7 +967,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapMismatchedAffiliateLengths(c *C) {
 	registerThorname(ctx, k, "mytn", 1)
 
 	// affiliates has 2 entries, affiliateBps has 1 → reject.
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn", "other"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -950,7 +981,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapMismatchedAffiliateLengths(c *C) {
 	c.Assert(acc.VolumeTor.IsZero(), Equals, true,
 		Commentf("mismatched slice lengths must not mutate state"))
 
-	bps := dfm.GetDynamicBps(ctx,
+	bps := dfm.GetDynamicBps(
+		ctx,
 		[]string{"mytn", "other"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 	)
@@ -971,7 +1003,8 @@ func (s *DynamicFeeMgrSuite) TestCreditSwapCacheContextRollback(c *C) {
 	registerThorname(ctx, k, "mytn", 1)
 
 	cacheCtx, _ := ctx.CacheContext()
-	dfm.CreditSwap(cacheCtx,
+	dfm.CreditSwap(
+		cacheCtx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -1006,7 +1039,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockSealBeforePruneSurvivesLateStart(c *C) 
 	// Epoch 50 > MaxDynamicFeeHistory (30). If prune ran before seal, a
 	// fresh record with LastActiveEpoch == 0 would satisfy
 	// currentEpoch - 0 >= 30 and be deleted on its first appearance.
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -1037,7 +1071,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockRebasesOnEpochBlocksShrink(c *C) {
 	registerThorname(ctx, k, "mytn", 1)
 
 	// Seal epoch under EB=100 at block 1000 → LastActiveEpoch = 10.
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -1083,7 +1118,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockRebasesOnEpochBlocksGrow(c *C) {
 	registerThorname(ctx, k, "mytn", 1)
 
 	// Seal at block 100 under EB=10 → LastActiveEpoch = 10.
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -1121,7 +1157,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockRebaseFirstObservationNoop(c *C) {
 	dfm := newDynamicFeeMgr(k)
 	registerThorname(ctx, k, "mytn", 1)
 
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -1223,7 +1260,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockClearsAccumulatorsWhenDisabled(c *C) {
 	c.Assert(ok, Equals, true)
 
 	// Accumulate within an epoch under the enabled feature.
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(1_000_000), cosmos.NewUint(10_000),
@@ -1247,7 +1285,8 @@ func (s *DynamicFeeMgrSuite) TestEndBlockClearsAccumulatorsWhenDisabled(c *C) {
 	// Re-enable and accumulate again — no pre-disable residue should be
 	// visible to the next seal.
 	k.SetMimir(ctx, "L1DynamicFeeEnabled", 1)
-	dfm.CreditSwap(ctx,
+	dfm.CreditSwap(
+		ctx,
 		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
 		common.BTCAsset, common.RuneAsset(),
 		cosmos.NewUint(7), cosmos.NewUint(3),

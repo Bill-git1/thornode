@@ -432,3 +432,68 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_rejects_legacy_round_i
 	c.Assert(err, NotNil)
 	c.Assert(errors.Is(err, se.ErrUnknownRequest), Equals, true)
 }
+
+// runTerminalRoundFreezeScenario submits an MsgTssKeysignFail with the given
+// terminal round from a simple majority of vault members. The blameBuilder
+// callback receives the registered member accounts and returns the BlameNodes
+// list to use, so positive-path callers can reference real registered pubkeys
+// (the handler resolves blame entries through GetNodeAccountByPubKey).
+func runTerminalRoundFreezeScenario(c *C, round string, blameBuilder func(members NodeAccounts) []Node) Vault {
+	helper := newTssKeysignHandlerTestHelper(c)
+	handler := NewTssKeysignHandler(NewDummyMgrWithKeeper(helper.keeper))
+	coins := common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}
+
+	vault := NewVault(helper.ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	accounts := NodeAccounts{}
+	for i := 0; i < 8; i++ {
+		na := GetRandomValidatorNode(NodeActive)
+		c.Assert(helper.keeper.SetNodeAccount(helper.ctx, na), IsNil)
+		vault.Membership = append(vault.Membership, na.PubKeySet.Secp256k1.String())
+		accounts = append(accounts, na)
+	}
+	c.Assert(helper.keeper.SetVault(helper.ctx, vault), IsNil)
+
+	blame := Blame{
+		FailReason: "tss timeout",
+		Round:      round,
+		BlameNodes: blameBuilder(accounts),
+	}
+	// Submit from 5 of 8 vault members to clear simple-majority consensus.
+	for i := 0; i < 5; i++ {
+		msg, err := NewMsgTssKeysignFail(helper.ctx.BlockHeight(), blame, "hello", coins, accounts[i].NodeAddress, vault.PubKey)
+		c.Assert(err, IsNil)
+		_, err = handler.Run(helper.ctx, msg)
+		c.Assert(err, IsNil)
+	}
+
+	got, err := helper.keeper.GetVault(helper.ctx, vault.PubKey)
+	c.Assert(err, IsNil)
+	return got
+}
+
+// TestTssKeysignFailHandler_terminal_round_empty_blamenodes_does_not_freeze is
+// the regression for the BlameNodes-guard fix: a terminal-round (KEYSIGN9 or
+// EDDSAKEYSIGN3) MsgTssKeysignFail with len(BlameNodes) == 0 must NOT increment
+// LastRoundCount and therefore must NOT freeze the vault. Without the guard,
+// a colluding minority could lock a vault by reporting terminal-round failures
+// that blame nobody, since FailReason alone satisfies Blame.IsEmpty().
+func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_terminal_round_empty_blamenodes_does_not_freeze(c *C) {
+	for _, round := range []string{tssMessages.KEYSIGN9, tssMessages.EDDSAKEYSIGN3} {
+		got := runTerminalRoundFreezeScenario(c, round, func(_ NodeAccounts) []Node { return []Node{} })
+		c.Assert(got.Frozen, HasLen, 0, Commentf("round=%s: empty BlameNodes must not freeze", round))
+	}
+}
+
+// TestTssKeysignFailHandler_terminal_round_with_blamenodes_freezes covers the
+// positive path: a terminal-round MsgTssKeysignFail with a non-empty BlameNodes
+// list reported by a majority of vault members must freeze the vault on the
+// blamed chain. Together with the empty-BlameNodes regression above, this
+// pins down the exact condition the guard enforces.
+func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_terminal_round_with_blamenodes_freezes(c *C) {
+	for _, round := range []string{tssMessages.KEYSIGN9, tssMessages.EDDSAKEYSIGN3} {
+		got := runTerminalRoundFreezeScenario(c, round, func(members NodeAccounts) []Node {
+			return []Node{{Pubkey: members[7].PubKeySet.Secp256k1.String()}}
+		})
+		c.Assert(got.Frozen, DeepEquals, []string{common.ETHChain.String()}, Commentf("round=%s: non-empty BlameNodes must freeze", round))
+	}
+}

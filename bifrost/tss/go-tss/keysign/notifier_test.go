@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"os"
 
-	tsslibcommon "github.com/binance-chain/tss-lib/common"
+	tsslibcommon "gitlab.com/thorchain/tss/tss-lib-private.git/v3/common"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
@@ -113,10 +113,8 @@ func (NotifierTestSuite) TestVerifySignatureInvalidPubKey(c *C) {
 	n, err := newNotifier("messageID", [][]byte{[]byte("hello")}, "invalidpubkey", nil)
 	c.Assert(err, IsNil)
 	sigData := &tsslibcommon.SignatureData{
-		Signature: &tsslibcommon.ECSignature{
-			R: []byte{1, 2, 3},
-			S: []byte{4, 5, 6},
-		},
+		R: []byte{1, 2, 3},
+		S: []byte{4, 5, 6},
 	}
 	err = n.verifySignature(sigData, []byte("hello"))
 	c.Assert(err, NotNil)

@@ -62,7 +62,8 @@ func (h WasmInstantiateContract2Handler) handle(ctx cosmos.Context, msg wasmtype
 		}
 	}
 
-	address, data, err := h.mgr.WasmManager().InstantiateContract2(ctx,
+	address, data, err := h.mgr.WasmManager().InstantiateContract2(
+		ctx,
 		msg.CodeID,
 		senderAddr,
 		adminAddr,

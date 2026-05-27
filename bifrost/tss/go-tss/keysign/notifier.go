@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/binance-chain/tss-lib/common"
 	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32"
 	"github.com/tendermint/btcd/btcec"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/common"
 )
 
 const defaultNotifierTTL = time.Second * 30
@@ -88,7 +88,7 @@ func (n *notifier) verifySignature(data *common.SignatureData, msg []byte) error
 		if err != nil {
 			return err
 		}
-		verified := ecdsa.Verify(pub.ToECDSA(), msg, new(big.Int).SetBytes(data.GetSignature().R), new(big.Int).SetBytes(data.GetSignature().S))
+		verified := ecdsa.Verify(pub.ToECDSA(), msg, new(big.Int).SetBytes(data.R), new(big.Int).SetBytes(data.S))
 		if !verified {
 			return fmt.Errorf("secp256k1 signature did not verify")
 		}
@@ -96,7 +96,7 @@ func (n *notifier) verifySignature(data *common.SignatureData, msg []byte) error
 
 	case ed25519.KeyType:
 		pk := ed25519.PubKey(pubKey.Bytes())
-		verified := pk.VerifySignature(msg, data.Signature.GetSignature())
+		verified := pk.VerifySignature(msg, data.Signature)
 		if !verified {
 			return fmt.Errorf("ed25519 signature did not verify")
 		}

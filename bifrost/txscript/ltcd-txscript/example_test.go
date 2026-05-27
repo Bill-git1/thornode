@@ -64,7 +64,8 @@ func ExampleExtractPkScriptAddrs() {
 
 	// Extract and print details from the script.
 	scriptClass, addresses, reqSigs, err := txscript.ExtractPkScriptAddrs(
-		script, &chaincfg.MainNetParams)
+		script, &chaincfg.MainNetParams,
+	)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -10,12 +10,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/binance-chain/tss-lib/ecdsa/keygen"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/addr"
 	maddr "github.com/multiformats/go-multiaddr"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
+	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/curvelock"
 )
 
 // KeygenLocalState is a structure used to represent the data we saved locally for different keygen
@@ -50,9 +52,15 @@ func (kls *KeygenLocalState) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	// if that fails, attempt unmarshal as the old format
+	// if that fails, attempt unmarshal as the old format. Pin the global curve
+	// to secp256k1 under the shared curvelock so v3's ECPoint.UnmarshalJSON
+	// cannot race with a concurrent EdDSA load flipping tss-lib's global mid-
+	// unmarshal — legacy keyshares lack the embedded "Curve" field and fall
+	// back to tss.EC().
 	var oldState keygenLocalStateV1
-	if err := json.Unmarshal(data, &oldState); err != nil {
+	if err := curvelock.WithCurve(tss.S256(), func() error {
+		return json.Unmarshal(data, &oldState)
+	}); err != nil {
 		return fmt.Errorf("failed to unmarshal both new and old KeygenLocalState formats: %w", err)
 	}
 

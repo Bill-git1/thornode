@@ -15,9 +15,21 @@ COPY --from=bitcoin-cash /usr/local/bin/bitcoin-cli /usr/local/bin/bitcoin-cash-
 COPY --from=dogecoin /usr/local/bin/dogecoin-cli /usr/local/bin/dogecoin-cli
 COPY --from=litecoin /usr/local/bin/litecoin-cli /usr/local/bin/litecoin-cli
 
+# tss-lib-private is a private GitLab subgroup repo; skip proxy.golang.org/sumdb
+# so `go mod download` resolves it via the git insteadOf below.
+ENV GOPRIVATE=gitlab.com/thorchain/tss/tss-lib-private.git
+
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN go mod download
+# Mount CI_JOB_TOKEN as a BuildKit secret to authenticate the private fetch.
+# required=false keeps local `make` / `docker compose` builds working when unset.
+# File-based mount instead of env= so hadolint 2.12.1-beta can parse the RUN.
+RUN --mount=type=secret,id=ci_job_token,required=false \
+    if [ -s /run/secrets/ci_job_token ]; then \
+      git config --global url."https://gitlab-ci-token:$(cat /run/secrets/ci_job_token)@gitlab.com/".insteadOf "https://gitlab.com/"; \
+    fi && \
+    go mod download && \
+    rm -f /root/.gitconfig
 
 COPY . .
 
