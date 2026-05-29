@@ -31,7 +31,12 @@ const (
 	KEYSIGN7         = "SignRound7Message"
 	KEYSIGN8         = "SignRound8Message"
 	KEYSIGN9         = "SignRound9Message"
-	TSSKEYGENROUNDS  = 4
+	// TEMP: keyverify — tss-lib keyverify round-message proto names.
+	KEYVERIFY1      = "KVRound1Message"
+	KEYVERIFY2a     = "KVRound2Message1"
+	KEYVERIFY2b     = "KVRound2Message2"
+	KEYVERIFY3      = "KVRound3Message"
+	TSSKEYGENROUNDS = 4
 	// TSSKEYSIGNROUNDS is sized to fit every ECDSA keysign message index
 	// (round 1 splits into Message1/Message2, then rounds 2..9 add one each),
 	// i.e. max blame.RoundInfo.Index + 1 = 10. tss-lib v3 added rounds 8 and 9.

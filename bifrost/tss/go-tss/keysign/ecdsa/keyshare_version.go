@@ -4,6 +4,34 @@ import (
 	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
 )
 
+// KeyshareVersion records the on-disk shape of a deserialised LocalPartySaveData.
+//
+// The v3 fork of tss-lib added two fields to the Paillier private key (P, Q)
+// so that keygen can emit a ModProof. The v0.1.6 binance-chain/tss-lib never
+// stored them. Detecting which set of fields is populated tells us which
+// generation of tss-lib produced the keyshare.
+type KeyshareVersion int
+
+const (
+	// KeyshareVersionLegacy is the pre-v3 shape: PaillierSK has only
+	// {N, LambdaN, PhiN}. Common in production on nodes that have not
+	// re-keygenned since the v3 upgrade.
+	KeyshareVersionLegacy KeyshareVersion = iota
+	// KeyshareVersionV3 is the v3 shape: PaillierSK additionally carries
+	// the safe primes {P, Q} required by ModProof during keygen.
+	KeyshareVersionV3
+)
+
+// DetectKeyshareVersion classifies a deserialised keyshare by the presence of
+// the v3-only Paillier safe primes. Callers must have unmarshalled the bytes
+// into a v3 LocalPartySaveData before calling.
+func DetectKeyshareVersion(d keygen.LocalPartySaveData) KeyshareVersion {
+	if d.PaillierSK != nil && d.PaillierSK.P != nil && d.PaillierSK.Q != nil {
+		return KeyshareVersionV3
+	}
+	return KeyshareVersionLegacy
+}
+
 // ValidateForKeysign returns true when the keyshare carries every field the
 // v3 ECDSA signing protocol actually reads.
 //

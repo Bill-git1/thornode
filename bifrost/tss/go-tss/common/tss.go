@@ -341,13 +341,13 @@ func (t *TssCommon) ProcessOneMessage(wrappedMsg *messages.WrappedMessage, peerI
 	}
 
 	switch wrappedMsg.MessageType {
-	case messages.TSSKeyGenMsg, messages.TSSKeySignMsg:
+	case messages.TSSKeyGenMsg, messages.TSSKeySignMsg, messages.TSSKeyVerifyMsg: // TEMP: keyverify
 		var wireMsg messages.WireMessage
 		if err := json.Unmarshal(wrappedMsg.Payload, &wireMsg); nil != err {
 			return fmt.Errorf("fail to unmarshal wire message: %w", err)
 		}
 		return t.processTSSMsg(&wireMsg, wrappedMsg.MessageType, false)
-	case messages.TSSKeyGenVerMsg, messages.TSSKeySignVerMsg:
+	case messages.TSSKeyGenVerMsg, messages.TSSKeySignVerMsg, messages.TSSKeyVerifyVerMsg: // TEMP: keyverify
 		var bMsg messages.BroadcastConfirmMessage
 		if err := json.Unmarshal(wrappedMsg.Payload, &bMsg); nil != err {
 			return errors.New("fail to unmarshal broadcast confirm message")
@@ -635,7 +635,10 @@ func (t *TssCommon) requestShareFromPeer(localCacheItem *LocalCacheItem, thresho
 	case messages.TSSKeySignVerMsg:
 		msg.RequestType = messages.TSSKeySignMsg
 		return t.processRequestMsgFromPeer(peersIDs, msg, true)
-	case messages.TSSKeySignMsg, messages.TSSKeyGenMsg:
+	case messages.TSSKeyVerifyVerMsg: // TEMP: keyverify
+		msg.RequestType = messages.TSSKeyVerifyMsg
+		return t.processRequestMsgFromPeer(peersIDs, msg, true)
+	case messages.TSSKeySignMsg, messages.TSSKeyGenMsg, messages.TSSKeyVerifyMsg: // TEMP: keyverify
 		msg.RequestType = msgType
 		return t.processRequestMsgFromPeer(peersIDs, msg, true)
 	default:
@@ -809,6 +812,8 @@ func getBroadcastMessageType(msgType messages.THORChainTSSMessageType) messages.
 		return messages.TSSKeyGenVerMsg
 	case messages.TSSKeySignMsg:
 		return messages.TSSKeySignVerMsg
+	case messages.TSSKeyVerifyMsg: // TEMP: keyverify
+		return messages.TSSKeyVerifyVerMsg
 	default:
 		return messages.Unknown // this should not happen
 	}

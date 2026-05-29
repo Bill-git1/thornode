@@ -135,9 +135,29 @@ func (h TssKeysignHandler) handle(ctx cosmos.Context, msg MsgTssKeysignFail) (*c
 	// still participate in keysign during churn after leaving the active set,
 	// so using IsNodeKeys here would undercount final-round reports and could
 	// miss freezing a vault that is still failing at the terminal round.
-	// tss-lib v3 changed the ECDSA terminal round from KEYSIGN7 to KEYSIGN9.
-	// No backward compatibility with pre-v3 round-7 records is needed: once
-	// this version is adopted, nodes sign exclusively under the v3 schema.
+	//
+	// The terminal round is the final protocol round, where signature shares
+	// are revealed: KEYSIGN9 for tss-lib v3 secp256k1 (v3 added rounds 8 and 9)
+	// and EDDSAKEYSIGN3 for EdDSA. KEYSIGN7 is deliberately NOT accepted.
+	// Although round 7 was the terminal round under tss-lib v1, under v3 it is
+	// an interior consistency-check commitment round (the U_i/T_i commitment in
+	// the GG18 phase-5 check) that runs before any share is revealed at round 9.
+	// A round-7 failure is therefore a transient mid-protocol liveness blip, not
+	// a terminal signing failure; accepting it would freeze vaults on ordinary
+	// peer timeouts. v1 round-7 backward compatibility is intentionally dropped:
+	// once v3 is adopted the network signs exclusively under the v3 schema, so
+	// no new KEYSIGN7 records are produced (see thornode!4846).
+	//
+	// CONSENSUS-AFFECTING: this acceptance set determines voter.LastRoundCount
+	// math for any MsgTssKeysignFail carrying these round names. All validators
+	// must run a build with the same set before the network observes v3 keysign
+	// failures, otherwise upgraded and non-upgraded peers diverge.
+	//
+	// The len(BlameNodes) > 0 guard prevents a colluding minority from
+	// freezing a vault by reporting terminal-round failures that blame
+	// nobody — Blame.IsEmpty() only checks FailReason, so without this
+	// guard an empty-BlameNodes terminal-round report would still bump
+	// LastRoundCount toward the freeze threshold.
 	if (msg.Blame.Round == tssMessages.KEYSIGN9 || msg.Blame.Round == tssMessages.EDDSAKEYSIGN3) && len(msg.Blame.BlameNodes) > 0 {
 		for _, na := range vaultMemberNodes {
 			if msg.Signer.Equals(na.NodeAddress) {
@@ -170,7 +190,7 @@ func (h TssKeysignHandler) handle(ctx cosmos.Context, msg MsgTssKeysignFail) (*c
 		[]metrics.Label{telemetry.NewLabel("pubkey", msg.PubKey.String()), telemetry.NewLabel("round", msg.Blame.Round)},
 	)
 
-	// If at least 2 nodes in the simple majority report round 7 failure freeze the vault.
+	// If at least 2 nodes in the simple majority report a terminal-round failure freeze the vault.
 	// There is a tradeoff here between the number of nodes required to maliciously freeze
 	// the vault and the number of nodes required to maliciously prevent freeze - we err
 	// on the side of over-freezing.

@@ -167,7 +167,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
-	gitlab.com/thorchain/tss/tss-lib-private.git/v3 v3.0.0-rc3 // indirect
+	gitlab.com/thorchain/tss/tss-lib-private.git/v3 v3.0.0-rc5 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.58.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0 // indirect
 	go.opentelemetry.io/otel v1.34.0 // indirect

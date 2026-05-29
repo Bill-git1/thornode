@@ -406,6 +406,72 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_accept_standby_node_me
 	c.Assert(errors.Is(err, se.ErrUnknownRequest), Equals, true)
 }
 
+// TestTssKeysignFailHandler_TerminalRoundIncrementsLastRoundCount asserts the
+// consensus-affecting LastRoundCount++ path: a MsgTssKeysignFail carrying one
+// of the accepted terminal-round names (v3 secp256k1 KEYSIGN9, EdDSA
+// EDDSAKEYSIGN3) must increment voter.LastRoundCount for the signer's vault
+// membership. Non-terminal rounds — including KEYSIGN7, which was terminal
+// under tss-lib v1 but is an interior consistency-check round under v3 — must
+// NOT increment. Regressing this would either freeze vaults too eagerly (on
+// mid-protocol round-7 timeouts) or fail to freeze vaults that should be frozen
+// on terminal-round consensus.
+func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_TerminalRoundIncrementsLastRoundCount(c *C) {
+	cases := []struct {
+		name            string
+		round           string
+		emptyBlameNodes bool
+		wantIncrement   bool
+	}{
+		{"v3 secp terminal round 9 increments", tssMessages.KEYSIGN9, false, true},
+		{"eddsa terminal round 3 increments", tssMessages.EDDSAKEYSIGN3, false, true},
+		// KEYSIGN7 was terminal under tss-lib v1 but is an interior round under
+		// v3 (the U_i/T_i consistency-check commitment, before shares reveal at
+		// round 9), so it must NOT increment — otherwise a routine round-7 peer
+		// timeout would freeze the vault.
+		{"v3 secp interior round 7 does not increment", tssMessages.KEYSIGN7, false, false},
+		{"v3 secp non-terminal round 8 does not increment", tssMessages.KEYSIGN8, false, false},
+		{"v3 secp non-terminal round 5 does not increment", tssMessages.KEYSIGN5, false, false},
+		{"eddsa non-terminal round 1 does not increment", tssMessages.EDDSAKEYSIGN1, false, false},
+		// Empty-BlameNodes guard: terminal-round reports that blame nobody
+		// must not bump LastRoundCount, otherwise a colluding minority can
+		// freeze a vault by spamming terminal-round reports with no blames.
+		{"v3 secp terminal round 9 with empty BlameNodes does not increment", tssMessages.KEYSIGN9, true, false},
+		{"eddsa terminal round 3 with empty BlameNodes does not increment", tssMessages.EDDSAKEYSIGN3, true, false},
+	}
+
+	for _, tc := range cases {
+		c.Logf(">Name: %s", tc.name)
+		helper := newTssKeysignHandlerTestHelper(c)
+		handler := NewTssKeysignHandler(NewDummyMgrWithKeeper(helper.keeper))
+
+		// The LastRoundCount increment fires only when the signer is in the
+		// vault's membership (the freeze path counts terminal-round failures
+		// from the actual signing committee). The default helper doesn't add
+		// helper.nodeAccount to retiringVault.Membership, so push it in.
+		helper.retiringVault.Membership = append(helper.retiringVault.Membership, helper.nodeAccount.PubKeySet.Secp256k1.String())
+		c.Assert(helper.keeper.SetVault(helper.ctx, helper.retiringVault), IsNil)
+
+		helper.blame.Round = tc.round
+		if tc.emptyBlameNodes {
+			helper.blame.BlameNodes = []Node{}
+		}
+		coins := common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}
+		msg, err := NewMsgTssKeysignFail(helper.ctx.BlockHeight(), helper.blame, "hello", coins, helper.nodeAccount.NodeAddress, helper.retiringVault.PubKey)
+		c.Assert(err, IsNil)
+
+		_, err = handler.Run(helper.ctx, msg)
+		c.Assert(err, IsNil)
+
+		voter, vErr := helper.keeper.GetTssKeysignFailVoter(helper.ctx, msg.ID)
+		c.Assert(vErr, IsNil)
+		if tc.wantIncrement {
+			c.Assert(voter.LastRoundCount, Equals, int64(1), Commentf("%s: expected LastRoundCount=1 after terminal-round report", tc.name))
+		} else {
+			c.Assert(voter.LastRoundCount, Equals, int64(0), Commentf("%s: expected LastRoundCount=0 for non-terminal round", tc.name))
+		}
+	}
+}
+
 // TestTssKeysignFailHandler_rejects_legacy_round_ids ensures Thornode only
 // accepts the canonical voter ID once round normalization is enforced.
 func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_rejects_legacy_round_ids(c *C) {

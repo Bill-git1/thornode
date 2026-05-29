@@ -98,6 +98,53 @@ func TestKeysignErrorIsTerminalRound(t *testing.T) {
 			round: tssMessages.KEYSIGN5,
 			want:  false,
 		},
+		// v3 added rounds 8 and 9 to the secp keysign protocol — 9 is the
+		// only terminal one. Pin 8 to false so a future refactor that
+		// widens the accept set is caught.
+		{
+			name:  "non-terminal secp round 8",
+			round: tssMessages.KEYSIGN8,
+			want:  false,
+		},
+		// Non-terminal EdDSA keysign rounds.
+		{
+			name:  "non-terminal eddsa round 1",
+			round: tssMessages.EDDSAKEYSIGN1,
+			want:  false,
+		},
+		{
+			name:  "non-terminal eddsa round 2",
+			round: tssMessages.EDDSAKEYSIGN2,
+			want:  false,
+		},
+		// Keygen rounds are never terminal-keysign even though they share a
+		// numeric scheme. Guard against accidental cross-protocol confusion.
+		{
+			name:  "keygen secp round 1 is not terminal keysign",
+			round: tssMessages.KEYGEN1,
+			want:  false,
+		},
+		{
+			name:  "keygen secp round 3 is not terminal keysign",
+			round: tssMessages.KEYGEN3,
+			want:  false,
+		},
+		{
+			name:  "keygen eddsa round 1 is not terminal keysign",
+			round: tssMessages.EDDSAKEYGEN1,
+			want:  false,
+		},
+		// Empty + arbitrary strings must not be terminal.
+		{
+			name:  "empty round",
+			round: "",
+			want:  false,
+		},
+		{
+			name:  "unknown round string",
+			round: "SomeUnknownRoundMessage",
+			want:  false,
+		},
 	}
 
 	for _, tc := range tests {

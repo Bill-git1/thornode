@@ -16,10 +16,12 @@ var _ = Suite(&THORChainTSSMessageTypeSuite{})
 
 func (THORChainTSSMessageTypeSuite) TestTHORChainTSSMessageType_String(c *C) {
 	m := map[THORChainTSSMessageType]string{
-		TSSKeyGenMsg:     "TSSKeyGenMsg",
-		TSSKeySignMsg:    "TSSKeySignMsg",
-		TSSKeyGenVerMsg:  "TSSKeyGenVerMsg",
-		TSSKeySignVerMsg: "TSSKeySignVerMsg",
+		TSSKeyGenMsg:       "TSSKeyGenMsg",
+		TSSKeySignMsg:      "TSSKeySignMsg",
+		TSSKeyGenVerMsg:    "TSSKeyGenVerMsg",
+		TSSKeySignVerMsg:   "TSSKeySignVerMsg",
+		TSSKeyVerifyMsg:    "TSSKeyVerifyMsg",
+		TSSKeyVerifyVerMsg: "TSSKeyVerifyVerMsg",
 	}
 	for k, v := range m {
 		c.Assert(k.String(), Equals, v)

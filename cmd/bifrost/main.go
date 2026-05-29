@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"errors" // TEMP: keyverify
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
+	"sort"    // TEMP: keyverify
+	"strconv" // TEMP: keyverify
 	"strings"
 	"syscall"
 	"time"
@@ -14,10 +17,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
+	libtss "gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss" // TEMP: keyverify
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame" // TEMP: keyverify
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
+	kvecdsa "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keyverify/ecdsa" // TEMP: keyverify
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/keyverify" // TEMP: keyverify
 
 	"gitlab.com/thorchain/thornode/v3/app"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
@@ -195,13 +202,122 @@ func main() {
 		log.Fatal().Msg("fail to load any chains")
 	}
 	tssKeysignMetricMgr := metrics.NewTssKeysignMetricMgr()
-	healthServer := NewHealthServer(cfg.TSS.InfoAddress, tssIns, chains)
+	// TEMP: keyverify
+	keyverifyMarkers := keyverify.NewMarkerStore(app.DefaultNodeHome)
+	healthServer := NewHealthServer(cfg.TSS.InfoAddress, tssIns, chains, keyverifyMarkers) // TEMP: keyverify (markerStore param)
 	go func() {
 		defer log.Info().Msg("health server exit")
 		if err = healthServer.Start(); err != nil {
 			log.Error().Err(err).Msg("fail to start health server")
 		}
 	}()
+
+	// TEMP: keyverify — scheduler block; remove as a unit with the keyverify rollout.
+	// Cancel is invoked explicitly in the graceful-shutdown path below; we avoid
+	// defer because subsequent log.Fatal calls would skip it (gocritic exitAfterDefer).
+	// keyverifyDone is closed by the scheduler goroutine on return so shutdown
+	// can wait for any in-flight Verify (which is still using tssIns.GetP2PComm
+	// and comm.CancelSubscribe via deferred cleanup) to finish before
+	// tssIns.Stop() tears down the comm/host underneath it.
+	//
+	// keyverifyStopChan is the out-of-band exit signal passed to every
+	// LiveVerifier-built TssKeyVerify; processVerify selects on it as an
+	// explicit "abandon now" trigger (independent of ctx). It's closed
+	// inside the shutdown sequence below alongside keyverifyCancel() so
+	// the parameter is actually wired up rather than a dead receiver.
+	keyverifyCtx, keyverifyCancel := context.WithCancel(context.Background())
+	keyverifyDone := make(chan struct{})
+	keyverifyStopChan := make(chan struct{})
+	{
+		localNodePubKey := tssIns.GetLocalNodePubKey()
+		live := keyverify.NewLiveVerifier(
+			tssIns.GetP2PComm(),
+			tssIns.GetBroadcastChan(),
+			stateManager,
+			common.TssConfig{
+				KeyGenTimeout:   keyverify.PerVaultTimeout - 30*time.Second,
+				KeySignTimeout:  cfg.Signer.KeysignTimeout,
+				PartyTimeout:    cfg.Signer.PartyTimeout,
+				PreParamTimeout: cfg.Signer.PreParamTimeout,
+			},
+			localNodePubKey,
+			tmPrivateKey,
+			keyverifyStopChan,
+		)
+		listVaults := func(_ context.Context) ([]keyverify.Vault, error) {
+			vs, vErr := thorchainBridge.GetAsgards()
+			if vErr != nil {
+				return nil, vErr
+			}
+			out := make([]keyverify.Vault, 0, len(vs))
+			for _, v := range vs {
+				if !v.IsAsgard() {
+					continue
+				}
+				if !v.IsActive() {
+					continue
+				}
+				if !v.Contains(tcommon.PubKey(localNodePubKey)) {
+					continue
+				}
+				members := make([]string, 0, len(v.GetMembership()))
+				for _, pk := range v.GetMembership() {
+					members = append(members, pk.String())
+				}
+				out = append(out, keyverify.Vault{PubKey: v.PubKey.String(), Members: members})
+			}
+			return out, nil
+		}
+		getHeight := func(_ context.Context) (int64, error) {
+			return thorchainBridge.GetBlockHeight()
+		}
+		isTimeoutErr := func(err error) bool { return errors.Is(err, blame.ErrTssTimeOut) }
+		extractTimeoutCulprits := func(err error) []string {
+			var tErr *kvecdsa.TimeoutError
+			if errors.As(err, &tErr) {
+				return tErr.Culprits
+			}
+			return nil
+		}
+		extractCulprits := func(err error, members []string) (string, []string, bool) {
+			var tssErr *libtss.Error
+			if errors.As(err, &tssErr) {
+				// conversion.GetParties sorts members lexicographically and
+				// uses the post-sort slice index as the PartyID.Id string.
+				// Reverse that mapping here so culprits surface as thorpubs.
+				sorted := append([]string(nil), members...)
+				sort.Strings(sorted)
+				pks := make([]string, 0, len(tssErr.Culprits()))
+				for _, p := range tssErr.Culprits() {
+					idx, perr := strconv.Atoi(p.Id)
+					if perr != nil || idx < 0 || idx >= len(sorted) {
+						log.Warn().Str("culprit_id", p.Id).Msg("unable to map culprit id to thorpub; using raw id")
+						pks = append(pks, p.Id)
+						continue
+					}
+					pks = append(pks, sorted[idx])
+				}
+				return tssErr.Error(), pks, true
+			}
+			return "", nil, false
+		}
+		sched := keyverify.NewScheduler(
+			keyverifyMarkers,
+			live,
+			log.With().Str("module", "keyverify").Logger(),
+			getHeight,
+			listVaults,
+			localNodePubKey,
+			isTimeoutErr,
+			extractCulprits,
+			extractTimeoutCulprits,
+		)
+		go func() {
+			defer close(keyverifyDone)
+			defer log.Info().Msg("keyverify scheduler exit")
+			sched.Start(keyverifyCtx)
+		}()
+	}
 
 	ctx := context.Background()
 
@@ -243,6 +359,15 @@ func main() {
 	}
 	log.Info().Msg("stop signal received")
 
+	// TEMP: keyverify — fire both stop signals together. keyverifyCancel
+	// cancels the per-attempt ctx (processVerify exits via <-ctx.Done()
+	// within milliseconds), and close(keyverifyStopChan) closes the
+	// out-of-band exit channel that processVerify also selects on (so the
+	// stopChan parameter passed into NewLiveVerifier is actually wired up,
+	// not a dead receiver).
+	keyverifyCancel()
+	close(keyverifyStopChan)
+
 	// stop observer
 	if err = obs.Stop(); err != nil {
 		log.Fatal().Err(err).Msg("fail to stop observer")
@@ -250,6 +375,28 @@ func main() {
 	// stop signer
 	if err = sign.Stop(); err != nil {
 		log.Fatal().Err(err).Msg("fail to stop signer")
+	}
+	// TEMP: keyverify — wait for the scheduler goroutine to drain before
+	// tearing down the TSS comm/host. The scheduler's in-flight Verify may
+	// still be calling tssIns.GetP2PComm()/comm.CancelSubscribe via deferred
+	// cleanup; tssIns.Stop() must not race with that.
+	//
+	// In practice this returns within milliseconds: keyverifyCancel + the
+	// out-of-band stopChan close above cause processVerify to exit immediately
+	// (one of two select arms fires), then the verifier's deferred
+	// CancelSubscribe + 4-topic teardown finishes synchronously before
+	// Verify returns and the scheduler goroutine falls through. The 10s cap
+	// is a safety net for a wedged tss-lib party.Start() that ignores both
+	// signals — not the strict PerVaultTimeout-style drain. We deliberately
+	// don't wait the full PerVaultTimeout (90s) on shutdown; if the in-flight
+	// attempt doesn't honor the two stop signals within 10s, racing
+	// tssIns.Stop() is the lesser evil vs. blocking operator shutdown.
+	// The per-vault defer recover() in runOneAttempt catches any panic
+	// resulting from the race.
+	select {
+	case <-keyverifyDone:
+	case <-time.After(10 * time.Second):
+		log.Warn().Msg("keyverify scheduler did not exit within 10s; proceeding with TSS shutdown anyway")
 	}
 	// stop go tss
 	tssIns.Stop()
