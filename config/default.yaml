@@ -77,6 +77,13 @@ bifrost:
     keysign_timeout: 45s
     party_timeout: 45s
     pre_param_timeout: 5m
+    # keyverify scheduler — independent of keygen/keysign budgets. Set
+    # via BIFROST_SIGNER_KEYVERIFY_ROUND_TIMEOUT /
+    # BIFROST_SIGNER_KEYVERIFY_PER_VAULT_TIMEOUT to adjust on a live
+    # bifrost without a release cut. round < per_vault so per-peer blame
+    # attribution wins over outer ctx-cancellation.
+    keyverify_round_timeout: 2m
+    keyverify_per_vault_timeout: 3m
   tss:
     rendezvous: asgard
     p2p_port: 5040

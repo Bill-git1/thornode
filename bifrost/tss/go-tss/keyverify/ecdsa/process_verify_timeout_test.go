@@ -44,12 +44,16 @@ func (s *stubLastMsg) String() string                                   { return
 func newProcessVerifyHarness(t *testing.T, keyGenTimeout time.Duration) *TssKeyVerify {
 	t.Helper()
 	priv := tcrypto.GenPrivKey()
+	// KeyverifyRoundTimeout is what processVerify reads for its inner round
+	// wait; mirror the caller's keyGenTimeout into it so existing fast
+	// (50ms) and slow (30s) timeout-path tests keep their previous schedules.
 	conf := common.TssConfig{
-		PartyTimeout:    keyGenTimeout,
-		KeyGenTimeout:   keyGenTimeout,
-		KeySignTimeout:  keyGenTimeout,
-		PreParamTimeout: keyGenTimeout,
-		EnableMonitor:   false,
+		PartyTimeout:          keyGenTimeout,
+		KeyGenTimeout:         keyGenTimeout,
+		KeySignTimeout:        keyGenTimeout,
+		PreParamTimeout:       keyGenTimeout,
+		KeyverifyRoundTimeout: keyGenTimeout,
+		EnableMonitor:         false,
 	}
 	tssCommon := common.NewTssCommon(
 		"local-peer",

@@ -17,6 +17,14 @@ type TssConfig struct {
 	KeySignTimeout time.Duration
 	// Pre-parameter define the pre-parameter generations timeout
 	PreParamTimeout time.Duration
+	// KeyverifyRoundTimeout bounds the inner per-round wait inside the
+	// keyverify processVerify dispatch (bifrost/tss/go-tss/keyverify/ecdsa).
+	// Decoupled from KeyGenTimeout because keyverify is a transitional path
+	// with different deployment-latency expectations (notably operators
+	// running bifrost behind proxy/WireGuard hairpins, where 4-of-N TSS
+	// coordination over the public-internet hop exceeds the keygen budget).
+	// Zero falls back to DefaultKeyverifyRoundTimeout in the ecdsa package.
+	KeyverifyRoundTimeout time.Duration
 	// enable the tss monitor
 	EnableMonitor bool
 }

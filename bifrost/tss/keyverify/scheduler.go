@@ -3,6 +3,7 @@ package keyverify
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"sync"
 	"time"
@@ -15,8 +16,17 @@ const (
 	BlockInterval = 100
 	// PollInterval — how often to poll thornode height
 	PollInterval = 6 * time.Second
-	// PerVaultTimeout — bound per-vault verify attempt
-	PerVaultTimeout = 90 * time.Second
+	// DefaultPerVaultTimeout — fallback per-vault verify-attempt bound used
+	// when NewScheduler is called with perVaultTimeout=0. Must exceed the
+	// inner round timeout (ecdsa.DefaultKeyverifyRoundTimeout = 120s) so the
+	// inner timeout fires first and the protocol can attribute the failure
+	// to specific culprits — otherwise an outer ctx-cancellation preempts
+	// the per-peer blame path. Operators running bifrost behind proxy/WG
+	// hairpins reported the previous 60s/90s pair firing before TSS rounds
+	// could complete; bumped to 120s/180s to give headroom while staying
+	// well inside the keysign retry budget so keyverify keeps its leading-
+	// indicator role.
+	DefaultPerVaultTimeout = 180 * time.Second
 	// StaggerStep — per-party-index delay before this node initiates round 1
 	StaggerStep = 200 * time.Millisecond
 )
@@ -40,6 +50,7 @@ type Scheduler struct {
 	isTimeoutErr           func(error) bool
 	extractCulprits        func(err error, members []string) (msg string, culprits []string, ok bool)
 	extractTimeoutCulprits func(err error) []string
+	perVaultTimeout        time.Duration
 
 	lastTickHeight int64
 	vaultMu        sync.Mutex
@@ -60,7 +71,11 @@ func NewScheduler(
 	isTimeoutErr func(error) bool,
 	extractCulprits func(err error, members []string) (string, []string, bool),
 	extractTimeoutCulprits func(err error) []string,
+	perVaultTimeout time.Duration,
 ) *Scheduler {
+	if perVaultTimeout <= 0 {
+		perVaultTimeout = DefaultPerVaultTimeout
+	}
 	return &Scheduler{
 		store:                  store,
 		verifier:               verifier,
@@ -71,6 +86,7 @@ func NewScheduler(
 		isTimeoutErr:           isTimeoutErr,
 		extractCulprits:        extractCulprits,
 		extractTimeoutCulprits: extractTimeoutCulprits,
+		perVaultTimeout:        perVaultTimeout,
 		lastTickHeight:         -1,
 		perVaultLocks:          map[string]*sync.Mutex{},
 	}
@@ -194,7 +210,7 @@ func (s *Scheduler) runOneAttempt(ctx context.Context, height int64, v Vault, st
 	metricAttempts.WithLabelValues(v.PubKey).Inc()
 	start := time.Now()
 
-	attemptCtx, cancel := context.WithTimeout(WithHeight(ctx, height), PerVaultTimeout)
+	attemptCtx, cancel := context.WithTimeout(WithHeight(ctx, height), s.perVaultTimeout)
 	defer cancel()
 	err := s.verifier.Verify(attemptCtx, v.PubKey, v.Members, startDelay)
 	dur := time.Since(start).Seconds()
@@ -208,13 +224,14 @@ func (s *Scheduler) runOneAttempt(ctx context.Context, height int64, v Vault, st
 		} else {
 			s.logger.Info().Str("pubkey", v.PubKey).Int64("height", height).Msg("keyverify success")
 		}
-	case err != nil && ctx.Err() != nil:
+	case ctx.Err() != nil:
 		// Parent context canceled — graceful shutdown. No marker, no metric.
 		// (ctx here is the scheduler's parent context, not attemptCtx. A
-		//  PerVaultTimeout-induced cancellation leaves ctx.Err() == nil and
+		//  perVaultTimeout-induced cancellation leaves ctx.Err() == nil and
 		//  falls through to the timeout/culprit/other branches below.)
+		// err != nil is guaranteed here — the err == nil case above already returned.
 		return
-	case s.isTimeoutErr(err):
+	case s.isTimeoutErr(err) || (attemptCtx.Err() == context.DeadlineExceeded && errors.Is(err, context.DeadlineExceeded)):
 		metricFailure.WithLabelValues(v.PubKey, "timeout").Inc()
 		metricDuration.WithLabelValues(v.PubKey, "timeout").Observe(dur)
 		var culprits []string

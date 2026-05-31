@@ -748,6 +748,25 @@ type BifrostSignerConfiguration struct {
 	KeysignTimeout     time.Duration `mapstructure:"keysign_timeout"`
 	PartyTimeout       time.Duration `mapstructure:"party_timeout"`
 	PreParamTimeout    time.Duration `mapstructure:"pre_param_timeout"`
+
+	// -------------------- keyverify timeouts --------------------
+	// Keyverify is bifrost/tss/keyverify's transitional scheduler with its
+	// own round + outer budget independent of KeyGen/KeySign above. These
+	// surfaced as a knob so proxy-fronted operators can adjust without a
+	// release cut. Zero falls back to the package defaults in
+	// bifrost/tss/keyverify (DefaultPerVaultTimeout, 180s) and
+	// bifrost/tss/go-tss/keyverify/ecdsa (DefaultKeyverifyRoundTimeout, 120s).
+
+	// KeyverifyRoundTimeout — inner per-round wait inside processVerify.
+	// Must remain strictly less than KeyverifyPerVaultTimeout so the inner
+	// timeout fires first and the protocol can attribute the failure to
+	// specific culprits — otherwise an outer ctx-cancellation preempts the
+	// per-peer blame path.
+	KeyverifyRoundTimeout time.Duration `mapstructure:"keyverify_round_timeout"`
+	// KeyverifyPerVaultTimeout — outer safety-net bound around each per-
+	// vault verify attempt. Sized as KeyverifyRoundTimeout + slack for
+	// stagger and teardown.
+	KeyverifyPerVaultTimeout time.Duration `mapstructure:"keyverify_per_vault_timeout"`
 }
 
 type BifrostAttestationGossipConfig struct {

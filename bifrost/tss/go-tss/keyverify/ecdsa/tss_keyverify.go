@@ -30,6 +30,16 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 )
 
+// DefaultKeyverifyRoundTimeout is the fallback inner per-round wait used by
+// processVerify when TssConfig.KeyverifyRoundTimeout is zero. Sized for
+// operators running bifrost behind proxy/WireGuard hairpins, where 4-of-N TSS
+// coordination over the public-internet hop was observed to exceed the prior
+// 60s budget at the per-round level. Must remain strictly less than the
+// scheduler's PerVaultTimeout (in bifrost/tss/keyverify) so the inner timeout
+// fires first and the protocol can attribute the failure to specific culprits
+// — otherwise an outer ctx cancellation preempts the per-peer blame path.
+const DefaultKeyverifyRoundTimeout = 120 * time.Second
+
 type TssKeyVerify struct {
 	logger          zerolog.Logger
 	localNodePubKey string
@@ -72,9 +82,10 @@ func (t *TssKeyVerify) GetTssCommonStruct() *common.TssCommon {
 // blame.ErrTssTimeOut on timeout, or *btss.Error on culprit failure.
 //
 // ctx bounds the entire attempt — cancellation propagates through
-// processVerify and returns ctx.Err(). The scheduler attaches PerVaultTimeout
-// to ctx; processVerify's internal tssConf.KeyGenTimeout still bounds the
-// per-round wait independently of ctx.
+// processVerify and returns ctx.Err(). The scheduler attaches its per-vault
+// timeout to ctx; processVerify's internal round timeout (from
+// TssConfig.KeyverifyRoundTimeout, falling back to DefaultKeyverifyRoundTimeout)
+// still bounds the per-round wait independently of ctx.
 func (t *TssKeyVerify) VerifyKey(ctx context.Context, req Request) error {
 	partiesID, localPartyID, err := conversion.GetParties(req.Members, t.localNodePubKey)
 	if err != nil {
@@ -170,8 +181,11 @@ func (t *TssKeyVerify) processVerify(
 ) error {
 	defer t.logger.Debug().Msg("finished keyverify process")
 	t.logger.Debug().Msg("start to read messages from local party")
-	tssConf := t.tssCommonStruct.GetConf()
 	blameMgr := t.tssCommonStruct.GetBlameMgr()
+	roundTimeout := t.tssCommonStruct.GetConf().KeyverifyRoundTimeout
+	if roundTimeout <= 0 {
+		roundTimeout = DefaultKeyverifyRoundTimeout
+	}
 	for {
 		select {
 		case <-errChan:
@@ -185,8 +199,8 @@ func (t *TssKeyVerify) processVerify(
 			t.logger.Error().Err(ctx.Err()).Msg("keyverify cancelled by context")
 			return fmt.Errorf("keyverify cancelled: %w", ctx.Err())
 
-		case <-time.After(tssConf.KeyGenTimeout):
-			t.logger.Error().Msgf("fail to complete keyverify within %s", tssConf.KeyGenTimeout)
+		case <-time.After(roundTimeout):
+			t.logger.Error().Msgf("fail to complete keyverify within %s", roundTimeout)
 			lastMsg := blameMgr.GetLastMsg()
 			failReason := blameMgr.GetBlame().FailReason
 			if failReason == "" {

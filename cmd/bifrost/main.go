@@ -235,10 +235,11 @@ func main() {
 			tssIns.GetBroadcastChan(),
 			stateManager,
 			common.TssConfig{
-				KeyGenTimeout:   keyverify.PerVaultTimeout - 30*time.Second,
-				KeySignTimeout:  cfg.Signer.KeysignTimeout,
-				PartyTimeout:    cfg.Signer.PartyTimeout,
-				PreParamTimeout: cfg.Signer.PreParamTimeout,
+				KeyGenTimeout:         cfg.Signer.KeygenTimeout,
+				KeySignTimeout:        cfg.Signer.KeysignTimeout,
+				PartyTimeout:          cfg.Signer.PartyTimeout,
+				PreParamTimeout:       cfg.Signer.PreParamTimeout,
+				KeyverifyRoundTimeout: cfg.Signer.KeyverifyRoundTimeout,
 			},
 			localNodePubKey,
 			tmPrivateKey,
@@ -311,6 +312,7 @@ func main() {
 			isTimeoutErr,
 			extractCulprits,
 			extractTimeoutCulprits,
+			cfg.Signer.KeyverifyPerVaultTimeout,
 		)
 		go func() {
 			defer close(keyverifyDone)
@@ -387,8 +389,9 @@ func main() {
 	// CancelSubscribe + 4-topic teardown finishes synchronously before
 	// Verify returns and the scheduler goroutine falls through. The 10s cap
 	// is a safety net for a wedged tss-lib party.Start() that ignores both
-	// signals — not the strict PerVaultTimeout-style drain. We deliberately
-	// don't wait the full PerVaultTimeout (90s) on shutdown; if the in-flight
+	// signals — not the strict per-vault-timeout-style drain. We deliberately
+	// don't wait the full per-vault timeout (180s by default) on shutdown;
+	// if the in-flight
 	// attempt doesn't honor the two stop signals within 10s, racing
 	// tssIns.Stop() is the lesser evil vs. blocking operator shutdown.
 	// The per-vault defer recover() in runOneAttempt catches any panic
