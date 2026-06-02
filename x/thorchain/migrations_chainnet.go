@@ -87,3 +87,9 @@ func (m Migrator) Migrate13to14(ctx sdk.Context) error {
 func (m Migrator) Migrate14to15(_ sdk.Context) error {
 	return nil
 }
+
+// Migrate15to16 migrates from version 15 to 16.
+// No-op on chainnet — the ADR-028 exploit conciliation only applies to mainnet state.
+func (m Migrator) Migrate15to16(_ sdk.Context) error {
+	return nil
+}

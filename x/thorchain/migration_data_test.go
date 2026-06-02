@@ -162,6 +162,40 @@ func (s MigrationDataSuite) TestMigrate14to15AddressValidation(c *C) {
 	}
 }
 
+func (s MigrationDataSuite) TestMigrate15to16DataValidation(c *C) {
+	// ADR-028 (Migrate15to16) pins long hex/bech32 strings that the //go:build
+	// mainnet migration parses at the one-shot upgrade height. Validate their shape
+	// here (mocknet CI) so a transposed character fails the build instead of aborting
+	// the chain mid-migration. Tests run under -tags=mocknet (prefix "tthor"), so —
+	// like TestMigrate14to15AddressValidation — check against the hardcoded mainnet
+	// "thor"/"thorpub" HRPs directly rather than via the configured prefix.
+
+	// Compromised vault pubkey (step 0 zeroes it — zeroing the wrong vault would be
+	// catastrophic, so a corrupted key must fail the build).
+	_, err := cosmos.GetFromBech32(string(vault2v28PubKey), "thorpub")
+	c.Assert(err, IsNil, Commentf("vault2v28PubKey is not a valid thorpub bech32: %s", vault2v28PubKey))
+
+	// Treasury multisig (step-4 LP coverage).
+	bz, err := cosmos.GetFromBech32(adr028TreasuryAddr, "thor")
+	c.Assert(err, IsNil, Commentf("adr028TreasuryAddr GetFromBech32 failed: %s", adr028TreasuryAddr))
+	c.Assert(cosmos.VerifyAddressFormat(bz), IsNil, Commentf("adr028TreasuryAddr VerifyAddressFormat failed: %s", adr028TreasuryAddr))
+
+	// Stuck streaming-swap txid (step 6) — NewTxID enforces 64 hex chars.
+	_, err = common.NewTxID(stuckStreamingTxStr)
+	c.Assert(err, IsNil, Commentf("stuckStreamingTxStr is not a valid txid: %s", stuckStreamingTxStr))
+
+	// Hex-qualified haircut assets — must parse, be non-empty, and unique.
+	c.Assert(len(adr028PinnedAssets), Equals, 7)
+	seen := make(map[string]bool)
+	for i, a := range adr028PinnedAssets {
+		asset, err := common.NewAsset(a)
+		c.Assert(err, IsNil, Commentf("NewAsset failed at index %d: %s", i, a))
+		c.Assert(asset.IsEmpty(), Equals, false, Commentf("asset is empty at index %d: %s", i, a))
+		c.Assert(seen[a], Equals, false, Commentf("duplicate asset at index %d: %s", i, a))
+		seen[a] = true
+	}
+}
+
 func (s MigrationDataSuite) TestVerifyVaultClampFixes14to15(c *C) {
 	// Verify the three (vault, amount) clamping reconciliations match the
 	// documented values exactly. Re-stated here to make a typo in the data
