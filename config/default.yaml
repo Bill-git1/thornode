@@ -163,6 +163,13 @@ bifrost:
 
         # the following defaults must be defined to override with environment
         start_block_height: 0
+        # forward-only floor for the block scanner: effective start is
+        # max(floor_block_height, persisted pos), so it never starts/rolls back below
+        # this height nor redoes already-scanned work (0 = off). Use to durably SKIP a
+        # known-bad range; for catch-up use max_resume_block_lag. SOL: best-effort.
+        # MUST be set identically across all validators or a real inbound can miss
+        # observation supermajority.
+        floor_block_height: 0
         cosmos_grpc_host: ""
         cosmos_grpc_tls: false
         gas_cache_blocks: 0

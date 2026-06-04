@@ -144,6 +144,12 @@ func (b *BlockScanner) RollbackToLastObserved() error {
 }
 
 func (b *BlockScanner) rollback(height int64) error {
+	// FloorBlockHeight is a hard lower bound: never roll back below it, even on a
+	// reorg. Without this clamp a rollback (e.g. RollbackToLastObserved) could drag
+	// the scanner back into a range the floor was configured to skip.
+	if b.cfg.FloorBlockHeight > 0 && height < b.cfg.FloorBlockHeight {
+		height = b.cfg.FloorBlockHeight
+	}
 	if b.PreviousHeight() <= height {
 		// height is already below rollback amount, proceed as normal
 		return nil
@@ -165,29 +171,42 @@ func (b *BlockScanner) GetMessages() <-chan int64 {
 func (b *BlockScanner) Start(globalTxsQueue chan types.TxIn, globalNetworkFeeQueue chan common.NetworkFee) {
 	b.globalTxsQueue = globalTxsQueue
 	b.globalNetworkFeeQueue = globalNetworkFeeQueue
+
+	currentPos, err := b.scannerStorage.GetScanPos()
+	if err != nil {
+		b.logger.Error().Err(err).Msgf("fail to get current block scan pos, %s will start from %d", b.cfg.ChainID, b.previousBlock)
+	}
+
 	// Only use persisted scan position if no explicit start height was configured.
-	// When StartBlockHeight is set, it should always take precedence so operators
-	// can force a rescan from a specific height. If there is already persisted
-	// scan state, purge stale block metadata at or above that height so the
-	// scanner re-processes those blocks.
+	// When StartBlockHeight is set, rewind the persisted scan position to that
+	// height so operators can force a rescan from a specific height, durably
+	// across restarts.
 	if b.cfg.StartBlockHeight > 0 {
-		currentPos, err := b.scannerStorage.GetScanPos()
-		if err != nil {
-			b.logger.Error().Err(err).Msg("fail to get current block scan pos before start-height override")
-		} else if currentPos > 0 {
-			removed, err := b.scannerStorage.PurgeFromHeight(b.cfg.StartBlockHeight)
-			if err != nil {
-				b.logger.Error().Err(err).Int64("height", b.cfg.StartBlockHeight).Msg("fail to purge block metadata from start height")
-			} else if removed > 0 {
-				b.logger.Info().Int64("height", b.cfg.StartBlockHeight).Int("removed", removed).Msg("purged stale block metadata for rescan")
+		if err == nil && currentPos > 0 {
+			if serr := b.scannerStorage.SetScanPos(b.cfg.StartBlockHeight); serr != nil {
+				b.logger.Error().Err(serr).Int64("height", b.cfg.StartBlockHeight).Msg("fail to rewind scan pos for start height override")
+			} else {
+				b.logger.Info().Int64("height", b.cfg.StartBlockHeight).Msg("rewound scan pos for rescan")
 			}
 		}
-	} else {
-		currentPos, err := b.scannerStorage.GetScanPos()
-		if err != nil {
-			b.logger.Error().Err(err).Msgf("fail to get current block scan pos, %s will start from %d", b.cfg.ChainID, b.previousBlock)
-		} else if currentPos > b.previousBlock {
-			b.previousBlock = currentPos
+	} else if err == nil && currentPos > b.previousBlock {
+		b.previousBlock = currentPos
+	}
+
+	// FloorBlockHeight prevents the scanner from ever starting below this height.
+	// The effective floor is max(FloorBlockHeight, persisted scan pos) so the
+	// scanner is never dragged backwards below where it has already scanned to.
+	if b.cfg.FloorBlockHeight > 0 {
+		floor := b.cfg.FloorBlockHeight
+		if err == nil && currentPos > floor {
+			floor = currentPos
+		}
+		if floor > b.previousBlock {
+			b.logger.Info().
+				Int64("floor", floor).
+				Int64("previous", b.previousBlock).
+				Msgf("advancing %s scanner to configured floor block height", b.cfg.ChainID)
+			b.previousBlock = floor
 		}
 	}
 	b.wg.Add(2)

@@ -164,6 +164,18 @@ func (s *SOLScanner) Start() {
 		s.logger.Error().Err(err).Msg("failed to get last scan pos")
 		return
 	}
+	// FloorBlockHeight prevents the scanner from ever resuming below this slot.
+	// Bump lastHeight forward and persist so subsequent restarts honour the floor.
+	if s.cfg.FloorBlockHeight > 0 && uint64(s.cfg.FloorBlockHeight) > lastHeight {
+		s.logger.Info().
+			Uint64("floor", uint64(s.cfg.FloorBlockHeight)).
+			Uint64("previous", lastHeight).
+			Msg("advancing SOL scanner to configured floor block height")
+		lastHeight = uint64(s.cfg.FloorBlockHeight)
+		if err := s.db.SetScanPos(lastHeight); err != nil {
+			s.logger.Error().Err(err).Msg("failed to persist floor block height")
+		}
+	}
 	s.lastHeightMu.Lock()
 	s.lastHeight = lastHeight
 	s.lastHeightMu.Unlock()
@@ -306,6 +318,19 @@ func (s *SOLScanner) scan() {
 			// NOTE: this can observe txs that we already observed in the past,
 			// because minContextSlot does not set a minimum bound for the query,
 			// it only ensures that minContextSlot is in the history on the rpc node.
+		}
+
+		// FloorBlockHeight: never query a vault below the configured floor. If the
+		// resolved minContextSlot is below the floor, advance to the floor and
+		// clear the cursor since any cached lastSig predates the floor.
+		if s.cfg.FloorBlockHeight > 0 && uint64(s.cfg.FloorBlockHeight) > minContextSlot {
+			s.logger.Info().
+				Str("vault", vaultAddr).
+				Uint64("floor", uint64(s.cfg.FloorBlockHeight)).
+				Uint64("previous", minContextSlot).
+				Msg("advancing vault scanner to configured floor block height")
+			minContextSlot = uint64(s.cfg.FloorBlockHeight)
+			queryLastSig = ""
 		}
 
 		go s.scanVault(vaultAddr, i, queryLastSig, minContextSlot, setUnhealthy, countTxs, successfulQueries, newLastSigs, &wg)

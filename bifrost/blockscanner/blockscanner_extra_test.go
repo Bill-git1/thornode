@@ -111,55 +111,6 @@ func (s *LevelDBStorageSuite) TestGetSetScanPos(c *C) {
 	c.Check(pos, Equals, int64(-10))
 }
 
-func (s *LevelDBStorageSuite) TestSetBlockScanStatus(c *C) {
-	db := newMemLevelDB(c)
-	defer db.Close()
-	store, _ := NewLevelDBScannerStorage(db)
-
-	block := Block{Height: 10, Txs: []string{"tx1", "tx2"}}
-	c.Assert(store.SetBlockScanStatus(block, Processing), IsNil)
-	c.Assert(store.SetBlockScanStatus(block, Finished), IsNil)
-}
-
-func (s *LevelDBStorageSuite) TestGetBlocksForRetry(c *C) {
-	db := newMemLevelDB(c)
-	defer db.Close()
-	store, _ := NewLevelDBScannerStorage(db)
-
-	blocks, err := store.GetBlocksForRetry(true)
-	c.Assert(err, IsNil)
-	c.Check(len(blocks), Equals, 0)
-
-	c.Assert(store.SetBlockScanStatus(Block{Height: 1, Txs: []string{"a"}}, Failed), IsNil)
-	c.Assert(store.SetBlockScanStatus(Block{Height: 2, Txs: []string{"b"}}, Finished), IsNil)
-	c.Assert(store.SetBlockScanStatus(Block{Height: 3, Txs: []string{"c"}}, Failed), IsNil)
-
-	blocks, err = store.GetBlocksForRetry(true)
-	c.Assert(err, IsNil)
-	c.Check(len(blocks), Equals, 2)
-
-	blocks, err = store.GetBlocksForRetry(false)
-	c.Assert(err, IsNil)
-	c.Check(len(blocks), Equals, 3)
-}
-
-func (s *LevelDBStorageSuite) TestRemoveBlockStatus(c *C) {
-	db := newMemLevelDB(c)
-	defer db.Close()
-	store, _ := NewLevelDBScannerStorage(db)
-
-	block := Block{Height: 5}
-	c.Assert(store.SetBlockScanStatus(block, Failed), IsNil)
-
-	blocks, _ := store.GetBlocksForRetry(true)
-	c.Check(len(blocks), Equals, 1)
-
-	c.Assert(store.RemoveBlockStatus(5), IsNil)
-
-	blocks, _ = store.GetBlocksForRetry(true)
-	c.Check(len(blocks), Equals, 0)
-}
-
 func (s *LevelDBStorageSuite) TestClose(c *C) {
 	db := newMemLevelDB(c)
 	store, _ := NewLevelDBScannerStorage(db)
@@ -287,13 +238,6 @@ func (s *MockStorageSuite) TestMockScannerStorage(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(pos, Equals, int64(100))
 
-	c.Assert(mss.SetBlockScanStatus(Block{Height: 10}, Failed), IsNil)
-	c.Assert(mss.RemoveBlockStatus(10), IsNil)
-
-	blocks, err := mss.GetBlocksForRetry(true)
-	c.Assert(err, IsNil)
-	c.Check(blocks, IsNil)
-
 	c.Check(mss.GetInternalDb(), IsNil)
 	c.Assert(mss.Close(), IsNil)
 }
@@ -331,21 +275,6 @@ func (s *DummyFetcherSuite) TestDummyFetcher(c *C) {
 	c.Check(err, NotNil)
 	_, err = d2.FetchTxs(1, 2)
 	c.Check(err, NotNil)
-}
-
-// ---------------------------------------------------------------------------
-// BlockScanStatus constants
-// ---------------------------------------------------------------------------
-
-type BlockScanStatusSuite struct{}
-
-var _ = Suite(&BlockScanStatusSuite{})
-
-func (s *BlockScanStatusSuite) TestBlockScanStatus(c *C) {
-	c.Check(Processing, Equals, BlockScanStatus(0))
-	c.Check(Failed, Equals, BlockScanStatus(1))
-	c.Check(Finished, Equals, BlockScanStatus(2))
-	c.Check(NotStarted, Equals, BlockScanStatus(3))
 }
 
 // ---------------------------------------------------------------------------
@@ -746,6 +675,116 @@ func (s *BlockScannerExtraSuite) TestGetStartHeightThorBackfillsRecentWindow(c *
 	}, mss, m, bridge, fetcher)
 	c.Assert(err, IsNil)
 	c.Check(scanner.PreviousHeight(), Equals, int64(600))
+}
+
+// startScannerForFloorTest is a helper that constructs a scanner with the given
+// floor/start/persisted-pos config, calls Start(), reads PreviousHeight, and stops.
+// The fetcher returns chainHeight=0 so scanBlocks cannot advance previousBlock
+// during the brief window in which we observe it.
+func (s *BlockScannerExtraSuite) startScannerForFloorTest(c *C, startHeight, floorHeight, persistedPos int64) int64 {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.RequestURI, thorclient.MimirEndpoint):
+			_, _ = w.Write([]byte(`-1`))
+		case strings.HasPrefix(r.RequestURI, "/thorchain/lastblock"):
+			_, _ = w.Write([]byte(`[{"chain":"NOOP","lastobservedin":0,"lastsignedout":0,"thorchain":0}]`))
+		}
+	}))
+	defer server.Close()
+	bridge := s.makeBridge(c, server)
+
+	mss := NewMockScannerStorage()
+	if persistedPos > 0 {
+		c.Assert(mss.SetScanPos(persistedPos), IsNil)
+	}
+	scanner, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
+		StartBlockHeight:           startHeight,
+		FloorBlockHeight:           floorHeight,
+		BlockScanProcessors:        1,
+		HTTPRequestTimeout:         time.Second,
+		BlockHeightDiscoverBackoff: time.Second,
+		BlockRetryInterval:         time.Second,
+		ChainID:                    common.ETHChain,
+		ScanMemPool:                false,
+	}, mss, m, bridge, &configFetcher{chainHeight: 0})
+	c.Assert(err, IsNil)
+
+	globalChan := make(chan types.TxIn, 1)
+	nfChan := make(chan common.NetworkFee, 1)
+	scanner.Start(globalChan, nfChan)
+	height := scanner.PreviousHeight()
+	scanner.Stop()
+	return height
+}
+
+func (s *BlockScannerExtraSuite) TestStartFloorUnsetUsesStartHeight(c *C) {
+	// Floor unset: behaves as before, StartBlockHeight wins.
+	got := s.startScannerForFloorTest(c, 10, 0, 0)
+	c.Check(got, Equals, int64(10))
+}
+
+func (s *BlockScannerExtraSuite) TestStartFloorAdvancesAboveStartHeight(c *C) {
+	// Floor > StartBlockHeight, no persisted pos: scanner advances to floor.
+	got := s.startScannerForFloorTest(c, 10, 100, 0)
+	c.Check(got, Equals, int64(100))
+}
+
+func (s *BlockScannerExtraSuite) TestStartFloorRespectsHigherPersistedPos(c *C) {
+	// Floor < persisted pos (with StartBlockHeight set): the effective floor is
+	// max(FloorBlockHeight, persisted pos), so the scanner is never dragged below
+	// the persisted scan position (forward-only — never redo already-scanned work).
+	got := s.startScannerForFloorTest(c, 10, 100, 200)
+	c.Check(got, Equals, int64(200))
+}
+
+func (s *BlockScannerExtraSuite) TestStartFloorAboveStartAndPersisted(c *C) {
+	// Floor above both StartBlockHeight and persisted pos: scanner advances to floor.
+	got := s.startScannerForFloorTest(c, 10, 500, 200)
+	c.Check(got, Equals, int64(500))
+}
+
+// TestRollbackNeverGoesBelowFloor is the reorg regression: a rollback (e.g. from
+// RollbackToLastObserved) must never drag the scanner below the configured floor,
+// otherwise it would re-enter the exact range the floor was set to skip.
+func (s *BlockScannerExtraSuite) TestRollbackNeverGoesBelowFloor(c *C) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.RequestURI, thorclient.MimirEndpoint):
+			_, _ = w.Write([]byte(`-1`))
+		case strings.HasPrefix(r.RequestURI, "/status"):
+			_, _ = w.Write([]byte(`{"result":{"sync_info":{"catching_up":false}}}`))
+		case strings.HasPrefix(r.RequestURI, "/thorchain/lastblock"):
+			_, _ = w.Write([]byte(`[{"chain":"NOOP","lastobservedin":0,"lastsignedout":0,"thorchain":0}]`))
+		}
+	}))
+	defer server.Close()
+	bridge := s.makeBridge(c, server)
+
+	mss := NewMockScannerStorage()
+	scanner, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
+		FloorBlockHeight:           500,
+		BlockScanProcessors:        1,
+		HTTPRequestTimeout:         time.Second,
+		BlockHeightDiscoverBackoff: time.Second,
+		BlockRetryInterval:         time.Second,
+		ChainID:                    common.ETHChain,
+		ScanMemPool:                false,
+	}, mss, m, bridge, &configFetcher{chainHeight: 0})
+	c.Assert(err, IsNil)
+
+	// Simulate the scanner having progressed well above the floor.
+	atomic.StoreInt64(&scanner.previousBlock, 1000)
+
+	// A rollback to above the floor is honored verbatim (rollback only moves down).
+	c.Assert(scanner.rollback(700), IsNil)
+	c.Check(scanner.PreviousHeight(), Equals, int64(700))
+
+	// A reorg rollback to below the floor must clamp to the floor, in memory and on disk.
+	c.Assert(scanner.rollback(200), IsNil)
+	c.Check(scanner.PreviousHeight(), Equals, int64(500))
+	pos, err := mss.GetScanPos()
+	c.Assert(err, IsNil)
+	c.Check(pos, Equals, int64(500))
 }
 
 func (s *BlockScannerExtraSuite) TestStartStopWithMempoolDisabled(c *C) {

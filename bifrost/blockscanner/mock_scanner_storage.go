@@ -2,10 +2,7 @@ package blockscanner
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -43,51 +40,6 @@ func (mss *MockScannerStorage) SetScanPos(block int64) error {
 	n := binary.PutVarint(buf, block)
 	mss.store[ScanPosKey] = buf[:n]
 	return nil
-}
-
-func (mss *MockScannerStorage) SetBlockScanStatus(block Block, status BlockScanStatus) error {
-	blockStatusItem := BlockStatusItem{
-		Block:  block,
-		Status: status,
-	}
-	buf, err := json.Marshal(blockStatusItem)
-	if err != nil {
-		return fmt.Errorf("fail to marshal BlockStatusItem to json: %w", err)
-	}
-	mss.l.Lock()
-	defer mss.l.Unlock()
-	mss.store[getBlockStatusKey(block.Height)] = buf
-	return nil
-}
-
-func (mss *MockScannerStorage) RemoveBlockStatus(block int64) error {
-	mss.l.Lock()
-	defer mss.l.Unlock()
-	delete(mss.store, getBlockStatusKey(block))
-	return nil
-}
-
-func (mss *MockScannerStorage) GetBlocksForRetry(failedOnly bool) ([]Block, error) {
-	return nil, nil
-}
-
-func (mss *MockScannerStorage) PurgeFromHeight(height int64) (int, error) {
-	mss.l.Lock()
-	defer mss.l.Unlock()
-	buf := make([]byte, 8)
-	n := binary.PutVarint(buf, height)
-	mss.store[ScanPosKey] = buf[:n]
-	var removed int
-	for key, val := range mss.store {
-		if strings.HasPrefix(key, blockStatusKeyPrefix) {
-			var item BlockStatusItem
-			if err := json.Unmarshal(val, &item); err == nil && item.Block.Height >= height {
-				delete(mss.store, key)
-				removed++
-			}
-		}
-	}
-	return removed, nil
 }
 
 func (mss *MockScannerStorage) Close() error {

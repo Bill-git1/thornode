@@ -100,30 +100,6 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	c.Check(err, IsNil)
 }
 
-func (s *BlockScannerTestSuite) TestPurgeFromHeightClearsScanPosAndBlockMeta(c *C) {
-	mss := NewMockScannerStorage()
-	_ = mss.SetScanPos(500)
-	_ = mss.SetBlockScanStatus(Block{Height: 100}, Processing)
-	_ = mss.SetBlockScanStatus(Block{Height: 200}, Processing)
-	_ = mss.SetBlockScanStatus(Block{Height: 300}, Processing)
-	_ = mss.SetBlockScanStatus(Block{Height: 400}, Processing)
-	_ = mss.SetBlockScanStatus(Block{Height: 500}, Processing)
-
-	removed, err := mss.PurgeFromHeight(300)
-	c.Assert(err, IsNil)
-	c.Check(removed, Equals, 3)
-
-	pos, err := mss.GetScanPos()
-	c.Assert(err, IsNil)
-	c.Check(pos, Equals, int64(300))
-
-	blocks, err := mss.GetBlocksForRetry(false)
-	c.Assert(err, IsNil)
-	for _, b := range blocks {
-		c.Check(b.Height < 300, Equals, true, Commentf("block at height %d should have been purged", b.Height))
-	}
-}
-
 func (s *BlockScannerTestSuite) TestStartBlockHeightOverridesPersistedPosition(c *C) {
 	mss := NewMockScannerStorage()
 	_ = mss.SetScanPos(9999)

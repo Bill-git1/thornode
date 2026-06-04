@@ -1007,7 +1007,17 @@ func (b *BifrostChainConfiguration) Validate() {
 }
 
 type BifrostBlockScannerConfiguration struct {
-	StartBlockHeight           int64         `mapstructure:"start_block_height"`
+	StartBlockHeight int64 `mapstructure:"start_block_height"`
+	// FloorBlockHeight is a forward-only floor for the bifrost block scanner start
+	// position (0 = disabled). The effective start is max(FloorBlockHeight, persisted
+	// scan pos), so the scanner never starts below the configured height nor below
+	// where it has already scanned; with the rollback clamp it also never rolls back
+	// below FloorBlockHeight on a reorg. Intended to durably SKIP a known-bad block
+	// range across restarts; for catch-up use MaxResumeBlockLag. On Solana it is
+	// best-effort (minContextSlot is an RPC-readiness hint, not a hard lower bound).
+	// MUST be set uniformly across the validator set: uncoordinated skipping can drop
+	// a real inbound below observation supermajority.
+	FloorBlockHeight           int64         `mapstructure:"floor_block_height"`
 	BlockScanProcessors        int           `mapstructure:"block_scan_processors"`
 	HTTPRequestTimeout         time.Duration `mapstructure:"http_request_timeout"`
 	HTTPRequestReadTimeout     time.Duration `mapstructure:"http_request_read_timeout"`

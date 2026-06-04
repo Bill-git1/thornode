@@ -15,7 +15,7 @@ type LevelDBScannerStorageSolana struct {
 	db *leveldb.DB
 }
 
-// BlockStatusItem indicate the status of a block
+// SolanaAccountScanStatus indicates the scan status of a Solana account
 type SolanaAccountScanStatus struct {
 	LastSignature string `json:"last_signature"`
 	LastSlot      uint64 `json:"last_slot"`
