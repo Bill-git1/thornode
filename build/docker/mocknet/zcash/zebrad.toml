@@ -10,6 +10,7 @@ initial_mainnet_peers = []
 NU5 = 1
 NU6 = 1
 "NU6.1" = 1
+"NU6.2" = 1
 
 [network.testnet_parameters.post_nu6_funding_streams.height_range]
 start = 1

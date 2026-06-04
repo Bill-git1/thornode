@@ -1079,7 +1079,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ${DOCKER_MIRROR:-}zfnd/zebra:4.3.0
+    image: ${DOCKER_MIRROR:-}zfnd/zebra:5.0.0
     restart: unless-stopped
     entrypoint: ["/etc/entrypoint.sh"]
     environment:
