@@ -1106,16 +1106,58 @@ func (s *ClientBackfillSuite) TestReportSolvencyUnhealthyScannerSameHeight(c *C)
 	client := s.makeClient(c, server)
 	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
 
-	// Set scanner unhealthy and lastHeight = 100
+	// Unhealthy scanner with the scan loop currently processing slot 100
+	// (recorded in currentScanSlot just before it calls ReportSolvency).
 	client.solScanner.healthy = &atomic.Bool{}
 	client.solScanner.healthy.Store(false)
-	client.solScanner.lastHeightMu.Lock()
-	client.solScanner.lastHeight = 100
-	client.solScanner.lastHeightMu.Unlock()
+	client.solScanner.currentScanSlot.Store(100)
 
-	// height = 100 (same as lastHeight), scanner unhealthy -> skip
+	// height = 100 (same as currentScanSlot) => this is the scan-driven call, so
+	// while unhealthy it must be skipped (defer to the SolvencyCheckRunner).
+	// Nothing should be queued.
 	err := client.ReportSolvency(100)
 	c.Assert(err, IsNil)
+	c.Assert(len(client.globalSolvencyQueue), Equals, 0)
+}
+
+// TestReportSolvencyUnhealthyScannerRunnerHeight verifies the other half of the
+// guard: an unhealthy scanner does NOT suppress a call whose height differs from
+// currentScanSlot — i.e. the SolvencyCheckRunner calling with the live chain tip
+// while the scan loop is frozen (paused because the chain is halted). The
+// runner's report must still go through so auto-unhalt can fire.
+func (s *ClientBackfillSuite) TestReportSolvencyUnhealthyScannerRunnerHeight(c *C) {
+	server := makeSolRPCServer(c, map[string]string{
+		"getSlot":    `{"jsonrpc":"2.0","result":11,"id":1}`,
+		"getBalance": `{"jsonrpc":"2.0","result":{"context":{"slot":11},"value":10000000000},"id":1}`,
+	})
+	defer server.Close()
+	client := s.makeClient(c, server)
+	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
+	client.solScanner.healthy.Store(false)
+	client.solScanner.lastFeeRate = 1
+
+	// Scan loop is frozen at slot 10 (chain halted => scanner paused); the runner
+	// calls with the live tip (11) != currentScanSlot, so the unhealthy guard must
+	// NOT fire and the report must still be queued.
+	client.solScanner.currentScanSlot.Store(10)
+
+	solVault := types2.Vault{
+		PubKey:      types2.GetRandomPubKey(),
+		PubKeyEddsa: types2.GetRandomEd25519PubKey(),
+		Coins:       common.NewCoins(common.NewCoin(common.SOLAsset, cosmos.NewUint(1_000_000_000))),
+	}
+	client.bridge = &mockSOLSolvencyBridge{asgards: types2.Vaults{solVault}}
+
+	err := client.ReportSolvency(11)
+	c.Assert(err, IsNil)
+
+	select {
+	case msg := <-client.globalSolvencyQueue:
+		c.Assert(msg.Chain, Equals, common.SOLChain)
+		c.Assert(msg.PubKey.Equals(solVault.PubKey), Equals, true)
+	case <-time.After(time.Second):
+		c.Fatal("runner-path call (height != currentScanSlot) must NOT be suppressed by the unhealthy guard")
+	}
 }
 
 func (s *ClientBackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults(c *C) {

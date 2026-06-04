@@ -285,9 +285,12 @@ func (c *SOLClient) ReportSolvency(height int64) error {
 		return nil
 	}
 
-	// when block scanner is not healthy, only report from auto-unhalt SolvencyCheckRunner
-	// (FetchTxs passes currentBlockHeight, while SolvencyCheckRunner passes chainHeight)
-	if !c.IsBlockScannerHealthy() && height == int64(c.solScanner.lastHeight) { //nolint:staticcheck
+	// When the block scanner is unhealthy, only report from the auto-unhalt
+	// SolvencyCheckRunner. The scan loop stores the slot it is processing in
+	// currentScanSlot just before calling here, while the runner passes the live
+	// chain tip (GetHeight); so a scan-driven call matches currentScanSlot and is
+	// skipped, deferring to the runner's up-to-date report.
+	if !c.IsBlockScannerHealthy() && height == c.solScanner.CurrentScanSlot() {
 		return nil
 	}
 
