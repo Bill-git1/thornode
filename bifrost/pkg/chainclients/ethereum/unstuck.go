@@ -190,7 +190,7 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 		cancelTx = etypes.NewTransaction(tx.Nonce(), ecommon.HexToAddress(address.String()), big.NewInt(0), c.cfg.BlockScanner.MaxGasLimit, currentGasRate, nil)
 	}
 
-	rawBytes, err := c.kw.Sign(cancelTx, pubKey)
+	rawBytes, err := c.kw.Sign(cancelTx, pubKey, item.TxOutItem.Height)
 	if err != nil {
 		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d, err: %w", tx.Nonce(), err)
 	}

@@ -91,8 +91,9 @@ func (s *KeySign) Stop() {
 	close(s.taskQueue)
 }
 
-// RemoteSign send the request to local task queue
-func (s *KeySign) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string) ([]byte, []byte, error) {
+// RemoteSign sends the request to the local task queue with the caller's
+// consensus-scheduled THORChain height.
+func (s *KeySign) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string, thorchainHeight int64) ([]byte, []byte, error) {
 	if len(msg) == 0 {
 		return nil, nil, nil
 	}
@@ -102,6 +103,7 @@ func (s *KeySign) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey str
 		Algo:       algo,
 		PoolPubKey: poolPubKey,
 		Msg:        encodedMsg,
+		Height:     thorchainHeight,
 		Resp:       make(chan tssKeySignResult, 1),
 	}
 	s.taskQueue <- &task
@@ -111,6 +113,10 @@ func (s *KeySign) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey str
 			return nil, nil, fmt.Errorf("fail to tss sign: %w", resp.Err)
 		}
 
+		if len(resp.R) == 0 && len(resp.S) == 0 {
+			// this means the node tried to do keysign , however this node has not been chosen to take part in the keysign committee
+			return nil, nil, ErrNotSelectedForKeysign
+		}
 		if algo == common.SigningAlgoEd25519 {
 			// ed25519 signature is not R and S , but a single byte array
 			sBytes, err := base64.StdEncoding.DecodeString(resp.S)
@@ -118,11 +124,6 @@ func (s *KeySign) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey str
 				return nil, nil, err
 			}
 			return sBytes, nil, nil
-		}
-
-		if len(resp.R) == 0 && len(resp.S) == 0 {
-			// this means the node tried to do keysign , however this node has not been chosen to take part in the keysign committee
-			return nil, nil, nil
 		}
 		s.logger.Debug().Str("R", resp.R).Str("S", resp.S).Str("recovery", resp.RecoveryID).Msg("tss result")
 		data, err := getSignature(resp.R, resp.S)
@@ -143,7 +144,13 @@ type tssKeySignTask struct {
 	PoolPubKey string
 	Algo       common.SigningAlgo
 	Msg        string
+	Height     int64
 	Resp       chan tssKeySignResult
+}
+
+type tssKeySignBatchKey struct {
+	algo   common.SigningAlgo
+	height int64
 }
 
 type tssKeySignResult struct {
@@ -178,9 +185,9 @@ func (s *KeySign) processKeySignTasks() {
 			// if it has more than maxKeysignPerRequest(15) in the queue , it will only send the first maxKeysignPerRequest(15) of them
 			// the reset will be send in the next request
 			taskLock.Lock()
-			for k, v := range tasks {
+			for poolPubKey, v := range tasks {
 				if len(v) == 0 {
-					delete(tasks, k)
+					delete(tasks, poolPubKey)
 					continue
 				}
 				totalTasks := len(v)
@@ -189,36 +196,49 @@ func (s *KeySign) processKeySignTasks() {
 				// The order of messages in the slice is non-deterministic due to goroutine execution timing.
 				// All bifrosts MUST send messages in the same order for TSS signature pairing to work correctly.
 				sort.SliceStable(v, func(i, j int) bool {
+					if v[i].Height != v[j].Height {
+						return v[i].Height < v[j].Height
+					}
+					if v[i].Algo != v[j].Algo {
+						return string(v[i].Algo) < string(v[j].Algo)
+					}
 					return v[i].Msg < v[j].Msg
 				})
 
 				if totalTasks > maxKeysignPerRequest {
 					totalTasks = maxKeysignPerRequest
 				}
-				s.wg.Add(1)
 				signingTask := v[:totalTasks]
-				tasks[k] = v[totalTasks:]
+				tasks[poolPubKey] = v[totalTasks:]
 
-				// split by algo
-				signingTasksSecp256k1 := make([]*tssKeySignTask, 0)
-				signingTasksEd25519 := make([]*tssKeySignTask, 0)
+				// Split by algo and scheduled THORChain height. A single go-tss
+				// request has one BlockHeight, so do not batch TxOut items with
+				// different policy heights together.
+				batches := make(map[tssKeySignBatchKey][]*tssKeySignTask)
+				batchKeys := make([]tssKeySignBatchKey, 0)
 				for _, task := range signingTask {
 					switch task.Algo {
 					case common.SigningAlgoSecp256k1:
-						signingTasksSecp256k1 = append(signingTasksSecp256k1, task)
 					case common.SigningAlgoEd25519:
-						signingTasksEd25519 = append(signingTasksEd25519, task)
 					default:
-						s.setTssKeySignTasksFail(signingTask, fmt.Errorf("unknown signing algo %s", task.Algo))
+						s.setTssKeySignTasksFail([]*tssKeySignTask{task}, fmt.Errorf("unknown signing algo %s", task.Algo))
 						continue
 					}
+					key := tssKeySignBatchKey{algo: task.Algo, height: task.Height}
+					if _, ok := batches[key]; !ok {
+						batchKeys = append(batchKeys, key)
+					}
+					batches[key] = append(batches[key], task)
 				}
-
-				if len(signingTasksSecp256k1) > 0 {
-					go s.toLocalTSSSigner(k, common.SigningAlgoSecp256k1, signingTasksSecp256k1)
-				}
-				if len(signingTasksEd25519) > 0 {
-					go s.toLocalTSSSigner(k, common.SigningAlgoEd25519, signingTasksEd25519)
+				sort.Slice(batchKeys, func(i, j int) bool {
+					if batchKeys[i].height != batchKeys[j].height {
+						return batchKeys[i].height < batchKeys[j].height
+					}
+					return string(batchKeys[i].algo) < string(batchKeys[j].algo)
+				})
+				for _, key := range batchKeys {
+					s.wg.Add(1)
+					go s.toLocalTSSSigner(poolPubKey, key.algo, batches[key])
 				}
 			}
 			taskLock.Unlock()
@@ -286,35 +306,34 @@ func (s *KeySign) setTssKeySignTasksFail(tasks []*tssKeySignTask, err error) {
 	}
 }
 
-// toLocalTSSSigner will send the request to local signer
+// toLocalTSSSigner will send the request to local signer.
 func (s *KeySign) toLocalTSSSigner(poolPubKey string, algo common.SigningAlgo, tasks []*tssKeySignTask) {
 	defer s.wg.Done()
-	var msgToSign []string
-	for _, item := range tasks {
-		msgToSign = append(msgToSign, item.Msg)
-	}
-	tssMsg := keysign.Request{
-		Algo:       string(algo),
-		PoolPubKey: poolPubKey,
-		Messages:   msgToSign,
-	}
-	currentVersion := s.getVersion()
-	tssMsg.Version = currentVersion.String()
-	s.logger.Debug().Msg("new TSS join party")
-	// get current thorchain block height
-	blockHeight, err := s.bridge.GetBlockHeight()
+	tssMsg, err := s.buildKeysignRequest(poolPubKey, algo, tasks)
 	if err != nil {
-		s.setTssKeySignTasksFail(tasks, fmt.Errorf("fail to get block height from thorchain: %w", err))
+		s.setTssKeySignTasksFail(tasks, err)
 		return
 	}
-	// this is just round the block height to the nearest 20
-	tssMsg.BlockHeight = blockHeight / 20 * 20
-
+	s.logger.Debug().Msg("new TSS join party")
 	s.logger.Info().Msgf("msgToSign to tss Local node PoolPubKey: %s, Messages: %+v, block height: %d", tssMsg.PoolPubKey, tssMsg.Messages, tssMsg.BlockHeight)
 
 	keySignResp, err := s.server.KeySign(tssMsg)
 	if err != nil {
 		s.setTssKeySignTasksFail(tasks, fmt.Errorf("fail tss keysign: %w", err))
+		return
+	}
+	if len(keySignResp.Signatures) == 0 && keySignResp.Blame.FailReason == "" && len(keySignResp.Blame.BlameNodes) == 0 {
+		// An empty response means this node was not selected for the filtered
+		// keysign party. Report an empty result so callers stand down cleanly.
+		s.logger.Info().
+			Str("pool_pub_key", poolPubKey).
+			Str("algo", string(algo)).
+			Int64("block_height", tssMsg.BlockHeight).
+			Int("message_count", len(tasks)).
+			Msg("local node is not selected for keysign party; standing down")
+		for _, t := range tasks {
+			t.Resp <- tssKeySignResult{}
+		}
 		return
 	}
 
@@ -361,4 +380,52 @@ func (s *KeySign) toLocalTSSSigner(poolPubKey string, algo common.SigningAlgo, t
 
 	// Blame need to be passed back to thorchain , so as thorchain can use the information to slash relevant node account
 	s.setTssKeySignTasksFail(tasks, NewKeysignError(blame))
+}
+
+// buildKeysignRequest builds the go-tss request and attaches the signer policy
+// for the THORChain height used by the TSS ceremony.
+func (s *KeySign) buildKeysignRequest(poolPubKey string, algo common.SigningAlgo, tasks []*tssKeySignTask) (keysign.Request, error) {
+	var msgToSign []string
+	for _, item := range tasks {
+		msgToSign = append(msgToSign, item.Msg)
+	}
+	tssMsg := keysign.Request{
+		Algo:       string(algo),
+		PoolPubKey: poolPubKey,
+		Messages:   msgToSign,
+	}
+	blockHeight, err := s.keysignRequestBlockHeight(tasks)
+	if err != nil {
+		return keysign.Request{}, err
+	}
+	tssMsg.BlockHeight = blockHeight
+	policy, err := s.bridge.GetKeysignPolicy(common.PubKey(tssMsg.PoolPubKey), tssMsg.BlockHeight)
+	if err != nil {
+		return keysign.Request{}, fmt.Errorf("fail to get keysign policy from thorchain: %w", err)
+	}
+	// SignerPubKeys is the authoritative active party. NeverSigners and
+	// JailedFallbackSigners remain diagnostic metadata for blame and review.
+	tssMsg.SignerPubKeys = policy.Signers.Strings()
+	tssMsg.NeverSigners = policy.NeverSigners.Strings()
+	tssMsg.JailedFallbackSigners = policy.JailedFallbackSigners.Strings()
+	tssMsg.RequiredSigners = policy.RequiredSigners
+	currentVersion := s.getVersion()
+	tssMsg.Version = currentVersion.String()
+	return tssMsg, nil
+}
+
+func (s *KeySign) keysignRequestBlockHeight(tasks []*tssKeySignTask) (int64, error) {
+	if len(tasks) == 0 {
+		return 0, fmt.Errorf("no keysign tasks")
+	}
+	height := tasks[0].Height
+	if height <= 0 {
+		return 0, fmt.Errorf("keysign task height must be positive")
+	}
+	for _, task := range tasks[1:] {
+		if task.Height != height {
+			return 0, fmt.Errorf("mixed keysign task heights: %d and %d", height, task.Height)
+		}
+	}
+	return height, nil
 }

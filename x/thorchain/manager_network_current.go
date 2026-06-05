@@ -1442,6 +1442,15 @@ func (vm *NetworkMgr) scheduleKeygen(ctx cosmos.Context, nas NodeAccounts, keyge
 			return nil
 		}
 	}
+	eligible, err := keygenEligibleNodeAccounts(ctx, vm.k, nas)
+	if err != nil {
+		return err
+	}
+	if err = validateKeygenEligibleThreshold(nas, eligible); err != nil {
+		return err
+	}
+	nas = eligible
+
 	var members []string
 	for i := range nas {
 		members = append(members, nas[i].PubKeySet.Secp256k1.String())

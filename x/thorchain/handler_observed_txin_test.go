@@ -3,6 +3,7 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/blang/semver"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
@@ -17,6 +18,22 @@ import (
 )
 
 type HandlerObservedTxInSuite struct{}
+
+// compromisedVaultNoOpSecurityMsgFromEvents returns the security-event message
+// for a compromised-vault no-op so tests can assert the operator alert path.
+func compromisedVaultNoOpSecurityMsgFromEvents(ctx cosmos.Context) string {
+	for _, event := range ctx.EventManager().Events() {
+		if event.Type != types.SecurityEventType {
+			continue
+		}
+		for _, attr := range event.Attributes {
+			if attr.Key == "msg" && strings.HasPrefix(attr.Value, compromisedVaultNoOpSecurityMsg) {
+				return attr.Value
+			}
+		}
+	}
+	return ""
+}
 
 type TestObservedTxInValidateKeeper struct {
 	keeper.KVStoreDummy
@@ -293,6 +310,9 @@ func (k *TestObservedTxInHandleKeeper) GetMimir(_ cosmos.Context, key string) (i
 	if key == "HaltMemoless" {
 		return 0, nil
 	}
+	if strings.HasPrefix(key, compromisedVaultMimirKeyPrefix) {
+		return -1, nil
+	}
 	return 0, fmt.Errorf("mimir not found")
 }
 
@@ -495,6 +515,68 @@ func (s *HandlerObservedTxInSuite) testHandleWithVersion(c *C) {
 	c.Check(keeper.height, Equals, int64(12))
 	ethCoin := keeper.vault.Coins.GetCoin(common.ETHAsset)
 	c.Assert(ethCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+}
+
+// TestCompromisedVaultInboundIsNoOp verifies the legacy MsgObservedTxIn path
+// still records quorum, but does not credit the vault, queue swaps, or schedule
+// refunds/outbounds for a vault flagged by CompromisedVault-<pubkey>.
+func (s *HandlerObservedTxInSuite) TestCompromisedVaultInboundIsNoOp(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(18)
+	k := mgr.Keeper()
+
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+
+	vaultPubKey := GetRandomPubKey()
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, vaultPubKey, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+	// The flag is per vault pubkey, matching the existing keysign and inbound
+	// address filtering semantics.
+	k.SetMimir(ctx, compromisedVaultMimirKeyPrefix+vaultPubKey.String(), 1)
+
+	vaultAddr, err := vaultPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomETHAddress(),
+		vaultAddr,
+		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))),
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(37500))},
+		"swap:BTC.BTC:"+GetRandomBTCAddress().String(),
+	)
+	obsTx := NewObservedTx(tx, 12, vaultPubKey, 12)
+	msg := NewMsgObservedTxIn(ObservedTxs{obsTx}, na.NodeAddress)
+
+	handler := NewObservedTxInHandler(mgr)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+
+	updatedVault, err := k.GetVault(ctx, vaultPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(updatedVault.GetCoin(common.ETHAsset).Amount.IsZero(), Equals, true)
+	c.Assert(updatedVault.InboundTxCount, Equals, int64(0))
+
+	voter, err := k.GetObservedTxInVoter(ctx, tx.ID)
+	c.Assert(err, IsNil)
+	// Finalised observations are closed out even though no tx handler is run.
+	c.Assert(voter.FinalisedHeight, Equals, ctx.BlockHeight())
+	c.Assert(voter.Tx.Status, Equals, common.Status_done)
+	c.Assert(voter.UpdatedVault, Equals, false)
+	// Operators need an explicit security signal that the tx was skipped
+	// because the destination vault has been flagged compromised.
+	securityMsg := compromisedVaultNoOpSecurityMsgFromEvents(ctx)
+	c.Assert(securityMsg, Not(Equals), "")
+	c.Assert(strings.Contains(securityMsg, vaultPubKey.String()), Equals, true)
+
+	queue := newSwapQueue(k)
+	swaps, err := queue.FetchQueue(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(swaps, HasLen, 0)
+
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 0)
 }
 
 // Test migrate memo

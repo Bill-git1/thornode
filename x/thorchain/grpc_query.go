@@ -38,9 +38,12 @@ func (s *queryServer) unwrapSdkContext(c context.Context) sdk.Context {
 
 func checkHeightParam(height string) error {
 	if len(height) > 0 {
-		_, err := strconv.ParseInt(height, 10, 64)
+		parsed, err := strconv.ParseInt(height, 10, 64)
 		if err != nil {
 			return fmt.Errorf("invalid height param, %w", err)
+		}
+		if parsed < 0 {
+			return fmt.Errorf("invalid height param, must not be negative")
 		}
 	}
 	return nil
@@ -449,6 +452,16 @@ func (s *queryServer) Vault(c context.Context, req *types.QueryVaultRequest) (*t
 	}
 	ctx := s.unwrapSdkContext(c)
 	return s.queryVault(ctx, req)
+}
+
+// KeysignParty returns the signer eligibility policy for a vault at the
+// requested THORChain signing height.
+func (s *queryServer) KeysignParty(c context.Context, req *types.QueryKeysignPartyRequest) (*types.QueryKeysignPartyResponse, error) {
+	if err := checkHeightParam(req.SigningHeight); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryKeysignParty(ctx, req)
 }
 
 func (s *queryServer) XMRSpentOutputRefs(c context.Context, req *types.QueryXMRSpentOutputRefsRequest) (*types.QueryXMRSpentOutputRefsResponse, error) {

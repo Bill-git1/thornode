@@ -43,6 +43,12 @@ const (
 	QueueTypeAdvanced = "advanced"
 )
 
+const (
+	jailReasonFailedToVoteKeygen     = "failed to vote keygen in time"
+	jailReasonFailedToPerformKeygen  = "failed to perform keygen"
+	jailReasonFailedToPerformKeysign = "failed to perform keysign"
+)
+
 var (
 	initManager = func(_ cosmos.Context, _ *Mgrs) {}
 	queryExport = func(_ sdk.Context, _ *Mgrs) ([]byte, error) {
@@ -176,6 +182,229 @@ func (qs queryServer) queryVault(ctx cosmos.Context, req *types.QueryVaultReques
 		VaultCreationHeightXmr: v.VaultCreationHeightXmr,
 	}
 	return &resp, nil
+}
+
+// queryKeysignParty classifies vault members into active, never-sign, and
+// jailed-fallback signers at a specific THORChain height.
+func (qs queryServer) queryKeysignParty(ctx cosmos.Context, req *types.QueryKeysignPartyRequest) (*types.QueryKeysignPartyResponse, error) {
+	if len(req.PubKey) < 1 {
+		return nil, errors.New("missing vault pub_key parameter")
+	}
+	height, err := optionalQueryHeight(ctx, req.SigningHeight)
+	if err != nil {
+		return nil, err
+	}
+	// Evaluate jail release state at the requested signing height. The query
+	// still reads the current store, so callers use rounded heights and avoid
+	// binding the returned party into keysign message IDs.
+	ctx = ctx.WithBlockHeight(height)
+
+	pubkey, err := common.NewPubKey(req.PubKey)
+	if err != nil {
+		return nil, fmt.Errorf("%s is invalid pubkey", req.PubKey)
+	}
+	vault, err := qs.mgr.Keeper().GetVault(ctx, pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get vault with pubkey(%s),err:%w", pubkey, err)
+	}
+	if vault.IsEmpty() {
+		return nil, errors.New("vault not found")
+	}
+	compromised, err := isVaultCompromised(ctx, qs.mgr.Keeper(), vault.PubKey)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get compromised vault mimir: %w", err)
+	}
+	// A compromised vault is a vault-level hard stop; no member fallback should
+	// form a signing party for it.
+	if compromised {
+		return nil, fmt.Errorf("vault %s is %w", vault.PubKey.String(), common.ErrCompromisedVault)
+	}
+	members := vault.GetMembership()
+	if len(members) == 0 {
+		return nil, fmt.Errorf("vault %s has empty signer membership", pubkey.String())
+	}
+
+	threshold, err := conversion.GetThreshold(len(members))
+	if err != nil {
+		return nil, fmt.Errorf("fail to calculate key sign threshold: %w", err)
+	}
+	requiredSigners := threshold + 1
+	policy := keysignPartyPolicy{signers: members}
+	filteringDisabled, err := tssSignerFilteringDisabled(ctx, qs.mgr.Keeper())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get TSS signer filtering mimir: %w", err)
+	}
+	if !filteringDisabled {
+		policy, err = keysignPolicyForVaultMembers(ctx, qs.mgr.Keeper(), members, requiredSigners)
+		if err != nil {
+			return nil, fmt.Errorf("fail to classify key sign party for vault %s: %w", pubkey.String(), err)
+		}
+	}
+
+	return &types.QueryKeysignPartyResponse{
+		PubKey:                vault.PubKey.String(),
+		Signers:               policy.signers.Strings(),
+		Height:                height,
+		Threshold:             int64(threshold),
+		RequiredSigners:       int64(requiredSigners),
+		NeverSigners:          policy.neverSigners.Strings(),
+		JailedFallbackSigners: policy.jailedFallbackSigners.Strings(),
+		ActiveSignerCount:     int64(len(policy.signers)),
+	}, nil
+}
+
+// optionalQueryHeight returns the request height when supplied, otherwise the
+// current context height. Future heights are rejected because jail release
+// checks would otherwise be evaluated against unavailable state.
+func optionalQueryHeight(ctx cosmos.Context, heightStr string) (int64, error) {
+	return parseQueryHeight(ctx, heightStr, true)
+}
+
+// keysignJailedCandidate carries a deterministic fallback ordering for jailed
+// vault members that may be needed to satisfy threshold.
+type keysignJailedCandidate struct {
+	pubkey            common.PubKey
+	priority          int
+	slashPoints       int64
+	jailReleaseHeight int64
+}
+
+// keysignPartyMemberState is the local classification input for one vault
+// member.
+type keysignPartyMemberState struct {
+	pubkey            common.PubKey
+	never             bool
+	jailed            bool
+	jailReason        string
+	jailReleaseHeight int64
+	slashPoints       int64
+}
+
+// keysignPartyPolicy is the final signer policy returned to bifrost callers.
+type keysignPartyPolicy struct {
+	signers               common.PubKeys
+	neverSigners          common.PubKeys
+	jailedFallbackSigners common.PubKeys
+}
+
+// keysignPolicyForVaultMembers loads node and jail state for each vault member
+// before applying the keysign participant policy.
+func keysignPolicyForVaultMembers(ctx cosmos.Context, k keeper.Keeper, members common.PubKeys, requiredSigners int) (keysignPartyPolicy, error) {
+	states := make([]keysignPartyMemberState, 0, len(members))
+	for _, member := range members {
+		nodeAccount, err := k.GetNodeAccountByPubKey(ctx, member)
+		if err != nil {
+			return keysignPartyPolicy{}, fmt.Errorf("vault member %s is missing node account state: %w", member.String(), err)
+		}
+		jail, err := k.GetNodeAccountJail(ctx, nodeAccount.NodeAddress)
+		if err != nil {
+			return keysignPartyPolicy{}, fmt.Errorf("fail to get node account jail for vault member %s: %w", member.String(), err)
+		}
+		slashPoints, err := k.GetNodeAccountSlashPoints(ctx, nodeAccount.NodeAddress)
+		if err != nil {
+			return keysignPartyPolicy{}, fmt.Errorf("fail to get slash points for vault member %s: %w", member.String(), err)
+		}
+		states = append(states, keysignPartyMemberState{
+			pubkey:            member,
+			never:             nodeAccountForcedOrFlagged(nodeAccount),
+			jailed:            jail.IsJailed(ctx),
+			jailReason:        jail.Reason,
+			jailReleaseHeight: jail.ReleaseHeight,
+			slashPoints:       slashPoints,
+		})
+	}
+	return classifyKeysignParty(states, requiredSigners)
+}
+
+// classifyKeysignParty prefers non-jailed vault members, then records jailed
+// members as deterministic fallback candidates that are used only when required.
+func classifyKeysignParty(members []keysignPartyMemberState, requiredSigners int) (keysignPartyPolicy, error) {
+	preferred := make(common.PubKeys, 0, len(members))
+	fallbackJailed := make([]keysignJailedCandidate, 0)
+	neverSigners := make(common.PubKeys, 0)
+	for _, member := range members {
+		// Forced-to-leave members are always excluded. Jailed members remain
+		// deterministic fallback candidates so a vault can still sign at
+		// threshold when clean members alone are insufficient.
+		if member.never {
+			neverSigners = append(neverSigners, member.pubkey)
+			continue
+		}
+		if member.jailed {
+			fallbackJailed = append(fallbackJailed, keysignJailedCandidate{
+				pubkey:            member.pubkey,
+				priority:          keysignJailFallbackPriority(member.jailReason),
+				slashPoints:       member.slashPoints,
+				jailReleaseHeight: member.jailReleaseHeight,
+			})
+			continue
+		}
+		preferred = append(preferred, member.pubkey)
+	}
+
+	sort.SliceStable(fallbackJailed, func(i, j int) bool {
+		// Use deterministic reliability signals before pubkey so every node
+		// derives the same fallback set while preferring less risky signers.
+		if fallbackJailed[i].priority != fallbackJailed[j].priority {
+			return fallbackJailed[i].priority < fallbackJailed[j].priority
+		}
+		if fallbackJailed[i].slashPoints != fallbackJailed[j].slashPoints {
+			return fallbackJailed[i].slashPoints < fallbackJailed[j].slashPoints
+		}
+		if fallbackJailed[i].jailReleaseHeight != fallbackJailed[j].jailReleaseHeight {
+			return fallbackJailed[i].jailReleaseHeight < fallbackJailed[j].jailReleaseHeight
+		}
+		return fallbackJailed[i].pubkey.String() < fallbackJailed[j].pubkey.String()
+	})
+	jailedFallbackSigners := make(common.PubKeys, 0, len(fallbackJailed))
+	for _, candidate := range fallbackJailed {
+		jailedFallbackSigners = append(jailedFallbackSigners, candidate.pubkey)
+	}
+
+	if len(preferred) >= requiredSigners {
+		return keysignPartyPolicy{
+			signers:               preferred,
+			neverSigners:          neverSigners,
+			jailedFallbackSigners: jailedFallbackSigners,
+		}, nil
+	}
+
+	needed := requiredSigners - len(preferred)
+	if len(fallbackJailed) < needed {
+		return keysignPartyPolicy{}, fmt.Errorf(
+			"not enough eligible signers: need %d of %d, got %d preferred and %d jailed fallback after excluding %d never-eligible members",
+			requiredSigners,
+			len(members),
+			len(preferred),
+			len(fallbackJailed),
+			len(neverSigners),
+		)
+	}
+	eligible := append(common.PubKeys{}, preferred...)
+	for _, candidate := range fallbackJailed[:needed] {
+		eligible = append(eligible, candidate.pubkey)
+	}
+	return keysignPartyPolicy{
+		signers:               eligible,
+		neverSigners:          neverSigners,
+		jailedFallbackSigners: jailedFallbackSigners,
+	}, nil
+}
+
+// keysignJailFallbackPriority orders jailed fallback candidates from least to
+// most directly relevant to keysign failure. Unknown reasons are still usable,
+// but only after known keygen/keysign reasons.
+func keysignJailFallbackPriority(reason string) int {
+	switch strings.ToLower(strings.TrimSpace(reason)) {
+	case jailReasonFailedToVoteKeygen:
+		return 10
+	case jailReasonFailedToPerformKeygen:
+		return 20
+	case jailReasonFailedToPerformKeysign:
+		return 30
+	default:
+		return 40
+	}
 }
 
 func (qs queryServer) queryAsgardVaults(ctx cosmos.Context, _ *types.QueryAsgardVaultsRequest) (*types.QueryAsgardVaultsResponse, error) {
@@ -606,12 +835,12 @@ func getXMRActiveVaultReady(ctx cosmos.Context, k keeper.Keeper) (bool, error) {
 func filterCompromisedVaults(ctx cosmos.Context, k keeper.Keeper, active Vaults) Vaults {
 	safe := make(Vaults, 0, len(active))
 	for _, v := range active {
-		flagged, err := k.GetMimirWithRef(ctx, "CompromisedVault-%s", v.PubKey.String())
+		compromised, err := isVaultCompromised(ctx, k, v.PubKey)
 		if err != nil {
 			ctx.Logger().Error("failed to read CompromisedVault mimir, excluding vault", "pub_key", v.PubKey.String(), "error", err)
 			continue
 		}
-		if flagged > 0 {
+		if compromised {
 			ctx.Logger().Info("excluding compromised vault", "pub_key", v.PubKey.String())
 			continue
 		}
@@ -2430,13 +2659,25 @@ func (qs queryServer) queryTx(ctx cosmos.Context, req *types.QueryTxRequest) (*t
 }
 
 func extractBlockHeight(ctx cosmos.Context, heightStr string) (int64, error) {
+	return parseQueryHeight(ctx, heightStr, false)
+}
+
+// parseQueryHeight parses historical query heights for endpoint handlers and
+// rejects future heights so callers cannot evaluate unavailable state.
+func parseQueryHeight(ctx cosmos.Context, heightStr string, allowEmpty bool) (int64, error) {
 	if len(heightStr) == 0 {
+		if allowEmpty {
+			return ctx.BlockHeight(), nil
+		}
 		return -1, errors.New("block height not provided")
 	}
-	height, err := strconv.ParseInt(heightStr, 0, 64)
+	height, err := strconv.ParseInt(heightStr, 10, 64)
 	if err != nil {
 		ctx.Logger().Error("fail to parse block height", "error", err)
 		return -1, fmt.Errorf("fail to parse block height: %w", err)
+	}
+	if height < 0 {
+		return -1, fmt.Errorf("block height must not be negative")
 	}
 	if height > ctx.BlockHeight() {
 		return -1, fmt.Errorf("block height not available yet")

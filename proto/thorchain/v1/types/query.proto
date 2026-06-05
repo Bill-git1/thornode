@@ -314,6 +314,11 @@ service Query {
     option (google.api.http).get = "/thorchain/vault/{pub_key}";
   }
 
+  rpc KeysignParty(QueryKeysignPartyRequest)
+      returns (QueryKeysignPartyResponse) {
+    option (google.api.http).get = "/thorchain/vault/{pub_key}/keysign_party";
+  }
+
   rpc XMRSpentOutputRefs(QueryXMRSpentOutputRefsRequest)
       returns (QueryXMRSpentOutputRefsResponse) {
     option (google.api.http).get = "/thorchain/xmr/spent_refs/{vault_pub_key}";

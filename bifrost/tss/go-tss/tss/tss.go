@@ -151,7 +151,7 @@ func (t *TssServer) requestToMsgId(request interface{}) (string, error) {
 	case keysign.Request:
 		sort.Strings(value.Messages)
 		dat = []byte(strings.Join(value.Messages, ","))
-		keys = value.SignerPubKeys
+		dat = append(dat, []byte(strings.TrimSpace(value.PoolPubKey))...)
 		algo = string(value.Algo)
 	default:
 		t.logger.Error().Msg("unknown request type")

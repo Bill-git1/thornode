@@ -245,6 +245,119 @@ func (a *VaultsApiService) VaultExecute(r ApiVaultRequest) (*Vault, *http.Respon
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiVaultKeysignPartyRequest struct {
+	ctx context.Context
+	ApiService *VaultsApiService
+	pubkey string
+	signingHeight *int64
+}
+
+// optional signing height, defaults to current tip
+func (r ApiVaultKeysignPartyRequest) SigningHeight(signingHeight int64) ApiVaultKeysignPartyRequest {
+	r.signingHeight = &signingHeight
+	return r
+}
+
+func (r ApiVaultKeysignPartyRequest) Execute() (*KeysignPartyResponse, *http.Response, error) {
+	return r.ApiService.VaultKeysignPartyExecute(r)
+}
+
+/*
+VaultKeysignParty Method for VaultKeysignParty
+
+Returns the keysign-eligible signer set for the provided vault pubkey. The optional signing_height is the signing height used for jail-release evaluation against current vault and node-account state; it is not a historical state query.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param pubkey
+ @return ApiVaultKeysignPartyRequest
+*/
+func (a *VaultsApiService) VaultKeysignParty(ctx context.Context, pubkey string) ApiVaultKeysignPartyRequest {
+	return ApiVaultKeysignPartyRequest{
+		ApiService: a,
+		ctx: ctx,
+		pubkey: pubkey,
+	}
+}
+
+// Execute executes the request
+//  @return KeysignPartyResponse
+func (a *VaultsApiService) VaultKeysignPartyExecute(r ApiVaultKeysignPartyRequest) (*KeysignPartyResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *KeysignPartyResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VaultsApiService.VaultKeysignParty")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/thorchain/vault/{pubkey}/keysign_party"
+	localVarPath = strings.Replace(localVarPath, "{"+"pubkey"+"}", url.PathEscape(parameterToString(r.pubkey, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.signingHeight != nil {
+		localVarQueryParams.Add("signing_height", parameterToString(*r.signingHeight, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiVaultPubkeysRequest struct {
 	ctx context.Context
 	ApiService *VaultsApiService

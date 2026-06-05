@@ -863,6 +863,68 @@ func (*NetworkManagerTestSuite) TestMigrateFundsLeavesXMRDustBufferForFinalRound
 	)
 }
 
+func (*NetworkManagerTestSuite) TestMigrateFundsFinalXMRMigrationCoversFrostFeeEstimate(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+	networkMgr := newNetworkMgr(mgr.Keeper(), mgr.TxOutStore(), mgr.EventMgr())
+
+	mgr.Keeper().SetMimir(ctx, constants.FundMigrationInterval.String(), 1)
+	mgr.Keeper().SetMimir(ctx, constants.ChurnMigrateRounds.String(), 2)
+
+	const (
+		xmrFrostWeight           = uint64(2000)
+		xmrScheduledFeeRate      = uint64(4_700_000)
+		actualFrostFeeEstimate   = uint64(1_073_010)
+		previousMaxGasEstimate   = uint64(1_057_500)
+		expectedCurrentMaxGasAmt = uint64(1_410_000)
+	)
+	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.XMRChain, NetworkFee{
+		Chain:              common.XMRChain,
+		TransactionSize:    xmrFrostWeight,
+		TransactionFeeRate: xmrScheduledFeeRate,
+	}), IsNil)
+
+	targetKey := GetRandomEd25519PubKey()
+	target := NewVaultV2(ctx.BlockHeight()-1, ActiveVault, AsgardVault, targetKey, xmrMonovaultChains().Strings(), nil, targetKey)
+	target.PubKeyFrost = targetKey
+	c.Assert(mgr.Keeper().SetVault(ctx, target), IsNil)
+
+	spendableBalance := cosmos.NewUint(100_000_000)
+	retiringKey := GetRandomEd25519PubKey()
+	retiring := NewVaultV2(ctx.BlockHeight()-1, RetiringVault, AsgardVault, retiringKey, xmrMonovaultChains().Strings(), nil, retiringKey)
+	retiring.PubKeyFrost = retiringKey
+	retiring.AddFunds(common.NewCoins(common.NewCoin(common.XMRAsset, spendableBalance)))
+	c.Assert(mgr.Keeper().SetVault(ctx, retiring), IsNil)
+
+	maxGas, err := mgr.GasMgr().GetMaxGas(ctx, common.XMRChain)
+	c.Assert(err, IsNil)
+	c.Assert(maxGas.Amount.Equal(cosmos.NewUint(expectedCurrentMaxGasAmt)), Equals, true)
+	c.Assert(previousMaxGasEstimate < actualFrostFeeEstimate, Equals, true)
+	c.Assert(maxGas.Amount.GTE(cosmos.NewUint(actualFrostFeeEstimate)), Equals, true)
+
+	c.Assert(networkMgr.migrateFunds(ctx, mgr), IsNil)
+
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 1)
+	c.Assert(items[0].Chain.Equals(common.XMRChain), Equals, true)
+	c.Assert(items[0].VaultPubKey.Equals(retiring.PubKey), Equals, true)
+
+	expectedAmount := common.SafeSub(
+		common.SafeSub(spendableBalance, maxGas.Amount),
+		common.XMRChain.DustThreshold(),
+	)
+	c.Assert(items[0].Coin.Amount.Equal(expectedAmount), Equals, true)
+
+	scheduledSpend := items[0].Coin.Amount.Add(cosmos.NewUint(actualFrostFeeEstimate))
+	c.Assert(
+		scheduledSpend.LTE(spendableBalance),
+		Equals,
+		true,
+		Commentf("scheduled=%s actual_fee=%d spendable=%s", items[0].Coin.Amount.String(), actualFrostFeeEstimate, spendableBalance.String()),
+	)
+}
+
 func (*NetworkManagerTestSuite) TestGetAvailablePoolsRune(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	helper := NewVaultGenesisSetupTestHelper(mgr.Keeper())

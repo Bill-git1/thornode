@@ -94,6 +94,7 @@ docs/KeygenMetric.md
 docs/KeygenResponse.md
 docs/KeysignInfo.md
 docs/KeysignMetrics.md
+docs/KeysignPartyResponse.md
 docs/KeysignResponse.md
 docs/LastBlock.md
 docs/LimitOrderApi.md
@@ -254,6 +255,7 @@ model_keygen_metric.go
 model_keygen_response.go
 model_keysign_info.go
 model_keysign_metrics.go
+model_keysign_party_response.go
 model_keysign_response.go
 model_last_block.go
 model_limit_swap_with_details.go

@@ -98,7 +98,16 @@ func (m *MockThorchainBridge) FetchNodeStatus() (types.NodeStatus, error) {
 	return types.NodeStatus_Unknown, nil
 }
 func (m *MockThorchainBridge) FetchActiveNodes() ([]common.PubKey, error) { return nil, nil }
-func (m *MockThorchainBridge) GetKeysignParty(common.PubKey) (common.PubKeys, error) {
+
+// GetKeysignPolicy satisfies the expanded bridge interface for node-gater
+// tests; peer gating does not inspect keysign signer filtering.
+func (m *MockThorchainBridge) GetKeysignPolicy(common.PubKey, int64) (thorclient.KeysignPolicy, error) {
+	return thorclient.KeysignPolicy{}, nil
+}
+
+// GetKeysignParty satisfies legacy callers on the mock bridge without making
+// node-gater tests set up vault signer state.
+func (m *MockThorchainBridge) GetKeysignParty(common.PubKey, int64) (common.PubKeys, error) {
 	return nil, nil
 }
 func (m *MockThorchainBridge) GetAsgards() (types.Vaults, error)           { return nil, nil }

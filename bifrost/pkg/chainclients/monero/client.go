@@ -74,6 +74,7 @@ const (
 	defaultXMRConsolidationMaxInputs           = int64(8)
 	defaultXMRConsolidationMaxLockBps          = int64(1000)        // 10.00%
 	defaultXMRConsolidationMinReserveAtomic    = uint64(50_000_000) // 0.00005 XMR (piconero)
+	defaultXMRSpentRefsRetryMaxAttempts        = 60                 // bounded peer-import retry window after the first failed attempt
 )
 
 var ErrSidecarNotConfigured = errors.New("xmr sidecar requires signer_endpoint or api_host configuration")
@@ -159,6 +160,9 @@ type Client struct {
 	lastSolvencyCheckHeight *atomic.Int64
 	wg                      *sync.WaitGroup
 	stopchan                chan struct{}
+
+	spentRefsRetryInterval    time.Duration
+	spentRefsRetryMaxAttempts int
 }
 
 // NewClient creates a monero chain client backed by the shared block scanner.
@@ -213,26 +217,28 @@ func NewClient(
 	scanner.SetVaultBootstrap(vaultBootstrap)
 
 	c := &Client{
-		logger:                  logger,
-		cfg:                     cfg,
-		chain:                   cfg.ChainID,
-		thorchainBridge:         bridge,
-		localNodePubKey:         localNodePubKey,
-		vaultBootstrap:          vaultBootstrap,
-		scanner:                 scanner,
-		sidecar:                 sc,
-		tssServer:               tssServer,
-		asgardAddresses:         make([]common.Address, 0),
-		vaultLocks:              make(map[string]*sync.Mutex),
-		consolidationState:      make(map[string]consolidationVaultState),
-		consolidateInProgress:   atomic.NewBool(false),
-		lastConsolidationHeight: atomic.NewInt64(0),
-		signerCacheManager:      nil,
-		vaultAddressMap:         make(map[string]common.Address),
-		vaultAddrToKey:          make(map[string]string),
-		lastSolvencyCheckHeight: atomic.NewInt64(0),
-		wg:                      &sync.WaitGroup{},
-		stopchan:                make(chan struct{}),
+		logger:                    logger,
+		cfg:                       cfg,
+		chain:                     cfg.ChainID,
+		thorchainBridge:           bridge,
+		localNodePubKey:           localNodePubKey,
+		vaultBootstrap:            vaultBootstrap,
+		scanner:                   scanner,
+		sidecar:                   sc,
+		tssServer:                 tssServer,
+		asgardAddresses:           make([]common.Address, 0),
+		vaultLocks:                make(map[string]*sync.Mutex),
+		consolidationState:        make(map[string]consolidationVaultState),
+		consolidateInProgress:     atomic.NewBool(false),
+		lastConsolidationHeight:   atomic.NewInt64(0),
+		signerCacheManager:        nil,
+		vaultAddressMap:           make(map[string]common.Address),
+		vaultAddrToKey:            make(map[string]string),
+		lastSolvencyCheckHeight:   atomic.NewInt64(0),
+		wg:                        &sync.WaitGroup{},
+		stopchan:                  make(chan struct{}),
+		spentRefsRetryInterval:    constants.ThorchainBlockTime,
+		spentRefsRetryMaxAttempts: defaultXMRSpentRefsRetryMaxAttempts,
 	}
 
 	var path string
@@ -1300,7 +1306,8 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		return nil, nil, nil, err
 	}
 
-	members, memberErr := c.vaultSigningMembers(signReqCtx.vaultPubKey)
+	policyHeight := height
+	members, activeMembers, memberErr := c.vaultSigningMembers(signReqCtx.vaultPubKey, policyHeight)
 	if memberErr != nil {
 		return nil, nil, nil, fmt.Errorf("fail to resolve vault signing members for FROST signing: %w", memberErr)
 	}
@@ -1372,7 +1379,8 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		Memo:                        tx.Memo,
 		FeeRate:                     feeRate,
 		SignerPubKeys:               members,
-		BlockHeight:                 height,
+		ActiveSignerPubKeys:         activeMembers,
+		BlockHeight:                 policyHeight,
 		Version:                     version.String(),
 		TxInHash:                    txInHash,
 		RequestID:                   tx.SigningID,
@@ -1384,6 +1392,10 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	resp, err := c.tssServer.FrostKeySign(frostReq, sidecar.NewFrostAdapter(c.sidecar))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to execute FROST keysign: %w", err)
+	}
+	if resp.Status == gotsscommon.NA && strings.TrimSpace(resp.TxHex) == "" && strings.TrimSpace(resp.Blame.FailReason) == "" && len(resp.Blame.BlameNodes) == 0 {
+		c.logger.Info().Str("vault_pubkey", signReqCtx.vaultPubKey.String()).Msg("local node is not selected for FROST keysign party; standing down")
+		return nil, nil, nil, nil
 	}
 	if resp.Status != gotsscommon.Success {
 		if len(resp.Blame.BlameNodes) > 0 {
@@ -1691,17 +1703,53 @@ func (c *Client) RestoreKeyshare(vaultPubKey common.PubKey, keyBytesHex string) 
 	return nil
 }
 
+// ApplySpentOutputRefs imports XMR spent refs and outbound metadata from an
+// attestation into the sidecar without creating a local attestation. The
+// scanner must later observe the sidecar-verified outbound before this node
+// signs it locally.
 func (c *Client) ApplySpentOutputRefs(tx common.ObservedTx) {
-	if c.sidecar == nil || len(tx.SpentOutputRefs) == 0 {
+	if !c.applySpentOutputRefsOnce(tx) {
 		return
 	}
+
+	interval := c.spentRefsRetryInterval
+	if interval <= 0 {
+		interval = constants.ThorchainBlockTime
+	}
+	maxAttempts := c.spentRefsRetryMaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = defaultXMRSpentRefsRetryMaxAttempts
+	}
+
+	c.logger.Info().
+		Str("tx_hash", tx.Tx.ID.String()).
+		Str("vault", tx.ObservedPubKey.String()).
+		Dur("interval", interval).
+		Int("max_attempts", maxAttempts).
+		Msg("queued xmr spent output refs retry")
+
+	// Retry asynchronously so callers that still need to broadcast the tx, such
+	// as local sign/consolidation paths, are not blocked waiting for the tx to
+	// appear in the Monero daemon.
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		c.retrySpentOutputRefs(tx, interval, maxAttempts)
+	}()
+}
+
+// applySpentOutputRefsOnce performs one verified mark-spent attempt. It returns
+// true only for transient failures where another bounded retry can still seed
+// the sidecar, such as the spend tx not being indexed yet or the sidecar being
+// temporarily unavailable.
+func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) bool {
 	if err := validateXMRSpentRefsForSidecar(tx); err != nil {
 		c.logger.Warn().
 			Err(err).
 			Str("tx_hash", tx.Tx.ID.String()).
 			Str("vault", tx.ObservedPubKey.String()).
 			Msg("skip invalid xmr spent output refs")
-		return
+		return false
 	}
 	vaultPubKey := tx.ObservedPubKey.String()
 	txHash := tx.Tx.ID.String()
@@ -1709,23 +1757,25 @@ func (c *Client) ApplySpentOutputRefs(tx common.ObservedTx) {
 	refs := xmrSpentRefsToSidecar(tx.SpentOutputRefs)
 	result, err := c.sidecar.MarkSpent(vaultPubKey, txHash, refs, false, xmrOutboundMeta(tx.Tx))
 	if err != nil {
-		// 404 indicates the sidecar's get_transactions race window — the
-		// catchup loop reconciles this on the next iteration, so log warn
-		// instead of error to avoid alarm noise.
-		if sidecar.IsHTTPStatus(err, http.StatusNotFound) {
+		// Peer pre-quorum imports cannot rely on Thornode catchup until the refs
+		// are committed, so retry sidecar-local transient failures. Validation
+		// failures remain terminal and a later committed catchup can still
+		// reconcile successfully applied refs independently.
+		if isRetryableSpentRefsSidecarErr(err) {
 			c.logger.Warn().
+				Err(err).
 				Str("tx_hash", txHash).
 				Str("vault", vaultPubKey).
 				Int("refs", len(refs)).
-				Msg("mark-spent transient 404 (will be reconciled by catchup)")
-			return
+				Msg("mark-spent transient failure")
+			return true
 		}
 		c.logger.Err(err).
 			Str("tx_hash", txHash).
 			Str("vault", vaultPubKey).
 			Int("refs", len(refs)).
 			Msg("failed to apply spent output refs from attestation")
-		return
+		return false
 	}
 	c.logger.Info().
 		Str("tx_hash", txHash).
@@ -1733,6 +1783,56 @@ func (c *Client) ApplySpentOutputRefs(tx common.ObservedTx) {
 		Int("marked", result.Marked).
 		Int("not_found", result.NotFound).
 		Msg("applied spent output refs from attestation")
+	return false
+}
+
+// isRetryableSpentRefsSidecarErr identifies sidecar failures that should not
+// permanently consume the peer-import opportunity. HTTP 404 covers the sidecar's
+// get_transactions race window; 429/5xx and non-HTTP call failures cover local
+// sidecar startup, overload, or temporary transport/read/decode failures.
+func isRetryableSpentRefsSidecarErr(err error) bool {
+	var httpErr *sidecar.HTTPError
+	if errors.As(err, &httpErr) {
+		return httpErr.Status == http.StatusNotFound ||
+			httpErr.Status == http.StatusTooManyRequests ||
+			httpErr.Status >= http.StatusInternalServerError
+	}
+	return err != nil
+}
+
+// retrySpentOutputRefs keeps retrying transient sidecar failures for a bounded
+// window. This covers peer pre-quorum imports where the XMR spend may not be
+// mined/indexed yet or where the local sidecar is temporarily unavailable, and
+// Thornode catchup cannot help until the refs are committed.
+func (c *Client) retrySpentOutputRefs(tx common.ObservedTx, interval time.Duration, maxAttempts int) {
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		// Wait before each retry so a just-gossiped outbound has time to appear
+		// in the Monero daemon/sidecar transaction lookup.
+		select {
+		case <-c.stopchan:
+			return
+		case <-timer.C:
+		}
+
+		if !c.applySpentOutputRefsOnce(tx) {
+			return
+		}
+		if attempt == maxAttempts {
+			break
+		}
+		// Keep the retry cadence simple and bounded; successful committed
+		// catchup can still reconcile the same refs independently later.
+		timer.Reset(interval)
+	}
+
+	c.logger.Warn().
+		Str("tx_hash", tx.Tx.ID.String()).
+		Str("vault", tx.ObservedPubKey.String()).
+		Int("attempts", maxAttempts).
+		Msg("xmr spent output refs retry exhausted")
 }
 
 func xmrSpentRefsToSidecar(refs []common.OutputRef) []sidecar.SpentRef {
@@ -1764,7 +1864,7 @@ func xmrOutputRefsFromPointers(refs []*common.OutputRef) []common.OutputRef {
 
 func validateXMRSpentRefsForSidecar(tx common.ObservedTx) error {
 	if len(tx.SpentOutputRefs) == 0 {
-		return nil
+		return fmt.Errorf("xmr spent refs are empty")
 	}
 	if err := tx.Valid(); err != nil {
 		return err
@@ -2089,16 +2189,20 @@ func monovaultKeygenLabel(blockHeight int64, poolPubKey common.PubKey, members [
 	return placeholder
 }
 
-func (c *Client) vaultSigningMembers(vaultPubKey common.PubKey) ([]string, error) {
+// vaultSigningMembers returns both signer views needed by FROST: full vault
+// membership for participant indexes and active membership for this keysign.
+func (c *Client) vaultSigningMembers(vaultPubKey common.PubKey, blockHeight int64) ([]string, []string, error) {
 	if vaultPubKey.IsEmpty() {
-		return nil, fmt.Errorf("vault pubkey is empty")
+		return nil, nil, fmt.Errorf("vault pubkey is empty")
 	}
 	vault, err := c.getVaultByPubKey(vaultPubKey)
 	if err != nil {
-		return nil, fmt.Errorf("fail to get vault membership: %w", err)
+		return nil, nil, fmt.Errorf("fail to get vault membership: %w", err)
 	}
 	members := vault.GetMembership().Strings()
 	if len(members) == 0 {
+		// Some test and legacy vault records only populate the raw membership
+		// strings. Keep that path so FROST can still derive stable indexes.
 		for _, member := range vault.Membership {
 			member = strings.TrimSpace(member)
 			if member != "" {
@@ -2107,9 +2211,28 @@ func (c *Client) vaultSigningMembers(vaultPubKey common.PubKey) ([]string, error
 		}
 	}
 	if len(members) == 0 {
-		return nil, fmt.Errorf("vault %s has empty membership", vaultPubKey.String())
+		return nil, nil, fmt.Errorf("vault %s has empty membership", vaultPubKey.String())
 	}
-	return members, nil
+	policy, err := c.thorchainBridge.GetKeysignPolicy(vaultPubKey, blockHeight)
+	if err != nil {
+		return nil, nil, err
+	}
+	activeMembers := policy.Signers.Strings()
+	if len(activeMembers) == 0 {
+		return nil, nil, fmt.Errorf("vault %s has empty active membership", vaultPubKey.String())
+	}
+	// The active signer set must be a filtered subset of full membership. This
+	// protects FROST participant indexes from a malformed policy response.
+	memberSet := make(map[string]bool, len(members))
+	for _, member := range members {
+		memberSet[strings.TrimSpace(member)] = true
+	}
+	for _, activeMember := range activeMembers {
+		if !memberSet[strings.TrimSpace(activeMember)] {
+			return nil, nil, fmt.Errorf("keysign policy signer %s is not in vault %s membership", activeMember, vaultPubKey.String())
+		}
+	}
+	return members, activeMembers, nil
 }
 
 func frostBlameToThorchainBlame(in gotssblame.Blame) ttypes.Blame {

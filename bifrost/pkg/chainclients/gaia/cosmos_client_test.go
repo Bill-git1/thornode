@@ -384,6 +384,7 @@ func (s *CosmosTestSuite) TestSign(c *C) {
 		vaultPubKey,
 		uint64(meta.AccountNumber),
 		uint64(meta.SeqNumber),
+		0,
 	)
 	c.Assert(err, IsNil)
 }

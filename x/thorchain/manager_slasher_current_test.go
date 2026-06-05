@@ -267,6 +267,85 @@ func (s *SlashingSuite) TestInactiveVaultDrainedReroute(c *C) {
 	c.Assert(keeper.txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
 }
 
+// TestLackSigningReassignsAwayFromCompromisedVault covers the retry loop called
+// out in review: bifrost refuses the original compromised vault, then LackSigning
+// must reassign to a safe Active vault instead of picking the flagged one again.
+func (s *SlashingSuite) TestLackSigningReassignsAwayFromCompromisedVault(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(201)
+	txOutStore := NewTxStoreDummy()
+	ver := GetCurrentVersion()
+	constAccessor := constants.GetConstantValues(ver)
+	na := GetRandomValidatorNode(NodeActive)
+	inTx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
+		common.Coins{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(3200000000)),
+		},
+		nil,
+		"REFUND:"+GetRandomTxHash().String(),
+	)
+
+	compromisedVault := GetRandomVault()
+	compromisedVault.Type = AsgardVault
+	compromisedVault.Status = ActiveVault
+	compromisedVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(500000*common.One)),
+	}
+
+	safeVault := GetRandomVault()
+	safeVault.Type = AsgardVault
+	safeVault.Status = ActiveVault
+	safeVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(500000*common.One)),
+	}
+
+	txOutItem := TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      inTx.ID,
+		VaultPubKey: compromisedVault.PubKey,
+		ToAddress:   GetRandomETHAddress(),
+		Coin: common.NewCoin(
+			common.ETHAsset, cosmos.NewUint(31239*common.One),
+		),
+		MaxGas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(150000)),
+		},
+		Memo: "REFUND:" + inTx.ID.String(),
+	}
+	txOut := NewTxOut(3)
+	txOut.TxArray = append(txOut.TxArray, txOutItem)
+
+	keeper := &TestSlashingLackKeeper{
+		txOut:  txOut,
+		na:     na,
+		vaults: Vaults{compromisedVault, safeVault},
+		voter: ObservedTxVoter{
+			Actions:         []TxOutItem{txOutItem},
+			FinalisedHeight: 3,
+		},
+		slashPts: make(map[string]int64),
+	}
+	keeper.SetMimir(ctx, compromisedVaultMimirKeyPrefix+compromisedVault.PubKey.String(), 1)
+
+	signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
+	ctx = ctx.WithBlockHeight(3 + signingTransactionPeriod)
+	mgr := NewDummyMgr()
+	mgr.txOutStore = txOutStore
+	slasher := newSlasher(keeper, NewDummyEventMgr())
+	c.Assert(slasher.LackSigning(ctx, mgr), IsNil)
+
+	outItems, err := txOutStore.GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(outItems, HasLen, 1)
+	c.Assert(outItems[0].VaultPubKey.Equals(compromisedVault.PubKey), Equals, false)
+	c.Assert(outItems[0].VaultPubKey.Equals(safeVault.PubKey), Equals, true)
+	c.Assert(keeper.voter.Actions[0].VaultPubKey.Equals(safeVault.PubKey), Equals, true)
+	c.Assert(keeper.txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
+}
+
 func (s *SlashingSuite) TestInactiveXMRVaultDrainedRerouteUsesMonovault(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	txOutStore := NewTxStoreDummy()

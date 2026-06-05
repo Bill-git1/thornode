@@ -59,7 +59,7 @@ func NewDualLPActor(asset common.Asset, rng *rand.Rand) *Actor {
 }
 
 func dualLPActorTimeout(asset common.Asset) time.Duration {
-	if asset.Chain.Equals(common.XMRChain) {
+	if asset.Chain.Equals(common.XMRChain) || asset.Chain.Equals(common.TRONChain) {
 		return 8 * time.Minute
 	}
 	return 2 * time.Minute

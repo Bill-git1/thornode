@@ -1523,7 +1523,7 @@ func (s *ExtraTestSuite) TestSignMsgBadPubkey(c *C) {
 	c.Assert(err, IsNil)
 
 	// signMsg with invalid pubkey should fail
-	_, err = cc.signMsg(txBuilder, common.PubKey("invalid"), 0, 0)
+	_, err = cc.signMsg(txBuilder, common.PubKey("invalid"), 0, 0, 0)
 	c.Assert(err, NotNil)
 }
 

@@ -20,16 +20,18 @@ import (
 {{- range $chain, $pkg := . }}
 
 type tssSignable{{ ToUpper $chain }} struct {
-	poolPubKey    common.PubKey
-	tssKeyManager tss.ThorchainKeyManager
-	log           zerolog.Logger
+	poolPubKey      common.PubKey
+	tssKeyManager   tss.ThorchainKeyManager
+	log             zerolog.Logger
+	thorchainHeight int64
 }
 
-func newTssSignable{{ ToUpper $chain }}(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger) *tssSignable{{ ToUpper $chain }} {
+func newTssSignable{{ ToUpper $chain }}(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger, thorchainHeight int64) *tssSignable{{ ToUpper $chain }} {
 	return &tssSignable{{ ToUpper $chain }}{
-		poolPubKey:    poolPubKey,
-		tssKeyManager: tssKeyManager,
-		log:           log,
+		poolPubKey:      poolPubKey,
+		tssKeyManager:   tssKeyManager,
+		log:             log,
+		thorchainHeight: thorchainHeight,
 	}
 }
 
@@ -39,9 +41,12 @@ func (ts *tssSignable{{ ToUpper $chain }}) SignECDSA(payload []byte) (*{{ $chain
 func (ts *tssSignable{{ ToUpper $chain }}) Sign(payload []byte) (*{{ $chain }}ec.Signature, error) {
 {{- end }}
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String(), ts.thorchainHeight)
 	if err != nil {
 		return nil, err
+	}
+	if result == nil {
+		return nil, tss.ErrNotSelectedForKeysign
 	}
 	var sig {{ $chain }}ec.Signature
 	sig.R = new(big.Int).SetBytes(result[:32])

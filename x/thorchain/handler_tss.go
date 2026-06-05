@@ -443,10 +443,7 @@ func (h TssHandler) handle(ctx cosmos.Context, msg *MsgTssPool) error {
 		// rotation forever. The dedicated XMR monovault also finalizes on first supermajority.
 		// The VaultExists check is the re-entry guard: late reporters arriving after
 		// finalization must not re-create the vault or re-trigger churn.
-		maxAbsent := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxAbsentKeygenReporters)
-		if maxAbsent < 0 {
-			maxAbsent = 0
-		}
+		maxAbsent := maxAbsentKeygenReporters(ctx, h.mgr.Keeper())
 		reportsRequired := int64(len(voter.PubKeys)) - maxAbsent
 		shouldFinalizeVault := int64(len(voter.Signers)) >= reportsRequired
 		if msg.KeygenType == AsgardKeygen && voter.HasConsensus() && !asgardKeygenRequiresCompleteConsensus(ctx, h.mgr.Keeper(), voter) {
@@ -632,6 +629,16 @@ func asgardKeygenRequiresCompleteConsensus(ctx cosmos.Context, k keeper.Keeper, 
 		}
 	}
 	return true
+}
+
+// maxAbsentKeygenReporters returns the configured tolerance for absent keygen
+// reports, falling back to constants when mimir is unset or unavailable.
+func maxAbsentKeygenReporters(ctx cosmos.Context, k keeper.Keeper) int64 {
+	maxAbsent := k.GetConfigInt64(ctx, constants.MaxAbsentKeygenReporters)
+	if maxAbsent < 0 {
+		return 0
+	}
+	return maxAbsent
 }
 
 func (h TssHandler) rotateReadyKeygenVaultFamilies(ctx cosmos.Context, keygenBlock KeygenBlock) error {

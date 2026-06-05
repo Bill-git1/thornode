@@ -20,7 +20,13 @@ type QueryKeysign struct {
 
 // GetKeysign retrieves txout from this block height from thorchain
 func (b *thorchainBridge) GetKeysign(blockHeight int64, pk string) (types.TxOut, error) {
-	path := fmt.Sprintf("%s/%d/%s", KeysignEndpoint, blockHeight, pk)
+	path := fmt.Sprintf("%s/%d", KeysignEndpoint, blockHeight)
+	if pk != "" {
+		// Keep the pubkey-specific endpoint for the normal signing path. XMR
+		// peer spent-ref validation passes an empty pk so newly churned-in
+		// validators can load the full public txout by height.
+		path = fmt.Sprintf("%s/%s", path, pk)
+	}
 	body, status, err := b.getWithPath(path)
 	if err != nil {
 		if status == http.StatusNotFound {

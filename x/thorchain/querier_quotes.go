@@ -1048,6 +1048,15 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		AffiliateBasisPoints: cosmos.ZeroUint(),
 	}
 
+	// Resolve the inbound vault before simulation. Simulation may also touch
+	// outbound vault selection; if the source vault is unavailable or
+	// compromised, surface that direct quote error instead of an incidental
+	// outbound simulation failure.
+	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, qs.mgr, amount, fromAsset.GetChain(), fromAsset)
+	if err != nil {
+		return nil, err
+	}
+
 	// simulate the swap
 	res, emitAmount, outboundFeeAmount, err := quoteSimulateSwap(ctx, qs.mgr, amount, msg, 1)
 	if err != nil {
@@ -1153,11 +1162,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	res.StreamingSwapBlocks = streamSwapBlocks
 	res.StreamingSwapSeconds = streamSwapBlocks * common.THORChain.ApproximateBlockMilliseconds() / 1000
 
-	// estimate the inbound info
-	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, qs.mgr, amount, fromAsset.GetChain(), fromAsset)
-	if err != nil {
-		return nil, err
-	}
 	res.InboundAddress = inboundAddress.String()
 	if inboundConfirmations > 0 {
 		res.InboundConfirmationBlocks = inboundConfirmations

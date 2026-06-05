@@ -4,7 +4,7 @@ set -e
 
 BLOCK_TIME=${BLOCK_TIME:-1}
 RPC_URL="http://127.0.0.1:18232"
-INIT_BLOCKS=${INIT_BLOCKS:=500}
+INIT_BLOCKS=${INIT_BLOCKS:=250}
 
 # Start zebrad in the background with config
 zebrad --config /etc/zebrad.toml &

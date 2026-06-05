@@ -40,6 +40,22 @@ message QueryVaultResponse {
   string pub_key_frost = 18 [ (gogoproto.nullable) = true ];
 }
 
+message QueryKeysignPartyRequest {
+  string pub_key = 1;
+  string signing_height = 2;
+}
+
+message QueryKeysignPartyResponse {
+  string pub_key = 1;
+  repeated string signers = 2;
+  int64 height = 3;
+  int64 threshold = 4;
+  int64 required_signers = 5;
+  repeated string never_signers = 6;
+  repeated string jailed_fallback_signers = 7;
+  int64 active_signer_count = 8;
+}
+
 message QueryAsgardVaultsRequest { string height = 1; }
 
 message QueryAsgardVaultsResponse {

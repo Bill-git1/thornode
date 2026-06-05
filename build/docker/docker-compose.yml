@@ -481,7 +481,7 @@ services:
       SIGNER_SEED_PHRASE: "cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat crawl"
     ports:
       - 5040
-      - 6040
+      - 6041:6040 # host-side simulation readiness probe
     volumes:
       - "../scripts:/docker/scripts"
       - bifrost-cat:/var/data/bifrost
@@ -516,7 +516,7 @@ services:
       SIGNER_SEED_PHRASE: "fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox filter"
     ports:
       - 5040
-      - 6040
+      - 6042:6040 # host-side simulation readiness probe
     volumes:
       - "../scripts:/docker/scripts"
       - bifrost-fox:/var/data/bifrost
@@ -551,7 +551,7 @@ services:
       SIGNER_SEED_PHRASE: "pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig quick"
     ports:
       - 5040
-      - 6040
+      - 6043:6040 # host-side simulation readiness probe
     volumes:
       - "../scripts:/docker/scripts"
       - bifrost-pig:/var/data/bifrost
@@ -838,7 +838,8 @@ services:
       - mocknet-cluster
     volumes:
       - xmr-frost-data-cat:/home/serai/xmr-frost
-    ports: []
+    ports:
+      - 8285:8283 # host-side simulation readiness probe
 
   xmr-frost-signer-fox:
     <<: *xmr-frost-signer
@@ -846,7 +847,8 @@ services:
       - mocknet-cluster
     volumes:
       - xmr-frost-data-fox:/home/serai/xmr-frost
-    ports: []
+    ports:
+      - 8286:8283 # host-side simulation readiness probe
 
   xmr-frost-signer-pig:
     <<: *xmr-frost-signer
@@ -854,7 +856,8 @@ services:
       - mocknet-cluster
     volumes:
       - xmr-frost-data-pig:/home/serai/xmr-frost
-    ports: []
+    ports:
+      - 8287:8283 # host-side simulation readiness probe
 
   xmr-sim-helper:
     profiles:
@@ -1004,7 +1007,7 @@ services:
       - "8091:8091"
     environment:
       TRON_NODE_TYPE: mocknet-fullnode
-      TRON_SEED_NODE: docker-tron-supernode-1:18888
+      TRON_SEED_NODE: tron-supernode:18888
     healthcheck:
       # The simulator signs TRON txs with wall-clock timestamps, but TRON sets tx
       # expiration from the fullnode's latest block. Require a fresh fullnode tip

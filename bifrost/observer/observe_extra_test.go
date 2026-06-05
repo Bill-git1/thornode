@@ -1816,6 +1816,49 @@ func (s *ObserveExtraSuite) TestAttestObservedTx(c *C) {
 	ag.mu.Unlock()
 }
 
+// TestAttestObservedTxPropagatesAllowFutureObservation verifies that locally
+// created future-observation attestations retain that flag through quorum send.
+func (s *ObserveExtraSuite) TestAttestObservedTxPropagatesAllowFutureObservation(c *C) {
+	ag, grpcClient := newTestAttestationGossip(c, []peer.ID{"self"})
+
+	tx := &common.ObservedTx{
+		Tx: common.Tx{
+			ID:    "future-observation-tx",
+			Chain: common.BTCChain,
+		},
+		ObservedPubKey: stypes.GetRandomPubKey(),
+	}
+
+	var sentTx *common.QuorumTx
+	grpcClient.sendQuorumTxFunc = func(ctx context.Context, quorumTx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error) {
+		sentTx = quorumTx
+		return &ebifrost.SendQuorumTxResult{}, nil
+	}
+
+	err := ag.AttestObservedTx(context.Background(), tx, false, true)
+	c.Assert(err, IsNil)
+
+	key := txKey{
+		Chain:                  tx.Tx.Chain,
+		ID:                     tx.Tx.ID,
+		UniqueHash:             tx.Tx.Hash(0),
+		AllowFutureObservation: true,
+		Finalized:              tx.IsFinal(),
+		Inbound:                false,
+	}
+
+	// Future observations must use a distinct key, otherwise they collide with
+	// normal outbound observations for the same transaction.
+	ag.mu.Lock()
+	_, exists := ag.observedTxs[key]
+	ag.mu.Unlock()
+
+	c.Assert(exists, Equals, true)
+	c.Assert(sentTx, NotNil)
+	c.Assert(sentTx.AllowFutureObservation, Equals, true)
+	c.Assert(sentTx.Inbound, Equals, false)
+}
+
 func (s *ObserveExtraSuite) TestAttestObservedTxNotActive(c *C) {
 	ag, _ := newTestAttestationGossip(c, []peer.ID{"self"})
 	// Remove self from active validators
@@ -2522,6 +2565,78 @@ func (s *ObserveExtraSuite) TestHandleObservedTxAttestationFutureObservation(c *
 	ag.mu.Lock()
 	c.Assert(len(ag.observedTxs) > 0, Equals, true)
 	ag.mu.Unlock()
+}
+
+// TestHandleObservedTxAttestationFutureObservationUsesActiveValidatorQuorum
+// verifies future outbound observations use active-validator quorum rather than
+// the filtered keysign signer count.
+func (s *ObserveExtraSuite) TestHandleObservedTxAttestationFutureObservationUsesActiveValidatorQuorum(c *C) {
+	ag, grpcClient := newTestAttestationGossip(c, []peer.ID{"self", "peer1", "peer2"})
+
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error {
+		return nil
+	}
+
+	ag.bridge = &MockThorchainBridge{
+		getKeysignPartyFunc: func(pubKey common.PubKey, _ int64) (common.PubKeys, error) {
+			c.Fatalf("observer quorum must not read keysign policy")
+			return nil, nil
+		},
+	}
+
+	var sentTx *common.QuorumTx
+	grpcClient.sendQuorumTxFunc = func(ctx context.Context, quorumTx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error) {
+		sentTx = quorumTx
+		return &ebifrost.SendQuorumTxResult{}, nil
+	}
+
+	ag.avMu.Lock()
+	ag.activeVals = map[peer.ID]bool{
+		"self":  true,
+		"peer1": true,
+		"peer2": true,
+	}
+	ag.avMu.Unlock()
+
+	obsTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:    "future-active-validator-quorum",
+			Chain: common.BTCChain,
+		},
+		ObservedPubKey: "thorpub1addwnpepqfuturequorumtest",
+	}
+
+	c.Assert(ag.activeValidatorCount(), Equals, 3)
+
+	// One of three active-validator attestations must not be enough, even
+	// though it would satisfy quorum if the denominator were one keysign signer.
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:                  obsTx,
+		Inbound:                false,
+		AllowFutureObservation: true,
+		Attestation: &common.Attestation{
+			PubKey:    []byte("future-pubkey-one"),
+			Signature: []byte("future-sig-one"),
+		},
+	})
+	c.Assert(sentTx, IsNil)
+
+	// Two of three is active-validator supermajority, so the local observer can
+	// now send the quorum tx while preserving AllowFutureObservation.
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:                  obsTx,
+		Inbound:                false,
+		AllowFutureObservation: true,
+		Attestation: &common.Attestation{
+			PubKey:    []byte("future-pubkey-two"),
+			Signature: []byte("future-sig-two"),
+		},
+	})
+	c.Assert(sentTx, NotNil)
+	c.Assert(sentTx.AllowFutureObservation, Equals, true)
+	c.Assert(sentTx.Attestations, HasLen, 2)
 }
 
 // ---------------------------------------------------------------------------

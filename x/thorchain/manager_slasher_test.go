@@ -24,6 +24,7 @@ type TestSlashingLackKeeper struct {
 	failGetObservedTxVoter     bool
 	failSetTxOut               bool
 	slashPts                   map[string]int64
+	mimirs                     map[string]int64
 }
 
 func (k *TestSlashingLackKeeper) PoolExist(ctx cosmos.Context, asset common.Asset) bool {
@@ -39,6 +40,24 @@ func (k *TestSlashingLackKeeper) GetObservedTxInVoter(_ cosmos.Context, _ common
 
 func (k *TestSlashingLackKeeper) SetObservedTxInVoter(_ cosmos.Context, voter ObservedTxVoter) {
 	k.voter = voter
+}
+
+// GetMimir returns zero by default so existing LackSigning tests do not trip the
+// compromised-vault fail-closed path unless a test explicitly sets the flag.
+func (k *TestSlashingLackKeeper) GetMimir(_ cosmos.Context, key string) (int64, error) {
+	if k.mimirs == nil {
+		return 0, nil
+	}
+	return k.mimirs[key], nil
+}
+
+// SetMimir lets LackSigning tests model CompromisedVault-<pubkey> without using
+// the KVStoreDummy implementation, which returns an error for every Mimir read.
+func (k *TestSlashingLackKeeper) SetMimir(_ cosmos.Context, key string, value int64) {
+	if k.mimirs == nil {
+		k.mimirs = make(map[string]int64)
+	}
+	k.mimirs[key] = value
 }
 
 func (k *TestSlashingLackKeeper) GetVault(_ cosmos.Context, pk common.PubKey) (Vault, error) {

@@ -1,18 +1,27 @@
 package core
 
 import (
+	"errors"
 	rand "math/rand/v2"
 	"reflect"
 	"testing"
 	"unsafe"
 
 	sdkmath "cosmossdk.io/math"
+	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	simtypes "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 	thorchaintypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
+
+// TestPackage runs check.v1 suites for this package.
+func TestPackage(t *testing.T) { TestingT(t) }
+
+type SwapBalanceSuite struct{}
+
+var _ = Suite(&SwapBalanceSuite{})
 
 func TestSwapSpendableBalanceLeavesGasReserve(t *testing.T) {
 	t.Parallel()
@@ -178,6 +187,8 @@ func TestAcquireUserForAmountSkipsImpossibleStrictQuotedAmount(t *testing.T) {
 	}
 }
 
+// newSwapBalanceTestActor creates a SwapActor with deterministic RNG for
+// balance-selection unit tests.
 func newSwapBalanceTestActor(from, to common.Asset, seed1, seed2 uint64) *SwapActor {
 	//nolint:gosec // deterministic simulation test RNG, not security-sensitive randomness.
 	rng := rand.New(rand.NewPCG(seed1, seed2))
@@ -213,6 +224,47 @@ func TestAcquireUserForAmountTracksSpendableGasBalance(t *testing.T) {
 	err := actor.updateSwapAmount(sdkmath.NewUint(96_000_000), "recommended minimum inbound amount")
 	if err == nil {
 		t.Fatal("expected quoted amount above spendable balance to fail")
+	}
+}
+
+// TestFinishAfterPostSelectionFundingErrorReleasesResources verifies a late
+// funding failure releases both the selected user and the target-XMR slot.
+func (s *SwapBalanceSuite) TestFinishAfterPostSelectionFundingErrorReleasesResources(c *C) {
+	actor := newSwapBalanceTestActor(common.ZECAsset, common.XMRAsset, 9, 10)
+	user := newTestSwapUserC(c, "selected", common.ZECAsset, sdkmath.NewUint(100), common.XMRAsset, sdkmath.ZeroUint())
+	c.Assert(user.Acquire(), Equals, true)
+	actor.user = user
+
+	select {
+	case targetXMRSwapSlot <- struct{}{}:
+		actor.targetXMRSwapSlotAcquired = true
+	default:
+		c.Fatal("target XMR swap slot was already held")
+	}
+	defer func() {
+		if actor.targetXMRSwapSlotAcquired {
+			actor.releaseTargetXMRSwapSlot()
+		}
+		if actor.user != nil {
+			actor.releaseUserSelection()
+		}
+	}()
+
+	err := errors.New("fail to get unspent UTXO: insufficient balance: 0.000000 < 4.012694")
+	c.Assert(isPostSelectionFundingError(err), Equals, true)
+
+	result := actor.finishAfterPostSelectionFundingError(err)
+	c.Assert(result.Finish, Equals, true)
+	c.Assert(result.Continue, Equals, false)
+	c.Assert(result.Error, IsNil)
+	c.Assert(actor.user, IsNil)
+	c.Assert(user.IsLocked(), Equals, false)
+	c.Assert(actor.targetXMRSwapSlotAcquired, Equals, false)
+
+	select {
+	case <-targetXMRSwapSlot:
+		c.Fatal("expected target XMR swap slot channel to be empty")
+	default:
 	}
 }
 
@@ -286,12 +338,42 @@ func newTestSwapUser(t *testing.T, name string, from common.Asset, fromBalance s
 	return user
 }
 
+// newTestSwapUserC builds a simulation user for check.v1 suite tests.
+func newTestSwapUserC(c *C, name string, from common.Asset, fromBalance sdkmath.Uint, to common.Asset, toBalance sdkmath.Uint) *simtypes.User {
+	user := &simtypes.User{
+		ChainClients: map[common.Chain]simtypes.LiteChainClient{
+			from.Chain: &testSwapLiteChainClient{
+				account: common.NewAccount(0, 0, common.Coins{common.NewCoin(from, fromBalance)}, true),
+			},
+			to.Chain: &testSwapLiteChainClient{
+				account: common.NewAccount(0, 0, common.Coins{common.NewCoin(to, toBalance)}, true),
+			},
+		},
+	}
+
+	setTestSwapUserFieldC(c, user, "lock", make(chan struct{}, 1))
+	setTestSwapUserFieldC(c, user, "pubkey", thorchaintypes.GetRandomPubKey())
+	setTestSwapUserFieldC(c, user, "eddsaPubkey", thorchaintypes.GetRandomEd25519PubKey())
+	setTestSwapUserFieldC(c, user, "mnemonic", name+" test mnemonic")
+
+	return user
+}
+
 func setTestSwapUserField(t *testing.T, user *simtypes.User, field string, value interface{}) {
 	t.Helper()
 
 	v := reflect.ValueOf(user).Elem().FieldByName(field)
 	if !v.IsValid() {
 		t.Fatalf("missing user field %s", field)
+	}
+	reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
+}
+
+// setTestSwapUserFieldC updates private User fields for check.v1 suite tests.
+func setTestSwapUserFieldC(c *C, user *simtypes.User, field string, value interface{}) {
+	v := reflect.ValueOf(user).Elem().FieldByName(field)
+	if !v.IsValid() {
+		c.Fatalf("missing user field %s", field)
 	}
 	reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
 }

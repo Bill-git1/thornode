@@ -12,19 +12,23 @@ import (
 
 // FrostKeySignRequest is the canonical request context for a FROST signing ceremony.
 type FrostKeySignRequest struct {
-	VaultPubKey    string
-	ToAddress      string
-	AmountAtomic   uint64
-	Memo           string
-	FeeRate        uint64
-	SignerPubKeys  []string
-	BlockHeight    int64
-	Version        string
-	TxInHash       string
-	RequestID      string
-	RequiredInputs []FrostSpentOutputRef
-	MaxInputs      int64
-	DustThreshold  uint64
+	VaultPubKey   string
+	ToAddress     string
+	AmountAtomic  uint64
+	Memo          string
+	FeeRate       uint64
+	SignerPubKeys []string
+	// ActiveSignerPubKeys is the keysign-eligible subset invited to the FROST
+	// ceremony. SignerPubKeys remains the full vault membership so participant
+	// indexes and the original threshold stay stable.
+	ActiveSignerPubKeys []string
+	BlockHeight         int64
+	Version             string
+	TxInHash            string
+	RequestID           string
+	RequiredInputs      []FrostSpentOutputRef
+	MaxInputs           int64
+	DustThreshold       uint64
 	// MaxSelectedInputValueAtomic caps the total value of selected inputs for
 	// management transactions such as XMR consolidation.
 	MaxSelectedInputValueAtomic uint64
@@ -42,6 +46,8 @@ type FrostKeySignResponse struct {
 	Blame           blame.Blame
 }
 
+// FrostEventuality is the sidecar-verified commitment used to prove the same
+// transaction plan produced the final FROST-signed transaction.
 type FrostEventuality struct {
 	Version       uint8  `json:"version"`
 	PlanHash      string `json:"plan_hash"`
@@ -245,6 +251,8 @@ type FrostDKGResult struct {
 	Blame                blame.Blame `json:"blame"`
 }
 
+// FrostTranscriptPreprocessHash returns the signed transcript hash for a
+// preprocess payload in one FROST signing session.
 func FrostTranscriptPreprocessHash(msgID string, payload FrostPreprocessPayload) (string, error) {
 	preprocessHex := strings.ToLower(strings.TrimSpace(payload.PreprocessHex))
 	if preprocessHex == "" {
@@ -259,6 +267,8 @@ func FrostTranscriptPreprocessHash(msgID string, payload FrostPreprocessPayload)
 	)
 }
 
+// FrostTranscriptShareHash returns the signed transcript hash for a partial
+// signature share payload.
 func FrostTranscriptShareHash(msgID string, payload FrostSharePayload) (string, error) {
 	shareHex := strings.ToLower(strings.TrimSpace(payload.ShareHex))
 	if shareHex == "" {
@@ -273,6 +283,8 @@ func FrostTranscriptShareHash(msgID string, payload FrostSharePayload) (string, 
 	)
 }
 
+// FrostTranscriptDKGRound1Hash returns the signed transcript hash for DKG
+// round 1 commitments.
 func FrostTranscriptDKGRound1Hash(msgID string, payload FrostDKGRound1Payload) (string, error) {
 	commitments := strings.TrimSpace(payload.Commitments)
 	if commitments == "" {
@@ -287,6 +299,8 @@ func FrostTranscriptDKGRound1Hash(msgID string, payload FrostDKGRound1Payload) (
 	)
 }
 
+// FrostTranscriptDKGRound2Hash returns the signed transcript hash for DKG
+// round 2 encrypted shares using deterministic target-index ordering.
 func FrostTranscriptDKGRound2Hash(msgID string, payload FrostDKGRound2Payload) (string, error) {
 	indexByRaw := make(map[uint64]string, len(payload.EncryptedShares))
 	for rawKey := range payload.EncryptedShares {
@@ -329,6 +343,8 @@ func FrostTranscriptDKGRound2Hash(msgID string, payload FrostDKGRound2Payload) (
 	)
 }
 
+// FrostTranscriptDKGRound3Hash returns the signed transcript hash for the DKG
+// final address and group key announcement.
 func FrostTranscriptDKGRound3Hash(msgID string, payload FrostDKGRound3Payload) (string, error) {
 	address := strings.TrimSpace(payload.Address)
 	groupKey := strings.ToLower(strings.TrimSpace(payload.GroupKey))
@@ -350,6 +366,8 @@ func FrostTranscriptDKGRound3Hash(msgID string, payload FrostDKGRound3Payload) (
 	)
 }
 
+// frostTranscriptHash builds the canonical transcript string shared by signing
+// and DKG round payload hashes.
 func frostTranscriptHash(round, msgID, targetSenderPubKey string, participantIndex uint32, roundFields []string) (string, error) {
 	msgID = strings.TrimSpace(msgID)
 	if msgID == "" {

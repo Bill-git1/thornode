@@ -36,6 +36,9 @@ func unsafeAddRefundOutbound(ctx cosmos.Context, mgr *Mgrs, inHash, destAddr str
 	if err != nil || len(activeAsgards) == 0 {
 		return fmt.Errorf("fail to get active asgard vaults: %w", err)
 	}
+	// This helper bypasses prepareTxOutItem, so keep the same outbound safety
+	// invariant here: never assign a refund to a flagged vault.
+	activeAsgards = filterCompromisedVaults(ctx, mgr.Keeper(), activeAsgards)
 	for _, v := range activeAsgards {
 		if v.GetCoin(coin.Asset).Amount.GTE(coin.Amount) {
 			asg = v

@@ -3,6 +3,7 @@ package tss
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -31,6 +32,8 @@ const (
 	frostRoundResult             = "frost_result"
 	frostEventualityHashHexBytes = 64
 )
+
+var errFrostResultTimeout = errors.New("timeout waiting for frost result")
 
 type FrostSignCoordinator struct {
 	logger           zerolog.Logger
@@ -77,10 +80,6 @@ func FrostKeySignMsgID(req FrostKeySignRequest) (string, error) {
 		return "", fmt.Errorf("to address is required")
 	}
 
-	membersHash, err := frostSignerSetHash(req.SignerPubKeys)
-	if err != nil {
-		return "", fmt.Errorf("fail to hash signer membership: %w", err)
-	}
 	requiredInputsHash, err := frostRequiredInputsHash(req.RequiredInputs)
 	if err != nil {
 		return "", fmt.Errorf("fail to hash required inputs: %w", err)
@@ -99,7 +98,6 @@ func FrostKeySignMsgID(req FrostKeySignRequest) (string, error) {
 		"tx_in_hash=" + strings.ToLower(strings.TrimSpace(req.TxInHash)),
 		"request_id=" + strings.TrimSpace(req.RequestID),
 		"block_height=" + strconv.FormatInt(req.BlockHeight, 10),
-		"members_hash=" + membersHash,
 	}, "\n")
 	return tcommon.MsgToHashString([]byte(canonical))
 }
@@ -118,6 +116,15 @@ func frostSignerSetHash(signerPubKeys []string) (string, error) {
 		return "", err
 	}
 	return tcommon.MsgToHashString([]byte(strings.Join(members, ",")))
+}
+
+// frostActiveSignerPubKeys returns the filtered FROST signing party when one
+// is supplied, otherwise it falls back to full vault membership.
+func frostActiveSignerPubKeys(req FrostKeySignRequest) []string {
+	if len(req.ActiveSignerPubKeys) > 0 {
+		return req.ActiveSignerPubKeys
+	}
+	return req.SignerPubKeys
 }
 
 func frostRequiredInputsHash(inputs []FrostSpentOutputRef) (string, error) {
@@ -170,6 +177,10 @@ func FrostPlanHash(req FrostKeySignRequest, msgID string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fail to hash signer membership: %w", err)
 	}
+	activeSignerSetHash, err := frostSignerSetHash(frostActiveSignerPubKeys(req))
+	if err != nil {
+		return "", fmt.Errorf("fail to hash active signer membership: %w", err)
+	}
 	requiredInputsHash, err := frostRequiredInputsHash(req.RequiredInputs)
 	if err != nil {
 		return "", fmt.Errorf("fail to hash required inputs: %w", err)
@@ -186,6 +197,7 @@ func FrostPlanHash(req FrostKeySignRequest, msgID string) (string, error) {
 		"max_inputs=" + strconv.FormatInt(req.MaxInputs, 10),
 		"max_selected_input_value_atomic=" + strconv.FormatUint(req.MaxSelectedInputValueAtomic, 10),
 		"signer_set_hash=" + signerSetHash,
+		"active_signer_set_hash=" + activeSignerSetHash,
 	}, "\n")
 	return tcommon.MsgToHashString([]byte(canonical))
 }
@@ -298,6 +310,10 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 	if len(req.SignerPubKeys) == 0 {
 		return FrostKeySignResponse{}, fmt.Errorf("signer pub keys are empty")
 	}
+	activeSignerPubKeys := frostActiveSignerPubKeys(req)
+	if len(activeSignerPubKeys) == 0 {
+		return FrostKeySignResponse{}, fmt.Errorf("active signer pub keys are empty")
+	}
 	msgID, err := FrostKeySignMsgID(req)
 	if err != nil {
 		return FrostKeySignResponse{}, fmt.Errorf("fail to compute frost msgID: %w", err)
@@ -309,6 +325,14 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 	threshold, err := conversion.GetThreshold(len(req.SignerPubKeys))
 	if err != nil {
 		return FrostKeySignResponse{}, fmt.Errorf("fail to compute frost threshold: %w", err)
+	}
+	if len(activeSignerPubKeys) <= threshold {
+		return FrostKeySignResponse{}, fmt.Errorf(
+			"not enough eligible frost signers: need %d of %d, got %d",
+			threshold+1,
+			len(req.SignerPubKeys),
+			len(activeSignerPubKeys),
+		)
 	}
 
 	msgChan := make(chan *p2p.Message, 1024)
@@ -328,11 +352,43 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 		close(sigChan)
 	}()
 
+	coordinator := NewFrostSignCoordinator(
+		t.p2pCommunication,
+		sidecar,
+		t.localNodePubKey,
+		msgID,
+		planHash,
+		msgChan,
+		t.conf.KeySignTimeout,
+	)
+
+	// Nodes outside the filtered active set must not join the FROST ceremony,
+	// but they can still import a quorum-verified result broadcast by signers.
+	if !containsNormalizedPubKey(activeSignerPubKeys, t.localNodePubKey) {
+		t.logger.Info().Str("msg_id", msgID).Msg("not eligible FROST signer, waiting for result")
+		quorum := threshold + 1
+		waitResp, waitErr := coordinator.WaitForResult(activeSignerPubKeys, quorum, t.conf.KeySignTimeout+5*time.Second)
+		if waitErr != nil {
+			if !errors.Is(waitErr, errFrostResultTimeout) {
+				return FrostKeySignResponse{}, fmt.Errorf("fail to wait for FROST result as non-eligible signer: %w", waitErr)
+			}
+			t.logger.Info().Err(waitErr).Str("msg_id", msgID).Msg("timed out waiting for FROST result as non-eligible signer; standing down")
+			return FrostKeySignResponse{
+				Status: tcommon.NA,
+				MsgID:  msgID,
+			}, nil
+		}
+		if waitResp.Status == tcommon.Success {
+			t.persistPeerAddressBook()
+		}
+		return waitResp, nil
+	}
+
 	onlinePeers, _, errJoinParty := t.joinParty(
 		msgID,
 		req.Version,
 		req.BlockHeight,
-		req.SignerPubKeys,
+		activeSignerPubKeys,
 		threshold,
 		sigChan,
 	)
@@ -356,16 +412,6 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 		allPeerIDs = onlinePeers
 	}
 
-	coordinator := NewFrostSignCoordinator(
-		t.p2pCommunication,
-		sidecar,
-		t.localNodePubKey,
-		msgID,
-		planHash,
-		msgChan,
-		t.conf.KeySignTimeout,
-	)
-
 	isActive := false
 	ourPeerID := t.p2pCommunication.GetLocalPeerID()
 	for _, p := range onlinePeers {
@@ -378,7 +424,7 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 	if !isActive {
 		t.logger.Info().Str("msg_id", msgID).Msg("not active FROST signer, waiting for result")
 		quorum := threshold + 1
-		waitResp, waitErr := coordinator.WaitForVerifiedSuccessOrResultQuorum(activeParticipants, quorum, t.conf.KeySignTimeout+5*time.Second)
+		waitResp, waitErr := coordinator.WaitForResult(activeParticipants, quorum, t.conf.KeySignTimeout+5*time.Second)
 		if waitErr != nil {
 			return FrostKeySignResponse{
 				Status: tcommon.Fail,
@@ -879,19 +925,6 @@ func (c *FrostSignCoordinator) exchangeShares(
 }
 
 func (c *FrostSignCoordinator) WaitForResult(activeParticipants []string, quorum int, timeout time.Duration) (FrostKeySignResponse, error) {
-	return c.waitForResult(activeParticipants, quorum, timeout, false)
-}
-
-func (c *FrostSignCoordinator) WaitForVerifiedSuccessOrResultQuorum(activeParticipants []string, quorum int, timeout time.Duration) (FrostKeySignResponse, error) {
-	return c.waitForResult(activeParticipants, quorum, timeout, true)
-}
-
-func (c *FrostSignCoordinator) waitForResult(
-	activeParticipants []string,
-	quorum int,
-	timeout time.Duration,
-	acceptSingleVerifiedSuccess bool,
-) (FrostKeySignResponse, error) {
 	_, _, activeByNormalized, err := buildParticipantIndex(activeParticipants)
 	if err != nil {
 		return FrostKeySignResponse{}, err
@@ -918,6 +951,7 @@ func (c *FrostSignCoordinator) waitForResult(
 	}
 
 	buckets := make(map[string]*resultVoteBucket)
+	malformedBuckets := make(map[string]*malformedResultVoteBucket)
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
@@ -951,11 +985,22 @@ func (c *FrostSignCoordinator) waitForResult(
 
 			normalized, matchKey, err := normalizeResultPayload(payload.Response, c.msgID, c.expectedPlanHash)
 			if err != nil {
-				resp := c.failForPubKeys(err.Error(), frostRoundResult, []string{payload.SenderPubKey})
-				return resp, nil
-			}
-			if acceptSingleVerifiedSuccess && normalized.Status == tcommon.Success {
-				return normalized, nil
+				reason := err.Error()
+				c.logger.Warn().Err(err).Str("sender", payload.SenderPubKey).Msg("skipping malformed frost result")
+				bucket := malformedBuckets[reason]
+				if bucket == nil {
+					bucket = &malformedResultVoteBucket{
+						reason: reason,
+						voters: make(map[string]string),
+					}
+					malformedBuckets[reason] = bucket
+				}
+				bucket.voters[senderNorm] = activeByNormalized[senderNorm]
+				if len(bucket.voters) >= quorum {
+					resp := c.failForPubKeys(reason, frostRoundResult, bucket.pubKeys())
+					return resp, nil
+				}
+				continue
 			}
 
 			bucket := buckets[matchKey]
@@ -971,7 +1016,7 @@ func (c *FrostSignCoordinator) waitForResult(
 				return bucket.response, nil
 			}
 		case <-timer.C:
-			return FrostKeySignResponse{}, fmt.Errorf("timeout waiting for frost result")
+			return FrostKeySignResponse{}, errFrostResultTimeout
 		}
 	}
 }
@@ -1070,6 +1115,20 @@ func parseWrappedMessage(raw []byte) (messages.WrappedMessage, bool) {
 type resultVoteBucket struct {
 	response FrostKeySignResponse
 	voters   map[string]struct{}
+}
+
+type malformedResultVoteBucket struct {
+	reason string
+	voters map[string]string
+}
+
+func (b *malformedResultVoteBucket) pubKeys() []string {
+	pubKeys := make([]string, 0, len(b.voters))
+	for _, pubKey := range b.voters {
+		pubKeys = append(pubKeys, pubKey)
+	}
+	sort.Strings(pubKeys)
+	return pubKeys
 }
 
 func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash string) (FrostKeySignResponse, string, error) {
@@ -1332,6 +1391,22 @@ func buildParticipantIndex(members []string) ([]string, map[string]uint32, map[s
 	return normalized, indexMap, originalByNormalized, nil
 }
 
+// normalizePubKey canonicalizes pubkey strings for set membership checks.
 func normalizePubKey(pubKey string) string {
 	return strings.ToLower(strings.TrimSpace(pubKey))
+}
+
+// containsNormalizedPubKey reports whether pubKeys contains pubKey after the
+// same trimming and case-folding used in FROST peer validation.
+func containsNormalizedPubKey(pubKeys []string, pubKey string) bool {
+	target := normalizePubKey(pubKey)
+	if target == "" {
+		return false
+	}
+	for _, candidate := range pubKeys {
+		if normalizePubKey(candidate) == target {
+			return true
+		}
+	}
+	return false
 }

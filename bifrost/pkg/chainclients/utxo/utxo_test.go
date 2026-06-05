@@ -1,13 +1,16 @@
 package utxo
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/hashicorp/go-multierror"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
 	. "gopkg.in/check.v1"
@@ -35,6 +38,19 @@ func TestUpdateCurrentBlockHeightMonotonic(t *testing.T) {
 	if got := client.getCurrentBlockHeight(); got != 110 {
 		t.Fatalf("expected current block height to advance to 110, got %d", got)
 	}
+}
+
+// TestAllNotSelectedForKeysign covers the signer stand-down helper with plain
+// and aggregated errors from the UTXO signing path.
+func (s *HelpersSuite) TestAllNotSelectedForKeysign(c *C) {
+	c.Assert(allNotSelectedForKeysign(nil), Equals, false)
+	c.Assert(allNotSelectedForKeysign(tss.ErrNotSelectedForKeysign), Equals, true)
+
+	allNotSelected := multierror.Append(nil, tss.ErrNotSelectedForKeysign, tss.ErrNotSelectedForKeysign)
+	c.Assert(allNotSelectedForKeysign(allNotSelected), Equals, true)
+
+	mixed := multierror.Append(nil, tss.ErrNotSelectedForKeysign, errors.New("signature failed"))
+	c.Assert(allNotSelectedForKeysign(mixed), Equals, false)
 }
 
 func GetMetricForTest(c *C, chain common.Chain) *metrics.Metrics {

@@ -92,6 +92,29 @@ func (b *mockSignBridge) GetVault(pubkey string) (ttypes.Vault, error) {
 	return b.vault, nil
 }
 
+// GetKeysignParty exposes vault membership through the legacy bridge path for
+// signer coverage tests that are not exercising policy filtering.
+func (b *mockSignBridge) GetKeysignParty(vaultPubKey common.PubKey, _ int64) (common.PubKeys, error) {
+	vault, err := b.GetVault(vaultPubKey.String())
+	if err != nil {
+		return nil, err
+	}
+	if members := vault.GetMembership(); len(members) > 0 {
+		return members, nil
+	}
+	return common.PubKeys{vaultPubKey}, nil
+}
+
+// GetKeysignPolicy builds an all-members policy from the mock vault so coverage
+// tests can satisfy the expanded bridge interface.
+func (b *mockSignBridge) GetKeysignPolicy(vaultPubKey common.PubKey, blockHeight int64) (thorclient.KeysignPolicy, error) {
+	signers, err := b.GetKeysignParty(vaultPubKey, blockHeight)
+	if err != nil {
+		return thorclient.KeysignPolicy{}, err
+	}
+	return thorclient.KeysignPolicy{PubKey: vaultPubKey, Signers: signers, RequiredSigners: len(signers), ActiveSignerCount: len(signers)}, nil
+}
+
 func (b *mockSignBridge) GetKeysign(blockHeight int64, pk string) (types.TxOut, error) {
 	return b.keysign, b.keysignErr
 }
@@ -1440,6 +1463,29 @@ func (b *mockSignBridgeWithCallback) GetMimirWithRef(template, ref string) (int6
 
 func (b *mockSignBridgeWithCallback) GetVault(pubkey string) (ttypes.Vault, error) {
 	return b.vault, b.vaultErr
+}
+
+// GetKeysignParty mirrors mockSignBridge while allowing tests to customize
+// Mimir responses independently.
+func (b *mockSignBridgeWithCallback) GetKeysignParty(vaultPubKey common.PubKey, _ int64) (common.PubKeys, error) {
+	vault, err := b.GetVault(vaultPubKey.String())
+	if err != nil {
+		return nil, err
+	}
+	if members := vault.GetMembership(); len(members) > 0 {
+		return members, nil
+	}
+	return common.PubKeys{vaultPubKey}, nil
+}
+
+// GetKeysignPolicy returns an all-members policy for coverage tests that are
+// focused on signer control flow rather than policy filtering.
+func (b *mockSignBridgeWithCallback) GetKeysignPolicy(vaultPubKey common.PubKey, blockHeight int64) (thorclient.KeysignPolicy, error) {
+	signers, err := b.GetKeysignParty(vaultPubKey, blockHeight)
+	if err != nil {
+		return thorclient.KeysignPolicy{}, err
+	}
+	return thorclient.KeysignPolicy{PubKey: vaultPubKey, Signers: signers, RequiredSigners: len(signers), ActiveSignerCount: len(signers)}, nil
 }
 
 func (b *mockSignBridgeWithCallback) GetKeysign(height int64, pk string) (types.TxOut, error) {

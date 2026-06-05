@@ -280,7 +280,8 @@ func TestBuildOutboundObservationConvertsFallbackNetworkFeeToThorchainUnits(t *t
 	if len(observation.Gas) != 1 {
 		t.Fatalf("expected one gas coin, got %d", len(observation.Gas))
 	}
-	if observation.Gas[0].Amount.Uint64() != 18_000 {
-		t.Fatalf("expected fallback fee 18000 thorchain units, got %d", observation.Gas[0].Amount.Uint64())
+	expectedFallbackFee := uint64(120_000 * typicalVaultOutboundWeight / moneroAtomicToThorchain)
+	if observation.Gas[0].Amount.Uint64() != expectedFallbackFee {
+		t.Fatalf("expected fallback fee %d thorchain units, got %d", expectedFallbackFee, observation.Gas[0].Amount.Uint64())
 	}
 }

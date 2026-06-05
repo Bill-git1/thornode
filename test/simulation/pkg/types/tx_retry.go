@@ -38,7 +38,11 @@ func SignAndBroadcastTx(client LiteChainClient, tx SimTx) (string, error) {
 		}
 
 		lastErr = err
-		if tx.OneShotMemo && txid != "" && isSubmittedButUnconfirmedSimTxBroadcast(tx.Chain, err) {
+		// A returned txid plus a known submitted-but-unconfirmed error is the
+		// safety condition here. This deliberately applies beyond OneShotMemo:
+		// once the chain client has submitted a tx, replacing it can create a
+		// duplicate inbound when bifrost later observes the original.
+		if txid != "" && isSubmittedButUnconfirmedSimTxBroadcast(tx.Chain, err) {
 			return txid, nil
 		}
 		if attempt < attempts && shouldRetrySimTxBroadcast(tx.Chain, err) {

@@ -1079,6 +1079,9 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		var approvalRawTx []byte
 		approvalRawTx, err = c.sign(approvalTx, tx.VaultPubKey, height, tx)
 		if err != nil {
+			if errors.Is(err, tss.ErrNotSelectedForKeysign) {
+				return nil, nil, nil, nil
+			}
 			c.logger.Err(err).Msg("fail to sign approval transaction")
 			return nil, nonceBytes, nil, fmt.Errorf("fail to sign approval transaction: %w", err)
 		}
@@ -1163,6 +1166,9 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	// Sign main transaction
 	rawTx, err = c.sign(outboundTx, tx.VaultPubKey, height, tx)
 	if err != nil || len(rawTx) == 0 {
+		if errors.Is(err, tss.ErrNotSelectedForKeysign) {
+			return nil, nil, nil, nil
+		}
 		return nil, nonceBytes, nil, fmt.Errorf("fail to sign message: %w", err)
 	}
 
@@ -1375,9 +1381,12 @@ func (c *EVMClient) checkAndApproveAllowance(tx stypes.TxOutItem, nonce uint64) 
 
 // sign is design to sign a given message with keysign party and keysign wrapper
 func (c *EVMClient) sign(tx *etypes.Transaction, poolPubKey common.PubKey, height int64, txOutItem stypes.TxOutItem) ([]byte, error) {
-	rawBytes, err := c.kw.Sign(tx, poolPubKey)
+	rawBytes, err := c.kw.Sign(tx, poolPubKey, height)
 	if err == nil && rawBytes != nil {
 		return rawBytes, nil
+	}
+	if errors.Is(err, tss.ErrNotSelectedForKeysign) {
+		return nil, tss.ErrNotSelectedForKeysign
 	}
 	var keysignError tss.KeysignError
 	if errors.As(err, &keysignError) {

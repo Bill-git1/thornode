@@ -178,6 +178,34 @@ func (b fakeBridge) GetVault(pubkey string) (types2.Vault, error) {
 	}, nil
 }
 
+// GetKeysignParty exposes a minimal signer set for signer tests that use the
+// fake bridge without configuring a full policy endpoint response.
+func (b fakeBridge) GetKeysignParty(vaultPubKey common.PubKey, _ int64) (common.PubKeys, error) {
+	vault, err := b.GetVault(vaultPubKey.String())
+	if err != nil {
+		return nil, err
+	}
+	if members := vault.GetMembership(); len(members) > 0 {
+		return members, nil
+	}
+	return common.PubKeys{vaultPubKey}, nil
+}
+
+// GetKeysignPolicy wraps the fake signer set in the policy shape required by
+// the current bridge interface.
+func (b fakeBridge) GetKeysignPolicy(vaultPubKey common.PubKey, blockHeight int64) (thorclient.KeysignPolicy, error) {
+	signers, err := b.GetKeysignParty(vaultPubKey, blockHeight)
+	if err != nil {
+		return thorclient.KeysignPolicy{}, err
+	}
+	return thorclient.KeysignPolicy{
+		PubKey:            vaultPubKey,
+		Signers:           signers,
+		RequiredSigners:   len(signers),
+		ActiveSignerCount: len(signers),
+	}, nil
+}
+
 func (b *batchingKeygenBridge) Broadcast(msgs ...sdktypes.Msg) (common.TxID, error) {
 	b.batchSizes = append(b.batchSizes, len(msgs))
 	return common.TxID("batched-keygen-tx"), nil
@@ -318,7 +346,7 @@ func (b *MockChainClient) SignTx(tai types.TxOutItem, height int64) ([]byte, []b
 	}
 
 	b.signCount += 1
-	sig, _, err := b.ks.RemoteSign([]byte(tai.Memo), common.SigningAlgoSecp256k1, tai.VaultPubKey.String())
+	sig, _, err := b.ks.RemoteSign([]byte(tai.Memo), common.SigningAlgoSecp256k1, tai.VaultPubKey.String(), height)
 
 	return sig, []byte(tai.Memo), nil, err
 }
@@ -626,12 +654,15 @@ func (s *SignSuite) TestBroadcastRetry(c *C) {
 	// create a signer store with fake txouts
 	sign.storage, err = NewSignerStore("", config.LevelDBOptions{}, "")
 	c.Assert(err, IsNil)
+	const txOutHeight int64 = 1
 	err = sign.storage.Set(TxOutStoreItem{
+		Height: txOutHeight,
 		TxOutItem: types.TxOutItem{
 			Chain:       common.ETHChain,
 			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
+			Height:      txOutHeight,
 			Coins: common.Coins{ // must be set or signer overrides memo
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
@@ -709,12 +740,15 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	// create a signer store with fake txouts
 	sign.storage, err = NewSignerStore("", config.LevelDBOptions{}, "")
 	c.Assert(err, IsNil)
+	const txOutHeight int64 = 1
 	err = sign.storage.Set(TxOutStoreItem{
+		Height: txOutHeight,
 		TxOutItem: types.TxOutItem{
 			Chain:       common.ETHChain,
 			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
+			Height:      txOutHeight,
 			Coins: common.Coins{ // must be set or signer overrides memo
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
@@ -722,11 +756,13 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	})
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
+		Height: txOutHeight,
 		TxOutItem: types.TxOutItem{
 			Chain:       common.ETHChain,
 			ToAddress:   "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
+			Height:      txOutHeight,
 			Coins: common.Coins{ // must be set or signer overrides memo
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
@@ -734,11 +770,13 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	})
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
+		Height: txOutHeight,
 		TxOutItem: types.TxOutItem{
 			Chain:       common.ETHChain,
 			ToAddress:   "0xd58610f89265a2fb637ac40edf59141ff873b266",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
+			Height:      txOutHeight,
 			Coins: common.Coins{ // must be set or signer overrides memo
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
@@ -748,11 +786,13 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 
 	// this will be ignored entirely since the vault pubkey is different
 	err = sign.storage.Set(TxOutStoreItem{
+		Height: txOutHeight,
 		TxOutItem: types.TxOutItem{
 			Chain:       common.ETHChain,
 			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			Memo:        msg,
 			VaultPubKey: "thorpub1addwnpepqtspqyy6gk22u37ztra4hq3hdakc0w0k60sfy849mlml2vrpfr0wvm6uz09",
+			Height:      txOutHeight,
 			Coins: common.Coins{ // must be set or signer overrides memo
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
@@ -770,11 +810,13 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	cc2 := &MockChainClient{ks: ks2}
 	sign.chains[common.BTCChain] = cc2
 	tois2 := TxOutStoreItem{
+		Height: txOutHeight,
 		TxOutItem: types.TxOutItem{
 			Chain:       common.BTCChain,
 			ToAddress:   "tbtc1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
 			VaultPubKey: vaultPubKey,
 			Memo:        msg2,
+			Height:      txOutHeight,
 			Coins: common.Coins{
 				common.NewCoin(common.BTCAsset, cosmos.NewUint(1000000)),
 			},
@@ -1150,6 +1192,33 @@ func (s *SignSuite) TestFlushPendingKeygenBroadcastsBuildsMessagesSequentially(c
 	c.Assert(bridge.batchSizes, HasLen, 1)
 	c.Assert(bridge.batchSizes[0], Equals, 2)
 	c.Assert(elapsed >= 325*time.Millisecond, Equals, true)
+}
+
+// TestOrderedKeygensForProcessingPrioritizesXMR verifies FROST keygen work is
+// started before ordinary keygen backup signing in the same block.
+func (s *SignSuite) TestOrderedKeygensForProcessingPrioritizesXMR(c *C) {
+	memberA := types2.GetRandomPubKey()
+	memberB := types2.GetRandomPubKey()
+	memberC := types2.GetRandomPubKey()
+	memberD := types2.GetRandomPubKey()
+	memberE := types2.GetRandomPubKey()
+	memberF := types2.GetRandomPubKey()
+	asgardA, err := types2.NewKeygen(2700, []string{memberA.String(), memberB.String()}, types2.KeygenType_AsgardKeygen)
+	c.Assert(err, IsNil)
+	xmrA, err := types2.NewKeygen(2700, []string{memberC.String(), memberD.String()}, types2.KeygenType_XMRMonovaultKeygen)
+	c.Assert(err, IsNil)
+	xmrB, err := types2.NewKeygen(2700, []string{memberE.String(), memberF.String()}, types2.KeygenType_XMRMonovaultKeygen)
+	c.Assert(err, IsNil)
+
+	ordered := orderedKeygensForProcessing([]types2.Keygen{asgardA, xmrA, xmrB})
+
+	c.Assert(ordered, HasLen, 3)
+	c.Assert(ordered[0].Type, Equals, types2.KeygenType_XMRMonovaultKeygen)
+	c.Assert(ordered[0].GetMembers(), DeepEquals, xmrA.GetMembers())
+	c.Assert(ordered[1].Type, Equals, types2.KeygenType_XMRMonovaultKeygen)
+	c.Assert(ordered[1].GetMembers(), DeepEquals, xmrB.GetMembers())
+	c.Assert(ordered[2].Type, Equals, types2.KeygenType_AsgardKeygen)
+	c.Assert(ordered[2].GetMembers(), DeepEquals, asgardA.GetMembers())
 }
 
 func (s *SignSuite) TestProcessKeygenBlockKeepsSuccessfulSiblingWhenAnotherFails(c *C) {

@@ -24,12 +24,12 @@ func (c *Client) getChainCfgDOGE() *dogechaincfg.Params {
 	}
 }
 
-func (c *Client) signUTXODOGE(redeemTx *dogewire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int) error {
+func (c *Client) signUTXODOGE(redeemTx *dogewire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int, thorchainHeight int64) error {
 	var signable dogetxscript.Signable
 	if tx.VaultPubKey.Equals(c.nodePubKey) {
 		signable = dogetxscript.NewPrivateKeySignable((*dogeec.PrivateKey)(c.nodePrivKey))
 	} else {
-		signable = newTssSignableDOGE(tx.VaultPubKey, c.tssKeySigner, c.log)
+		signable = newTssSignableDOGE(tx.VaultPubKey, c.tssKeySigner, c.log, thorchainHeight)
 	}
 
 	sig, err := dogetxscript.RawTxInSignature(redeemTx, idx, sourceScript, dogetxscript.SigHashAll, signable)

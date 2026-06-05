@@ -1080,6 +1080,82 @@ func (s TxOutStoreSuite) TestAddOutTxItem_SecurityVersusOutboundNumber(c *C) {
 	c.Assert(scheduledOutbounds, HasLen, 0)
 }
 
+// TestPrepareTxOutItemExcludesCompromisedVaults verifies initial outbound
+// scheduling filters flagged vaults before both Active and Retiring candidates
+// are considered. The compromised vaults are funded enough to be selected if the
+// filter is accidentally removed.
+func (s TxOutStoreSuite) TestPrepareTxOutItemExcludesCompromisedVaults(c *C) {
+	w := getHandlerTestWrapper(c, 1, true, true)
+
+	activeCompromisedPubKey := GetRandomPubKey()
+	retiringCompromisedPubKey := GetRandomPubKey()
+	retiringSafePubKey := GetRandomPubKey()
+
+	activeCompromisedVault := GetRandomVault()
+	activeCompromisedVault.PubKey = activeCompromisedPubKey
+	activeCompromisedVault.Type = AsgardVault
+	activeCompromisedVault.Status = ActiveVault
+	activeCompromisedVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(10000*common.One)),
+	}
+	c.Assert(w.keeper.SetVault(w.ctx, activeCompromisedVault), IsNil)
+
+	retiringCompromisedVault := GetRandomVault()
+	retiringCompromisedVault.PubKey = retiringCompromisedPubKey
+	retiringCompromisedVault.Type = AsgardVault
+	retiringCompromisedVault.Status = RetiringVault
+	retiringCompromisedVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(10000*common.One)),
+	}
+	c.Assert(w.keeper.SetVault(w.ctx, retiringCompromisedVault), IsNil)
+
+	retiringSafeVault := GetRandomVault()
+	retiringSafeVault.PubKey = retiringSafePubKey
+	retiringSafeVault.Type = AsgardVault
+	retiringSafeVault.Status = RetiringVault
+	retiringSafeVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(5000*common.One)),
+	}
+	c.Assert(w.keeper.SetVault(w.ctx, retiringSafeVault), IsNil)
+
+	pool, err := w.keeper.GetPool(w.ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	pool.Asset = common.ETHAsset
+	pool.BalanceAsset = cosmos.NewUint(50000 * common.One)
+	pool.BalanceRune = cosmos.NewUint(50000 * common.One)
+	pool.LPUnits = cosmos.NewUint(50000 * common.One)
+	c.Assert(w.keeper.SetPool(w.ctx, pool), IsNil)
+
+	w.keeper.SetMimir(w.ctx, compromisedVaultMimirKeyPrefix+activeCompromisedVault.PubKey.String(), 1)
+	w.keeper.SetMimir(w.ctx, compromisedVaultMimirKeyPrefix+retiringCompromisedVault.PubKey.String(), 1)
+
+	inTxID := GetRandomTxHash()
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
+			Tx:             GetRandomTx(),
+			Status:         common.Status_incomplete,
+			BlockHeight:    1,
+			Signers:        []string{w.activeNodeAccount.NodeAddress.String()},
+			KeysignMs:      0,
+			FinaliseHeight: 1,
+		},
+	})
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
+	txOutStore := newTxOutStorage(w.keeper, w.mgr.GetConstants(), w.mgr.EventMgr(), w.mgr.GasMgr())
+	outputs, _, err := txOutStore.prepareTxOutItem(w.ctx, TxOutItem{
+		Chain:     common.ETHChain,
+		ToAddress: GetRandomETHAddress(),
+		InHash:    inTxID,
+		Coin:      common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(outputs, HasLen, 1)
+	c.Assert(outputs[0].VaultPubKey.Equals(activeCompromisedPubKey), Equals, false)
+	c.Assert(outputs[0].VaultPubKey.Equals(retiringCompromisedPubKey), Equals, false)
+	c.Assert(outputs[0].VaultPubKey.Equals(retiringSafePubKey), Equals, true)
+}
+
 func (s TxOutStoreSuite) TestAddOutTxItem_VaultStatusVersusOutboundNumber(c *C) {
 	// Within this example vault bonds are treated as zero, using only assets to represent security.
 

@@ -992,6 +992,41 @@ paths:
           description: OK
       tags:
       - Vaults
+  /thorchain/vault/{pubkey}/keysign_party:
+    get:
+      description: Returns the keysign-eligible signer set for the provided vault
+        pubkey. The optional signing_height is the signing height used for jail-release
+        evaluation against current vault and node-account state; it is not a historical
+        state query.
+      operationId: vaultKeysignParty
+      parameters:
+      - description: "optional signing height, defaults to current tip"
+        explode: true
+        in: query
+        name: signing_height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: pubkey
+        required: true
+        schema:
+          example: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeysignPartyResponse'
+          description: OK
+      tags:
+      - Vaults
   /thorchain/vaults/pubkeys:
     get:
       description: Returns all pubkeys for current vaults.
@@ -2969,6 +3004,17 @@ components:
       explode: true
       in: query
       name: height
+      required: false
+      schema:
+        format: int64
+        minimum: 0
+        type: integer
+      style: form
+    querySigningHeight:
+      description: "optional signing height, defaults to current tip"
+      explode: true
+      in: query
+      name: signing_height
       required: false
       schema:
         format: int64
@@ -5958,6 +6004,63 @@ components:
       type: array
     VaultResponse:
       $ref: '#/components/schemas/Vault'
+    KeysignPartyResponse:
+      example:
+        jailed_fallback_signers:
+        - thorpub1addwnpep...
+        - thorpub1addwnpep...
+        signers:
+        - thorpub1addwnpep...
+        - thorpub1addwnpep...
+        required_signers: 1
+        threshold: 6
+        active_signer_count: 5
+        never_signers:
+        - thorpub1addwnpep...
+        - thorpub1addwnpep...
+        pub_key: thorpub1addwnpep...
+        height: 0
+      properties:
+        pub_key:
+          example: thorpub1addwnpep...
+          type: string
+        signers:
+          items:
+            example: thorpub1addwnpep...
+            type: string
+          type: array
+        height:
+          format: int64
+          type: integer
+        threshold:
+          format: int64
+          type: integer
+        required_signers:
+          format: int64
+          type: integer
+        never_signers:
+          items:
+            example: thorpub1addwnpep...
+            type: string
+          type: array
+        jailed_fallback_signers:
+          items:
+            example: thorpub1addwnpep...
+            type: string
+          type: array
+        active_signer_count:
+          format: int64
+          type: integer
+      required:
+      - active_signer_count
+      - height
+      - jailed_fallback_signers
+      - never_signers
+      - pub_key
+      - required_signers
+      - signers
+      - threshold
+      type: object
     VaultPubkeysResponse:
       example:
         yggdrasil:

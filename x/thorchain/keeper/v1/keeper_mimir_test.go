@@ -1,6 +1,8 @@
 package keeperv1
 
 import (
+	"gitlab.com/thorchain/thornode/v3/constants"
+
 	. "gopkg.in/check.v1"
 )
 
@@ -46,4 +48,19 @@ func (s *KeeperMimirSuite) TestIsOperationalMimirPOLReserveBlackList(c *C) {
 	// Similarly-prefixed but unrelated keys must NOT be flagged operational.
 	c.Check(k.IsOperationalMimir("POLReserveFoo-BTC-BTC"), Equals, false)
 	c.Check(k.IsOperationalMimir("POLReserveDeposit-BTC-BTC"), Equals, false)
+}
+
+func (s *KeeperMimirSuite) TestIsOperationalMimirCompromisedVault(c *C) {
+	_, k := setupKeeperForTest(c)
+
+	c.Check(k.IsOperationalMimir("CompromisedVault-tthorpub1addwnpepq0"), Equals, true)
+	c.Check(k.IsOperationalMimir("COMPROMISEDVAULT-TTHORPUB1ADDWNPEPQ0"), Equals, true)
+	c.Check(k.IsOperationalMimir("compromisedvault-tthorpub1addwnpepq0"), Equals, true)
+	c.Check(k.IsOperationalMimir("CompromisedVault"), Equals, false)
+}
+
+func (s *KeeperMimirSuite) TestDisableTSSSignerFilteringIsEconomicMimir(c *C) {
+	_, k := setupKeeperForTest(c)
+
+	c.Check(k.IsOperationalMimir(constants.MimirKeyDisableTSSSignerFiltering), Equals, false)
 }

@@ -48,7 +48,7 @@ const (
 	// starts relaying stable block production from the supernode.
 	tronRPCReadinessTimeout   = 4 * time.Minute
 	solanaRPCReadinessTimeout = 4 * time.Minute
-	zecRPCReadinessTimeout    = 4 * time.Minute
+	zecRPCReadinessTimeout    = 8 * time.Minute
 )
 
 var bifrostReadinessEndpoints = []string{
@@ -91,10 +91,13 @@ func simulationStages() []simulationStage {
 		{name: "memoless-swaps", defaultOn: true, constructor: suites.MemolessSwaps},
 		{name: "consolidate", defaultOn: true, constructor: features.Consolidate},
 		{name: "churn", defaultOn: false, constructor: core.NewChurnActor},
+		{name: "xmr-post-churn", defaultOn: false, constructor: suites.XMRPostChurn},
+		{name: "xmr-spent-refs", defaultOn: false, constructor: suites.XMRSpentRefTracking},
+		{name: "forced-to-leave-keygen", defaultOn: false, constructor: core.NewForcedToLeaveKeygenActor},
+		{name: "forced-to-leave-keysign", defaultOn: false, constructor: core.NewForcedToLeaveKeysignActor},
+		{name: "jailed-keysign-fallback", defaultOn: false, constructor: core.NewJailedKeysignFallbackActor},
 		{name: "inactive-vault-refunds", defaultOn: false, constructor: features.InactiveVaultRefunds},
 		{name: "solvency", defaultOn: true, constructor: core.NewSolvencyCheckActor},
-		{name: "xmr-spent-refs", defaultOn: false, constructor: suites.XMRSpentRefTracking},
-		{name: "xmr-post-churn", defaultOn: false, constructor: suites.XMRPostChurn},
 		{name: "ragnarok", defaultOn: true, constructor: suites.Ragnarok},
 	}
 }
@@ -463,7 +466,7 @@ func waitForZecRPCReadinessWithClock(
 	sleep func(time.Duration),
 	timeout time.Duration,
 ) error {
-	const requiredHeight int64 = 500
+	const requiredHeight int64 = 250
 	const requiredAdvances = 1
 
 	lastHeight := int64(-1)

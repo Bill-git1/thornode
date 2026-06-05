@@ -90,6 +90,35 @@ func (b *consolidationBridge) GetVault(pubkey string) (ttypes.Vault, error) {
 	return ttypes.Vault{}, errors.New("vault not found")
 }
 
+// GetKeysignParty exposes vault membership to consolidation tests through the
+// legacy bridge method used before full policy metadata existed.
+func (b *consolidationBridge) GetKeysignParty(vaultPubKey common.PubKey, _ int64) (common.PubKeys, error) {
+	vault, err := b.GetVault(vaultPubKey.String())
+	if err != nil {
+		return nil, err
+	}
+	members := vault.GetMembership()
+	if len(members) > 0 {
+		return members, nil
+	}
+	for _, member := range vault.Membership {
+		if member != "" {
+			members = append(members, common.PubKey(member))
+		}
+	}
+	return members, nil
+}
+
+// GetKeysignPolicy synthesizes a full policy from membership for consolidation
+// tests that only need all vault members to remain eligible.
+func (b *consolidationBridge) GetKeysignPolicy(vaultPubKey common.PubKey, blockHeight int64) (thorclient.KeysignPolicy, error) {
+	signers, err := b.GetKeysignParty(vaultPubKey, blockHeight)
+	if err != nil {
+		return thorclient.KeysignPolicy{}, err
+	}
+	return thorclient.KeysignPolicy{PubKey: vaultPubKey, Signers: signers, RequiredSigners: len(signers), ActiveSignerCount: len(signers)}, nil
+}
+
 func (b *consolidationBridge) GetThorchainVersion() (semver.Version, error) {
 	return semver.MustParse("1.134.0"), nil
 }

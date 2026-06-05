@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -113,6 +114,12 @@ func TestApplySpentOutputRefsSidecarCall(t *testing.T) {
 	var capturedVault string
 	var capturedTxHash string
 	var capturedRefs []sidecar.SpentRef
+	var capturedSkipVerification bool
+	var capturedFromAddress string
+	var capturedToAddress string
+	var capturedAmount uint64
+	var capturedFee uint64
+	var capturedMemo string
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/monero/outputs/mark-spent" {
@@ -122,6 +129,12 @@ func TestApplySpentOutputRefsSidecarCall(t *testing.T) {
 			capturedVault = req.VaultPubKey
 			capturedTxHash = req.TxHash
 			capturedRefs = req.SpentRefs
+			capturedSkipVerification = req.SkipVerification
+			capturedFromAddress = req.FromAddress
+			capturedToAddress = req.ToAddress
+			capturedAmount = req.Amount
+			capturedFee = req.Fee
+			capturedMemo = req.Memo
 			mu.Unlock()
 			_ = json.NewEncoder(w).Encode(sidecar.MarkSpentResp{Marked: len(req.SpentRefs)})
 			return
@@ -149,8 +162,9 @@ func TestApplySpentOutputRefsSidecarCall(t *testing.T) {
 			Chain:       common.XMRChain,
 			FromAddress: vaultAddr,
 			ToAddress:   testOutboundXMRDestination(),
-			Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50))),
-			Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+			Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(500_000))),
+			Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(10_000))},
+			Memo:        "MIGRATE:100",
 		},
 		100,
 		vaultPubKey,
@@ -163,8 +177,24 @@ func TestApplySpentOutputRefsSidecarCall(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// The sidecar receives atomic-unit outbound metadata. This is separate from
+	// the consensus ObservedTx shape and is what lets the scanner later
+	// attribute the verified XMR spend back to the THORChain outbound.
+	expectedAmount, err := thorchainAmountToAtomic(obsTx.Tx.Coins.GetCoin(common.XMRAsset).Amount)
+	require.NoError(t, err)
+	expectedFee, err := thorchainAmountToAtomic(obsTx.Tx.Gas.ToCoins().GetCoin(common.XMRAsset).Amount)
+	require.NoError(t, err)
+
 	assert.Equal(t, vaultPubKey.String(), capturedVault, "sidecar should receive the vault pubkey from ObservedPubKey")
 	assert.Equal(t, spendTxHash, capturedTxHash)
+	// Peer-imported refs must still be verified by the sidecar. This explicitly
+	// guards against accidentally switching the import path to trusted refs.
+	assert.False(t, capturedSkipVerification)
+	assert.Equal(t, vaultAddr.String(), capturedFromAddress)
+	assert.Equal(t, obsTx.Tx.ToAddress.String(), capturedToAddress)
+	assert.Equal(t, expectedAmount, capturedAmount)
+	assert.Equal(t, expectedFee, capturedFee)
+	assert.Equal(t, "MIGRATE:100", capturedMemo)
 	require.Equal(t, 2, len(capturedRefs))
 	assert.Equal(t, refs[0].TxHash, capturedRefs[0].TxHash)
 	assert.Equal(t, uint32(0), capturedRefs[0].OutputIndex)
@@ -176,6 +206,246 @@ func TestApplySpentOutputRefsSidecarCall(t *testing.T) {
 	assert.Equal(t, spendTxHash, capturedRefs[1].SpendTxHash)
 }
 
+// TestApplySpentOutputRefsRetriesTransientNotFound covers the race where peer
+// refs arrive before the Monero daemon/sidecar can query the spend tx. The
+// import should retry boundedly instead of relying only on committed catchup.
+func TestApplySpentOutputRefsRetriesTransientNotFound(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey := testVaultPubKey(t, "test-vault-apply-spent-retry")
+	vaultAddr, err := vaultPubKey.GetAddress(common.XMRChain)
+	require.NoError(t, err)
+	spendTxHash := testXMRHash("apply-spent-output-refs-retry")
+
+	var mu sync.Mutex
+	calls := 0
+	done := make(chan struct{})
+	var closeDone sync.Once
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/monero/outputs/mark-spent" {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+
+		mu.Lock()
+		calls++
+		call := calls
+		mu.Unlock()
+
+		if call == 1 {
+			// First attempt simulates the sidecar get_transactions race window.
+			// The second attempt proves ApplySpentOutputRefs queues a retry.
+			http.Error(w, "tx not mined yet", http.StatusNotFound)
+			return
+		}
+
+		var req sidecar.MarkSpentReq
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewEncoder(w).Encode(sidecar.MarkSpentResp{Marked: len(req.SpentRefs)})
+		closeDone.Do(func() { close(done) })
+	}))
+	defer server.Close()
+
+	signer, err := sidecar.NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	require.NoError(t, err)
+
+	c := &Client{
+		chain:                     common.XMRChain,
+		sidecar:                   signer,
+		logger:                    testLogger(),
+		wg:                        &sync.WaitGroup{},
+		stopchan:                  make(chan struct{}),
+		spentRefsRetryInterval:    10 * time.Millisecond,
+		spentRefsRetryMaxAttempts: 3,
+	}
+	defer func() {
+		close(c.stopchan)
+		c.wg.Wait()
+	}()
+
+	refs := []common.OutputRef{
+		*testXMROutputRef("spent-retry-a", 0, spendTxHash),
+	}
+	obsTx := common.NewObservedTx(
+		common.Tx{
+			ID:          common.TxID(spendTxHash),
+			Chain:       common.XMRChain,
+			FromAddress: vaultAddr,
+			ToAddress:   testOutboundXMRDestination(),
+			Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50))),
+			Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		},
+		100,
+		vaultPubKey,
+		100,
+	)
+	obsTx.SpentOutputRefs = refs
+
+	c.ApplySpentOutputRefs(obsTx)
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for mark-spent retry")
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.GreaterOrEqual(t, calls, 2)
+}
+
+// TestApplySpentOutputRefsRetriesTransientSidecarUnavailable covers the peer
+// import case where the local sidecar is reachable but not ready yet. This must
+// not permanently consume the observer bucket's spent-ref import opportunity.
+func TestApplySpentOutputRefsRetriesTransientSidecarUnavailable(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey := testVaultPubKey(t, "test-vault-apply-spent-retry-503")
+	vaultAddr, err := vaultPubKey.GetAddress(common.XMRChain)
+	require.NoError(t, err)
+	spendTxHash := testXMRHash("apply-spent-output-refs-retry-503")
+
+	var mu sync.Mutex
+	calls := 0
+	done := make(chan struct{})
+	var closeDone sync.Once
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/monero/outputs/mark-spent" {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+
+		mu.Lock()
+		calls++
+		call := calls
+		mu.Unlock()
+
+		if call == 1 {
+			// A 503 is a sidecar readiness/health failure, not a ref validation
+			// failure. The import should retry just like the get_transactions
+			// 404 race.
+			http.Error(w, "sidecar not ready", http.StatusServiceUnavailable)
+			return
+		}
+
+		var req sidecar.MarkSpentReq
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewEncoder(w).Encode(sidecar.MarkSpentResp{Marked: len(req.SpentRefs)})
+		closeDone.Do(func() { close(done) })
+	}))
+	defer server.Close()
+
+	signer, err := sidecar.NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	require.NoError(t, err)
+
+	c := &Client{
+		chain:                     common.XMRChain,
+		sidecar:                   signer,
+		logger:                    testLogger(),
+		wg:                        &sync.WaitGroup{},
+		stopchan:                  make(chan struct{}),
+		spentRefsRetryInterval:    10 * time.Millisecond,
+		spentRefsRetryMaxAttempts: 3,
+	}
+	defer func() {
+		close(c.stopchan)
+		c.wg.Wait()
+	}()
+
+	obsTx := common.NewObservedTx(
+		common.Tx{
+			ID:          common.TxID(spendTxHash),
+			Chain:       common.XMRChain,
+			FromAddress: vaultAddr,
+			ToAddress:   testOutboundXMRDestination(),
+			Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50))),
+			Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		},
+		100,
+		vaultPubKey,
+		100,
+	)
+	obsTx.SpentOutputRefs = []common.OutputRef{*testXMROutputRef("spent-retry-503-a", 0, spendTxHash)}
+
+	c.ApplySpentOutputRefs(obsTx)
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for mark-spent retry after 503")
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.GreaterOrEqual(t, calls, 2)
+}
+
+// TestApplySpentOutputRefsDoesNotRetryTerminalSidecarError verifies that the
+// broader transient retry policy does not retry sidecar validation failures.
+// Retrying 400-class ref errors would only add load and hide bad inputs.
+func TestApplySpentOutputRefsDoesNotRetryTerminalSidecarError(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey := testVaultPubKey(t, "test-vault-apply-spent-no-retry-400")
+	vaultAddr, err := vaultPubKey.GetAddress(common.XMRChain)
+	require.NoError(t, err)
+	spendTxHash := testXMRHash("apply-spent-output-refs-no-retry-400")
+
+	var mu sync.Mutex
+	calls := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/monero/outputs/mark-spent" {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		http.Error(w, "invalid spent refs", http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	signer, err := sidecar.NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	require.NoError(t, err)
+
+	c := &Client{
+		chain:    common.XMRChain,
+		sidecar:  signer,
+		logger:   testLogger(),
+		wg:       &sync.WaitGroup{},
+		stopchan: make(chan struct{}),
+	}
+	defer close(c.stopchan)
+
+	obsTx := common.NewObservedTx(
+		common.Tx{
+			ID:          common.TxID(spendTxHash),
+			Chain:       common.XMRChain,
+			FromAddress: vaultAddr,
+			ToAddress:   testOutboundXMRDestination(),
+			Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50))),
+			Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		},
+		100,
+		vaultPubKey,
+		100,
+	)
+	obsTx.SpentOutputRefs = []common.OutputRef{*testXMROutputRef("spent-no-retry-400-a", 0, spendTxHash)}
+
+	c.ApplySpentOutputRefs(obsTx)
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, 1, calls)
+}
+
+// TestApplySpentOutputRefsFromTxInItemUsesObservationHeight verifies the
+// observer-to-sidecar conversion preserves the observed tx hash/ref set when a
+// TxInItem is reconstructed into an ObservedTx for spent-ref import.
 func TestApplySpentOutputRefsFromTxInItemUsesObservationHeight(t *testing.T) {
 	t.Parallel()
 

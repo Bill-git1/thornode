@@ -758,6 +758,9 @@ func (tos *TxOutStorage) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) ([]
 			if err != nil {
 				return nil, cosmos.ZeroUint(), fmt.Errorf("fail to get active vaults: %w", err)
 			}
+			// Compromised vaults stay Active on-chain so they can be observed and
+			// recovered, but they must not receive newly scheduled outbounds.
+			activeAsgards = filterCompromisedVaults(ctx, tos.keeper, activeAsgards)
 
 			// All else being equal, prefer lower-security vaults for outbounds.
 			activeAsgards = tos.keeper.SortBySecurity(ctx, activeAsgards, signingTransactionPeriod)
@@ -775,6 +778,9 @@ func (tos *TxOutStorage) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) ([]
 			if err != nil {
 				return nil, cosmos.ZeroUint(), fmt.Errorf("fail to get retiring vaults: %w", err)
 			}
+			// Retiring vaults are still valid outbound candidates, so apply the same
+			// compromised-vault exclusion before they are considered for fallback.
+			retiringAsgards = filterCompromisedVaults(ctx, tos.keeper, retiringAsgards)
 
 			// All else being equal, prefer lower-security vaults for outbounds.
 			retiringAsgards = tos.keeper.SortBySecurity(ctx, retiringAsgards, signingTransactionPeriod)

@@ -13,16 +13,18 @@ import (
 )
 
 type KeysignSuite struct {
-	server  *httptest.Server
-	bridge  *thorchainBridge
-	cfg     config.BifrostClientConfiguration
-	fixture string
+	server     *httptest.Server
+	bridge     *thorchainBridge
+	cfg        config.BifrostClientConfiguration
+	fixture    string
+	requestURI string
 }
 
 var _ = Suite(&KeysignSuite{})
 
 func (s *KeysignSuite) SetUpSuite(c *C) {
 	s.server = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		s.requestURI = req.RequestURI
 		if strings.HasPrefix(req.RequestURI, KeysignEndpoint) {
 			httpTestHandler(c, rw, s.fixture)
 		}
@@ -45,6 +47,7 @@ func (s *KeysignSuite) TearDownSuite(c *C) {
 	s.server.Close()
 }
 
+// TestGetKeysign keeps the normal pubkey-scoped keysign endpoint behavior.
 func (s *KeysignSuite) TestGetKeysign(c *C) {
 	s.fixture = "../../test/fixtures/endpoints/keysign/template.json"
 	pk := types.GetRandomPubKey()
@@ -53,4 +56,19 @@ func (s *KeysignSuite) TestGetKeysign(c *C) {
 	c.Assert(keysign, NotNil)
 	c.Assert(keysign.Height, Equals, int64(1718))
 	c.Assert(keysign.TxArray[0].Chain, Equals, common.ETHChain)
+	c.Assert(s.requestURI, Equals, KeysignEndpoint+"/1718/"+pk.String())
+}
+
+// TestGetKeysignWithoutPubKeyUsesHeightEndpoint covers the public height lookup
+// used by XMR peer spent-ref validation when the caller does not know the
+// retiring vault pubkey.
+func (s *KeysignSuite) TestGetKeysignWithoutPubKeyUsesHeightEndpoint(c *C) {
+	s.fixture = "../../test/fixtures/endpoints/keysign/template.json"
+	keysign, err := s.bridge.GetKeysign(1718, "")
+	c.Assert(err, IsNil)
+	c.Assert(keysign, NotNil)
+	c.Assert(keysign.Height, Equals, int64(1718))
+	// XMR peer spent-ref validation needs the public height endpoint because a
+	// newly churned-in validator may not know the retiring vault pubkey.
+	c.Assert(s.requestURI, Equals, KeysignEndpoint+"/1718")
 }

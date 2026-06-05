@@ -323,13 +323,6 @@ func (s *AttestationGossip) activeValidatorCount() int {
 	return len(s.activeVals)
 }
 
-func (s *AttestationGossip) getKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error) {
-	if s.bridge == nil {
-		return nil, fmt.Errorf("thorchain bridge is nil")
-	}
-	return s.bridge.GetKeysignParty(vaultPubKey)
-}
-
 // Check if a public key belongs to an active validator
 func (s *AttestationGossip) isActiveValidator(p peer.ID) bool {
 	s.avMu.Lock()
@@ -360,17 +353,11 @@ func (s *AttestationGossip) applySpentRefsAsync(tx common.ObservedTx) {
 		go s.observerApplySpentOutputRefs(tx)
 		return
 	}
-	select {
-	case s.applySpentRefsSem <- struct{}{}:
-		go func() {
-			defer func() { <-s.applySpentRefsSem }()
-			s.observerApplySpentOutputRefs(tx)
-		}()
-	default:
-		s.logger.Warn().
-			Str("tx_id", tx.Tx.ID.String()).
-			Msg("apply spent refs queue full, dropping (will be caught by periodic catchup)")
-	}
+	go func() {
+		s.applySpentRefsSem <- struct{}{}
+		defer func() { <-s.applySpentRefsSem }()
+		s.observerApplySpentOutputRefs(tx)
+	}()
 }
 
 // Handle a committed quorum transaction event

@@ -45,6 +45,7 @@ func (p *AttestationStatePool[T]) NewAttestationState(initialItem T) *Attestatio
 	state.quorumAttestationsSent = time.Time{}
 	state.lastAttestationsSent = time.Time{}
 	state.lastCommittedAttestation = time.Time{}
+	state.spentRefsApplied = false
 
 	return state
 }
@@ -57,6 +58,7 @@ func (p *AttestationStatePool[T]) PutAttestationState(state *AttestationState[T]
 	state.quorumAttestationsSent = time.Time{}
 	state.lastAttestationsSent = time.Time{}
 	state.lastCommittedAttestation = time.Time{}
+	state.spentRefsApplied = false
 	// Return to pool
 	p.Put(state)
 }

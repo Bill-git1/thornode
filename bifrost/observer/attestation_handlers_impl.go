@@ -1,7 +1,6 @@
 package observer
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"time"
@@ -33,57 +32,75 @@ func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx 
 	state.mu.Lock()
 	s.mu.Unlock()
 
-	defer state.mu.Unlock()
-
 	attestationCountBefore := state.AttestationCount()
 
 	// Add the attestation
 	if err := state.AddAttestation(tx.Attestation); err != nil {
 		s.logger.Error().Err(err).Msg("fail to add attestation")
+		state.mu.Unlock()
 		return
 	}
 	isNewAttestation := state.AttestationCount() > attestationCountBefore
 
-	// Import verified XMR outbound metadata into the local sidecar outside the
-	// lock. This does not add a local attestation; the scanner must later
-	// observe the sidecar-verified outbound before this node signs it.
-	var applySpentRefs *common.ObservedTx
+	// Candidate XMR spent-ref imports are authorized after releasing the state
+	// lock. The authorization path may query thornode and the eventual import
+	// calls the sidecar, neither of which should run while this mutex is held.
+	var maybeApplySpentRefs *common.ObservedTx
 	isXMROutboundWithRefs := obsTx.Tx.Chain.Equals(common.XMRChain) && !tx.Inbound &&
 		len(obsTx.SpentOutputRefs) > 0 && len(obsTx.SpentOutputRefs) <= common.MaxXMRSpentOutputRefs
-	isLocalAttestation := tx.Attestation != nil && bytes.Equal(tx.Attestation.PubKey, s.pubKey)
-	if isXMROutboundWithRefs && isNewAttestation && isLocalAttestation && !state.spentRefsApplied {
-		state.spentRefsApplied = true
+	if isXMROutboundWithRefs && isNewAttestation && !state.spentRefsApplied {
+		// Do not set spentRefsApplied here. A peer attestation is only a
+		// candidate until it passes the XMR-specific authority checks below; an
+		// unauthorized peer must not suppress a later authorized import.
 		cp := obsTx
-		applySpentRefs = &cp
+		maybeApplySpentRefs = &cp
 	}
 
-	// Determine the number of validators needed for attestation
-	var total int
-	if k.AllowFutureObservation {
-		keysignParty, err := s.getKeysignParty(obsTx.ObservedPubKey)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("fail to get key sign party")
-			return
-		}
-		total = len(keysignParty)
-	} else {
-		total = s.activeValidatorCount()
-	}
+	// Observation quorum is independent of the keysign committee. Even future
+	// outbound observations must match thornode's active-validator quorum check.
+	attestationCount := state.AttestationCount()
+	total := s.activeValidatorCount()
 
-	hasSuperMajority := types.HasSuperMajority(state.AttestationCount(), total)
+	hasSuperMajority := types.HasSuperMajority(attestationCount, total)
 
 	// If we have a supermajority, send to thornode
 	if hasSuperMajority {
-		s.logger.Debug().Msgf("has supermajority: %d/%d", state.AttestationCount(), total)
+		s.logger.Debug().Msgf("has supermajority: %d/%d", attestationCount, total)
 
 		s.sendObservedTxAttestationsToThornode(ctx, obsTx, state, k.Inbound, k.AllowFutureObservation, true)
 	} else {
 		s.logger.Debug().Msgf("observed tx attestation received - %s, id: %s, inbound: %t, final: %t, quorum: %d/%d",
-			k.Chain, k.ID, k.Inbound, k.Finalized, state.AttestationCount(), total)
+			k.Chain, k.ID, k.Inbound, k.Finalized, attestationCount, total)
+	}
+	state.mu.Unlock()
+
+	var applySpentRefs *common.ObservedTx
+	if maybeApplySpentRefs != nil && s.observerApplySpentOutputRefs != nil &&
+		s.shouldApplyXMRSpentRefsFromAttestation(*maybeApplySpentRefs, tx.Attestation) {
+		s.mu.Lock()
+		liveState, ok := s.observedTxs[k]
+		if ok {
+			// Re-acquire locks in the normal global-then-state order. The
+			// authorization path above can block on thornode, so the originally
+			// captured state may have been pruned and returned to the pool.
+			liveState.mu.Lock()
+		}
+		s.mu.Unlock()
+
+		if ok {
+			if !liveState.spentRefsApplied {
+				// Only mutate the currently indexed state bucket. If the bucket was
+				// pruned while authorization was running, skip the import instead
+				// of marking a stale or recycled state object.
+				liveState.spentRefsApplied = true
+				applySpentRefs = maybeApplySpentRefs
+			}
+			liveState.mu.Unlock()
+		}
 	}
 
-	// Apply XMR spent output refs outside the lock to avoid holding the
-	// mutex during a blocking HTTP call to the sidecar.
+	// Apply XMR spent output refs after all authorization and state bookkeeping.
+	// This seeds the sidecar only; it does not add a local attestation.
 	if applySpentRefs != nil && s.observerApplySpentOutputRefs != nil {
 		s.applySpentRefsAsync(*applySpentRefs)
 	}

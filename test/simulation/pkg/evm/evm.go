@@ -36,6 +36,27 @@ import (
 
 const ContractGasLimit = 3000000
 
+// chainGasOffset makes simulator-signed EVM transactions chain-distinct even
+// when mock geth nodes all run with the dev chain ID 1337. The offset is tiny
+// enough not to affect execution, but it changes the signed tx bytes so two
+// mock chains cannot produce the same tx hash from the same account/nonce/memo.
+func chainGasOffset(chain common.Chain) uint64 {
+	switch chain {
+	case common.ETHChain:
+		return 0
+	case common.BSCChain:
+		return 1
+	case common.BASEChain:
+		return 2
+	case common.POLChain:
+		return 3
+	case common.AVAXChain:
+		return 4
+	default:
+		return 0
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Init
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -267,10 +288,11 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 
 	// create a standard transfer tx
 	gasPerByte := uint64(40) // https://eips.ethereum.org/EIPS/eip-7623
+	gasLimit := uint64(21000) + uint64(len(tx.Memo))*gasPerByte + chainGasOffset(tx.Chain)
 	txData := &etypes.LegacyTx{
 		To:    &toAddress,
 		Data:  []byte(tx.Memo),
-		Gas:   21000 + uint64(len(tx.Memo))*gasPerByte,            // transfer + memo
+		Gas:   gasLimit,                                           // transfer + memo
 		Value: tx.Coin.Amount.Mul(sdkmath.NewUint(1e10)).BigInt(), // 1e8 -> 1e18,
 	}
 
@@ -382,7 +404,7 @@ func (c *Client) SignContractTx(tx SimContractTx) ([]byte, error) {
 	txData := &etypes.LegacyTx{
 		To:    &contractAddress,
 		Data:  data,
-		Gas:   ContractGasLimit,
+		Gas:   ContractGasLimit + chainGasOffset(tx.Chain),
 		Value: value,
 	}
 

@@ -27,6 +27,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 
@@ -252,30 +253,30 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 					signErr = fmt.Errorf("unexpected doge signing tx type %T", stx)
 					break
 				}
-				signErr = c.signUTXODOGE(msgTx, tx, amount, sourceScript, i)
+				signErr = c.signUTXODOGE(msgTx, tx, amount, sourceScript, i, thorchainHeight)
 			case common.BCHChain:
 				msgTx, ok := stx.(*bchwire.MsgTx)
 				if !ok {
 					signErr = fmt.Errorf("unexpected bch signing tx type %T", stx)
 					break
 				}
-				signErr = c.signUTXOBCH(msgTx, tx, amount, sourceScript, i)
+				signErr = c.signUTXOBCH(msgTx, tx, amount, sourceScript, i, thorchainHeight)
 			case common.LTCChain:
 				msgTx, ok := stx.(*ltcwire.MsgTx)
 				if !ok {
 					signErr = fmt.Errorf("unexpected ltc signing tx type %T", stx)
 					break
 				}
-				signErr = c.signUTXOLTC(msgTx, tx, amount, sourceScript, i)
+				signErr = c.signUTXOLTC(msgTx, tx, amount, sourceScript, i, thorchainHeight)
 			case common.BTCChain:
 				msgTx, ok := stx.(*btcwire.MsgTx)
 				if !ok {
 					signErr = fmt.Errorf("unexpected btc signing tx type %T", stx)
 					break
 				}
-				signErr = c.signUTXOBTC(msgTx, tx, amount, sourceScript, i)
+				signErr = c.signUTXOBTC(msgTx, tx, amount, sourceScript, i, thorchainHeight)
 			case common.ZECChain:
-				signErr = c.signUTXOZEC(zecTx, tx, amount, sourceScript, i)
+				signErr = c.signUTXOZEC(zecTx, tx, amount, sourceScript, i, thorchainHeight)
 			default:
 				c.log.Fatal().Msg("unsupported chain")
 			}
@@ -289,6 +290,9 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	}
 	wg.Wait()
 	if utxoErr != nil {
+		if allNotSelectedForKeysign(utxoErr) {
+			return nil, nil, nil, nil
+		}
 		err = utxo.PostKeysignFailure(c.bridge, tx, c.log, thorchainHeight, utxoErr)
 		return nil, checkpointBytes, nil, fmt.Errorf("fail to sign the message: %w", err)
 	}
@@ -392,6 +396,28 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	}
 
 	return signedTx.Bytes(), nil, txIn, nil
+}
+
+// allNotSelectedForKeysign only stands down when every parallel signing error
+// says this node was not selected. Mixed errors still need normal failure
+// handling and blame reporting.
+func allNotSelectedForKeysign(err error) bool {
+	if err == nil {
+		return false
+	}
+	var merr *multierror.Error
+	if !errors.As(err, &merr) {
+		return errors.Is(err, tss.ErrNotSelectedForKeysign)
+	}
+	if len(merr.Errors) == 0 {
+		return false
+	}
+	for _, item := range merr.Errors {
+		if !errors.Is(item, tss.ErrNotSelectedForKeysign) {
+			return false
+		}
+	}
+	return true
 }
 
 // GetVaultLock returns a mutex for the given vault pubkey. This is primarily used to

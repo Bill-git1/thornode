@@ -25,9 +25,12 @@ func CamelToSnakeUpper(s string) string {
 func init() {
 	int64Overrides = map[ConstantName]int64{
 		// ArtificialRagnarokBlockHeight: 200,
-		DesiredValidatorSet:                 12,
-		ChurnInterval:                       60,
-		ChurnRetryInterval:                  30,
+		DesiredValidatorSet: 12,
+		ChurnInterval:       60,
+		// XMR FROST keygen can take longer than the old 30-block mocknet retry
+		// window while sidecars are starting. Keep the initial monovault result
+		// valid long enough for bootstrap and post-churn simulation coverage.
+		ChurnRetryInterval:                  365,
 		MinimumBondInRune:                   100_000_000, // 1 rune
 		MemolessTxnTTL:                      100,
 		MemolessTxnMaxUse:                   5, // higher limit for testing

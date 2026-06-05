@@ -84,6 +84,37 @@ const (
 	mocknetInitConcurrency     = 2
 )
 
+// getHeightProvider lets chains with non-replayable mock histories seed
+// network fees at their current chain height instead of the legacy height 1.
+type getHeightProvider interface {
+	GetHeight() (int64, error)
+}
+
+// getHeight preserves the old height-1 behavior for most chains, while
+// allowing XRP to avoid writing a stale last-chain-height that late Bifrosts
+// cannot scan from against the mock XRPL daemon.
+func getHeight(chain common.Chain, clients map[common.Chain]LiteChainClient) (int64, error) {
+	client, ok := clients[chain]
+	if !ok {
+		return 1, nil
+	}
+
+	provider, ok := client.(getHeightProvider)
+	if !ok {
+		return 1, nil
+	}
+
+	height, err := provider.GetHeight()
+	if err != nil {
+		return 0, err
+	}
+	if height <= 0 {
+		return 0, fmt.Errorf("%s network fee height must be positive, got %d", chain, height)
+	}
+
+	return height, nil
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Init
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -171,11 +202,18 @@ func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 			for _, fee := range defaultFees {
 				log.Info().Msgf("posting %s network fee", fee.chain)
 				for {
-					_, err := a.Thorchain.PostNetworkFee(1, fee.chain, fee.size, fee.rate)
+					height, err := getHeight(fee.chain, a.ChainClients)
+					if err != nil {
+						log.Error().Err(err).Stringer("chain", fee.chain).Msg("failed to get network fee height")
+						time.Sleep(2 * time.Second)
+						continue
+					}
+
+					_, err = a.Thorchain.PostNetworkFee(height, fee.chain, fee.size, fee.rate)
 					if err == nil {
 						break
 					}
-					log.Error().Err(err).Msg("failed to post network fee")
+					log.Error().Err(err).Int64("height", height).Msg("failed to post network fee")
 					time.Sleep(2 * time.Second)
 				}
 			}

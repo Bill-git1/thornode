@@ -2,6 +2,7 @@ package tss
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -83,6 +84,16 @@ func TestFrostKeySignMsgIDDeterministic(t *testing.T) {
 	}
 	if id1 != id3 {
 		t.Fatalf("expected same msg id with reordered signers, got %q != %q", id1, id3)
+	}
+
+	activeChanged := base
+	activeChanged.ActiveSignerPubKeys = []string{"thorpub-a", "thorpub-b"}
+	id4, err := FrostKeySignMsgID(activeChanged)
+	if err != nil {
+		t.Fatalf("msg id active signers changed: %v", err)
+	}
+	if id1 != id4 {
+		t.Fatalf("expected active signer changes not to affect msg id, got %q != %q", id1, id4)
 	}
 }
 
@@ -172,6 +183,15 @@ func TestFrostKeySignIdentityIncludesSpendConstraints(t *testing.T) {
 	}
 	if basePlan == feePlan {
 		t.Fatalf("expected fee rate to affect plan hash")
+	}
+	changedActive := base
+	changedActive.ActiveSignerPubKeys = []string{"thorpub-a", "thorpub-b"}
+	activePlan, err := FrostPlanHash(changedActive, "fixed-msg-id")
+	if err != nil {
+		t.Fatalf("active signer plan hash: %v", err)
+	}
+	if basePlan == activePlan {
+		t.Fatalf("expected active signer changes to affect plan hash")
 	}
 	selectedValuePlan, err := FrostPlanHash(changedSelectedValue, "fixed-msg-id")
 	if err != nil {
@@ -408,6 +428,43 @@ func TestFrostWaitForResultRequiresQuorumMatch(t *testing.T) {
 	}
 }
 
+func TestFrostWaitForResultTimeoutUsesSentinel(t *testing.T) {
+	ensureBech32Prefix()
+
+	coord := &FrostSignCoordinator{
+		localPubKey:      testPubKeys[0],
+		msgID:            "msg-id",
+		expectedPlanHash: testExpectedPlanHash,
+		msgChan:          make(chan *p2p.Message, 1),
+		timeout:          100 * time.Millisecond,
+	}
+
+	_, err := coord.WaitForResult([]string{testPubKeys[0], testPubKeys[1]}, 1, 10*time.Millisecond)
+	if !errors.Is(err, errFrostResultTimeout) {
+		t.Fatalf("expected frost result timeout sentinel, got %v", err)
+	}
+}
+
+func TestFrostWaitForResultSetupErrorIsNotTimeout(t *testing.T) {
+	ensureBech32Prefix()
+
+	coord := &FrostSignCoordinator{
+		localPubKey:      testPubKeys[0],
+		msgID:            "msg-id",
+		expectedPlanHash: testExpectedPlanHash,
+		msgChan:          make(chan *p2p.Message, 1),
+		timeout:          100 * time.Millisecond,
+	}
+
+	_, err := coord.WaitForResult([]string{testPubKeys[0], testPubKeys[0]}, 1, time.Second)
+	if err == nil {
+		t.Fatalf("expected setup error for duplicate active signer")
+	}
+	if errors.Is(err, errFrostResultTimeout) {
+		t.Fatalf("setup error must not be classified as frost result timeout")
+	}
+}
+
 func TestFrostWaitForResultAcceptsThresholdIdenticalSuccess(t *testing.T) {
 	ensureBech32Prefix()
 
@@ -445,7 +502,7 @@ func TestFrostWaitForResultAcceptsThresholdIdenticalSuccess(t *testing.T) {
 	}
 }
 
-func TestFrostWaitForVerifiedSuccessOrResultQuorumAcceptsSingleSuccess(t *testing.T) {
+func TestFrostWaitForResultRejectsSingleSuccessWithoutQuorum(t *testing.T) {
 	ensureBech32Prefix()
 
 	msgChan := make(chan *p2p.Message, 1)
@@ -463,19 +520,12 @@ func TestFrostWaitForVerifiedSuccessOrResultQuorumAcceptsSingleSuccess(t *testin
 		Response:     result,
 	})
 
-	resp, err := coord.WaitForVerifiedSuccessOrResultQuorum([]string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}, 2, time.Second)
-	if err != nil {
-		t.Fatalf("wait for verified result: %v", err)
-	}
-	if resp.Status != tcommon.Success {
-		t.Fatalf("expected success status, got %d", resp.Status)
-	}
-	if resp.TxHash != testHashOf('1') || resp.TxHex != "deadbeef" {
-		t.Fatalf("unexpected response: %+v", resp)
+	if _, err := coord.WaitForResult([]string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}, 2, 150*time.Millisecond); err == nil {
+		t.Fatalf("expected timeout waiting for success quorum, got nil error")
 	}
 }
 
-func TestFrostWaitForVerifiedSuccessOrResultQuorumRequiresFailureQuorum(t *testing.T) {
+func TestFrostWaitForResultRequiresFailureQuorum(t *testing.T) {
 	ensureBech32Prefix()
 
 	msgChan := make(chan *p2p.Message, 1)
@@ -498,8 +548,48 @@ func TestFrostWaitForVerifiedSuccessOrResultQuorumRequiresFailureQuorum(t *testi
 		},
 	})
 
-	if _, err := coord.WaitForVerifiedSuccessOrResultQuorum([]string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}, 2, 150*time.Millisecond); err == nil {
+	if _, err := coord.WaitForResult([]string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}, 2, 150*time.Millisecond); err == nil {
 		t.Fatalf("expected timeout waiting for failure quorum, got nil error")
+	}
+}
+
+func TestFrostWaitForResultContinuesAfterSingleMalformedResult(t *testing.T) {
+	ensureBech32Prefix()
+
+	msgChan := make(chan *p2p.Message, 3)
+	coord := &FrostSignCoordinator{
+		localPubKey:      testPubKeys[0],
+		msgID:            "msg-id",
+		expectedPlanHash: testExpectedPlanHash,
+		msgChan:          msgChan,
+		timeout:          time.Second,
+		logger:           zerolog.Nop(),
+	}
+
+	malformed := mustSuccessResult(t, "msg-id", testHashOf('9'), testHashOf('7'), "deadbeef", 10)
+	enqueueResultMessage(t, msgChan, "msg-id", testPubKeys[1], testPubKeys[1], FrostResultPayload{
+		SenderPubKey: testPubKeys[1],
+		Response:     malformed,
+	})
+	valid := mustSuccessResult(t, "msg-id", testExpectedPlanHash, testHashOf('8'), "deadbeef", 10)
+	enqueueResultMessage(t, msgChan, "msg-id", testPubKeys[2], testPubKeys[2], FrostResultPayload{
+		SenderPubKey: testPubKeys[2],
+		Response:     valid,
+	})
+	enqueueResultMessage(t, msgChan, "msg-id", testPubKeys[3], testPubKeys[3], FrostResultPayload{
+		SenderPubKey: testPubKeys[3],
+		Response:     valid,
+	})
+
+	resp, err := coord.WaitForResult([]string{testPubKeys[1], testPubKeys[2], testPubKeys[3]}, 2, time.Second)
+	if err != nil {
+		t.Fatalf("wait for result: %v", err)
+	}
+	if resp.Status != tcommon.Success {
+		t.Fatalf("expected success status, got %d", resp.Status)
+	}
+	if resp.TxHash != testHashOf('8') {
+		t.Fatalf("expected valid quorum result, got %+v", resp)
 	}
 }
 

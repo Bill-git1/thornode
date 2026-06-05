@@ -137,6 +137,35 @@ func ensureVaultAndGetTxInVoter(ctx cosmos.Context, vaultPubKey common.PubKey, t
 	return voter, nil
 }
 
+const (
+	compromisedVaultMimirKeyPrefix  = "CompromisedVault-"
+	compromisedVaultNoOpSecurityMsg = "inbound to compromised vault no-oped"
+)
+
+// isVaultCompromised reports whether CompromisedVault-<pubkey> is set.
+// The compromised-vault Mimir is keyed by vault pubkey rather than chain or
+// address so it covers every inbound address exposed by the same vault.
+// On KV read failure it returns true so callers can fail closed.
+func isVaultCompromised(ctx cosmos.Context, k keeper.Keeper, vaultPubKey common.PubKey) (bool, error) {
+	flagged, err := k.GetMimir(ctx, compromisedVaultMimirKeyPrefix+vaultPubKey.String())
+	if err != nil {
+		return true, err
+	}
+	return flagged > 0, nil
+}
+
+// emitCompromisedVaultNoOpSecurityEvent emits the operator-facing alert for an
+// inbound that reached quorum but was intentionally skipped because its vault is
+// flagged by CompromisedVault-<pubkey>.
+func emitCompromisedVaultNoOpSecurityEvent(ctx cosmos.Context, mgr Manager, tx common.ObservedTx, vaultPubKey common.PubKey) {
+	// EventSecurity includes the external tx attributes, but not the observed
+	// vault pubkey, so keep the vault key in the message for incident review.
+	msg := fmt.Sprintf("%s: vault=%s", compromisedVaultNoOpSecurityMsg, vaultPubKey.String())
+	if err := mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
+		ctx.Logger().Error("fail to emit compromised vault no-op security event", "pub_key", vaultPubKey.String(), "tx", tx.Tx.ID.String(), "error", err)
+	}
+}
+
 // handleObservedTxInQuorum - will process the observed tx in quorum.
 // used by both MsgObservedTxIn and MsgObservedTxInQuorum after processing
 // attestation(s).
@@ -177,6 +206,37 @@ func handleObservedTxInQuorum(
 
 	voter.Tx.Tx.Memo = tx.Tx.Memo
 
+	hasFinalised := voter.HasFinalised(activeNodeAccounts)
+
+	compromised, compromisedErr := isVaultCompromised(ctx, k, vault.PubKey)
+	if compromisedErr != nil {
+		ctx.Logger().Error("failed to read CompromisedVault mimir, treating inbound as no-op", "pub_key", vault.PubKey.String(), "error", compromisedErr)
+	}
+	if compromised {
+		// The tx has already reached observation quorum. Record observation
+		// metadata, but deliberately skip every value-changing action below:
+		// vault accounting, memo resolution, refunds, swap queueing, and
+		// internal handler dispatch. Funds sent to a compromised vault should
+		// not affect THORChain state.
+		if err = k.SetLastChainHeight(ctx, tx.Tx.Chain, tx.BlockHeight); err != nil {
+			ctx.Logger().Error("fail to set last chain height", "error", err)
+		}
+
+		mgr.ObMgr().AppendObserver(tx.Tx.Chain, voter.Tx.GetSigners())
+		if hasFinalised {
+			// Mark finalised no-op observations done so they do not remain as
+			// pending inbound work waiting for an outbound that will never be
+			// scheduled.
+			emitCompromisedVaultNoOpSecurityEvent(ctx, mgr, tx, vault.PubKey)
+			voter.SetDone()
+			ctx.Logger().Info("observed tx in to compromised vault no-oped", "pub_key", vault.PubKey.String(), "tx", tx.Tx.ID.String())
+		} else {
+			ctx.Logger().Info("observed tx in to compromised vault pending confirmation counting", "pub_key", vault.PubKey.String(), "tx", tx.Tx.ID.String())
+		}
+		k.SetObservedTxInVoter(ctx, voter)
+		return nil
+	}
+
 	// add memo for memoless transactions (after consensus is reached)
 	if len(tx.Tx.Coins) > 0 {
 		// Use the asset from the first coin for reference memo lookup
@@ -202,8 +262,6 @@ func handleObservedTxInQuorum(
 	// memo errors are ignored here and will be caught later in processing,
 	// after vault update, voter setup, etc and the coin will be refunded
 	memo, _ := ParseMemoWithTHORNames(ctx, k, tx.Tx.Memo)
-
-	hasFinalised := voter.HasFinalised(activeNodeAccounts)
 
 	// Update vault balances from inbounds with Migrate memos immediately,
 	// to minimise any gap between outbound and inbound observations.

@@ -1437,6 +1437,424 @@ func (s *QuerierSuite) TestQueryVault(c *C) {
 	c.Assert(vault.BlockHeight, Equals, returnVault.BlockHeight)
 }
 
+// TestQueryKeysignParty verifies jailed members are reported as fallback
+// candidates and restored after jail release.
+func (s *QuerierSuite) TestQueryKeysignParty(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.Height, Equals, int64(100))
+	c.Assert(resp.RequiredSigners, Equals, int64(3))
+	c.Assert(resp.ActiveSignerCount, Equals, int64(3))
+	c.Assert(resp.NeverSigners, HasLen, 0)
+	c.Assert(resp.JailedFallbackSigners, DeepEquals, []string{
+		nodes[1].PubKeySet.Secp256k1.String(),
+	})
+
+	c.Assert(s.k.ReleaseNodeAccountFromJail(ctx, nodes[1].NodeAddress), IsNil)
+	resp, err = s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.Signers, HasLen, len(nodes))
+	c.Assert(resp.ActiveSignerCount, Equals, int64(len(nodes)))
+	c.Assert(resp.NeverSigners, HasLen, 0)
+	c.Assert(resp.JailedFallbackSigners, HasLen, 0)
+}
+
+// TestQueryKeysignPartyUsesRequestedHeight verifies policy evaluation can be
+// pinned to the signing height rather than the latest query context.
+func (s *QuerierSuite) TestQueryKeysignPartyUsesRequestedHeight(c *C) {
+	ctx := s.ctx.WithBlockHeight(200)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey:        vault.PubKey.String(),
+		SigningHeight: "100",
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.Height, Equals, int64(100))
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+	})
+
+	resp, err = s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey:        vault.PubKey.String(),
+		SigningHeight: "150",
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.Height, Equals, int64(150))
+	c.Assert(resp.Signers, HasLen, len(nodes))
+}
+
+// TestQueryKeysignPartyRejectsNegativeHeight rejects invalid historical height
+// input before policy classification runs.
+func (s *QuerierSuite) TestQueryKeysignPartyRejectsNegativeHeight(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, _ := s.setupKeysignPartyVault(c, ctx)
+
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey:        vault.PubKey.String(),
+		SigningHeight: "-1",
+	})
+	c.Assert(resp, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*height.*negative.*")
+}
+
+// TestQueryKeysignPartyFindsVaultByFrostPubKey verifies FROST callers can use
+// the FROST vault key while the response remains anchored to the secp vault.
+func (s *QuerierSuite) TestQueryKeysignPartyFindsVaultByFrostPubKey(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+	frostPubKey := GetRandomPubKey()
+	vault.PubKeyFrost = frostPubKey
+	c.Assert(s.k.SetVault(ctx, vault), IsNil)
+
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: frostPubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.PubKey, Equals, vault.PubKey.String())
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+	})
+}
+
+// TestQueryKeysignPartyUsesJailedFallbackOnlyWhenNeeded verifies jailed members
+// are promoted only when clean preferred signers cannot satisfy threshold.
+func (s *QuerierSuite) TestQueryKeysignPartyUsesJailedFallbackOnlyWhenNeeded(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeygen), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[2].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.RequiredSigners, Equals, int64(3))
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.ActiveSignerCount, Equals, int64(3))
+	c.Assert(resp.NeverSigners, HasLen, 0)
+	c.Assert(resp.JailedFallbackSigners, DeepEquals, []string{
+		nodes[1].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+	})
+}
+
+// TestQueryKeysignPartyJailedFallbackPriority locks the deterministic ordering
+// used when several jailed fallback candidates are available.
+func (s *QuerierSuite) TestQueryKeysignPartyJailedFallbackPriority(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVaultWithCount(c, ctx, 6)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, "unknown jail reason"), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[2].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[3].NodeAddress, 150, jailReasonFailedToPerformKeygen), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[4].NodeAddress, 150, jailReasonFailedToVoteKeygen), IsNil)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.RequiredSigners, Equals, int64(4))
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[5].PubKeySet.Secp256k1.String(),
+		nodes[4].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.JailedFallbackSigners, DeepEquals, []string{
+		nodes[4].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+	})
+}
+
+// TestQueryKeysignPartyJailedFallbackReliabilityTieBreakers ensures equal jail
+// reasons are ordered by lower slash points, then shorter remaining jail time.
+func (s *QuerierSuite) TestQueryKeysignPartyJailedFallbackReliabilityTieBreakers(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVaultWithCount(c, ctx, 6)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[2].NodeAddress, 180, jailReasonFailedToPerformKeysign), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[3].NodeAddress, 130, jailReasonFailedToPerformKeysign), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[4].NodeAddress, 120, jailReasonFailedToPerformKeysign), IsNil)
+	s.k.SetNodeAccountSlashPoints(ctx, nodes[1].NodeAddress, 20)
+	s.k.SetNodeAccountSlashPoints(ctx, nodes[2].NodeAddress, 5)
+	s.k.SetNodeAccountSlashPoints(ctx, nodes[3].NodeAddress, 5)
+	s.k.SetNodeAccountSlashPoints(ctx, nodes[4].NodeAddress, 10)
+
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.RequiredSigners, Equals, int64(4))
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[5].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.JailedFallbackSigners, DeepEquals, []string{
+		nodes[3].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[4].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+	})
+}
+
+// TestQueryKeysignPartyUnknownJailReasonIsLastFallback ensures unknown jail
+// reasons are still usable but rank behind known keygen/keysign reasons.
+func (s *QuerierSuite) TestQueryKeysignPartyUnknownJailReasonIsLastFallback(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, "unknown jail reason"), IsNil)
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[2].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	nodes[3].ForcedToLeave = true
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[3]), IsNil)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.RequiredSigners, Equals, int64(3))
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.NeverSigners, DeepEquals, []string{
+		nodes[3].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.JailedFallbackSigners, DeepEquals, []string{
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+	})
+}
+
+// TestQueryKeysignPartyExcludesForcedToLeave verifies forced-to-leave members
+// are never returned as signers.
+func (s *QuerierSuite) TestQueryKeysignPartyExcludesForcedToLeave(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+
+	nodes[3].ForcedToLeave = true
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[3]), IsNil)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.NeverSigners, DeepEquals, []string{
+		nodes[3].PubKeySet.Secp256k1.String(),
+	})
+}
+
+// TestQueryKeysignPartyDisableFilteringMimirReturnsFullMembership verifies the
+// economic Mimir escape hatch disables both jail and forced-to-leave filtering.
+func (s *QuerierSuite) TestQueryKeysignPartyDisableFilteringMimirReturnsFullMembership(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	nodes[2].ForcedToLeave = true
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[2]), IsNil)
+	s.k.SetMimir(ctx, constants.MimirKeyDisableTSSSignerFiltering, 1)
+
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.RequiredSigners, Equals, int64(3))
+	c.Assert(resp.ActiveSignerCount, Equals, int64(len(nodes)))
+	c.Assert(resp.NeverSigners, HasLen, 0)
+	c.Assert(resp.JailedFallbackSigners, HasLen, 0)
+}
+
+// TestQueryKeysignPartyIncludesRequestedToLeave documents that requested-leave
+// nodes remain eligible until they are actually churned or forced out.
+func (s *QuerierSuite) TestQueryKeysignPartyIncludesRequestedToLeave(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVaultWithCount(c, ctx, 6)
+
+	nodes[5].RequestedToLeave = true
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[5]), IsNil)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+	c.Assert(resp.RequiredSigners, Equals, int64(4))
+	c.Assert(resp.Signers, DeepEquals, []string{
+		nodes[0].PubKeySet.Secp256k1.String(),
+		nodes[1].PubKeySet.Secp256k1.String(),
+		nodes[2].PubKeySet.Secp256k1.String(),
+		nodes[3].PubKeySet.Secp256k1.String(),
+		nodes[4].PubKeySet.Secp256k1.String(),
+		nodes[5].PubKeySet.Secp256k1.String(),
+	})
+	c.Assert(resp.NeverSigners, HasLen, 0)
+}
+
+// TestQueryKeysignPartyFailsWhenBelowThreshold fails closed when filtering
+// leaves too few eligible signers for the original vault threshold.
+func (s *QuerierSuite) TestQueryKeysignPartyFailsWhenBelowThreshold(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, nodes := s.setupKeysignPartyVault(c, ctx)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeysign), IsNil)
+	nodes[2].ForcedToLeave = true
+	nodes[3].ForcedToLeave = true
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[2]), IsNil)
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[3]), IsNil)
+
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(resp, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*not enough eligible signers.*")
+}
+
+// TestQueryKeysignPartyFailsForCompromisedVault verifies compromised vaults are
+// a hard stop even when filtering is disabled by Mimir.
+func (s *QuerierSuite) TestQueryKeysignPartyFailsForCompromisedVault(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	vault, _ := s.setupKeysignPartyVault(c, ctx)
+
+	s.k.SetMimir(ctx, constants.MimirKeyDisableTSSSignerFiltering, 1)
+	s.k.SetMimir(ctx, compromisedVaultMimirKeyPrefix+vault.PubKey.String(), 1)
+	resp, err := s.queryServer.KeysignParty(ctx, &types.QueryKeysignPartyRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(resp, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*marked compromised.*")
+}
+
+// TestKeygenEligibleNodeAccountsKeepsJailedButExcludesFlagged verifies keygen
+// filtering ignores jail state and only removes nodes that must not receive new
+// key shares.
+func (s *QuerierSuite) TestKeygenEligibleNodeAccountsKeepsJailedButExcludesFlagged(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	_, nodes := s.setupKeysignPartyVaultWithCount(c, ctx, 6)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeygen), IsNil)
+	nodes[2].ForcedToLeave = true
+	nodes[3].RequestedToLeave = true
+	nodes[4].LeaveScore = 1
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[2]), IsNil)
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[3]), IsNil)
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[4]), IsNil)
+
+	eligible, err := keygenEligibleNodeAccounts(ctx, s.k, NodeAccounts(nodes))
+	c.Assert(err, IsNil)
+	c.Assert(eligible, HasLen, 5)
+	c.Assert(eligible[0].PubKeySet.Secp256k1.String(), Equals, nodes[0].PubKeySet.Secp256k1.String())
+	c.Assert(eligible[1].PubKeySet.Secp256k1.String(), Equals, nodes[1].PubKeySet.Secp256k1.String())
+	c.Assert(eligible[2].PubKeySet.Secp256k1.String(), Equals, nodes[3].PubKeySet.Secp256k1.String())
+	c.Assert(eligible[3].PubKeySet.Secp256k1.String(), Equals, nodes[4].PubKeySet.Secp256k1.String())
+	c.Assert(eligible[4].PubKeySet.Secp256k1.String(), Equals, nodes[5].PubKeySet.Secp256k1.String())
+}
+
+// TestKeygenEligibleNodeAccountsDisableFilteringMimirReturnsAllNodes verifies
+// the same disable Mimir bypasses keygen filtering.
+func (s *QuerierSuite) TestKeygenEligibleNodeAccountsDisableFilteringMimirReturnsAllNodes(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	_, nodes := s.setupKeysignPartyVaultWithCount(c, ctx, 6)
+
+	c.Assert(s.k.SetNodeAccountJail(ctx, nodes[1].NodeAddress, 150, jailReasonFailedToPerformKeygen), IsNil)
+	nodes[2].ForcedToLeave = true
+	c.Assert(s.k.SetNodeAccount(ctx, nodes[2]), IsNil)
+	s.k.SetMimir(ctx, constants.MimirKeyDisableTSSSignerFiltering, 1)
+
+	eligible, err := keygenEligibleNodeAccounts(ctx, s.k, NodeAccounts(nodes))
+	c.Assert(err, IsNil)
+	c.Assert(eligible, HasLen, len(nodes))
+	for i := range nodes {
+		c.Assert(eligible[i].PubKeySet.Secp256k1.String(), Equals, nodes[i].PubKeySet.Secp256k1.String())
+	}
+}
+
+// TestKeygenEligibleThresholdRejectsTooFewMembers protects against creating a
+// vault whose filtered member set is below the original TSS threshold.
+func (s *QuerierSuite) TestKeygenEligibleThresholdRejectsTooFewMembers(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	_, nodes := s.setupKeysignPartyVaultWithCount(c, ctx, 6)
+
+	eligible := NodeAccounts{nodes[0], nodes[1], nodes[2]}
+	err := validateKeygenEligibleThreshold(NodeAccounts(nodes), eligible)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*need at least 4 of 6 original members, got 3.*")
+}
+
+// TestKeygenEligibleThresholdRejectsZeroMembers verifies an empty filtered
+// keygen set fails with a clear error.
+func (s *QuerierSuite) TestKeygenEligibleThresholdRejectsZeroMembers(c *C) {
+	ctx := s.ctx.WithBlockHeight(100)
+	_, nodes := s.setupKeysignPartyVaultWithCount(c, ctx, 6)
+
+	err := validateKeygenEligibleThreshold(NodeAccounts(nodes), nil)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*no eligible keygen members.*")
+}
+
+// setupKeysignPartyVault creates the default four-member active vault used by
+// keysign policy tests.
+func (s *QuerierSuite) setupKeysignPartyVault(c *C, ctx cosmos.Context) (Vault, []NodeAccount) {
+	return s.setupKeysignPartyVaultWithCount(c, ctx, 4)
+}
+
+// setupKeysignPartyVaultWithCount creates a deterministic active vault with
+// count validator members and persists the matching node accounts.
+func (s *QuerierSuite) setupKeysignPartyVaultWithCount(c *C, ctx cosmos.Context, count int) (Vault, []NodeAccount) {
+	nodes := make([]NodeAccount, 0, count)
+	for i := 0; i < count; i++ {
+		nodes = append(nodes, GetRandomValidatorNode(NodeActive))
+	}
+	membership := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		c.Assert(s.k.SetNodeAccount(ctx, node), IsNil)
+		membership = append(membership, node.PubKeySet.Secp256k1.String())
+	}
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), nil)
+	vault.Membership = membership
+	c.Assert(s.k.SetVault(ctx, vault), IsNil)
+	return vault, nodes
+}
+
 func (s *QuerierSuite) TestQueryVersion(c *C) {
 	queryVersionResp, err := s.queryServer.Version(s.ctx, &types.QueryVersionRequest{})
 	c.Assert(err, IsNil)

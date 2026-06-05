@@ -6,6 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**Asgard**](VaultsApi.md#Asgard) | **Get** /thorchain/vaults/asgard | 
 [**Vault**](VaultsApi.md#Vault) | **Get** /thorchain/vault/{pubkey} | 
+[**VaultKeysignParty**](VaultsApi.md#VaultKeysignParty) | **Get** /thorchain/vault/{pubkey}/keysign_party | 
 [**VaultPubkeys**](VaultsApi.md#VaultPubkeys) | **Get** /thorchain/vaults/pubkeys | 
 [**VaultSolvency**](VaultsApi.md#VaultSolvency) | **Get** /thorchain/vaults/solvency | 
 [**Yggdrasil**](VaultsApi.md#Yggdrasil) | **Get** /thorchain/vaults/yggdrasil | 
@@ -135,6 +136,78 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**Vault**](Vault.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## VaultKeysignParty
+
+> KeysignPartyResponse VaultKeysignParty(ctx, pubkey).SigningHeight(signingHeight).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    pubkey := "thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc" // string | 
+    signingHeight := int64(789) // int64 | optional signing height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.VaultsApi.VaultKeysignParty(context.Background(), pubkey).SigningHeight(signingHeight).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `VaultsApi.VaultKeysignParty``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `VaultKeysignParty`: KeysignPartyResponse
+    fmt.Fprintf(os.Stdout, "Response from `VaultsApi.VaultKeysignParty`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**pubkey** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiVaultKeysignPartyRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **signingHeight** | **int64** | optional signing height, defaults to current tip | 
+
+### Return type
+
+[**KeysignPartyResponse**](KeysignPartyResponse.md)
 
 ### Authorization
 

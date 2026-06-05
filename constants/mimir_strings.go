@@ -5,11 +5,12 @@ package constants
 // Each string should clearly indicate its usage for the final Mimir key (key, template, reference)
 // and no Mimir key should require the combination of more than two strings.
 const (
-	MimirKeySecuredAssetHaltGlobal = "HaltSecuredGlobal"
-	MimirKeyWasmPermissionless     = "WasmPermissionless"
-	MimirKeyWasmHaltGlobal         = "HaltWasmGlobal"
-	MimirKeyWasmMinGasPrice        = "WasmMinGasPrice"
-	MimirKeyScheduledMigration     = "ScheduledMigration"
+	MimirKeySecuredAssetHaltGlobal    = "HaltSecuredGlobal"
+	MimirKeyWasmPermissionless        = "WasmPermissionless"
+	MimirKeyWasmHaltGlobal            = "HaltWasmGlobal"
+	MimirKeyWasmMinGasPrice           = "WasmMinGasPrice"
+	MimirKeyScheduledMigration        = "ScheduledMigration"
+	MimirKeyDisableTSSSignerFiltering = "DisableTSSSignerFiltering"
 
 	MimirTemplateEVMAllowanceCheck         = "EVMAllowanceCheck-%s"         // Use with Chain
 	MimirTemplateConfMultiplierBasisPoints = "ConfMultiplierBasisPoints-%s" // Use with Chain

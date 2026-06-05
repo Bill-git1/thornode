@@ -1,12 +1,15 @@
 package tss
 
 import (
+	"errors"
 	"fmt"
 
 	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
+
+var ErrNotSelectedForKeysign = errors.New("not selected for keysign party")
 
 // KeysignError is a custom error create to include which party to blame
 type KeysignError struct {

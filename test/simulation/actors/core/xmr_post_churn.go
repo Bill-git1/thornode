@@ -25,8 +25,10 @@ type XMRPostChurnActor struct {
 const (
 	xmrPostChurnNewNodesPerChurn = int64(3)
 	// Keep this above the 300s FROST keygen timeout, but low enough that a
-	// missed local keygen gets a retry before the actor deadline.
-	xmrPostChurnChurnRetryInterval = int64(360)
+	// missed local keygen gets a retry before the actor deadline. This matches
+	// the mocknet ChurnRetryInterval override; 360 would also clear the timeout,
+	// but using one value avoids a misleading reviewer-only delta.
+	xmrPostChurnChurnRetryInterval = int64(365)
 )
 
 func NewXMRPostChurnActor(rng *rand.Rand) *Actor {
@@ -78,6 +80,10 @@ func (a *XMRPostChurnActor) startChurn(config *OpConfig) OpResult {
 	if len(activeNodes) > 1 {
 		a.Log().Info().Msg("cluster already churned; waiting for XMR vault rotation")
 		return OpResult{Continue: true}
+	}
+
+	if result := waitForXMRFrostChurnReadiness(a.Log(), config); !result.Continue {
+		return result
 	}
 
 	node := config.NodeUsers[0]
@@ -172,6 +178,16 @@ func (a *XMRPostChurnActor) waitForVaultRotation(config *OpConfig) OpResult {
 			Stringer("total", snapshot.total).
 			Stringer("spendable", snapshot.spendable).
 			Msg("waiting for active XMR vault spendable balance")
+		return OpResult{Continue: false}
+	}
+
+	network, err := thornode.GetNetwork()
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to get network")
+		return OpResult{Continue: false}
+	}
+	if network.VaultsMigrating {
+		a.Log().Info().Msg("waiting for post-churn vault migrations to settle")
 		return OpResult{Continue: false}
 	}
 

@@ -24,12 +24,12 @@ func (c *Client) getChainCfgBCH() *bchchaincfg.Params {
 	}
 }
 
-func (c *Client) signUTXOBCH(redeemTx *bchwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int) error {
+func (c *Client) signUTXOBCH(redeemTx *bchwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int, thorchainHeight int64) error {
 	var signable bchtxscript.Signable
 	if tx.VaultPubKey.Equals(c.nodePubKey) {
 		signable = bchtxscript.NewPrivateKeySignable((*bchec.PrivateKey)(c.nodePrivKey))
 	} else {
-		signable = newTssSignableBCH(tx.VaultPubKey, c.tssKeySigner, c.log)
+		signable = newTssSignableBCH(tx.VaultPubKey, c.tssKeySigner, c.log, thorchainHeight)
 	}
 
 	sig, err := bchtxscript.RawTxInECDSASignature(redeemTx, idx, sourceScript, bchtxscript.SigHashAll, signable, amount)

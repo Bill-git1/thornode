@@ -73,6 +73,52 @@ func TestThorUserFundingPlanKeepsExistingRuneUsersInLaterChainSeeding(t *testing
 	}
 }
 
+// TestGetHeightDefaultsToOneWithoutProvider keeps the legacy mocknet
+// behavior for chains that do not need a chain-specific network-fee height.
+func TestGetHeightDefaultsToOneWithoutProvider(t *testing.T) {
+	height, err := getHeight(common.GAIAChain, map[common.Chain]LiteChainClient{
+		common.GAIAChain: &stubLiteChainClient{},
+	})
+	if err != nil {
+		t.Fatalf("expected fallback network fee height without error, got %v", err)
+	}
+	if height != 1 {
+		t.Fatalf("expected fallback network fee height 1, got %d", height)
+	}
+}
+
+// TestGetHeightUsesProvider covers the XRP path where the mock daemon's
+// current ledger must be used to avoid late scanner lgrNotFound failures.
+func TestGetHeightUsesProvider(t *testing.T) {
+	client := &stubGetHeightClient{height: 46}
+
+	height, err := getHeight(common.XRPChain, map[common.Chain]LiteChainClient{
+		common.XRPChain: client,
+	})
+	if err != nil {
+		t.Fatalf("expected provider network fee height without error, got %v", err)
+	}
+	if height != 46 {
+		t.Fatalf("expected provider network fee height 46, got %d", height)
+	}
+	if client.calls != 1 {
+		t.Fatalf("expected provider to be called once, got %d", client.calls)
+	}
+}
+
+// TestGetHeightRejectsNonPositiveProviderHeight prevents an opt-in chain
+// client from silently reintroducing the stale height-1 class of scanner bugs.
+func TestGetHeightRejectsNonPositiveProviderHeight(t *testing.T) {
+	client := &stubGetHeightClient{height: 0}
+
+	_, err := getHeight(common.XRPChain, map[common.Chain]LiteChainClient{
+		common.XRPChain: client,
+	})
+	if err == nil {
+		t.Fatal("expected non-positive provider network fee height to fail")
+	}
+}
+
 func TestMocknetWaitsForXMRMasterAccountReadiness(t *testing.T) {
 	mocknetGo := readRepoFile(t, "test/simulation/cmd/mocknet.go")
 
@@ -217,6 +263,22 @@ func TestXMRSignerEntrypointSupportsRegistryAndLocalImages(t *testing.T) {
 	}
 }
 
+func TestMocknetClusterPublishesBifrostAndXMRFrostReadinessPorts(t *testing.T) {
+	compose := readRepoFile(t, "build/docker/docker-compose.yml")
+	for _, snippet := range []string{
+		"- 6041:6040",
+		"- 6042:6040",
+		"- 6043:6040",
+		"- 8285:8283",
+		"- 8286:8283",
+		"- 8287:8283",
+	} {
+		if !strings.Contains(compose, snippet) {
+			t.Fatalf("mocknet cluster compose must publish %q so simulation can gate churn on all Bifrost and XMR FROST readiness endpoints", snippet)
+		}
+	}
+}
+
 func TestMocknetDogecoinRaisesRPCWorkQueueDepth(t *testing.T) {
 	compose := readRepoFile(t, "build/docker/docker-compose.yml")
 	if !strings.Contains(compose, `- "./mocknet:/mocknet"`) {
@@ -333,8 +395,8 @@ func TestSimulationWaitsForZecInitialBlocksBeforeCreatingUsers(t *testing.T) {
 	if !strings.Contains(mainGo, `method":"getblockcount"`) {
 		t.Fatal("ZEC readiness should poll getblockcount before simulation users are created")
 	}
-	if !strings.Contains(mainGo, "const requiredHeight int64 = 500") {
-		t.Fatal("ZEC readiness should wait for the initial 500-block mocknet bootstrap before funding users")
+	if !strings.Contains(mainGo, "const requiredHeight int64 = 250") {
+		t.Fatal("ZEC readiness should wait for the initial 250-block mocknet bootstrap before funding users")
 	}
 	if !strings.Contains(mainGo, "zec readiness timed out after") {
 		t.Fatal("ZEC readiness should time out with a clear error instead of racing immature coinbase outputs")
@@ -706,6 +768,9 @@ func TestSimulationStageOrder(t *testing.T) {
 
 	assertStageOrder(t, stageNames, "bootstrap", "xmr-coverage")
 	assertStageOrder(t, stageNames, "xmr-coverage", "arb")
+	assertStageOrder(t, stageNames, "churn", "xmr-post-churn")
+	assertStageOrder(t, stageNames, "xmr-post-churn", "xmr-spent-refs")
+	assertStageOrder(t, stageNames, "xmr-spent-refs", "jailed-keysign-fallback")
 	assertStageOrder(t, stageNames, "xmr-post-churn", "ragnarok")
 }
 
@@ -760,4 +825,16 @@ func (s *stubLiteChainClient) SignTx(SimTx) ([]byte, error) {
 
 func (s *stubLiteChainClient) BroadcastTx([]byte) (string, error) {
 	return "", errors.New("not implemented")
+}
+
+type stubGetHeightClient struct {
+	stubLiteChainClient
+	height int64
+	calls  int
+}
+
+// GetHeight lets tests exercise the opt-in path without a live chain RPC.
+func (s *stubGetHeightClient) GetHeight() (int64, error) {
+	s.calls++
+	return s.height, nil
 }

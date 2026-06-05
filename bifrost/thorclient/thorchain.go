@@ -27,6 +27,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/app"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
@@ -47,6 +48,7 @@ const (
 	NodeAccountsEndpoint        = "/thorchain/nodes"
 	StatusEndpoint              = "/status"
 	VaultEndpoint               = "/thorchain/vault/%s"
+	KeysignPartyEndpoint        = "/thorchain/vault/%s/keysign_party"
 	XMRSpentOutputRefsEndpoint  = "/thorchain/xmr/spent_refs/%s"
 	AsgardVault                 = "/thorchain/vaults/asgard"
 	PubKeysEndpoint             = "/thorchain/vaults/pubkeys"
@@ -62,6 +64,8 @@ const (
 	TxDetailEndpoint            = "/thorchain/tx/details/%s"
 )
 
+var errThorchainTransport = errors.New("thornode transport error")
+
 // thorchainBridge will be used to send tx to THORChain
 type thorchainBridge struct {
 	logger        zerolog.Logger
@@ -74,6 +78,19 @@ type thorchainBridge struct {
 	seqNumber     uint64
 	httpClient    *retryablehttp.Client
 	broadcastLock *sync.RWMutex
+}
+
+// KeysignPolicy is thornode's signer eligibility view for one vault at one
+// THORChain height.
+type KeysignPolicy struct {
+	PubKey                common.PubKey  `json:"pub_key"`
+	Signers               common.PubKeys `json:"signers"`
+	NeverSigners          common.PubKeys `json:"never_signers"`
+	JailedFallbackSigners common.PubKeys `json:"jailed_fallback_signers"`
+	Height                int64          `json:"height,string"`
+	Threshold             int            `json:"threshold,string"`
+	RequiredSigners       int            `json:"required_signers,string"`
+	ActiveSignerCount     int            `json:"active_signer_count,string"`
 }
 
 type ThorchainBridge interface {
@@ -90,7 +107,8 @@ type ThorchainBridge interface {
 	GetContractAddress() ([]PubKeyContractAddressPair, error)
 	GetErrataMsg(txID common.TxID, chain common.Chain) sdk.Msg
 	GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []stypes.Blame, inputPks common.PubKeys, keygenType stypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte, frostExtras ...any) (sdk.Msg, error)
-	GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error)
+	GetKeysignPolicy(vaultPubKey common.PubKey, blockHeight int64) (KeysignPolicy, error)
+	GetKeysignParty(vaultPubKey common.PubKey, blockHeight int64) (common.PubKeys, error)
 	GetMimir(key string) (int64, error)
 	GetMimirWithRef(template, ref string) (int64, error)
 	GetInboundOutbound(txIns common.ObservedTxs) (common.ObservedTxs, common.ObservedTxs, error)
@@ -230,7 +248,7 @@ func (b *thorchainBridge) get(url string) ([]byte, int, error) {
 	resp, err := b.httpClient.Get(url)
 	if err != nil {
 		b.errCounter.WithLabelValues("fail_get_from_thorchain", "").Inc()
-		return nil, http.StatusNotFound, fmt.Errorf("failed to GET from thorchain: %w", err)
+		return nil, 0, fmt.Errorf("%w: failed to GET from thorchain: %w", errThorchainTransport, err)
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -512,17 +530,119 @@ func (b *thorchainBridge) FetchNodeStatus() (stypes.NodeStatus, error) {
 	return na.Status, nil
 }
 
-// GetKeysignParty call into thorchain to get the node accounts that should be join together to sign the message
-func (b *thorchainBridge) GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error) {
+// GetKeysignPolicy fetches the keysign signer policy for the vault. A positive
+// blockHeight pins jail and leave-state evaluation to that signing height.
+func (b *thorchainBridge) GetKeysignPolicy(vaultPubKey common.PubKey, blockHeight int64) (KeysignPolicy, error) {
+	path := fmt.Sprintf(KeysignPartyEndpoint, vaultPubKey.String())
+	uri := b.getThorChainURL(path)
+	if blockHeight > 0 {
+		uri += "?signing_height=" + strconv.FormatInt(blockHeight, 10)
+	}
+	buf, s, err := b.get(uri)
+	if err != nil {
+		if errors.Is(err, errThorchainTransport) {
+			return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from thorchain: %w", err)
+		}
+		if len(buf) > 0 {
+			body := responseBodySnippet(buf)
+			// Compromised vaults are a hard stop; never fall back to full vault
+			// membership when thornode explicitly marks the vault unsafe.
+			if IsCompromisedVaultError(errors.New(body)) {
+				return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from %s: status code %d: %w: %s", path, s, common.ErrCompromisedVault, body)
+			}
+			// 404/501 are treated as upgrade compatibility only. Other status
+			// bodies remain errors so real policy failures do not silently widen.
+			if keysignPolicyEndpointUnavailable(s) {
+				return b.getKeysignPolicyFromVaultMembership(vaultPubKey, blockHeight)
+			}
+			return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from %s: status code %d: %s", path, s, body)
+		}
+		// Preserve signing on older thornode versions that do not implement the
+		// endpoint yet, but do not mask transport errors from implemented nodes.
+		if keysignPolicyEndpointUnavailable(s) {
+			return b.getKeysignPolicyFromVaultMembership(vaultPubKey, blockHeight)
+		}
+		return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from thorchain: %w", err)
+	}
+	var policy KeysignPolicy
+	if err = json.Unmarshal(buf, &policy); err != nil {
+		return KeysignPolicy{}, fmt.Errorf("fail to unmarshal key sign policy from json: %w", err)
+	}
+	if len(policy.Signers) == 0 {
+		return KeysignPolicy{}, fmt.Errorf("vault %s has empty signer membership", vaultPubKey.String())
+	}
+	if policy.PubKey.IsEmpty() {
+		policy.PubKey = vaultPubKey
+	}
+	return policy, nil
+}
+
+// keysignPolicyEndpointUnavailable identifies endpoint absence during rolling
+// upgrades; these are the only errors allowed to use the vault-membership
+// compatibility fallback.
+func keysignPolicyEndpointUnavailable(status int) bool {
+	return status == http.StatusNotFound || status == http.StatusNotImplemented
+}
+
+// getKeysignPolicyFromVaultMembership preserves signing compatibility with
+// thornode versions that have vault membership but no keysign-party endpoint.
+func (b *thorchainBridge) getKeysignPolicyFromVaultMembership(vaultPubKey common.PubKey, blockHeight int64) (KeysignPolicy, error) {
 	vault, err := b.GetVault(vaultPubKey.String())
 	if err != nil {
-		return common.PubKeys{}, fmt.Errorf("fail to get key sign party from thorchain: %w", err)
+		return KeysignPolicy{}, fmt.Errorf("fail to fallback to vault membership for key sign policy: %w", err)
 	}
 	members := vault.GetMembership()
 	if len(members) == 0 {
-		return common.PubKeys{}, fmt.Errorf("vault %s has empty signer membership", vaultPubKey.String())
+		return KeysignPolicy{}, fmt.Errorf("vault %s has empty signer membership", vaultPubKey.String())
 	}
-	return members, nil
+	threshold, err := conversion.GetThreshold(len(members))
+	if err != nil {
+		return KeysignPolicy{}, fmt.Errorf("fail to calculate fallback key sign threshold: %w", err)
+	}
+	pubKey := vault.PubKey
+	if pubKey.IsEmpty() {
+		// FROST callers may query by a vault-specific alternate pubkey; retain
+		// the requested key when the legacy vault record lacks a secp key.
+		pubKey = vaultPubKey
+	}
+	return KeysignPolicy{
+		PubKey:            pubKey,
+		Signers:           members,
+		Height:            blockHeight,
+		Threshold:         threshold,
+		RequiredSigners:   threshold + 1,
+		ActiveSignerCount: len(members),
+	}, nil
+}
+
+// GetKeysignParty keeps the legacy bridge helper for callers that still need
+// the compatibility signers field.
+func (b *thorchainBridge) GetKeysignParty(vaultPubKey common.PubKey, blockHeight int64) (common.PubKeys, error) {
+	policy, err := b.GetKeysignPolicy(vaultPubKey, blockHeight)
+	if err != nil {
+		return nil, err
+	}
+	return policy.Signers, nil
+}
+
+// IsCompromisedVaultError reports whether an error represents the vault-level
+// hard stop returned by thornode for keysign policy queries.
+func IsCompromisedVaultError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, common.ErrCompromisedVault) || strings.Contains(err.Error(), common.CompromisedVaultErrorText)
+}
+
+// responseBodySnippet keeps non-200 response bodies useful without logging an
+// unbounded HTTP payload.
+func responseBodySnippet(buf []byte) string {
+	const maxResponseBodySnippet = 256
+	body := strings.TrimSpace(string(buf))
+	if len(body) > maxResponseBodySnippet {
+		return body[:maxResponseBodySnippet] + "..."
+	}
+	return body
 }
 
 // IsCatchingUp returns bool for if thorchain is catching up to the rest of the

@@ -180,7 +180,7 @@ func (c *EVMClient) unstuckTx(clog zerolog.Logger, item evmtypes.SignedTxItem) e
 		currentGasRate,
 		nil,
 	)
-	rawBytes, err := c.kw.Sign(canceltx, pubKey)
+	rawBytes, err := c.kw.Sign(canceltx, pubKey, item.TxOutItem.Height)
 	if err != nil {
 		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d, err: %w", tx.Nonce(), err)
 	}

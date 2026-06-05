@@ -609,6 +609,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/VaultResponse"
 
+  /thorchain/vault/{pubkey}/keysign_party:
+    parameters:
+      - $ref: "#/components/parameters/querySigningHeight"
+      - $ref: "#/components/parameters/pubkey"
+    get:
+      description: Returns the keysign-eligible signer set for the provided vault pubkey. The optional signing_height is the signing height used for jail-release evaluation against current vault and node-account state; it is not a historical state query.
+      operationId: vaultKeysignParty
+      tags:
+        - Vaults
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeysignPartyResponse"
+
   /thorchain/vaults/pubkeys:
     parameters:
       - $ref: "#/components/parameters/queryHeight"
@@ -1888,6 +1905,16 @@ components:
       name: height
       in: query
       description: optional block height, defaults to current tip
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+
+    querySigningHeight:
+      name: signing_height
+      in: query
+      description: optional signing height, defaults to current tip
       required: false
       schema:
         type: integer
@@ -4021,6 +4048,49 @@ components:
 
     VaultResponse:
       $ref: "#/components/schemas/Vault"
+
+    KeysignPartyResponse:
+      type: object
+      required:
+        - pub_key
+        - signers
+        - height
+        - threshold
+        - required_signers
+        - never_signers
+        - jailed_fallback_signers
+        - active_signer_count
+      properties:
+        pub_key:
+          type: string
+          example: thorpub1addwnpep...
+        signers:
+          type: array
+          items:
+            type: string
+            example: thorpub1addwnpep...
+        height:
+          type: integer
+          format: int64
+        threshold:
+          type: integer
+          format: int64
+        required_signers:
+          type: integer
+          format: int64
+        never_signers:
+          type: array
+          items:
+            type: string
+            example: thorpub1addwnpep...
+        jailed_fallback_signers:
+          type: array
+          items:
+            type: string
+            example: thorpub1addwnpep...
+        active_signer_count:
+          type: integer
+          format: int64
 
     VaultPubkeysResponse:
       type: object

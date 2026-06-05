@@ -4,8 +4,14 @@ import (
 	"errors"
 	"testing"
 
+	. "gopkg.in/check.v1"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 )
+
+type TxRetrySuite struct{}
+
+var _ = Suite(&TxRetrySuite{})
 
 type retryLiteChainClient struct {
 	signCalls      int
@@ -112,6 +118,32 @@ func TestSignAndBroadcastTxDoesNotReplaceSubmittedOneShotMemo(t *testing.T) {
 	if client.broadcastCalls != 1 {
 		t.Fatalf("expected 1 broadcast attempt, got %d", client.broadcastCalls)
 	}
+}
+
+// TestSignAndBroadcastTxAcceptsSubmittedSolanaTransaction verifies Solana
+// submitted-but-unconfirmed broadcasts are treated as accepted one-shot results.
+func (s *TxRetrySuite) TestSignAndBroadcastTxAcceptsSubmittedSolanaTransaction(c *C) {
+	prevDelay := solanaSimTxBroadcastRetryDelay
+	prevAttempts := solanaSimTxMaxBroadcastAttempts
+	solanaSimTxBroadcastRetryDelay = 0
+	solanaSimTxMaxBroadcastAttempts = 4
+	defer func() {
+		solanaSimTxBroadcastRetryDelay = prevDelay
+		solanaSimTxMaxBroadcastAttempts = prevAttempts
+	}()
+
+	client := &retryLiteChainClient{
+		broadcastTxIDs: []string{"submitted"},
+		broadcastErrs: []error{
+			errors.New("broadcasted tx submitted not confirmed on solana node after 1m0s"),
+		},
+	}
+
+	txid, err := SignAndBroadcastTx(client, SimTx{Chain: common.SOLChain})
+	c.Assert(err, IsNil)
+	c.Assert(txid, Equals, "submitted")
+	c.Assert(client.signCalls, Equals, 1)
+	c.Assert(client.broadcastCalls, Equals, 1)
 }
 
 func TestSignAndBroadcastTxRetriesTronTransportFailures(t *testing.T) {

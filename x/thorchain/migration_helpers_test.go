@@ -15,10 +15,13 @@ type MigrationHelpersTestSuite struct{}
 
 var _ = Suite(&MigrationHelpersTestSuite{})
 
+// TestUnsafeAddRefundOutbound ensures migration refunds use the same
+// compromised-vault exclusion as regular outbound scheduling, even though this
+// helper selects an Active Asgard directly.
 func (MigrationHelpersTestSuite) TestUnsafeAddRefundOutbound(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, true)
 
-	// add a vault
+	// add a compromised vault
 	vault := GetRandomVault()
 	vault.PubKeyFrost = GetRandomEd25519PubKey()
 	vault.Coins = common.Coins{
@@ -26,6 +29,14 @@ func (MigrationHelpersTestSuite) TestUnsafeAddRefundOutbound(c *C) {
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(10000*common.One)),
 	}
 	c.Assert(w.keeper.SetVault(w.ctx, vault), IsNil)
+
+	// add a safe vault for the helper to select
+	safeVault := GetRandomVault()
+	safeVault.PubKeyFrost = GetRandomEd25519PubKey()
+	safeVault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(10000*common.One)),
+	}
+	c.Assert(w.keeper.SetVault(w.ctx, safeVault), IsNil)
 
 	// add node
 	acc1 := GetRandomValidatorNode(NodeActive)
@@ -63,6 +74,7 @@ func (MigrationHelpersTestSuite) TestUnsafeAddRefundOutbound(c *C) {
 
 	mgr, ok := w.mgr.(*Mgrs)
 	c.Assert(ok, Equals, true)
+	w.keeper.SetMimir(w.ctx, compromisedVaultMimirKeyPrefix+vault.PubKey.String(), 1)
 
 	// add outbound using migration helper
 	err = unsafeAddRefundOutbound(w.ctx, mgr, inTxID.String(), ethAddr.String(), coin, height)
@@ -74,9 +86,10 @@ func (MigrationHelpersTestSuite) TestUnsafeAddRefundOutbound(c *C) {
 	c.Assert(items[0].Chain, Equals, common.ETHChain)
 	c.Assert(items[0].InHash.Equals(inTxID), Equals, true)
 	c.Assert(items[0].ToAddress.Equals(ethAddr), Equals, true)
-	c.Assert(items[0].VaultPubKey.Equals(vault.PubKey), Equals, true)
-	c.Assert(items[0].VaultPubKeyEddsa.Equals(vault.PubKeyEddsa), Equals, true)
-	c.Assert(items[0].VaultPubKeyFrost.Equals(vault.PubKeyFrost), Equals, true)
+	c.Assert(items[0].VaultPubKey.Equals(vault.PubKey), Equals, false)
+	c.Assert(items[0].VaultPubKey.Equals(safeVault.PubKey), Equals, true)
+	c.Assert(items[0].VaultPubKeyEddsa.Equals(safeVault.PubKeyEddsa), Equals, true)
+	c.Assert(items[0].VaultPubKeyFrost.Equals(safeVault.PubKeyFrost), Equals, true)
 	c.Assert(items[0].Coin.Equals(coin), Equals, true)
 }
 

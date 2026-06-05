@@ -78,6 +78,18 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	}, nil
 }
 
+// GetHeight returns the current XRPL ledger so mocknet does not seed
+// XRP's last-chain-height at ledger 1, which the standalone daemon cannot
+// necessarily replay for late-starting Bifrost scanners.
+func (c *Client) GetHeight() (int64, error) {
+	ledgerIndex, err := c.rpcClient.GetLedgerIndex()
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(ledgerIndex.Int()), nil
+}
+
 func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	address := c.localKm.AccountID
 	if pk != nil {

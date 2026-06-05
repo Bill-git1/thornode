@@ -83,7 +83,7 @@ func TestGetNetworkFeeUsesTypicalWeightAndPerWeightRate(t *testing.T) {
 	s := &Scanner{
 		logger:             log.Logger,
 		currentBlockHeight: atomic.NewInt64(0),
-		lastFee:            atomic.NewUint64(45_000_000),
+		lastFee:            atomic.NewUint64(30_000 * typicalVaultOutboundWeight),
 	}
 
 	txSize, feeRate := s.GetNetworkFee()
@@ -96,10 +96,11 @@ func TestGetNetworkFeeUsesTypicalWeightAndPerWeightRate(t *testing.T) {
 }
 
 func TestGetNetworkFeePreservesNativePiconeroUnits(t *testing.T) {
+	expectedTotalFee := uint64(120_000 * typicalVaultOutboundWeight)
 	s := &Scanner{
 		logger:             log.Logger,
 		currentBlockHeight: atomic.NewInt64(0),
-		lastFee:            atomic.NewUint64(120_000 * typicalVaultOutboundWeight),
+		lastFee:            atomic.NewUint64(expectedTotalFee),
 	}
 
 	txSize, feeRate := s.GetNetworkFee()
@@ -109,11 +110,12 @@ func TestGetNetworkFeePreservesNativePiconeroUnits(t *testing.T) {
 	if feeRate != 120_000 {
 		t.Fatalf("expected fee rate 120000 piconero/weight, got %d", feeRate)
 	}
-	if txSize*feeRate != 180_000_000 {
-		t.Fatalf("expected total network fee 180000000 piconero, got %d", txSize*feeRate)
+	if txSize*feeRate != expectedTotalFee {
+		t.Fatalf("expected total network fee %d piconero, got %d", expectedTotalFee, txSize*feeRate)
 	}
-	if totalFeeAtomicToThorchain(txSize*feeRate) != 18_000 {
-		t.Fatalf("expected total network fee 18000 thorchain units, got %d", totalFeeAtomicToThorchain(txSize*feeRate))
+	expectedThorchainFee := expectedTotalFee / moneroAtomicToThorchain
+	if totalFeeAtomicToThorchain(txSize*feeRate) != expectedThorchainFee {
+		t.Fatalf("expected total network fee %d thorchain units, got %d", expectedThorchainFee, totalFeeAtomicToThorchain(txSize*feeRate))
 	}
 }
 

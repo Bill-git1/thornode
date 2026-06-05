@@ -1982,7 +1982,7 @@ func (s *XrpTestSuite) TestSignMsgLocalKeyManager(c *C) {
 	c.Assert(err, IsNil)
 
 	// signMsg with local key - should succeed
-	txBytes, err := client.signMsg(payment, vaultPubKey)
+	txBytes, err := client.signMsg(payment, vaultPubKey, 0)
 	c.Assert(err, IsNil)
 	c.Check(len(txBytes) > 0, Equals, true)
 }
@@ -2558,7 +2558,7 @@ func (s *XrpTestSuite) TestSignMsgBadPubKey(c *C) {
 	c.Assert(err, IsNil)
 
 	// signMsg with invalid pubkey
-	_, err = client.signMsg(nil, common.PubKey("invalid"))
+	_, err = client.signMsg(nil, common.PubKey("invalid"), 0)
 	c.Assert(err, NotNil)
 }
 

@@ -5,11 +5,20 @@ import (
 	"strings"
 	"testing"
 
+	. "gopkg.in/check.v1"
+
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	ttypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
+
+// TestPackage runs check.v1 suites for this package.
+func TestPackage(t *testing.T) { TestingT(t) }
+
+type VaultAddressSuite struct{}
+
+var _ = Suite(&VaultAddressSuite{})
 
 type mockMoneroBridge struct {
 	thorclient.ThorchainBridge
@@ -18,6 +27,8 @@ type mockMoneroBridge struct {
 	spentRefsByVaultKey map[string][]*common.OutputRef
 	pubKeys             []thorclient.PubKeyContractAddressPair
 	pubKeysErr          error
+	keysignPolicy       thorclient.KeysignPolicy
+	keysignPolicyErr    error
 }
 
 func (m *mockMoneroBridge) GetVault(pubkey string) (ttypes.Vault, error) {
@@ -69,6 +80,12 @@ func (m *mockMoneroBridge) GetXMRSpentOutputRefs(vaultPubKey common.PubKey) ([]*
 		return m.spentRefsByVaultKey[vaultPubKey.String()], nil
 	}
 	return nil, nil
+}
+
+// GetKeysignPolicy returns the injected policy so vault membership tests can
+// assert full-vs-active signer handling without a live thorchain bridge.
+func (m *mockMoneroBridge) GetKeysignPolicy(common.PubKey, int64) (thorclient.KeysignPolicy, error) {
+	return m.keysignPolicy, m.keysignPolicyErr
 }
 
 func TestDeriveVaultAddressReturnsEmptyForUnknownVault(t *testing.T) {
@@ -179,4 +196,34 @@ func TestTxVaultPubKeyRequiresFrost(t *testing.T) {
 	if !got.IsEmpty() {
 		t.Fatalf("expected empty vault pubkey when frost key is missing, got %s", got.String())
 	}
+}
+
+// TestVaultSigningMembersReturnsFullAndActiveMembership verifies Monero keeps
+// the full vault membership separate from thornode's active keysign signers.
+func (s *VaultAddressSuite) TestVaultSigningMembersReturnsFullAndActiveMembership(c *C) {
+	fullMembers := []string{"pk-a", "pk-b", "pk-c", "pk-d"}
+	client := &Client{
+		chain: common.XMRChain,
+		thorchainBridge: &mockMoneroBridge{
+			vaultByPubKey: map[string]ttypes.Vault{
+				"vault": {Membership: fullMembers},
+			},
+			keysignPolicy: thorclient.KeysignPolicy{
+				Signers:               common.PubKeys{common.PubKey("pk-a"), common.PubKey("pk-c"), common.PubKey("pk-b")},
+				NeverSigners:          common.PubKeys{common.PubKey("pk-d")},
+				JailedFallbackSigners: common.PubKeys{common.PubKey("pk-b")},
+				RequiredSigners:       3,
+			},
+		},
+	}
+
+	members, activeMembers, err := client.vaultSigningMembers(common.PubKey("vault"), 123)
+	c.Assert(err, IsNil)
+	c.Assert(members, DeepEquals, fullMembers)
+
+	wantActive := []string{"pk-a", "pk-c", "pk-b"}
+	c.Assert(activeMembers, DeepEquals, wantActive)
+
+	wantFull := []string{"pk-a", "pk-b", "pk-c", "pk-d"}
+	c.Assert(fullMembers, DeepEquals, wantFull)
 }

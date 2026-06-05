@@ -444,7 +444,7 @@ func (m *errorThorchainKeyManager) ExportAsKeyStore(password string) (*tss.Encry
 	return nil, nil
 }
 
-func (m *errorThorchainKeyManager) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string) ([]byte, []byte, error) {
+func (m *errorThorchainKeyManager) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string, thorchainHeight int64) ([]byte, []byte, error) {
 	return nil, nil, errors.New("mock remote sign failure")
 }
 

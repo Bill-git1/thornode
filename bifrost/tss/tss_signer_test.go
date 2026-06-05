@@ -30,11 +30,13 @@ var _ = Suite(&KeySignTestSuite{})
 // ---------------------------------------------------------------------------
 
 type mockTssServer struct {
-	resp keysign.Response
-	err  error
+	resp    keysign.Response
+	err     error
+	lastReq keysign.Request
 }
 
 func (m *mockTssServer) KeySign(req keysign.Request) (keysign.Response, error) {
+	m.lastReq = req
 	return m.resp, m.err
 }
 
@@ -43,10 +45,18 @@ func (m *mockTssServer) KeySign(req keysign.Request) (keysign.Response, error) {
 // ---------------------------------------------------------------------------
 
 type mockBridgeForKeysign struct {
-	version     semver.Version
-	versionErr  error
-	blockHeight int64
-	blockErr    error
+	version               semver.Version
+	versionErr            error
+	blockHeight           int64
+	blockErr              error
+	keysignParty          common.PubKeys
+	neverSigners          common.PubKeys
+	jailedFallbackSigners common.PubKeys
+	requiredSigners       int
+	keysignPartyErr       error
+	keysignPartyCalls     int
+	lastKeysignPartyKey   common.PubKey
+	lastKeysignPartyBlock int64
 }
 
 var _ thorclient.ThorchainBridge = (*mockBridgeForKeysign)(nil)
@@ -55,8 +65,28 @@ func (m *mockBridgeForKeysign) EnsureNodeWhitelisted() error                { re
 func (m *mockBridgeForKeysign) EnsureNodeWhitelistedWithTimeout() error     { return nil }
 func (m *mockBridgeForKeysign) FetchNodeStatus() (stypes.NodeStatus, error) { return 0, nil }
 func (m *mockBridgeForKeysign) FetchActiveNodes() ([]common.PubKey, error)  { return nil, nil }
-func (m *mockBridgeForKeysign) GetKeysignParty(common.PubKey) (common.PubKeys, error) {
-	return nil, nil
+
+// GetKeysignPolicy records the requested vault and policy height while
+// returning the injected policy fields used by keysign request tests.
+func (m *mockBridgeForKeysign) GetKeysignPolicy(pubKey common.PubKey, blockHeight int64) (thorclient.KeysignPolicy, error) {
+	m.keysignPartyCalls++
+	m.lastKeysignPartyKey = pubKey
+	m.lastKeysignPartyBlock = blockHeight
+	return thorclient.KeysignPolicy{
+		PubKey:                pubKey,
+		Signers:               m.keysignParty,
+		NeverSigners:          m.neverSigners,
+		JailedFallbackSigners: m.jailedFallbackSigners,
+		RequiredSigners:       m.requiredSigners,
+		ActiveSignerCount:     len(m.keysignParty),
+	}, m.keysignPartyErr
+}
+
+// GetKeysignParty preserves the legacy signer-only bridge helper on top of the
+// full policy mock.
+func (m *mockBridgeForKeysign) GetKeysignParty(pubKey common.PubKey, blockHeight int64) (common.PubKeys, error) {
+	policy, err := m.GetKeysignPolicy(pubKey, blockHeight)
+	return policy.Signers, err
 }
 func (m *mockBridgeForKeysign) GetAsgards() (stypes.Vaults, error) { return nil, nil }
 func (m *mockBridgeForKeysign) GetVault(string) (stypes.Vault, error) {
@@ -283,12 +313,12 @@ func (s *KeySignTestSuite) TestGetSignatureHighS(c *C) {
 
 func (s *KeySignTestSuite) TestRemoteSignEmptyMsg(c *C) {
 	ks, _ := NewKeySign(&mockTssServer{}, &mockBridgeForKeysign{})
-	sig, recoveryID, err := ks.RemoteSign(nil, common.SigningAlgoSecp256k1, "poolpub")
+	sig, recoveryID, err := ks.RemoteSign(nil, common.SigningAlgoSecp256k1, "poolpub", 0)
 	c.Assert(err, IsNil)
 	c.Assert(sig, IsNil)
 	c.Assert(recoveryID, IsNil)
 
-	sig, recoveryID, err = ks.RemoteSign([]byte{}, common.SigningAlgoSecp256k1, "poolpub")
+	sig, recoveryID, err = ks.RemoteSign([]byte{}, common.SigningAlgoSecp256k1, "poolpub", 0)
 	c.Assert(err, IsNil)
 	c.Assert(sig, IsNil)
 	c.Assert(recoveryID, IsNil)
@@ -325,7 +355,7 @@ func (s *KeySignTestSuite) TestRemoteSignSecp256k1Success(c *C) {
 	ks.Start()
 	defer ks.Stop()
 
-	sig, recovery, err := ks.RemoteSign(msg, common.SigningAlgoSecp256k1, "poolpub")
+	sig, recovery, err := ks.RemoteSign(msg, common.SigningAlgoSecp256k1, "poolpub", 100)
 	c.Assert(err, IsNil)
 	c.Assert(sig, NotNil)
 	c.Assert(len(sig), Equals, 64)
@@ -359,7 +389,7 @@ func (s *KeySignTestSuite) TestRemoteSignEd25519Success(c *C) {
 	ks.Start()
 	defer ks.Stop()
 
-	sig, recovery, err := ks.RemoteSign(msg, common.SigningAlgoEd25519, "poolpub")
+	sig, recovery, err := ks.RemoteSign(msg, common.SigningAlgoEd25519, "poolpub", 100)
 	c.Assert(err, IsNil)
 	c.Assert(sig, NotNil)
 	c.Assert(len(sig), Equals, 64)
@@ -381,7 +411,7 @@ func (s *KeySignTestSuite) TestRemoteSignError(c *C) {
 	ks.Start()
 	defer ks.Stop()
 
-	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub")
+	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub", 100)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Matches, ".*fail to tss sign.*")
 }
@@ -408,7 +438,7 @@ func (s *KeySignTestSuite) TestRemoteSignBlame(c *C) {
 	ks.Start()
 	defer ks.Stop()
 
-	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub")
+	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub", 100)
 	c.Assert(err, NotNil)
 	// The error is wrapped via fmt.Errorf, so use errors.As
 	var ke KeysignError
@@ -440,17 +470,30 @@ func (s *KeySignTestSuite) TestRemoteSignNotSelected(c *C) {
 	ks.Start()
 	defer ks.Stop()
 
-	sig, recovery, err := ks.RemoteSign(msg, common.SigningAlgoSecp256k1, "poolpub")
-	c.Assert(err, IsNil)
+	sig, recovery, err := ks.RemoteSign(msg, common.SigningAlgoSecp256k1, "poolpub", 100)
+	c.Assert(errors.Is(err, ErrNotSelectedForKeysign), Equals, true)
 	c.Assert(sig, IsNil)
 	c.Assert(recovery, IsNil)
 }
 
-func (s *KeySignTestSuite) TestRemoteSignBlockHeightError(c *C) {
-	server := &mockTssServer{}
+// TestRemoteSignEd25519NotSelected verifies EdDSA signing returns the same
+// stand-down error as ECDSA when this node is not in the policy signer set.
+func (s *KeySignTestSuite) TestRemoteSignEd25519NotSelected(c *C) {
+	msg := []byte("test msg")
+	encodedMsg := base64.StdEncoding.EncodeToString(msg)
+
+	server := &mockTssServer{
+		resp: keysign.Response{
+			Signatures: []keysign.Signature{
+				{Msg: encodedMsg},
+			},
+			Status: tsscommon.Success,
+		},
+	}
+
 	bridge := &mockBridgeForKeysign{
-		version:  semver.MustParse("1.0.0"),
-		blockErr: fmt.Errorf("fail to get block height"),
+		version:     semver.MustParse("1.0.0"),
+		blockHeight: 100,
 	}
 
 	ks, err := NewKeySign(server, bridge)
@@ -458,9 +501,45 @@ func (s *KeySignTestSuite) TestRemoteSignBlockHeightError(c *C) {
 	ks.Start()
 	defer ks.Stop()
 
-	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub")
+	sig, recovery, err := ks.RemoteSign(msg, common.SigningAlgoEd25519, "poolpub", 100)
+	c.Assert(errors.Is(err, ErrNotSelectedForKeysign), Equals, true)
+	c.Assert(sig, IsNil)
+	c.Assert(recovery, IsNil)
+}
+
+func (s *KeySignTestSuite) TestRemoteSignRequiresHeight(c *C) {
+	server := &mockTssServer{}
+	bridge := &mockBridgeForKeysign{
+		version: semver.MustParse("1.0.0"),
+	}
+
+	ks, err := NewKeySign(server, bridge)
+	c.Assert(err, IsNil)
+	ks.Start()
+	defer ks.Stop()
+
+	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub", 0)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Matches, ".*fail to get block height.*")
+	c.Assert(err.Error(), Matches, ".*keysign task height must be positive.*")
+	c.Assert(bridge.keysignPartyCalls, Equals, 0)
+}
+
+func (s *KeySignTestSuite) TestRemoteSignUsesRequestedHeight(c *C) {
+	server := &mockTssServer{}
+	bridge := &mockBridgeForKeysign{
+		version:  semver.MustParse("1.0.0"),
+		blockErr: fmt.Errorf("unexpected block height lookup"),
+	}
+
+	ks, err := NewKeySign(server, bridge)
+	c.Assert(err, IsNil)
+	ks.Start()
+	defer ks.Stop()
+
+	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub", 456)
+	c.Assert(errors.Is(err, ErrNotSelectedForKeysign), Equals, true)
+	c.Assert(bridge.keysignPartyCalls, Equals, 1)
+	c.Assert(bridge.lastKeysignPartyBlock, Equals, int64(456))
 }
 
 func (s *KeySignTestSuite) TestRemoteSignMsgNotFound(c *C) {
@@ -490,9 +569,78 @@ func (s *KeySignTestSuite) TestRemoteSignMsgNotFound(c *C) {
 	ks.Start()
 	defer ks.Stop()
 
-	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub")
+	_, _, err = ks.RemoteSign([]byte("test msg"), common.SigningAlgoSecp256k1, "poolpub", 100)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Matches, ".*didn't find signature.*")
+}
+
+// TestBuildKeysignRequestAttachesKeysignPolicy verifies that bifrost passes the
+// filtered policy from thornode through to go-tss without re-deriving it locally.
+func (s *KeySignTestSuite) TestBuildKeysignRequestAttachesKeysignPolicy(c *C) {
+	poolPubKey := stypes.GetRandomPubKey()
+	signers := common.PubKeys{stypes.GetRandomPubKey(), stypes.GetRandomPubKey()}
+	neverSigners := common.PubKeys{stypes.GetRandomPubKey()}
+	jailedFallbackSigners := common.PubKeys{stypes.GetRandomPubKey()}
+	bridge := &mockBridgeForKeysign{
+		version:               semver.MustParse("1.0.0"),
+		blockHeight:           123,
+		keysignParty:          signers,
+		neverSigners:          neverSigners,
+		jailedFallbackSigners: jailedFallbackSigners,
+		requiredSigners:       2,
+	}
+	ks, _ := NewKeySign(&mockTssServer{}, bridge)
+	tasks := []*tssKeySignTask{
+		{Msg: base64.StdEncoding.EncodeToString([]byte("msg1")), Height: 123},
+	}
+
+	req, err := ks.buildKeysignRequest(poolPubKey.String(), common.SigningAlgoSecp256k1, tasks)
+	c.Assert(err, IsNil)
+	c.Assert(req.BlockHeight, Equals, int64(123))
+	c.Assert(fmt.Sprint(req.SignerPubKeys), Equals, fmt.Sprint(signers.Strings()))
+	c.Assert(fmt.Sprint(req.NeverSigners), Equals, fmt.Sprint(neverSigners.Strings()))
+	c.Assert(fmt.Sprint(req.JailedFallbackSigners), Equals, fmt.Sprint(jailedFallbackSigners.Strings()))
+	c.Assert(req.RequiredSigners, Equals, 2)
+	c.Assert(bridge.keysignPartyCalls, Equals, 1)
+	c.Assert(bridge.lastKeysignPartyKey.Equals(poolPubKey), Equals, true)
+	c.Assert(bridge.lastKeysignPartyBlock, Equals, int64(123))
+}
+
+// TestBuildKeysignRequestAllowsEmptyPolicy preserves the empty-policy path used
+// by pre-vault keygen checks that do not filter signers.
+func (s *KeySignTestSuite) TestBuildKeysignRequestAllowsEmptyPolicy(c *C) {
+	poolPubKey := stypes.GetRandomPubKey()
+	bridge := &mockBridgeForKeysign{
+		version:     semver.MustParse("1.0.0"),
+		blockHeight: 123,
+	}
+	ks, _ := NewKeySign(&mockTssServer{}, bridge)
+	tasks := []*tssKeySignTask{
+		{Msg: base64.StdEncoding.EncodeToString([]byte("msg1")), Height: 123},
+	}
+
+	req, err := ks.buildKeysignRequest(poolPubKey.String(), common.SigningAlgoSecp256k1, tasks)
+	c.Assert(err, IsNil)
+	c.Assert(req.BlockHeight, Equals, int64(123))
+	c.Assert(req.SignerPubKeys, HasLen, 0)
+	c.Assert(bridge.keysignPartyCalls, Equals, 1)
+}
+
+func (s *KeySignTestSuite) TestBuildKeysignRequestRejectsMixedHeights(c *C) {
+	poolPubKey := stypes.GetRandomPubKey()
+	bridge := &mockBridgeForKeysign{
+		version: semver.MustParse("1.0.0"),
+	}
+	ks, _ := NewKeySign(&mockTssServer{}, bridge)
+	tasks := []*tssKeySignTask{
+		{Msg: base64.StdEncoding.EncodeToString([]byte("msg1")), Height: 123},
+		{Msg: base64.StdEncoding.EncodeToString([]byte("msg2")), Height: 124},
+	}
+
+	_, err := ks.buildKeysignRequest(poolPubKey.String(), common.SigningAlgoSecp256k1, tasks)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*mixed keysign task heights.*")
+	c.Assert(bridge.keysignPartyCalls, Equals, 0)
 }
 
 func (s *KeySignTestSuite) TestGetVersionCached(c *C) {
@@ -574,7 +722,7 @@ func (s *KeySignTestSuite) TestToLocalTSSSignerSuccess(c *C) {
 	ks, _ := NewKeySign(server, bridge)
 
 	tasks := []*tssKeySignTask{
-		{PoolPubKey: "poolpub", Algo: common.SigningAlgoSecp256k1, Msg: msg1, Resp: make(chan tssKeySignResult, 1)},
+		{PoolPubKey: "poolpub", Algo: common.SigningAlgoSecp256k1, Msg: msg1, Height: 100, Resp: make(chan tssKeySignResult, 1)},
 	}
 
 	ks.wg.Add(1)
@@ -584,6 +732,32 @@ func (s *KeySignTestSuite) TestToLocalTSSSignerSuccess(c *C) {
 	c.Assert(result.Err, IsNil)
 	c.Assert(result.R, Equals, rB64)
 	c.Assert(result.S, Equals, sB64)
+}
+
+// TestToLocalTSSSignerNotSelectedEmptyResponse verifies an empty go-tss
+// response is treated as a non-error stand-down path for unselected signers.
+func (s *KeySignTestSuite) TestToLocalTSSSignerNotSelectedEmptyResponse(c *C) {
+	msg1 := base64.StdEncoding.EncodeToString([]byte("msg1"))
+	server := &mockTssServer{
+		resp: keysign.Response{},
+	}
+	bridge := &mockBridgeForKeysign{
+		version:     semver.MustParse("1.0.0"),
+		blockHeight: 100,
+	}
+	ks, _ := NewKeySign(server, bridge)
+
+	tasks := []*tssKeySignTask{
+		{PoolPubKey: "poolpub", Algo: common.SigningAlgoSecp256k1, Msg: msg1, Height: 100, Resp: make(chan tssKeySignResult, 1)},
+	}
+
+	ks.wg.Add(1)
+	ks.toLocalTSSSigner("poolpub", common.SigningAlgoSecp256k1, tasks)
+
+	result := <-tasks[0].Resp
+	c.Assert(result.Err, IsNil)
+	c.Assert(result.R, Equals, "")
+	c.Assert(result.S, Equals, "")
 }
 
 func (s *KeySignTestSuite) TestToLocalTSSSignerServerError(c *C) {
@@ -597,7 +771,7 @@ func (s *KeySignTestSuite) TestToLocalTSSSignerServerError(c *C) {
 	ks, _ := NewKeySign(server, bridge)
 
 	tasks := []*tssKeySignTask{
-		{PoolPubKey: "poolpub", Algo: common.SigningAlgoSecp256k1, Msg: "msg1", Resp: make(chan tssKeySignResult, 1)},
+		{PoolPubKey: "poolpub", Algo: common.SigningAlgoSecp256k1, Msg: "msg1", Height: 100, Resp: make(chan tssKeySignResult, 1)},
 	}
 
 	ks.wg.Add(1)
@@ -608,11 +782,10 @@ func (s *KeySignTestSuite) TestToLocalTSSSignerServerError(c *C) {
 	c.Assert(result.Err.Error(), Matches, ".*fail tss keysign.*")
 }
 
-func (s *KeySignTestSuite) TestToLocalTSSSignerBlockHeightError(c *C) {
+func (s *KeySignTestSuite) TestToLocalTSSSignerMissingHeightError(c *C) {
 	server := &mockTssServer{}
 	bridge := &mockBridgeForKeysign{
-		version:  semver.MustParse("1.0.0"),
-		blockErr: fmt.Errorf("block height error"),
+		version: semver.MustParse("1.0.0"),
 	}
 	ks, _ := NewKeySign(server, bridge)
 
@@ -625,7 +798,7 @@ func (s *KeySignTestSuite) TestToLocalTSSSignerBlockHeightError(c *C) {
 
 	result := <-tasks[0].Resp
 	c.Assert(result.Err, NotNil)
-	c.Assert(result.Err.Error(), Matches, ".*fail to get block height.*")
+	c.Assert(result.Err.Error(), Matches, ".*keysign task height must be positive.*")
 }
 
 // ---------------------------------------------------------------------------

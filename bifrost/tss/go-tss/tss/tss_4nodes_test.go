@@ -113,6 +113,33 @@ func hash(payload []byte) []byte {
 	return h.Sum(nil)
 }
 
+// makeKeysignMessages returns the baseline messages used by the four-node
+// happy-path keysign test.
+func makeKeysignMessages() []string {
+	return []string{
+		base64.StdEncoding.EncodeToString(hash([]byte("helloworld"))),
+		base64.StdEncoding.EncodeToString(hash([]byte("helloworld2"))),
+	}
+}
+
+// makeLocalStateKeysignMessages returns messages for the legacy empty-policy
+// compatibility path.
+func makeLocalStateKeysignMessages() []string {
+	return []string{
+		base64.StdEncoding.EncodeToString(hash([]byte("local-state-helloworld"))),
+		base64.StdEncoding.EncodeToString(hash([]byte("local-state-helloworld2"))),
+	}
+}
+
+// makeFilteredKeysignMessages returns messages that isolate the filtered-party
+// keysign scenario from the baseline run.
+func makeFilteredKeysignMessages() []string {
+	return []string{
+		base64.StdEncoding.EncodeToString(hash([]byte("filtered-helloworld"))),
+		base64.StdEncoding.EncodeToString(hash([]byte("filtered-helloworld2"))),
+	}
+}
+
 // we do for both join party schemes
 func (s *FourNodeTestSuite) Test4NodesTss(c *C) {
 	algos := []tcommon.SigningAlgo{tcommon.SigningAlgoEd25519, tcommon.SigningAlgoSecp256k1}
@@ -175,19 +202,12 @@ func (s *FourNodeTestSuite) doTestKeygenAndKeySign(c *C, version string, algo tc
 	c.Assert(err, NotNil)
 	c.Assert(resp.Signatures, HasLen, 0)
 
-	makeMessages := func() []string {
-		return []string{
-			base64.StdEncoding.EncodeToString(hash([]byte("helloworld"))),
-			base64.StdEncoding.EncodeToString(hash([]byte("helloworld2"))),
-		}
-	}
-
 	keysignResult := make(map[int]keysign.Response)
 	for i := 0; i < partyNum; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			req := keysign.NewRequest(poolPubKey, algo, makeMessages(), 10, copyTestPubKeys(), version)
+			req := keysign.NewRequest(poolPubKey, algo, makeKeysignMessages(), 10, copyTestPubKeys(), version)
 			res, err := s.servers[idx].KeySign(req)
 			c.Assert(err, IsNil)
 			lock.Lock()
@@ -198,13 +218,16 @@ func (s *FourNodeTestSuite) doTestKeygenAndKeySign(c *C, version string, algo tc
 	wg.Wait()
 	checkSignResult(c, keysignResult)
 
+	s.doTestFilteredKeySign(c, poolPubKey, version, algo)
+	s.doTestFilteredKeySignBelowThreshold(c, poolPubKey, version, algo)
+
 	keysignResult1 := make(map[int]keysign.Response)
 	for i := 0; i < partyNum; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
 			var signers []string
-			req := keysign.NewRequest(poolPubKey, algo, makeMessages(), 10, signers, version)
+			req := keysign.NewRequest(poolPubKey, algo, makeLocalStateKeysignMessages(), 10, signers, version)
 			res, err := s.servers[idx].KeySign(req)
 			c.Assert(err, IsNil)
 			lock.Lock()
@@ -214,6 +237,84 @@ func (s *FourNodeTestSuite) doTestKeygenAndKeySign(c *C, version string, algo tc
 	}
 	wg.Wait()
 	checkSignResult(c, keysignResult1)
+}
+
+// doTestFilteredKeySign verifies the active signer set can complete keysign
+// even when the full local-state party would have selected an excluded leader.
+func (s *FourNodeTestSuite) doTestFilteredKeySign(c *C, poolPubKey string, version string, algo tcommon.SigningAlgo) {
+	filteredSigners := copyTestPubKeys()[:partyNum-1]
+	excludedSigner := copyTestPubKeys()[partyNum-1]
+	req := keysign.NewRequest(poolPubKey, algo, makeFilteredKeysignMessages(), 10, nil, version)
+	req.NeverSigners = []string{excludedSigner}
+	req.SignerPubKeys = filteredSigners
+	msgID, err := s.servers[0].requestToMsgId(req)
+	c.Assert(err, IsNil)
+
+	// Pick a height where the old full-local-state join party would select the
+	// excluded signer as leader. The filtered party must still complete.
+	req.BlockHeight = heightWithExcludedFullPartyLeader(c, msgID, copyTestPubKeys(), filteredSigners, excludedSigner)
+
+	wg := sync.WaitGroup{}
+	lock := &sync.Mutex{}
+	keysignResult := make(map[int]keysign.Response)
+	for i := 0; i < len(filteredSigners); i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			res, err := s.servers[idx].KeySign(req)
+			c.Assert(err, IsNil)
+			lock.Lock()
+			defer lock.Unlock()
+			keysignResult[idx] = res
+		}(i)
+	}
+	wg.Wait()
+	checkSignResult(c, keysignResult)
+
+	excludedResp, err := s.servers[partyNum-1].KeySign(req)
+	c.Assert(err, IsNil)
+	c.Assert(excludedResp.Signatures, HasLen, 0)
+}
+
+// doTestFilteredKeySignBelowThreshold verifies go-tss rejects a filtered party
+// that cannot satisfy the original TSS threshold.
+func (s *FourNodeTestSuite) doTestFilteredKeySignBelowThreshold(c *C, poolPubKey string, version string, algo tcommon.SigningAlgo) {
+	req := keysign.NewRequest(poolPubKey, algo, makeKeysignMessages(), 10, nil, version)
+	req.SignerPubKeys = copyTestPubKeys()[:2]
+	resp, err := s.servers[0].KeySign(req)
+	c.Assert(err, ErrorMatches, "not enough signers")
+	c.Assert(resp.Signatures, HasLen, 0)
+}
+
+// heightWithExcludedFullPartyLeader finds a deterministic block height where
+// the removed member would have led the full party but not the filtered party.
+func heightWithExcludedFullPartyLeader(c *C, msgID string, fullSigners []string, filteredSigners []string, excludedSigner string) int64 {
+	fullPeers := signerPeerStrings(c, fullSigners)
+	filteredPeers := signerPeerStrings(c, filteredSigners)
+	excludedPeer := signerPeerStrings(c, []string{excludedSigner})[0]
+	for height := int64(1); height < 1000; height++ {
+		fullLeader, err := p2p.LeaderNode(msgID, height, fullPeers)
+		c.Assert(err, IsNil)
+		filteredLeader, err := p2p.LeaderNode(msgID, height, filteredPeers)
+		c.Assert(err, IsNil)
+		if fullLeader == excludedPeer && filteredLeader != excludedPeer {
+			return height
+		}
+	}
+	c.Fatalf("failed to find height where excluded signer is full-party leader")
+	return 0
+}
+
+// signerPeerStrings converts pubkeys into peer IDs using the same conversion
+// path as leader selection.
+func signerPeerStrings(c *C, signers []string) []string {
+	peers, err := conversion.GetPeerIDsFromPubKeys(signers)
+	c.Assert(err, IsNil)
+	peerStrings := make([]string, len(peers))
+	for i, peer := range peers {
+		peerStrings[i] = peer.String()
+	}
+	return peerStrings
 }
 
 func (s *FourNodeTestSuite) doTestFailJoinParty(c *C, version string, algo tcommon.SigningAlgo) {

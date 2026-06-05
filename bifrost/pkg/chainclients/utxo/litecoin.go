@@ -23,14 +23,14 @@ func (c *Client) getChainCfgLTC() *ltcchaincfg.Params {
 	return nil
 }
 
-func (c *Client) signUTXOLTC(redeemTx *ltcwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int) error {
+func (c *Client) signUTXOLTC(redeemTx *ltcwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int, thorchainHeight int64) error {
 	sigHashes := ltctxscript.NewTxSigHashes(redeemTx)
 
 	var signable ltctxscript.Signable
 	if tx.VaultPubKey.Equals(c.nodePubKey) {
 		signable = ltctxscript.NewPrivateKeySignable((*ltcec.PrivateKey)(c.nodePrivKey))
 	} else {
-		signable = newTssSignableLTC(tx.VaultPubKey, c.tssKeySigner, c.log)
+		signable = newTssSignableLTC(tx.VaultPubKey, c.tssKeySigner, c.log, thorchainHeight)
 	}
 
 	witness, err := ltctxscript.WitnessSignature(redeemTx, sigHashes, idx, amount, sourceScript, ltctxscript.SigHashAll, signable, true)

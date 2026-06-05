@@ -336,7 +336,7 @@ func (s *XrpTestSuite) TestSign(c *C) {
 	}
 
 	// Sign the message (verifies signature within)
-	_, err = client.signMsg(msg, vaultPubKey)
+	_, err = client.signMsg(msg, vaultPubKey, 0)
 	c.Assert(err, IsNil)
 }
 

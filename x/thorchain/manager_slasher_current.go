@@ -435,6 +435,9 @@ func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 					if err != nil {
 						return fmt.Errorf("fail to get active asgard vaults: %w", err)
 					}
+					// A compromised-vault keysign refusal makes the outbound eligible
+					// for rescheduling; do not pick that same compromised vault again.
+					active = filterCompromisedVaults(ctx, s.keeper, active)
 					active = filterActiveVaultsForOutboundChain(active, toi.Chain)
 					// Deduct the asset's pending outbound funds to represent only the available funds.
 					pendingOutbounds := mgr.Keeper().GetPendingOutbounds(ctx, toi.Coin.Asset)

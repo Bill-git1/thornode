@@ -73,6 +73,7 @@ const (
 	Query_LastBlocks_FullMethodName              = "/types.Query/LastBlocks"
 	Query_ChainsLastBlock_FullMethodName         = "/types.Query/ChainsLastBlock"
 	Query_Vault_FullMethodName                   = "/types.Query/Vault"
+	Query_KeysignParty_FullMethodName            = "/types.Query/KeysignParty"
 	Query_XMRSpentOutputRefs_FullMethodName      = "/types.Query/XMRSpentOutputRefs"
 	Query_AsgardVaults_FullMethodName            = "/types.Query/AsgardVaults"
 	Query_VaultsPubkeys_FullMethodName           = "/types.Query/VaultsPubkeys"
@@ -181,6 +182,7 @@ type QueryClient interface {
 	LastBlocks(ctx context.Context, in *QueryLastBlocksRequest, opts ...grpc.CallOption) (*QueryLastBlocksResponse, error)
 	ChainsLastBlock(ctx context.Context, in *QueryChainsLastBlockRequest, opts ...grpc.CallOption) (*QueryLastBlocksResponse, error)
 	Vault(ctx context.Context, in *QueryVaultRequest, opts ...grpc.CallOption) (*QueryVaultResponse, error)
+	KeysignParty(ctx context.Context, in *QueryKeysignPartyRequest, opts ...grpc.CallOption) (*QueryKeysignPartyResponse, error)
 	XMRSpentOutputRefs(ctx context.Context, in *QueryXMRSpentOutputRefsRequest, opts ...grpc.CallOption) (*QueryXMRSpentOutputRefsResponse, error)
 	AsgardVaults(ctx context.Context, in *QueryAsgardVaultsRequest, opts ...grpc.CallOption) (*QueryAsgardVaultsResponse, error)
 	VaultsPubkeys(ctx context.Context, in *QueryVaultsPubkeysRequest, opts ...grpc.CallOption) (*QueryVaultsPubkeysResponse, error)
@@ -716,6 +718,15 @@ func (c *queryClient) Vault(ctx context.Context, in *QueryVaultRequest, opts ...
 	return out, nil
 }
 
+func (c *queryClient) KeysignParty(ctx context.Context, in *QueryKeysignPartyRequest, opts ...grpc.CallOption) (*QueryKeysignPartyResponse, error) {
+	out := new(QueryKeysignPartyResponse)
+	err := c.cc.Invoke(ctx, Query_KeysignParty_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) XMRSpentOutputRefs(ctx context.Context, in *QueryXMRSpentOutputRefsRequest, opts ...grpc.CallOption) (*QueryXMRSpentOutputRefsResponse, error) {
 	out := new(QueryXMRSpentOutputRefsResponse)
 	err := c.cc.Invoke(ctx, Query_XMRSpentOutputRefs_FullMethodName, in, out, opts...)
@@ -1134,6 +1145,7 @@ type QueryServer interface {
 	LastBlocks(context.Context, *QueryLastBlocksRequest) (*QueryLastBlocksResponse, error)
 	ChainsLastBlock(context.Context, *QueryChainsLastBlockRequest) (*QueryLastBlocksResponse, error)
 	Vault(context.Context, *QueryVaultRequest) (*QueryVaultResponse, error)
+	KeysignParty(context.Context, *QueryKeysignPartyRequest) (*QueryKeysignPartyResponse, error)
 	XMRSpentOutputRefs(context.Context, *QueryXMRSpentOutputRefsRequest) (*QueryXMRSpentOutputRefsResponse, error)
 	AsgardVaults(context.Context, *QueryAsgardVaultsRequest) (*QueryAsgardVaultsResponse, error)
 	VaultsPubkeys(context.Context, *QueryVaultsPubkeysRequest) (*QueryVaultsPubkeysResponse, error)
@@ -1341,6 +1353,9 @@ func (UnimplementedQueryServer) ChainsLastBlock(context.Context, *QueryChainsLas
 }
 func (UnimplementedQueryServer) Vault(context.Context, *QueryVaultRequest) (*QueryVaultResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Vault not implemented")
+}
+func (UnimplementedQueryServer) KeysignParty(context.Context, *QueryKeysignPartyRequest) (*QueryKeysignPartyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method KeysignParty not implemented")
 }
 func (UnimplementedQueryServer) XMRSpentOutputRefs(context.Context, *QueryXMRSpentOutputRefsRequest) (*QueryXMRSpentOutputRefsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method XMRSpentOutputRefs not implemented")
@@ -2444,6 +2459,24 @@ func _Query_Vault_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_KeysignParty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryKeysignPartyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).KeysignParty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_KeysignParty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).KeysignParty(ctx, req.(*QueryKeysignPartyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_XMRSpentOutputRefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryXMRSpentOutputRefsRequest)
 	if err := dec(in); err != nil {
@@ -3368,6 +3401,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Vault",
 			Handler:    _Query_Vault_Handler,
+		},
+		{
+			MethodName: "KeysignParty",
+			Handler:    _Query_KeysignParty_Handler,
 		},
 		{
 			MethodName: "XMRSpentOutputRefs",

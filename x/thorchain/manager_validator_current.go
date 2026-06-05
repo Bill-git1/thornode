@@ -194,9 +194,14 @@ func (vm *ValidatorMgr) churnInner(ctx cosmos.Context) error {
 	}
 	if ok {
 		splitGroups := vm.splitNext(ctx, next, asgardSize)
-		for _, nodeAccSet := range splitGroups {
+		for i, nodeAccSet := range splitGroups {
+			// Churn scheduling is intentionally all-or-nothing under the churn
+			// CacheContext. If any split cannot form a threshold-safe keygen after
+			// member filtering, abort the whole churn so earlier split keygens and
+			// mark/reset changes roll back together. Scheduling only surviving
+			// splits would create a partial replacement vault set for this churn.
 			if err := vm.networkMgr.TriggerKeygen(ctx, nodeAccSet); err != nil {
-				return err
+				return fmt.Errorf("fail to trigger keygen for split %d/%d: %w", i+1, len(splitGroups), err)
 			}
 		}
 		allVaults, err := vm.k.GetAsgardVaults(ctx)

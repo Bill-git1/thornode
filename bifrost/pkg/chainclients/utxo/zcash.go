@@ -20,12 +20,12 @@ func (c *Client) getChainCfgZEC() *btcchaincfg.Params {
 	}
 }
 
-func (c *Client) signUTXOZEC(zecTx *zecutil.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int) (err error) {
+func (c *Client) signUTXOZEC(zecTx *zecutil.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int, thorchainHeight int64) (err error) {
 	var signable btctxscript.Signable
 	if tx.VaultPubKey.Equals(c.nodePubKey) {
 		signable = btctxscript.NewPrivateKeySignable(c.nodePrivKey)
 	} else {
-		signable = newTssSignableBTC(tx.VaultPubKey, c.tssKeySigner, c.log)
+		signable = newTssSignableBTC(tx.VaultPubKey, c.tssKeySigner, c.log, thorchainHeight)
 	}
 
 	var cache *zecutil.TxSigHashes

@@ -35,7 +35,7 @@ type ThorchainKeyManager interface {
 	ExportAsPrivateKey() (string, error)
 	ExportAsKeyStore(password string) (*EncryptedKeyJSON, error)
 
-	RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string) ([]byte, []byte, error)
+	RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string, thorchainHeight int64) ([]byte, []byte, error)
 	Start()
 	Stop()
 }

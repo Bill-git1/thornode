@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,6 +77,18 @@ type pendingKeygenBroadcast struct {
 	poolPubKeyFrost      common.PubKey
 	frostKeyshareHex     string
 	observedMoneroHeight int64
+}
+
+// keygenCheckBridge suppresses signer filtering for the self-check signature
+// because the new key has not been saved into a vault policy yet.
+type keygenCheckBridge struct {
+	thorclient.ThorchainBridge
+}
+
+// GetKeysignPolicy returns an empty policy so go-tss falls back to the local
+// keygen membership for the pre-vault check signature.
+func (b keygenCheckBridge) GetKeysignPolicy(common.PubKey, int64) (thorclient.KeysignPolicy, error) {
+	return thorclient.KeysignPolicy{}, nil
 }
 
 type keygenBackups struct {
@@ -435,12 +448,35 @@ func singleKeygenBlock(height int64, keygen ttypes.Keygen) ttypes.KeygenBlock {
 	}
 }
 
+// orderedKeygensForProcessing returns a stable copy ordered by ceremony risk;
+// XMR/FROST keygen enters its sidecar DKG before regular keygen backup work.
+func orderedKeygensForProcessing(keygens []ttypes.Keygen) []ttypes.Keygen {
+	ordered := append([]ttypes.Keygen(nil), keygens...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return keygenProcessingPriority(ordered[i].Type) < keygenProcessingPriority(ordered[j].Type)
+	})
+	return ordered
+}
+
+// keygenProcessingPriority ranks keygen types by how sensitive they are to
+// startup delay in the current block.
+func keygenProcessingPriority(keygenType ttypes.KeygenType) int {
+	// A churn block can contain both regular Asgard keygen and XMR/FROST
+	// monovault keygen. Run XMR first so all nodes enter the sidecar DKG
+	// ceremony before regular keygen self-check signing or keyshare backup work
+	// can delay one participant long enough to make the FROST ceremony timeout.
+	if keygenType == ttypes.KeygenType_XMRMonovaultKeygen {
+		return 0
+	}
+	return 1
+}
+
 func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 	s.logger.Info().Interface("keygenBlock", keygenBlock).Msg("processing keygen block")
-	pendingBroadcasts := make([]pendingKeygenBroadcast, 0, len(keygenBlock.Keygens))
 
-	// NOTE: in practice there is only one keygen in the keygen block
-	for _, keygenReq := range keygenBlock.Keygens {
+	// Process XMR/FROST keygens before regular TSS keygens so every node enters
+	// the sidecar ceremony before regular keygen self-checks can delay a leader.
+	for _, keygenReq := range orderedKeygensForProcessing(keygenBlock.Keygens) {
 		keygenStart := time.Now()
 		keygenTime := time.Since(keygenStart).Milliseconds()
 		keygenChains := s.keygenChainsForType(keygenReq.Type)
@@ -521,7 +557,7 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 			}
 
 			// generate a verification signature to ensure we can sign with the new key
-			secp256k1Sig = s.secp256k1VerificationSignature(pubKey.Secp256k1)
+			secp256k1Sig = s.secp256k1VerificationSignature(pubKey.Secp256k1, keygenBlock.Height)
 		}
 
 		if pubKey.Secp256k1.IsEmpty() || pubKey.Ed25519.IsEmpty() {
@@ -532,7 +568,7 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 			continue
 		}
 
-		pendingBroadcasts = append(pendingBroadcasts, pendingKeygenBroadcast{
+		s.flushPendingKeygenBroadcasts([]pendingKeygenBroadcast{{
 			height:               keygenBlock.Height,
 			poolPk:               pubKey.Secp256k1,
 			secp256k1Signature:   secp256k1Sig,
@@ -545,10 +581,8 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 			poolPubKeyFrost:      frostPubKey,
 			frostKeyshareHex:     frostKeyshareHex,
 			observedMoneroHeight: observedMoneroHeight,
-		})
+		}})
 	}
-
-	s.flushPendingKeygenBroadcasts(pendingBroadcasts)
 }
 
 func (s *Signer) flushPendingKeygenBroadcasts(pending []pendingKeygenBroadcast) {
@@ -558,11 +592,9 @@ func (s *Signer) flushPendingKeygenBroadcasts(pending []pendingKeygenBroadcast) 
 
 	msgs := make([]sdktypes.Msg, len(pending))
 	for i, item := range pending {
-		// Keep the final THORChain submit batched per block, but build the
-		// individual keygen messages in-process one at a time. In practice there
-		// are at most two messages here (regular Asgard + XMR monovault), and the
-		// real backup/encryption work inside buildKeygenMsg has shown signs of
-		// wedging some nodes when both builders run concurrently.
+		// Build individual keygen messages in-process one at a time. The real
+		// backup/encryption work inside buildKeygenMsg has shown signs of
+		// wedging some nodes when multiple builders run concurrently.
 		msg, err := s.buildKeygenMsg(item.height, item.poolPk, item.secp256k1Signature, item.blame, item.input, item.keygenType, item.chains, item.keygenTime, item.poolPubKeyEddsa, item.poolPubKeyFrost, item.frostKeyshareHex, item.observedMoneroHeight)
 		if err != nil {
 			s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
@@ -586,8 +618,6 @@ func (s *Signer) flushPendingKeygenBroadcasts(pending []pendingKeygenBroadcast) 
 			Str("keygen_type", item.keygenType.String()).
 			Msg("sent keygen tx to thorchain")
 
-		// Broadcast all keygen messages for the block together so the XMR
-		// monovault vote cannot be stranded behind a separate THORChain tx path.
 		if !item.poolPk.IsEmpty() {
 			algo := common.SigningAlgoSecp256k1
 			if item.keygenType == ttypes.KeygenType_XMRMonovaultKeygen {
@@ -699,9 +729,9 @@ func (s *Signer) runCustomKeygenHooks(
 // its own private key as a sanity check to ensure parties are able to sign. The
 // signature will be included in the TssPool message if successful, and verified by
 // THORNode before the keygen is accepted.
-func (s *Signer) secp256k1VerificationSignature(pk common.PubKey) []byte {
+func (s *Signer) secp256k1VerificationSignature(pk common.PubKey, thorchainHeight int64) []byte {
 	// create keysign instance
-	ks, err := tss.NewKeySign(s.tssServer, s.thorchainBridge)
+	ks, err := tss.NewKeySign(s.tssServer, keygenCheckBridge{ThorchainBridge: s.thorchainBridge})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to create keysign for secp256k1 check signing")
 		return nil
@@ -711,8 +741,14 @@ func (s *Signer) secp256k1VerificationSignature(pk common.PubKey) []byte {
 
 	// sign the public key with its own private key
 	data := []byte(pk.String())
-	sigBytes, _, err := ks.RemoteSign(data, common.SigningAlgoSecp256k1, pk.String())
+	// The check signature proves the newly generated secp256k1 key can sign
+	// before thornode has saved the new vault, so attach an empty policy and
+	// let go-tss resolve the full local keygen membership.
+	sigBytes, _, err := ks.RemoteSign(data, common.SigningAlgoSecp256k1, pk.String(), thorchainHeight)
 	if err != nil {
+		if errors.Is(err, tss.ErrNotSelectedForKeysign) {
+			return nil
+		}
 		// this is expected in some cases if we were not in the signing party
 		s.logger.Info().Err(err).Msg("fail secp256k1 check signing")
 		return nil

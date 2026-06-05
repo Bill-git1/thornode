@@ -1213,6 +1213,7 @@ func (s *HandlerTssSuite) TestXMRMonovaultWaitsForRegularVaultRotation(c *C) {
 
 func (s *HandlerTssSuite) TestAsgardKeygenAllActiveStillWaitsForCompleteConsensus(c *C) {
 	helper := newTssHandlerTestHelper(c)
+	helper.keeper.SetMimir(helper.ctx, constants.MaxAbsentKeygenReporters.String(), 0)
 	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
 	c.Assert(helper.keeper.Keeper.DeleteVault(helper.ctx, helper.poolPk), IsNil)
 	members := helper.members[:4]
@@ -1277,6 +1278,7 @@ func (s *HandlerTssSuite) TestKeygenSuccessHandlerBufferDefault(c *C) {
 	verifySecp256K1Signature = func(_ common.PubKey, _ []byte) error { return nil }
 
 	helper := newTssHandlerTestHelper(c)
+	helper.keeper.SetMimir(helper.ctx, constants.MaxAbsentKeygenReporters.String(), 0)
 	for _, member := range helper.members {
 		setKeygenMemberNodeAccount(c, helper, member, NodeActive)
 	}

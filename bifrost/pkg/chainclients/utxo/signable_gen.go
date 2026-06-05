@@ -20,23 +20,28 @@ import (
 )
 
 type tssSignableBCH struct {
-	poolPubKey    common.PubKey
-	tssKeyManager tss.ThorchainKeyManager
-	log           zerolog.Logger
+	poolPubKey      common.PubKey
+	tssKeyManager   tss.ThorchainKeyManager
+	log             zerolog.Logger
+	thorchainHeight int64
 }
 
-func newTssSignableBCH(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger) *tssSignableBCH {
+func newTssSignableBCH(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger, thorchainHeight int64) *tssSignableBCH {
 	return &tssSignableBCH{
-		poolPubKey:    poolPubKey,
-		tssKeyManager: tssKeyManager,
-		log:           log,
+		poolPubKey:      poolPubKey,
+		tssKeyManager:   tssKeyManager,
+		log:             log,
+		thorchainHeight: thorchainHeight,
 	}
 }
 func (ts *tssSignableBCH) SignECDSA(payload []byte) (*bchec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String(), ts.thorchainHeight)
 	if err != nil {
 		return nil, err
+	}
+	if result == nil {
+		return nil, tss.ErrNotSelectedForKeysign
 	}
 	var sig bchec.Signature
 	sig.R = new(big.Int).SetBytes(result[:32])
@@ -79,23 +84,28 @@ func (ts *tssSignableBCH) GetPubKey() *bchec.PublicKey {
 }
 
 type tssSignableBTC struct {
-	poolPubKey    common.PubKey
-	tssKeyManager tss.ThorchainKeyManager
-	log           zerolog.Logger
+	poolPubKey      common.PubKey
+	tssKeyManager   tss.ThorchainKeyManager
+	log             zerolog.Logger
+	thorchainHeight int64
 }
 
-func newTssSignableBTC(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger) *tssSignableBTC {
+func newTssSignableBTC(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger, thorchainHeight int64) *tssSignableBTC {
 	return &tssSignableBTC{
-		poolPubKey:    poolPubKey,
-		tssKeyManager: tssKeyManager,
-		log:           log,
+		poolPubKey:      poolPubKey,
+		tssKeyManager:   tssKeyManager,
+		log:             log,
+		thorchainHeight: thorchainHeight,
 	}
 }
 func (ts *tssSignableBTC) Sign(payload []byte) (*btcec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String(), ts.thorchainHeight)
 	if err != nil {
 		return nil, err
+	}
+	if result == nil {
+		return nil, tss.ErrNotSelectedForKeysign
 	}
 	var sig btcec.Signature
 	sig.R = new(big.Int).SetBytes(result[:32])
@@ -133,23 +143,28 @@ func (ts *tssSignableBTC) GetPubKey() *btcec.PublicKey {
 }
 
 type tssSignableDOGE struct {
-	poolPubKey    common.PubKey
-	tssKeyManager tss.ThorchainKeyManager
-	log           zerolog.Logger
+	poolPubKey      common.PubKey
+	tssKeyManager   tss.ThorchainKeyManager
+	log             zerolog.Logger
+	thorchainHeight int64
 }
 
-func newTssSignableDOGE(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger) *tssSignableDOGE {
+func newTssSignableDOGE(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger, thorchainHeight int64) *tssSignableDOGE {
 	return &tssSignableDOGE{
-		poolPubKey:    poolPubKey,
-		tssKeyManager: tssKeyManager,
-		log:           log,
+		poolPubKey:      poolPubKey,
+		tssKeyManager:   tssKeyManager,
+		log:             log,
+		thorchainHeight: thorchainHeight,
 	}
 }
 func (ts *tssSignableDOGE) Sign(payload []byte) (*dogeec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String(), ts.thorchainHeight)
 	if err != nil {
 		return nil, err
+	}
+	if result == nil {
+		return nil, tss.ErrNotSelectedForKeysign
 	}
 	var sig dogeec.Signature
 	sig.R = new(big.Int).SetBytes(result[:32])
@@ -187,23 +202,28 @@ func (ts *tssSignableDOGE) GetPubKey() *dogeec.PublicKey {
 }
 
 type tssSignableLTC struct {
-	poolPubKey    common.PubKey
-	tssKeyManager tss.ThorchainKeyManager
-	log           zerolog.Logger
+	poolPubKey      common.PubKey
+	tssKeyManager   tss.ThorchainKeyManager
+	log             zerolog.Logger
+	thorchainHeight int64
 }
 
-func newTssSignableLTC(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger) *tssSignableLTC {
+func newTssSignableLTC(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger, thorchainHeight int64) *tssSignableLTC {
 	return &tssSignableLTC{
-		poolPubKey:    poolPubKey,
-		tssKeyManager: tssKeyManager,
-		log:           log,
+		poolPubKey:      poolPubKey,
+		tssKeyManager:   tssKeyManager,
+		log:             log,
+		thorchainHeight: thorchainHeight,
 	}
 }
 func (ts *tssSignableLTC) Sign(payload []byte) (*ltcec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String(), ts.thorchainHeight)
 	if err != nil {
 		return nil, err
+	}
+	if result == nil {
+		return nil, tss.ErrNotSelectedForKeysign
 	}
 	var sig ltcec.Signature
 	sig.R = new(big.Int).SetBytes(result[:32])

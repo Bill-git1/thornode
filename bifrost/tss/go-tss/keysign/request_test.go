@@ -21,10 +21,18 @@ func TestNewRequest(t *testing.T) {
 	assert.Equal(t, msgs, r.Messages)
 	assert.Equal(t, blockHeight, r.BlockHeight)
 	assert.Equal(t, signers, r.SignerPubKeys)
+	assert.Equal(t, len(signers), r.RequiredSigners)
 	assert.Equal(t, version, r.Version)
 
 	// Test with ed25519 algo
-	r2 := NewRequest(pk, common.SigningAlgoEd25519, []string{"msg3"}, 200, []string{"s1"}, "0.15.0")
+	r2 := NewRequest(pk, common.SigningAlgoEd25519, []string{"msg3"}, 200, []string{"s1"}, "0.15.0", PolicyMetadata{
+		NeverSigners:          []string{"never"},
+		JailedFallbackSigners: []string{"fallback"},
+		RequiredSigners:       3,
+	})
 	assert.Equal(t, string(common.SigningAlgoEd25519), r2.Algo)
 	assert.Equal(t, int64(200), r2.BlockHeight)
+	assert.Equal(t, []string{"never"}, r2.NeverSigners)
+	assert.Equal(t, []string{"fallback"}, r2.JailedFallbackSigners)
+	assert.Equal(t, 3, r2.RequiredSigners)
 }

@@ -632,6 +632,18 @@ func (s *ClientBackfillSuite) makeClient(c *C, server *httptest.Server) *SOLClie
 	return client
 }
 
+// vaultPubKeyEDDSA returns the test node's EdDSA pubkey in THORChain pubkey
+// form for SOL signing paths.
+func (s *ClientBackfillSuite) vaultPubKeyEDDSA(c *C) common.PubKey {
+	privKey, err := s.keys.GetPrivateKeyEDDSA()
+	c.Assert(err, IsNil)
+	pubKeyBech32, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, privKey.PubKey())
+	c.Assert(err, IsNil)
+	pubKey, err := common.NewPubKey(pubKeyBech32)
+	c.Assert(err, IsNil)
+	return pubKey
+}
+
 // -------------------------------------------------------------------------
 // NewSOLClient error paths
 // -------------------------------------------------------------------------
@@ -1046,12 +1058,9 @@ func (s *ClientBackfillSuite) TestCreateTxZeroAmount(c *C) {
 	client := s.makeClient(c, server)
 	client.solScanner.setRecentBlockHash("blockhash123")
 
-	// Use a known test pubkey
-	testVaultPubKey := common.PubKey("tthorpub1zcjduepq829qzzhllcktltnfdudyupw5qjtyyjzcmv9wx2jvpah4d6nxtl2s7vwca8")
-
 	txHash := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	_, err := client.CreateTx(stypes.TxOutItem{
-		VaultPubKeyEddsa: testVaultPubKey,
+		VaultPubKeyEddsa: s.vaultPubKeyEDDSA(c),
 		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
 		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(0))},
 	}, fmt.Sprintf("OUT:%s", txHash))
@@ -1067,11 +1076,9 @@ func (s *ClientBackfillSuite) TestCreateTxEmptyMemoDefaultsToOutbound(c *C) {
 	client := s.makeClient(c, server)
 	client.solScanner.setRecentBlockHash("blockhash123")
 
-	testVaultPubKey := common.PubKey("tthorpub1zcjduepq829qzzhllcktltnfdudyupw5qjtyyjzcmv9wx2jvpah4d6nxtl2s7vwca8")
-
 	txHash := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	tx, err := client.CreateTx(stypes.TxOutItem{
-		VaultPubKeyEddsa: testVaultPubKey,
+		VaultPubKeyEddsa: s.vaultPubKeyEDDSA(c),
 		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
 		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(1000))},
 		InHash:           common.TxID(txHash),

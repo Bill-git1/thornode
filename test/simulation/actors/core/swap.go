@@ -44,6 +44,9 @@ type SwapActor struct {
 	requiredOutboundSpend sdkmath.Uint
 	minExpected           sdkmath.Uint
 	maxExpected           sdkmath.Uint
+	// expectedOutboundVault lets specialized swap actors prove a specific vault
+	// produced the outbound instead of only checking the final amount.
+	expectedOutboundVault common.PubKey
 
 	targetXMRSwapSlotAcquired bool
 }
@@ -292,6 +295,27 @@ func (a *SwapActor) releaseTargetXMRSwapSlot() {
 	<-targetXMRSwapSlot
 	a.targetXMRSwapSlotAcquired = false
 	a.Log().Info().Msg("released target XMR swap slot")
+}
+
+// isPostSelectionFundingError detects balance failures that can happen after a
+// simulation user is selected but before the swap is submitted.
+func isPostSelectionFundingError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "insufficient balance") ||
+		strings.Contains(msg, "insufficient funds")
+}
+
+// finishAfterPostSelectionFundingError releases any acquired simulation slots
+// and ends this actor when its selected user can no longer fund the swap.
+func (a *SwapActor) finishAfterPostSelectionFundingError(err error) OpResult {
+	a.Log().Warn().Err(err).Msg("selected user can no longer fund swap; skipping actor")
+	a.releaseUserSelection()
+	a.releaseTargetXMRSwapSlot()
+	return OpResult{Finish: true}
 }
 
 func (a *SwapActor) acquireUserForAmount(config *OpConfig, targetAmount sdkmath.Uint, allowPartial bool) OpResult {
@@ -589,6 +613,9 @@ func (a *SwapActor) sendSwap(config *OpConfig) OpResult {
 
 	txid, err := SignAndBroadcastTx(client, tx)
 	if err != nil {
+		if isPostSelectionFundingError(err) {
+			return a.finishAfterPostSelectionFundingError(err)
+		}
 		a.Log().Error().Err(err).Msg("failed to broadcast tx")
 		return OpResult{
 			Continue: false,
@@ -657,6 +684,9 @@ func (a *SwapActor) sendTokenSwap(config *OpConfig) OpResult {
 	// broadcast approve transaction
 	txid, err := client.BroadcastTx(signed)
 	if err != nil {
+		if isPostSelectionFundingError(err) {
+			return a.finishAfterPostSelectionFundingError(err)
+		}
 		a.Log().Error().Err(err).Msg("failed to broadcast tx")
 		return OpResult{
 			Continue: false,
@@ -695,6 +725,9 @@ func (a *SwapActor) sendTokenSwap(config *OpConfig) OpResult {
 	// broadcast deposit transaction
 	txid, err = client.BroadcastTx(signed)
 	if err != nil {
+		if isPostSelectionFundingError(err) {
+			return a.finishAfterPostSelectionFundingError(err)
+		}
 		a.Log().Error().Err(err).Msg("failed to broadcast tx")
 		return OpResult{
 			Continue: false,
@@ -772,18 +805,25 @@ func (a *SwapActor) verifyOutbound(config *OpConfig) OpResult {
 	// verify outbound amount + max gas within expected range
 	action := details.Actions[0]
 	out := details.OutTxs[0]
-	outAmountPlusGas, err := outboundAmountPlusGas(out, action, a.to)
-	if err != nil {
-		a.Log().Warn().Err(err).Msg("failed to convert asset")
+	if !a.expectedOutboundVault.IsEmpty() {
+		if action.VaultPubKey == nil {
+			err = fmt.Errorf("expected outbound vault %s, got empty vault pubkey", a.expectedOutboundVault)
+		} else if *action.VaultPubKey != a.expectedOutboundVault.String() {
+			err = fmt.Errorf("expected outbound vault %s, got %s", a.expectedOutboundVault, *action.VaultPubKey)
+		}
+	}
+	outAmountPlusGas, convertErr := outboundAmountPlusGas(out, action, a.to)
+	if convertErr != nil {
+		a.Log().Warn().Err(convertErr).Msg("failed to convert asset")
 		return OpResult{
 			Continue: false,
 		}
 	}
 
 	// retrieve L1 balance
-	toAcct, err := a.user.ChainClients[a.to.Chain].GetAccount(nil)
-	if err != nil {
-		a.Log().Warn().Err(err).Msg("failed to get to account")
+	toAcct, accountErr := a.user.ChainClients[a.to.Chain].GetAccount(nil)
+	if accountErr != nil {
+		a.Log().Warn().Err(accountErr).Msg("failed to get to account")
 		return OpResult{
 			Continue: false,
 		}
