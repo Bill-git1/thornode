@@ -377,13 +377,27 @@ test-simulation:
   script:
     - make test-simulation-cluster
   after_script:
-    - make test-simulation-events
-    - mkdir logs
+    - make test-simulation-events || true
+    - mkdir -p logs/xmr-debug
     - docker ps -a >./logs/ps.log 2>&1
     - |
       for name in $(docker ps --format '{{.Names}}'); do
         docker logs "$name" >"./logs/$name.log" 2>&1
       done
+    - docker inspect docker-xmr-sim-helper-1 > logs/xmr-debug/xmr-sim-helper.inspect.json 2>&1 || true
+    - docker image inspect "$(docker inspect -f '{{.Image}}' docker-xmr-sim-helper-1)" > logs/xmr-debug/xmr-sim-helper.image.json 2>&1 || true
+    - |
+      docker run --rm --network docker_default curlimages/curl:8.11.1 -sv \
+        -H 'Authorization: Bearer xmr-sim-helper-mocknet-token' \
+        http://xmr-sim-helper:8284/ \
+        > logs/xmr-debug/root.txt 2>&1 || true
+    - |
+      docker run --rm --network docker_default curlimages/curl:8.11.1 -sv \
+        -X POST http://xmr-sim-helper:8284/v1/monero/sim/balance \
+        -H 'Authorization: Bearer xmr-sim-helper-mocknet-token' \
+        -H 'Content-Type: application/json' \
+        -d '{"spend_key_hex":"00"}' \
+        > logs/xmr-debug/sim-balance.txt 2>&1 || true
 
 test-regression:
   rules:

@@ -203,7 +203,7 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 
 	if totalBatches == 0 {
 		// Receiver replied "done" because there are no batches to transfer.
-		// Validate and exit cleanly — falling through to the streamAckBegin
+		// Validate and exit cleanly - falling through to the streamAckBegin
 		// check below would log a false "unexpected response to batch begin"
 		// error in this success path.
 		if string(ack) != p2p.StreamMsgDone {

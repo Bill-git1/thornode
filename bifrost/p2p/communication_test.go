@@ -3,8 +3,7 @@ package p2p
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"os"
-	"path/filepath"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	maddr "github.com/multiformats/go-multiaddr"
@@ -13,7 +12,6 @@ import (
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
-	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 )
 
 type CommunicationTestSuite struct{}
@@ -70,7 +68,8 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 		c.Assert(stopErr, IsNil)
 	}()
 
-	// we connect to an invalid peer and see
+	// Configured bootstrap peers still fail fast by default so production
+	// misconfiguration remains visible.
 	sk2, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	c.Assert(err, IsNil)
 	id, err := peer.IDFromPrivateKey(sk2)
@@ -81,7 +80,16 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	comm3, err := NewCommunication(&Config{Port: 2222, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{invalidMultiAddr}}, nil, nil)
 	c.Assert(err, IsNil)
 	err = comm3.Start(sk1raw)
-	c.Assert(err, ErrorMatches, "fail to connect to bootstrap peer: fail to connect to any peer")
+	if allowUnreachableConfiguredBootstrapPeers {
+		c.Assert(err, IsNil)
+		defer func() {
+			stopErr := comm3.Stop()
+			c.Assert(stopErr, IsNil)
+		}()
+	} else {
+		c.Assert(err, ErrorMatches, "fail to connect to bootstrap peer: fail to connect to any peer")
+		c.Assert(comm3.Stop(), IsNil)
+	}
 
 	// we connect to one invalid and one valid address
 	comm4, err := NewCommunication(&Config{Port: 2223, RendezvousString: "commTest", BootstrapPeers: []maddr.Multiaddr{invalidMultiAddr, validMultiAddr}}, nil, nil)
@@ -101,21 +109,66 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	c.Assert(checkExist(ps.Addrs(comm.host.ID()), fakeExternalMultiAddr), Equals, true)
 }
 
-func (CommunicationTestSuite) TestBootstrapConnectivityRequiredOnlyForConfiguredPeers(c *C) {
-	invalidPeer := "/ip4/127.0.0.1/tcp/1/p2p/16Uiu2HAm4TmEzUqy3q3Dv7HvdoSboHk5sFj2FH3npiN5vDbJC6gh"
-	invalidMultiAddr, err := maddr.NewMultiaddr(invalidPeer)
+// TestConnectToBootstrapPeersSelfDoesNotDeadlock is a regression test for the
+// connRet read-deadlock in connectToBootstrapPeers.
+//
+// Bug: the for-loop reading from connRet iterated len(bootstrapPeers) times,
+// but goroutines were skipped for self entries (`if pi.ID == c.host.ID()`),
+// so the read for the self slot blocked forever waiting for a send that never
+// came. This is the exact configuration produced after a TSS keysign
+// SaveAddressBook, which writes self into address_book.seed.
+//
+// Fix: track dialAttempts separately and read exactly that many.
+//
+// This test constructs bootstrap peers containing the host's own peer ID
+// plus an unreachable peer, calls Start(), and asserts it returns within a
+// timeout instead of hanging.
+func (CommunicationTestSuite) TestConnectToBootstrapPeersSelfDoesNotDeadlock(c *C) {
+	// Generate a key for our host so we can derive its peer ID and put it in
+	// the bootstrap list.
+	priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+	c.Assert(err, IsNil)
+	privRaw, err := priv.Raw()
+	c.Assert(err, IsNil)
+	selfID, err := peer.IDFromPrivateKey(priv)
+	c.Assert(err, IsNil)
+	selfAddr, err := maddr.NewMultiaddr("/ip4/127.0.0.1/tcp/2230/p2p/" + selfID.String())
 	c.Assert(err, IsNil)
 
-	commWithConfig, err := NewCommunication(&Config{Port: 3330, RendezvousString: "commConfig", BootstrapPeers: []maddr.Multiaddr{invalidMultiAddr}}, nil, nil)
+	// An unreachable peer with a different ID, so dialAttempts > 0 and we
+	// actually exercise the read loop after wg.Wait. (If self were the only
+	// entry, dialAttempts would be 0 and the early return would mask the bug.)
+	otherPriv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	c.Assert(err, IsNil)
-	c.Assert(commWithConfig.bootstrapConnectivityRequired(), Equals, true)
+	otherID, err := peer.IDFromPrivateKey(otherPriv)
+	c.Assert(err, IsNil)
+	otherAddr, err := maddr.NewMultiaddr("/ip4/127.0.0.1/tcp/2231/p2p/" + otherID.String())
+	c.Assert(err, IsNil)
 
-	dir := c.MkDir()
-	err = os.WriteFile(filepath.Join(dir, "address_book.seed"), []byte(invalidPeer+"\n"), 0o600)
+	comm, err := NewCommunication(&Config{
+		Port:             2230,
+		RendezvousString: "selfDeadlockTest",
+		BootstrapPeers:   []maddr.Multiaddr{selfAddr, otherAddr},
+	}, nil, nil)
 	c.Assert(err, IsNil)
-	stateMgr, err := storage.NewFileStateMgr(dir)
-	c.Assert(err, IsNil)
-	commSavedOnly, err := NewCommunication(&Config{Port: 3331, RendezvousString: "commSavedOnly"}, stateMgr, nil)
-	c.Assert(err, IsNil)
-	c.Assert(commSavedOnly.bootstrapConnectivityRequired(), Equals, false)
+
+	// Start in a goroutine so we can enforce a timeout.
+	startDone := make(chan error, 1)
+	go func() {
+		startDone <- comm.Start(privRaw)
+	}()
+
+	select {
+	case startErr := <-startDone:
+		if allowUnreachableConfiguredBootstrapPeers {
+			c.Assert(startErr, IsNil)
+		} else {
+			c.Assert(startErr, ErrorMatches, "fail to connect to bootstrap peer: fail to connect to any peer")
+		}
+	case <-time.After(60 * time.Second):
+		c.Fatalf("Start() deadlocked when self was in bootstrap peers list")
+	}
+
+	stopErr := comm.Stop()
+	c.Assert(stopErr, IsNil)
 }

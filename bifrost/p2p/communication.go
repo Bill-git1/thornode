@@ -294,7 +294,10 @@ func (c *Communication) bootstrapConnectivityRequired() bool {
 		c.logger.Error().Err(err).Msg("fail to get bootstrap peers from config")
 		return true
 	}
-	return len(cfgBootstrapPeers) > 0
+	if len(cfgBootstrapPeers) == 0 {
+		return false
+	}
+	return !allowUnreachableConfiguredBootstrapPeers
 }
 
 func (c *Communication) bootStrapConnectivityCheck() error {
@@ -406,11 +409,10 @@ func (c *Communication) startChannel(privKeyBytes []byte) error {
 		if requireBootstrapConnectivity {
 			return fmt.Errorf("fail to connect to bootstrap peer: %w", connectionErr)
 		}
-		// If this node has no configured bootstrap peers and is only trying
-		// stale peers from address_book.seed, do not hard-fail startup. This
-		// lets the bootstrap bifrost come up after a simultaneous restart; the
-		// other bifrosts still fail-fast because they do have configured peers.
-		c.logger.Warn().Err(connectionErr).Msg("saved bootstrap peers unreachable at startup, continuing")
+		// Mocknet/simulation simultaneous restarts can temporarily make every
+		// configured bootstrap peer unreachable. Continue there so the HTTP
+		// /p2pid endpoint comes up and peers can later recover through DHT.
+		c.logger.Warn().Err(connectionErr).Msg("bootstrap peers unreachable at startup, continuing - will discover via DHT")
 	}
 
 	// We use a rendezvous point "meet me here" to announce our location.
@@ -421,7 +423,7 @@ func (c *Communication) startChannel(privKeyBytes []byte) error {
 		if requireBootstrapConnectivity {
 			return err
 		}
-		c.logger.Warn().Err(err).Msg("saved bootstrap connectivity check failed, continuing")
+		c.logger.Warn().Err(err).Msg("bootstrap connectivity check failed, continuing")
 	}
 
 	c.logger.Info().Msg("Successfully announced!")

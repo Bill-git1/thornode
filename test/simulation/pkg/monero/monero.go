@@ -286,7 +286,15 @@ func decodeResponse(resp *http.Response, out interface{}) error {
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		method := "<unknown>"
+		target := "<unknown>"
+		if resp.Request != nil {
+			method = resp.Request.Method
+			if resp.Request.URL != nil {
+				target = resp.Request.URL.Redacted()
+			}
+		}
+		return fmt.Errorf("http %d from %s %s: %s", resp.StatusCode, method, target, strings.TrimSpace(string(body)))
 	}
 	if out == nil {
 		return nil

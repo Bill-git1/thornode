@@ -1000,3 +1000,217 @@ func ParseMessages(data []byte) [][]byte {
 
 	return messages
 }
+
+// TestSendAttestationStateEmptyProtocolCorrect is a regression test for the
+// totalBatches==0 fallthrough bug in sendAttestationState.
+//
+// The existing TestSendAttestationStateEmpty uses AutoResponderStream which
+// always responds "ack_begin" to prefixBatchBegin regardless of totalBatches.
+// That hides the bug because the buggy code falls through and (eventually)
+// fails on a different check.
+//
+// In the real wire protocol, when the sender writes prefixBatchBegin with
+// totalBatches=0, the receiver replies with StreamMsgDone (see
+// receiveBatchedAttestationState). The pre-fix sender validated the "done"
+// ack but then fell through to the streamAckBegin check and logged a false
+// "unexpected response to batch begin" error. This test uses a stream that
+// responds protocol-correctly with "done" and verifies the sender exits
+// cleanly without sending additional batch messages and without the false
+// error.
+func TestSendAttestationStateEmptyProtocolCorrect(t *testing.T) {
+	originalApplyDeadline := p2p.ApplyDeadline.Load()
+	p2p.ApplyDeadline.Store(false)
+	defer func() { p2p.ApplyDeadline.Store(originalApplyDeadline) }()
+
+	ag, _, _, _, _, _ := setupTestGossip(t)
+
+	stream := newDoneResponderStream("test-peer")
+
+	done := make(chan struct{})
+	go func() {
+		ag.sendAttestationState(stream)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("sendAttestationState did not return after StreamMsgDone ack")
+	}
+
+	// Sender must have written exactly one prefixBatchBegin and nothing else
+	// (no header, no data, no end) - the empty-state path completes after the
+	// done ack.
+	messages := ParseMessages(stream.GetWrittenData())
+	require.NotEmpty(t, messages, "Should have written at least one message")
+
+	var beginCount, headerCount, dataCount, endCount int
+	for _, msg := range messages {
+		if len(msg) == 0 {
+			continue
+		}
+		switch {
+		case bytes.HasPrefix(msg, prefixBatchBegin):
+			beginCount++
+			totalBatches := int(binary.LittleEndian.Uint32(msg[1:5]))
+			assert.Equal(t, 0, totalBatches, "Empty state should encode totalBatches=0 on the wire")
+		case bytes.HasPrefix(msg, prefixBatchHeader):
+			headerCount++
+		case bytes.HasPrefix(msg, prefixBatchData):
+			dataCount++
+		case bytes.Equal(msg, prefixBatchEnd):
+			endCount++
+		}
+	}
+	assert.Equal(t, 1, beginCount, "Should write exactly one batch begin")
+	assert.Equal(t, 0, headerCount, "Should not write any batch header for empty state")
+	assert.Equal(t, 0, dataCount, "Should not write any batch data for empty state")
+	assert.Equal(t, 0, endCount, "Should not write batch end after a done ack")
+}
+
+// doneResponderStream is a MockStream that responds protocol-correctly to a
+// prefixBatchBegin with totalBatches=0 by replying with StreamMsgDone, instead
+// of always replying ack_begin like AutoResponderStream. Used to verify the
+// sender does not fall through to the ack_begin check after a valid done ack.
+type doneResponderStream struct {
+	MockStream
+	writtenData *bytes.Buffer
+	readData    chan []byte
+}
+
+func newDoneResponderStream(peer peer.ID) *doneResponderStream {
+	return &doneResponderStream{
+		MockStream: MockStream{
+			peer: peer,
+			mu:   new(sync.Mutex),
+		},
+		writtenData: &bytes.Buffer{},
+		readData:    make(chan []byte, 4),
+	}
+}
+
+func (s *doneResponderStream) Read(p []byte) (n int, err error) {
+	select {
+	case data := <-s.readData:
+		return copy(p, data), nil
+	case <-time.After(100 * time.Millisecond):
+		return 0, io.EOF
+	}
+}
+
+func (s *doneResponderStream) Write(p []byte) (n int, err error) {
+	n, err = s.writtenData.Write(p)
+	if err != nil {
+		return n, err
+	}
+	if len(p) < p2p.LengthHeader {
+		return n, nil
+	}
+	length := binary.LittleEndian.Uint32(p[:p2p.LengthHeader])
+	if len(p) < p2p.LengthHeader+int(length) {
+		return n, nil
+	}
+	message := p[p2p.LengthHeader : p2p.LengthHeader+int(length)]
+
+	// Only respond to prefixBatchBegin: reply with the protocol-correct
+	// StreamMsgDone if totalBatches==0, ack_begin otherwise.
+	if !bytes.HasPrefix(message, prefixBatchBegin) {
+		return n, nil
+	}
+	var resp []byte
+	totalBatches := uint32(0)
+	if len(message) >= 5 {
+		totalBatches = binary.LittleEndian.Uint32(message[1:5])
+	}
+	if totalBatches == 0 {
+		resp = []byte(p2p.StreamMsgDone)
+	} else {
+		resp = []byte("ack_begin")
+	}
+	respHeader := make([]byte, p2p.LengthHeader)
+	binary.LittleEndian.PutUint32(respHeader, uint32(len(resp)))
+	s.readData <- append(respHeader, resp...)
+	return n, nil
+}
+
+func (s *doneResponderStream) GetWrittenData() []byte {
+	return s.writtenData.Bytes()
+}
+
+// TestAskStreamForStateEmptyState is a regression test for the prefix-strip
+// bug in askStreamForState.
+//
+// Before the fix, askStreamForState passed the full initialData (including
+// the prefixBatchBegin byte) to receiveBatchedAttestationState, which then
+// read initialData[:4] as totalBatches and got garbage [0x02, b0, b1, b2]
+// instead of the real [b0, b1, b2, b3]. The bug was invisible whenever the
+// real totalBatches was non-zero (the receiver loop terminates on
+// prefixBatchEnd, not on a counter), so existing send/receive tests with
+// non-empty state didn't catch it. It only manifested in the empty-state
+// case: real totalBatches=0 was misread as 2, the receiver sent ack_begin
+// instead of done, and the sender errored.
+//
+// This test exercises the full ask/handle wire flow with an EMPTY sender
+// state and verifies both sides complete cleanly.
+func TestAskStreamForStateEmptyState(t *testing.T) {
+	originalApplyDeadline := p2p.ApplyDeadline.Load()
+	p2p.ApplyDeadline.Store(false)
+	defer func() { p2p.ApplyDeadline.Store(originalApplyDeadline) }()
+
+	agSender, _, _, _, _, _ := setupTestGossip(t)
+	agReceiver, _, _, _, _, _ := setupTestGossip(t)
+
+	// Authorize the receiver to ask agSender for state.
+	agSender.stateInitMu.Lock()
+	agSender.stateInitPeers = map[peer.ID]bool{agReceiver.host.ID(): true}
+	agSender.stateInitMu.Unlock()
+
+	// Buffered stream pair: what one writes the other reads.
+	senderReader := bytes.NewBuffer(nil)
+	senderWriter := &bytes.Buffer{}
+	receiverReader := senderWriter
+	receiverWriter := senderReader
+
+	var sharedMu sync.Mutex
+	receiverStream := &MockStream{
+		reader: receiverReader,
+		writer: receiverWriter,
+		peer:   agSender.host.ID(),
+		mu:     &sharedMu,
+	}
+	senderStream := &MockStream{
+		reader: senderReader,
+		writer: senderWriter,
+		peer:   agReceiver.host.ID(),
+		mu:     &sharedMu,
+	}
+
+	done := make(chan struct{})
+	go func() {
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			agSender.handleStreamAttestationState(senderStream)
+		}()
+		go func() {
+			defer wg.Done()
+			agReceiver.askStreamForState(receiverStream)
+		}()
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ask/handle did not complete on empty state - totalBatches=0 wire path is wedged")
+	}
+
+	// Receiver should not have populated any observed txs (sender was empty).
+	agReceiver.mu.Lock()
+	defer agReceiver.mu.Unlock()
+	assert.Equal(t, 0, len(agReceiver.observedTxs), "receiver should have no txs after empty-state init")
+	assert.Equal(t, 0, len(agReceiver.networkFees), "receiver should have no network fees after empty-state init")
+	assert.Equal(t, 0, len(agReceiver.solvencies), "receiver should have no solvencies after empty-state init")
+}
