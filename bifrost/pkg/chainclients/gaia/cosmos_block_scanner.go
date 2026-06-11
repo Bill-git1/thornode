@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/btcsuite/btcutil/bech32"
+	abcitypes "github.com/cometbft/cometbft/abci/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -412,12 +414,16 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 		txInItems := []*types.TxInItem{}
 		stop := false
 
-		for _, message := range tx.GetMsgs() {
+		for msgIndex, message := range tx.GetMsgs() {
 			coins := common.Coins{}
 			var fromAddress, toAddress string
 
 			switch msg := message.(type) {
 			case *ibcchanneltypes.MsgRecvPacket:
+				if !isIBCMessageSuccessful(blockResults.TxsResults[i].Events, msgIndex) {
+					continue
+				}
+
 				var packetData ibctransfertypes.FungibleTokenPacketData
 				err = json.Unmarshal(msg.Packet.Data, &packetData)
 				if err != nil {
@@ -583,6 +589,32 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 	}
 
 	return txIn, nil
+}
+
+func isIBCMessageSuccessful(events []abcitypes.Event, msgIndex int) bool {
+	expectedMsgIndex := strconv.Itoa(msgIndex)
+
+	for _, event := range events {
+		if event.Type != ibctransfertypes.EventTypePacket {
+			continue
+		}
+
+		msgIndexMatches := false
+		success := false
+		for _, attr := range event.Attributes {
+			switch attr.Key {
+			case "msg_index":
+				msgIndexMatches = attr.Value == expectedMsgIndex
+			case ibctransfertypes.AttributeKeyAckSuccess:
+				success = strings.EqualFold(attr.Value, "true")
+			}
+		}
+		if msgIndexMatches && success {
+			return true
+		}
+	}
+
+	return false
 }
 
 // getTxInFromFailedTransaction checks whether a failed on-chain transaction was an

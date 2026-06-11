@@ -1,11 +1,15 @@
 package gaia
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
+	ctypesrpc "github.com/cometbft/cometbft/rpc/core/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	ibccoreeventtypes "github.com/cosmos/ibc-go/v8/modules/core/types"
 	ibclightclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 
 	sdkmath "cosmossdk.io/math"
@@ -79,6 +83,47 @@ type BlockScannerTestSuite struct {
 }
 
 var _ = Suite(&BlockScannerTestSuite{})
+
+type mockTendermintRPCWithFailedSecondIBCReceive struct {
+	mockTendermintRPC
+}
+
+func (m *mockTendermintRPCWithFailedSecondIBCReceive) BlockResults(ctx context.Context, height *int64) (*ctypesrpc.ResultBlockResults, error) {
+	results, err := m.mockTendermintRPC.BlockResults(ctx, height)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, txResult := range results.TxsResults {
+		for eventIndex := range txResult.Events {
+			event := &txResult.Events[eventIndex]
+			if event.Type != ibctransfertypes.EventTypePacket {
+				continue
+			}
+
+			matchesSecondMessage := false
+			for _, attr := range event.Attributes {
+				if attr.Key == "msg_index" && attr.Value == "2" {
+					matchesSecondMessage = true
+					break
+				}
+			}
+			if !matchesSecondMessage {
+				continue
+			}
+
+			event.Type = ibccoreeventtypes.ErrorAttributeKeyPrefix + event.Type
+			for attrIndex := range event.Attributes {
+				if event.Attributes[attrIndex].Key == ibctransfertypes.AttributeKeyAckSuccess {
+					event.Attributes[attrIndex].Value = "false"
+				}
+				event.Attributes[attrIndex].Key = ibccoreeventtypes.ErrorAttributeKeyPrefix + event.Attributes[attrIndex].Key
+			}
+		}
+	}
+
+	return results, nil
+}
 
 func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 	s.m = GetMetricForTest(c)
@@ -286,4 +331,37 @@ func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
 	c.Assert(len(txInItems), Equals, 1)
 
 	c.Assert(txInItems[0].Tx, Equals, "d1490eb0303aa7f4612f46826230b14102ab6d3ee77645c3710ed53be31ad230")
+}
+
+func (s *BlockScannerTestSuite) TestProcessTxsIgnoresFailedIBCPacketAcknowledgements(c *C) {
+	cfg := config.BifrostBlockScannerConfiguration{
+		ChainID: common.GAIAChain,
+		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
+			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
+			{Denom: "ibc/5DB84693CB3F67A2D25D133C177B06786F423D6D1AFF2B8E080F0753B2E4D585", Decimals: 6, THORChainSymbol: "NTRN"},
+		},
+	}
+	registry := s.bridge.GetContext().InterfaceRegistry
+	btypes.RegisterInterfaces(registry)
+	ibcchanneltypes.RegisterInterfaces(registry)
+	ibccoretypes.RegisterInterfaces(registry)
+	ibclightclient.RegisterInterfaces(registry)
+
+	cdc := codec.NewProtoCodec(registry)
+
+	blockScanner := CosmosBlockScanner{
+		cfg:    cfg,
+		rpc:    &mockTendermintRPCWithFailedSecondIBCReceive{},
+		cdc:    cdc,
+		logger: log.Logger.With().Str("module", "blockscanner").Str("chain", common.GAIAChain.String()).Logger(),
+	}
+
+	block, err := blockScanner.GetBlock(11350935)
+	c.Assert(err, IsNil)
+
+	txInItems, err := blockScanner.processTxs(11350935, block.Data.Txs)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(txInItems), Equals, 1)
+	c.Assert(txInItems[0].Tx, Equals, "17471479c1cb868818dfdfde25711f13ec448ffe08893cb47b4c7b60b1429b25")
 }
