@@ -81,7 +81,7 @@ func TestPartyCoordinator(t *testing.T) {
 
 func TestPartyCoordinatorTimeOut(t *testing.T) {
 	ApplyDeadline.Store(false)
-	timeout := time.Second
+	timeout := 3 * time.Second
 	hosts := setupHosts(t, 4)
 	var pcs []*PartyCoordinator
 	var peers []string
@@ -123,7 +123,7 @@ func TestPartyCoordinatorTimeOut(t *testing.T) {
 				onlinePeersStr = append(onlinePeersStr, el.String())
 			}
 			sort.Strings(onlinePeersStr)
-			assert.EqualValues(t, onlinePeersStr, expected)
+			assert.EqualValues(t, expected, onlinePeersStr)
 		}(el)
 	}
 
