@@ -84,6 +84,11 @@ bifrost:
     # attribution wins over outer ctx-cancellation.
     keyverify_round_timeout: 2m
     keyverify_per_vault_timeout: 3m
+    # set true to disable the keyverify scheduler entirely (stops the
+    # every-100-blocks TSS re-attestation load; inbound keyverify streams
+    # from peers that still run it are swept by a background timer). Can also
+    # be set via BIFROST_SIGNER_KEYVERIFY_DISABLED without a release cut.
+    keyverify_disabled: false
   tss:
     rendezvous: asgard
     p2p_port: 5040

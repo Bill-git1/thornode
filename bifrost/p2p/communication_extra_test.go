@@ -100,6 +100,27 @@ func TestReleaseStream(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestReleaseStreamsByPrefix(t *testing.T) {
+	comm, err := NewCommunication(&Config{Port: 7796, RendezvousString: "test"}, nil, nil)
+	assert.NoError(t, err)
+
+	comm.streamMgr.AddStream("keyverify-pk1-100", NewMockNetworkStream())
+	comm.streamMgr.AddStream("keyverify-pk1-100", NewMockNetworkStream())
+	comm.streamMgr.AddStream("keyverify-pk2-200", NewMockNetworkStream())
+	comm.streamMgr.AddStream(StreamUnknown, NewMockNetworkStream())
+	// Keygen/keysign-style hex msgIDs must survive the sweep — resetting a
+	// parked outbound stream races the remote peer's read of its payload.
+	comm.streamMgr.AddStream("deadbeef", NewMockNetworkStream())
+	comm.ReleaseStreamsByPrefix("keyverify-")
+
+	assert.Len(t, comm.streamMgr.unusedStreams, 1)
+	assert.Contains(t, comm.streamMgr.unusedStreams, "deadbeef")
+
+	// Idempotent when nothing matches.
+	comm.ReleaseStreamsByPrefix("keyverify-")
+	assert.Len(t, comm.streamMgr.unusedStreams, 1)
+}
+
 func TestGetPeersWithNoStateManager(t *testing.T) {
 	comm, err := NewCommunication(&Config{
 		Port:             7793,

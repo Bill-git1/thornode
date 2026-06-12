@@ -15,7 +15,7 @@ import (
 func TestHandler_Empty(t *testing.T) {
 	store := NewMarkerStore(t.TempDir())
 	rr := httptest.NewRecorder()
-	Handler(store, zerolog.Nop())(rr, httptest.NewRequest(http.MethodGet, "/status/keyverify", nil))
+	Handler(store, zerolog.Nop(), false)(rr, httptest.NewRequest(http.MethodGet, "/status/keyverify", nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want 200", rr.Code)
 	}
@@ -26,6 +26,29 @@ func TestHandler_Empty(t *testing.T) {
 	}
 	if len(got) != 0 {
 		t.Fatalf("expected empty array, got %d entries", len(got))
+	}
+	if h := rr.Header().Get("X-Keyverify-Disabled"); h != "" {
+		t.Fatalf("X-Keyverify-Disabled header set when enabled: %q", h)
+	}
+}
+
+// TestHandler_DisabledHeader pins the non-breaking disabled signal: when the
+// scheduler is off the body is still a normal (here empty) array, but the
+// X-Keyverify-Disabled header lets an operator confirm it's disabled rather
+// than merely idle.
+func TestHandler_DisabledHeader(t *testing.T) {
+	store := NewMarkerStore(t.TempDir())
+	rr := httptest.NewRecorder()
+	Handler(store, zerolog.Nop(), true)(rr, httptest.NewRequest(http.MethodGet, "/status/keyverify", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want 200", rr.Code)
+	}
+	if h := rr.Header().Get("X-Keyverify-Disabled"); h != "true" {
+		t.Fatalf("X-Keyverify-Disabled: got %q, want \"true\"", h)
+	}
+	var got []VaultStatus
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatalf("body must remain a valid VaultStatus array: %v", err)
 	}
 }
 
@@ -47,7 +70,7 @@ func TestHandler_MixedSuccessFailurePending(t *testing.T) {
 	store.SetExpected([]string{pkVerified, pkFailed, pkPending})
 
 	rr := httptest.NewRecorder()
-	Handler(store, zerolog.Nop())(rr, httptest.NewRequest(http.MethodGet, "/status/keyverify", nil))
+	Handler(store, zerolog.Nop(), false)(rr, httptest.NewRequest(http.MethodGet, "/status/keyverify", nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want 200", rr.Code)
 	}

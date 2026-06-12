@@ -10,6 +10,7 @@ import (
 	"sort"    // TEMP: keyverify
 	"strconv" // TEMP: keyverify
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -204,7 +205,7 @@ func main() {
 	tssKeysignMetricMgr := metrics.NewTssKeysignMetricMgr()
 	// TEMP: keyverify
 	keyverifyMarkers := keyverify.NewMarkerStore(app.DefaultNodeHome)
-	healthServer := NewHealthServer(cfg.TSS.InfoAddress, tssIns, chains, keyverifyMarkers) // TEMP: keyverify (markerStore param)
+	healthServer := NewHealthServer(cfg.TSS.InfoAddress, tssIns, chains, keyverifyMarkers, cfg.Signer.KeyverifyDisabled) // TEMP: keyverify (markerStore, disabled params)
 	go func() {
 		defer log.Info().Msg("health server exit")
 		if err = healthServer.Start(); err != nil {
@@ -215,10 +216,10 @@ func main() {
 	// TEMP: keyverify — scheduler block; remove as a unit with the keyverify rollout.
 	// Cancel is invoked explicitly in the graceful-shutdown path below; we avoid
 	// defer because subsequent log.Fatal calls would skip it (gocritic exitAfterDefer).
-	// keyverifyDone is closed by the scheduler goroutine on return so shutdown
-	// can wait for any in-flight Verify (which is still using tssIns.GetP2PComm
-	// and comm.CancelSubscribe via deferred cleanup) to finish before
-	// tssIns.Stop() tears down the comm/host underneath it.
+	// keyverifyDone is closed once all keyverify background goroutines return,
+	// so shutdown can wait for any in-flight Verify (which is still using
+	// tssIns.GetP2PComm and comm.CancelSubscribe via deferred cleanup) to
+	// finish before tssIns.Stop() tears down the comm/host underneath it.
 	//
 	// keyverifyStopChan is the out-of-band exit signal passed to every
 	// LiveVerifier-built TssKeyVerify; processVerify selects on it as an
@@ -228,7 +229,48 @@ func main() {
 	keyverifyCtx, keyverifyCancel := context.WithCancel(context.Background())
 	keyverifyDone := make(chan struct{})
 	keyverifyStopChan := make(chan struct{})
-	{
+	var keyverifyWG sync.WaitGroup
+
+	// Sweep keyverify-msgID parked p2p streams on every node. Disabled nodes
+	// need this because they never run a local Verify for inbound keyverify
+	// msgIDs. Enabled nodes also need it after a vault is locally marked .ok:
+	// the scheduler skips that vault, but peers that are still failing it can
+	// keep broadcasting keyverify attempts under new window msgIDs that no
+	// local Verify will release. The sweep is scoped to keyverify.MsgIDPrefix
+	// (plus StreamUnknown) so it can never reset a keygen/keysign/FROST
+	// stream whose payload the remote peer has not finished reading — Reset
+	// is abortive and discards the peer's buffered-but-unread data. The same
+	// race against an in-flight keyverify attempt's own streams remains and
+	// is accepted: worst case is one spurious attempt failure, retried next
+	// window.
+	log.Info().Msg("starting keyverify parked-stream sweeper")
+	keyverifyWG.Add(1)
+	go func() {
+		defer keyverifyWG.Done()
+		defer log.Info().Msg("keyverify parked-stream sweeper exit")
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-keyverifyCtx.Done():
+				return
+			case <-ticker.C:
+				comm.ReleaseStreamsByPrefix(keyverify.MsgIDPrefix)
+			}
+		}
+	}()
+
+	if cfg.Signer.KeyverifyDisabled {
+		// Operator opted out: never start the scheduler. Peers still fan
+		// keyverify messages out to the on-chain vault membership (there is no
+		// opt-in handshake), and the unconditional sweeper above releases those
+		// parked inbound streams.
+		//
+		// keyverifyCancel() in the shutdown sequence stops the sweeper;
+		// close(keyverifyStopChan) remains a harmless no-op (nothing receives
+		// on it in this branch).
+		log.Info().Msg("keyverify scheduler disabled by config (keyverify_disabled)")
+	} else {
 		localNodePubKey := tssIns.GetLocalNodePubKey()
 		live := keyverify.NewLiveVerifier(
 			tssIns.GetP2PComm(),
@@ -314,12 +356,17 @@ func main() {
 			extractTimeoutCulprits,
 			cfg.Signer.KeyverifyPerVaultTimeout,
 		)
+		keyverifyWG.Add(1)
 		go func() {
-			defer close(keyverifyDone)
+			defer keyverifyWG.Done()
 			defer log.Info().Msg("keyverify scheduler exit")
 			sched.Start(keyverifyCtx)
 		}()
 	}
+	go func() {
+		keyverifyWG.Wait()
+		close(keyverifyDone)
+	}()
 
 	ctx := context.Background()
 

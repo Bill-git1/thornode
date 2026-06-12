@@ -767,6 +767,14 @@ type BifrostSignerConfiguration struct {
 	// vault verify attempt. Sized as KeyverifyRoundTimeout + slack for
 	// stagger and teardown.
 	KeyverifyPerVaultTimeout time.Duration `mapstructure:"keyverify_per_vault_timeout"`
+	// KeyverifyDisabled lets an operator turn the keyverify scheduler off
+	// entirely so it stops generating its every-100-blocks TSS load. Default
+	// (false) preserves the current always-on behavior; absent from an older
+	// config it also decodes to false, so existing nodes are unaffected.
+	// Disabled nodes still receive keyverify traffic from enabled peers; a
+	// background sweeper releases those parked streams so they don't
+	// accumulate.
+	KeyverifyDisabled bool `mapstructure:"keyverify_disabled"`
 }
 
 type BifrostAttestationGossipConfig struct {

@@ -21,6 +21,7 @@ type recordingComm struct {
 	mu         sync.Mutex
 	subscribes []subscribeCall
 	cancels    []cancelCall
+	releases   []string
 }
 
 type subscribeCall struct {
@@ -46,6 +47,12 @@ func (r *recordingComm) CancelSubscribe(topic messages.THORChainTSSMessageType, 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.cancels = append(r.cancels, cancelCall{topic, msgID})
+}
+
+func (r *recordingComm) ReleaseStream(msgID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.releases = append(r.releases, msgID)
 }
 
 func (r *recordingComm) subscribeCount() int {
@@ -163,6 +170,12 @@ func TestLiveVerifier_SubscribesAllFourTopicsBeforeSleep(t *testing.T) {
 		if !gotCancelTopics[want] {
 			t.Errorf("missing CancelSubscribe for topic %v", want)
 		}
+	}
+
+	// (3b) The attempt's parked streams are released exactly once — without
+	// this every attempt permanently leaks its libp2p streams.
+	if len(rc.releases) != 1 || rc.releases[0] != wantMsgID {
+		t.Errorf("ReleaseStream calls = %v, want exactly one with %q", rc.releases, wantMsgID)
 	}
 
 	// (4) VerifyKey was actually invoked with the expected request.

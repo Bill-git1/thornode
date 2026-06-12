@@ -15,6 +15,12 @@ import (
 	kvecdsa "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keyverify/ecdsa"
 )
 
+// MsgIDPrefix prefixes every keyverify attempt msgID (see Verify). The
+// parked-stream sweeper in cmd/bifrost releases p2p streams by this prefix,
+// so it must stay in sync with the msgID format below. Keygen/keysign msgIDs
+// are hex hashes and can never collide with it.
+const MsgIDPrefix = "keyverify-"
+
 // Verifier runs one keyverify round for a single vault. Implementations are
 // expected to load the local keyshare for pubKey, run tss-lib keyverify with
 // the given member pubkeys, and return:
@@ -39,6 +45,7 @@ type commSubscriber interface {
 	GetLocalPeerID() string
 	SetSubscribe(topic messages.THORChainTSSMessageType, msgID string, channel chan *p2p.Message)
 	CancelSubscribe(topic messages.THORChainTSSMessageType, msgID string)
+	ReleaseStream(msgID string)
 }
 
 // LiveVerifier is the production Verifier that drives the go-tss keyverify wrapper.
@@ -113,9 +120,19 @@ func (lv *LiveVerifier) Verify(ctx context.Context, pubKey string, members []str
 	if h, ok := ctx.Value(ctxKeyHeight{}).(int64); ok {
 		height = h
 	}
-	msgID := fmt.Sprintf("keyverify-%s-%d", pubKey, height)
+	msgID := fmt.Sprintf("%s%s-%d", MsgIDPrefix, pubKey, height)
 
 	tkv := lv.newTssKeyVerify(msgID)
+
+	// Release the per-attempt streams parked under this msgID once the
+	// attempt ends. Every TSS message opens a new libp2p stream per peer on
+	// the sender and parks one on the receiver (StreamMgr.AddStream), and
+	// ReleaseStream is the only cleanup — keygen/keysign do the same
+	// (tss/keygen.go, tss/keysign.go). Without this, every attempt
+	// permanently leaks all its streams (quadratic in members via the
+	// confirm fan-out). Declared first so it runs after the CancelSubscribe
+	// defers below.
+	defer lv.comm.ReleaseStream(msgID)
 
 	// Subscribe inbound channels for this msgID across all topics keyverify uses.
 	// Both TSSKeyVerifyMsg (round data) and TSSKeyVerifyVerMsg (broadcast hash

@@ -11,7 +11,12 @@ import (
 // Handler returns an http.HandlerFunc serving GET /status/keyverify.
 // Response body: JSON array of VaultStatus, one per pubkey that has been
 // attempted (no entry for vaults with neither .ok nor .fail).
-func Handler(store *MarkerStore, logger zerolog.Logger) http.HandlerFunc {
+//
+// When disabled is true the scheduler is not running, so the body would be
+// indistinguishable from "enabled but nothing attempted yet" (empty array or
+// stale markers). The X-Keyverify-Disabled response header makes the disabled
+// state observable without changing the body shape existing consumers parse.
+func Handler(store *MarkerStore, logger zerolog.Logger, disabled bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		statuses, err := store.List()
 		if err != nil {
@@ -29,6 +34,9 @@ func Handler(store *MarkerStore, logger zerolog.Logger) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
+		if disabled {
+			w.Header().Set("X-Keyverify-Disabled", "true")
+		}
 		if _, err := w.Write(buf); err != nil {
 			logger.Error().Err(err).Msg("keyverify: write response")
 		}
