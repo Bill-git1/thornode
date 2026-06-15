@@ -23,8 +23,8 @@ var (
 
 	metricCulprit = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "tss_keyverify_culprit_total",
-		Help: "tss-lib keyverify culprit blame counts, labeled by vault pubkey and culprit pubkey",
-	}, []string{"pubkey", "culprit_pubkey"})
+		Help: "tss-lib keyverify culprit blame counts, labeled by vault pubkey, culprit pubkey, and the blamed round (the reporter's last produced round; \"none\" when unknown)",
+	}, []string{"pubkey", "culprit_pubkey", "round"})
 
 	metricDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "tss_keyverify_duration_seconds",

@@ -767,6 +767,13 @@ type BifrostSignerConfiguration struct {
 	// vault verify attempt. Sized as KeyverifyRoundTimeout + slack for
 	// stagger and teardown.
 	KeyverifyPerVaultTimeout time.Duration `mapstructure:"keyverify_per_vault_timeout"`
+	// KeyverifyRetryInterval — cadence of the per-attempt recovery ticker
+	// (unicast re-send, confirm re-broadcast, share re-request). Zero falls
+	// back to DefaultKeyverifyRetryInterval (5s) in go-tss/keyverify/ecdsa.
+	KeyverifyRetryInterval time.Duration `mapstructure:"keyverify_retry_interval"`
+	// KeyverifyMaxRetries — per-artifact cap on recovery re-sends within one
+	// attempt. Zero falls back to DefaultKeyverifyMaxRetries (3).
+	KeyverifyMaxRetries int `mapstructure:"keyverify_max_retries"`
 	// KeyverifyDisabled lets an operator turn the keyverify scheduler off
 	// entirely so it stops generating its every-100-blocks TSS load. Default
 	// (false) preserves the current always-on behavior; absent from an older

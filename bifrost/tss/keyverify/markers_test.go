@@ -316,3 +316,79 @@ func TestMarkerStore_SetExpected_EmptyClearsPending(t *testing.T) {
 		t.Fatalf("after SetExpected(nil): want 0 entries, got %d", len(got))
 	}
 }
+
+// TestMarkerStore_OldFormatFailFileDecodes pins the schema-evolution rule on
+// FailureRecord: a .fail file written by a pre-CulpritDetails release (string
+// culprits, none of the new fields) must keep decoding, with the new fields
+// zero-valued. A type change to Culprits would make List() drop the file.
+func TestMarkerStore_OldFormatFailFileDecodes(t *testing.T) {
+	dir := t.TempDir()
+	s := NewMarkerStore(dir)
+	oldJSON := `{
+  "pubkey": "` + testPubKey + `",
+  "height": 12345600,
+  "attempted_at": "2025-06-01T00:00:00Z",
+  "kind": "timeout",
+  "error": "TSS timeout: non-participating peers: [thorpub1x]",
+  "culprits": ["thorpub1x", "thorpub1y"]
+}`
+	if err := os.WriteFile(filepath.Join(dir, "keyverify-"+testPubKey+".fail"), []byte(oldJSON), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Failure == nil {
+		t.Fatalf("old-format .fail did not decode: %+v", got)
+	}
+	f := got[0].Failure
+	if len(f.Culprits) != 2 || f.Culprits[0] != "thorpub1x" {
+		t.Fatalf("culprits mis-decoded: %v", f.Culprits)
+	}
+	if f.ReporterPubKey != "" || f.LocalRound != "" || f.CulpritDetails != nil {
+		t.Fatalf("new fields must be zero for old records, got reporter=%q localRound=%q details=%v",
+			f.ReporterPubKey, f.LocalRound, f.CulpritDetails)
+	}
+}
+
+func TestMarkerStore_FailureRecordWithDetailsRoundtrips(t *testing.T) {
+	dir := t.TempDir()
+	s := NewMarkerStore(dir)
+	seen := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
+	rec := FailureRecord{
+		PubKey:         testPubKey,
+		Height:         12345600,
+		AttemptedAt:    seen,
+		Kind:           "timeout",
+		Error:          "TSS timeout",
+		Culprits:       []string{"thorpub1x"},
+		ReporterPubKey: "thorpub1reporter",
+		LocalRound:     "KVRound2Message2",
+		CulpritDetails: []Culprit{{
+			PubKey:            "thorpub1x",
+			LastAcceptedRound: "KVRound1Message",
+			LastWireRound:     "KVRound2Message2",
+			LastSeenAt:        seen,
+			SharesAccepted:    1,
+			SharesExpected:    4,
+		}},
+	}
+	if err := s.WriteFailure(rec); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Failure == nil {
+		t.Fatalf("List: %+v", got)
+	}
+	f := got[0].Failure
+	if f.ReporterPubKey != rec.ReporterPubKey || f.LocalRound != rec.LocalRound {
+		t.Fatalf("reporter/localRound mismatch: %+v", f)
+	}
+	if len(f.CulpritDetails) != 1 || f.CulpritDetails[0] != rec.CulpritDetails[0] {
+		t.Fatalf("culprit details mismatch: %+v vs %+v", f.CulpritDetails, rec.CulpritDetails)
+	}
+}

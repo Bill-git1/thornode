@@ -12,8 +12,13 @@ To rip it out:
    - `bifrost/p2p/messages/p2p_message.go` — `TSSKeyVerifyMsg` and `TSSKeyVerifyVerMsg` consts + `String()` cases
    - `bifrost/p2p/messages/p2p_message_test.go` — table entries
    - `bifrost/p2p/messages/TssPhaseMessages.go` — `KEYVERIFY1`, `KEYVERIFY2a`, `KEYVERIFY2b`, `KEYVERIFY3` constants
-   - `bifrost/tss/go-tss/common/tss.go` — keyverify branches in the 4 dispatch switches
+   - `bifrost/tss/go-tss/common/tss.go` — keyverify branches in the 4 dispatch switches, the recovery hooks (sent-message retention in `sendBulkMsg`, wire-receipt + duplicate-drop guard in `processTSSMsg`, recovered-note in `applyShare`), and the `kvRecovery` struct field
+   - `bifrost/tss/go-tss/common/keyverify_recovery.go` + `keyverify_recovery_test.go` — delete whole files (recovery ticker state/actions)
+   - `bifrost/tss/go-tss/common/local_cache_item.go` — `snapshotMsgAndConfirms`, plus the keyverify-gated `Msg`-write locking in `tss.go` it pairs with (`applyShare` not-majority branch, `processTSSMsg` confirm-first branch) — revert both sites to the plain writes
+   - `bifrost/tss/go-tss/common/types.go` — `KeyverifyRetryInterval`, `KeyverifyMaxRetries` config fields
    - `bifrost/tss/go-tss/common/tss_helper.go` — keyverify import + 4 `GetMsgRound` cases
+   - `bifrost/tss/go-tss/blame/manager.go` — `GetAcceptedSharesSnapshot`
+   - `config/config.go` + `config/default.yaml` — `keyverify_*` knobs (timeouts, retry interval, max retries)
    - `bifrost/tss/go-tss/tss/server.go` — `GetP2PComm`, `GetBroadcastChan`, `GetLocalNodePubKey` methods
    - `bifrost/tss/go-tss/tss/tss.go` — concrete impls of the above
    - `bifrost/tss/go-tss/cmd/tss/mock_tss_server.go` — mock stubs
@@ -30,8 +35,12 @@ To rip it out:
 - On any multiple-of-100 block, ran the tss-lib `keyverify` 4-round ECDSA
   subprotocol against every active ECDSA asgard vault this node was a member
   of, until each vault produced a `<home>/keyverify-<pubkey>.ok` marker.
-- Failure attempts wrote a `<home>/keyverify-<pubkey>.fail` JSON with culprits.
+- Failure attempts wrote a `<home>/keyverify-<pubkey>.fail` JSON with culprits
+  (plus reporter pubkey, local round, and per-culprit round/receipt detail).
 - Exposed `GET /status/keyverify` on the bifrost health server.
+- Ran a per-attempt recovery ticker re-sending dropped round messages,
+  hash-confirms, and share re-requests (metrics `tss_keyverify_retry_total`,
+  `tss_keyverify_recovered_total`; see DESIGN_retry_and_blame_visibility.md).
 
 ## On-disk artifacts left behind after removal
 

@@ -25,6 +25,14 @@ type TssConfig struct {
 	// coordination over the public-internet hop exceeds the keygen budget).
 	// Zero falls back to DefaultKeyverifyRoundTimeout in the ecdsa package.
 	KeyverifyRoundTimeout time.Duration
+	// KeyverifyRetryInterval is the cadence of the keyverify per-attempt
+	// recovery ticker. Zero falls back to DefaultKeyverifyRetryInterval in
+	// the keyverify/ecdsa package. TEMP: keyverify.
+	KeyverifyRetryInterval time.Duration
+	// KeyverifyMaxRetries caps recovery re-sends per artifact within one
+	// keyverify attempt. Zero falls back to DefaultKeyverifyMaxRetries.
+	// TEMP: keyverify.
+	KeyverifyMaxRetries int
 	// enable the tss monitor
 	EnableMonitor bool
 }

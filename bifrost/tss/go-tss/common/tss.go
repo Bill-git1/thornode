@@ -51,6 +51,9 @@ type TssCommon struct {
 	cachedWireBroadcastMsgLists *sync.Map
 	cachedWireUnicastMsgLists   *sync.Map
 	msgNum                      int
+	// kvRecovery holds keyverify recovery-ticker state; nil for keygen and
+	// keysign instances. Guarded by unConfirmedMsgLock. TEMP: keyverify.
+	kvRecovery *keyverifyRecovery
 }
 
 func NewTssCommon(peerID string, broadcastChannel chan *messages.BroadcastMsgChan, conf TssConfig, msgID string, privKey tcrypto.PrivKey, msgNum int) *TssCommon {
@@ -495,10 +498,14 @@ func (t *TssCommon) sendBulkMsg(wiredMsgType string, tssMsgType messages.THORCha
 			peerIDs = append(peerIDs, peerID)
 		}
 	}
-	t.renderToP2P(&messages.BroadcastMsgChan{
+	outMsg := &messages.BroadcastMsgChan{
 		WrappedMessage: wrappedMsg,
 		PeersID:        peerIDs,
-	})
+	}
+	t.renderToP2P(outMsg)
+	if tssMsgType == messages.TSSKeyVerifyMsg { // TEMP: keyverify — retain for recovery re-send
+		t.recordKeyverifySent(outMsg, r.IsBroadcast)
+	}
 
 	return nil
 }
@@ -578,7 +585,16 @@ func (t *TssCommon) applyShare(localCacheItem *LocalCacheItem, threshold int, ke
 		}
 		if errors.Is(err, blame.ErrNotMajority) {
 			t.logger.Error().Err(err).Msg("we send request to get the message match with majority")
-			localCacheItem.Msg = nil
+			// TEMP: keyverify — Msg writes hold the item lock so the recovery
+			// ticker's snapshot reads are race-free. Keygen/keysign instances
+			// never run the ticker and keep the original lock-free write.
+			if msgType == messages.TSSKeyVerifyMsg || msgType == messages.TSSKeyVerifyVerMsg {
+				localCacheItem.lock.Lock()
+				localCacheItem.Msg = nil
+				localCacheItem.lock.Unlock()
+			} else {
+				localCacheItem.Msg = nil
+			}
 			return t.requestShareFromPeer(localCacheItem, threshold, key, msgType)
 		}
 
@@ -600,6 +616,9 @@ func (t *TssCommon) applyShare(localCacheItem *LocalCacheItem, threshold int, ke
 	t.logger.Debug().Msgf("remove key: %s", key)
 	// the information had been confirmed by all party , we don't need it anymore
 	t.removeKey(key)
+	if msgType == messages.TSSKeyVerifyMsg || msgType == messages.TSSKeyVerifyVerMsg { // TEMP: keyverify
+		t.noteKeyverifyRecovered(key, localCacheItem.Msg.RoundInfo)
+	}
 	return nil
 }
 
@@ -763,10 +782,25 @@ func (t *TssCommon) processTSSMsg(wireMsg *messages.WireMessage, msgType message
 		return errors.New("signature verify failed")
 	}
 
+	if msgType == messages.TSSKeyVerifyMsg { // TEMP: keyverify — wire-level receipt for blame visibility
+		t.recordKeyverifyWireReceipt(wireMsg.Routing.From.Id, wireMsg.RoundInfo)
+	}
+
 	// for the unicast message, we only update it local party
 	if !wireMsg.Routing.IsBroadcast {
 		t.logger.Debug().Msgf("msg from %s to %+v", wireMsg.Routing.From, wireMsg.Routing.To)
 		return t.updateLocal(wireMsg)
+	}
+
+	// TEMP: keyverify — a re-received broadcast we already accepted would
+	// otherwise recreate a fresh cache item (the original was removed on
+	// acceptance) and re-trigger an N-2 confirm fan-out. Recovery re-sends
+	// (design Part A, action d) make such duplicates routine; drop them.
+	if msgType == messages.TSSKeyVerifyMsg {
+		if t.blameMgr.GetRoundMgr().Get(wireMsg.GetCacheKey()) != nil {
+			t.logger.Debug().Msgf("keyverify: drop duplicate of accepted broadcast %s", wireMsg.GetCacheKey())
+			return nil
+		}
 	}
 
 	// if not received the broadcast message , we save a copy locally , and then tell all others what we got
@@ -791,10 +825,20 @@ func (t *TssCommon) processTSSMsg(wireMsg *messages.WireMessage, msgType message
 	} else {
 		// this means we received the broadcast confirm message from other party first
 		t.logger.Debug().Msgf("==%s exist", key)
+		// TEMP: keyverify — Msg writes hold the item lock so the recovery
+		// ticker's snapshot reads are race-free. Keygen/keysign instances
+		// never run the ticker and keep the original lock-free path.
+		kvLock := msgType == messages.TSSKeyVerifyMsg
+		if kvLock {
+			localCacheItem.lock.Lock()
+		}
 		if localCacheItem.Msg == nil {
 			t.logger.Debug().Msgf("==%s exist, set message", key)
 			localCacheItem.Msg = wireMsg
 			localCacheItem.Hash = msgHash
+		}
+		if kvLock {
+			localCacheItem.lock.Unlock()
 		}
 	}
 	localCacheItem.UpdateConfirmList(t.localPeerID, msgHash)

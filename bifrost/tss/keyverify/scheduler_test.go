@@ -153,12 +153,21 @@ func TestScheduler_TimeoutWritesFailWithTimeoutKind(t *testing.T) {
 	pk := "thorpub1addwnpepqf90u7n3nr2jwsw4t2gzhzqfdlply8dlzv3mdj4dr22uvhe04azq5gac3gq"
 	sv := &stubVerifier{results: map[string]error{pk: errTssTimeOutForTest}}
 	sched := newSchedulerForTest(store, sv, []Vault{{PubKey: pk, Members: []string{pk}}})
-	// Inject a stub timeout-culprit extractor that returns a known non-participating peer.
-	sched.extractTimeoutCulprits = func(err error) []string {
+	// Inject a stub timeout-info extractor that returns a known
+	// non-participating peer with per-culprit detail and a local round.
+	sched.extractTimeoutInfo = func(err error) ([]string, []Culprit, string) {
 		if errors.Is(err, errTssTimeOutForTest) {
-			return []string{"peerOffline"}
+			return []string{"peerOffline"},
+				[]Culprit{{
+					PubKey:            "peerOffline",
+					LastAcceptedRound: "KVRound1Message",
+					LastWireRound:     "KVRound2Message2",
+					SharesAccepted:    1,
+					SharesExpected:    4,
+				}},
+				"KVRound2Message2"
 		}
-		return nil
+		return nil, nil, ""
 	}
 
 	sched.tickOnce(context.Background(), 100)
@@ -178,6 +187,20 @@ func TestScheduler_TimeoutWritesFailWithTimeoutKind(t *testing.T) {
 	}
 	if len(st.Failure.Culprits) != 1 || st.Failure.Culprits[0] != "peerOffline" {
 		t.Fatalf("expected culprits=[peerOffline]; got %v", st.Failure.Culprits)
+	}
+	if st.Failure.ReporterPubKey != testReporterPubKey {
+		t.Fatalf("expected ReporterPubKey=%q; got %q", testReporterPubKey, st.Failure.ReporterPubKey)
+	}
+	if st.Failure.LocalRound != "KVRound2Message2" {
+		t.Fatalf("expected LocalRound=KVRound2Message2; got %q", st.Failure.LocalRound)
+	}
+	if len(st.Failure.CulpritDetails) != 1 {
+		t.Fatalf("expected 1 culprit detail; got %+v", st.Failure.CulpritDetails)
+	}
+	cd := st.Failure.CulpritDetails[0]
+	if cd.PubKey != "peerOffline" || cd.LastAcceptedRound != "KVRound1Message" ||
+		cd.LastWireRound != "KVRound2Message2" || cd.SharesAccepted != 1 || cd.SharesExpected != 4 {
+		t.Fatalf("unexpected culprit detail: %+v", cd)
 	}
 }
 
@@ -238,6 +261,8 @@ func TestScheduler_OtherErrorWritesFailWithOtherKind(t *testing.T) {
 
 var errTssTimeOutForTest = errors.New("test: tss timeout")
 
+const testReporterPubKey = "thorpub1reporterlocalnodepubkeyfortests"
+
 type fakeTssErr struct {
 	msg      string
 	culprits []string
@@ -262,10 +287,11 @@ func newSchedulerForTest(store *MarkerStore, v Verifier, vaults []Vault) *Schedu
 		// Default no-op extractor so the timeout branch's culprit-collection
 		// arm is never silently skipped by accident in unit tests; tests that
 		// want non-nil culprits override this field explicitly.
-		extractTimeoutCulprits: func(_ error) []string { return nil },
-		listVaults:             func(_ context.Context) ([]Vault, error) { return vaults, nil },
-		lastTickHeight:         -1,
-		perVaultLocks:          map[string]*sync.Mutex{},
+		extractTimeoutInfo: func(_ error) ([]string, []Culprit, string) { return nil, nil, "" },
+		localPubKey:        testReporterPubKey,
+		listVaults:         func(_ context.Context) ([]Vault, error) { return vaults, nil },
+		lastTickHeight:     -1,
+		perVaultLocks:      map[string]*sync.Mutex{},
 	}
 	return s
 }
@@ -484,28 +510,28 @@ func TestScheduler_TimeoutWithCulpritsBumpsMetric(t *testing.T) {
 	sv := &stubVerifier{results: map[string]error{pk: errTssTimeOutForTest}}
 	sched := newSchedulerForTest(store, sv, []Vault{{PubKey: pk, Members: []string{pk, "peerA", "peerB"}}})
 
-	// Inject two culprits via the timeout-culprit extractor so we can verify
-	// per-(vault, culprit) increments.
-	sched.extractTimeoutCulprits = func(err error) []string {
+	// Inject two culprits via the timeout-info extractor so we can verify
+	// per-(vault, culprit, round) increments.
+	sched.extractTimeoutInfo = func(err error) ([]string, []Culprit, string) {
 		if errors.Is(err, errTssTimeOutForTest) {
-			return []string{"peerA", "peerB"}
+			return []string{"peerA", "peerB"}, nil, "KVRound1Message"
 		}
-		return nil
+		return nil, nil, ""
 	}
 
 	// Snapshot starting counter values so this test is robust to other tests
 	// in the package that happen to share the same label values.
-	beforeCulpritA := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerA"))
-	beforeCulpritB := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerB"))
+	beforeCulpritA := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerA", "KVRound1Message"))
+	beforeCulpritB := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerB", "KVRound1Message"))
 	beforeFailTimeout := testutil.ToFloat64(metricFailure.WithLabelValues(pk, "timeout"))
 
 	sched.tickOnce(context.Background(), 100)
 
-	if got := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerA")) - beforeCulpritA; got != 1 {
-		t.Errorf("metricCulprit{pubkey=%s,culprit=peerA} delta = %v, want 1", pk, got)
+	if got := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerA", "KVRound1Message")) - beforeCulpritA; got != 1 {
+		t.Errorf("metricCulprit{pubkey=%s,culprit=peerA,round=KVRound1Message} delta = %v, want 1", pk, got)
 	}
-	if got := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerB")) - beforeCulpritB; got != 1 {
-		t.Errorf("metricCulprit{pubkey=%s,culprit=peerB} delta = %v, want 1", pk, got)
+	if got := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerB", "KVRound1Message")) - beforeCulpritB; got != 1 {
+		t.Errorf("metricCulprit{pubkey=%s,culprit=peerB,round=KVRound1Message} delta = %v, want 1", pk, got)
 	}
 	if got := testutil.ToFloat64(metricFailure.WithLabelValues(pk, "timeout")) - beforeFailTimeout; got != 1 {
 		t.Errorf("metricFailure{pubkey=%s,kind=timeout} delta = %v, want 1", pk, got)
@@ -524,13 +550,13 @@ func TestScheduler_CulpritErrorBumpsMetric(t *testing.T) {
 	}}
 	sched := newSchedulerForTest(store, sv, []Vault{{PubKey: pk, Members: []string{pk, "peerC"}}})
 
-	beforeCulprit := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerC"))
+	beforeCulprit := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerC", "none"))
 	beforeFailCulprit := testutil.ToFloat64(metricFailure.WithLabelValues(pk, "culprit"))
 
 	sched.tickOnce(context.Background(), 100)
 
-	if got := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerC")) - beforeCulprit; got != 1 {
-		t.Errorf("metricCulprit{pubkey=%s,culprit=peerC} delta = %v, want 1", pk, got)
+	if got := testutil.ToFloat64(metricCulprit.WithLabelValues(pk, "peerC", "none")) - beforeCulprit; got != 1 {
+		t.Errorf("metricCulprit{pubkey=%s,culprit=peerC,round=none} delta = %v, want 1", pk, got)
 	}
 	if got := testutil.ToFloat64(metricFailure.WithLabelValues(pk, "culprit")) - beforeFailCulprit; got != 1 {
 		t.Errorf("metricFailure{pubkey=%s,kind=culprit} delta = %v, want 1", pk, got)

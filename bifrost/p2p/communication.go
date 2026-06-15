@@ -245,13 +245,20 @@ func (c *Communication) handleStreamTss(stream network.Stream) {
 			return
 		}
 		c.logger.Debug().Msgf(">>>>>>>[%s] %s", wrappedMsg.MessageType, string(wrappedMsg.Payload))
-		c.streamMgr.AddStream(wrappedMsg.MsgID, stream)
 		channel := c.getSubscriber(wrappedMsg.MessageType, wrappedMsg.MsgID)
 		if nil == channel {
 			c.logger.Debug().Msgf("no MsgID %s found for this message", wrappedMsg.MsgID)
 			c.logger.Debug().Msgf("no MsgID %s found for this message", wrappedMsg.MessageType)
+			// No subscriber means no local operation will ever call
+			// ReleaseStream for this msgID — parking the stream in StreamMgr
+			// would leak it forever (the parked set is cleanup-only; streams
+			// are never read back out, only Reset). Reset it now.
+			if err := stream.Reset(); err != nil {
+				c.logger.Error().Err(err).Msg("fail to reset unsubscribed stream")
+			}
 			return
 		}
+		c.streamMgr.AddStream(wrappedMsg.MsgID, stream)
 		channel <- &Message{
 			PeerID:  stream.Conn().RemotePeer(),
 			Payload: dataBuf,

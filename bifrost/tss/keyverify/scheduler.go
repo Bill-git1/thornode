@@ -41,16 +41,18 @@ type Vault struct {
 
 // Scheduler runs the periodic keyverify loop.
 type Scheduler struct {
-	store                  *MarkerStore
-	verifier               Verifier
-	logger                 zerolog.Logger
-	getHeight              func(context.Context) (int64, error)
-	listVaults             func(context.Context) ([]Vault, error)
-	localPubKey            string
-	isTimeoutErr           func(error) bool
-	extractCulprits        func(err error, members []string) (msg string, culprits []string, ok bool)
-	extractTimeoutCulprits func(err error) []string
-	perVaultTimeout        time.Duration
+	store           *MarkerStore
+	verifier        Verifier
+	logger          zerolog.Logger
+	getHeight       func(context.Context) (int64, error)
+	listVaults      func(context.Context) ([]Vault, error)
+	localPubKey     string
+	isTimeoutErr    func(error) bool
+	extractCulprits func(err error, members []string) (msg string, culprits []string, ok bool)
+	// extractTimeoutInfo pulls the culprit list plus per-culprit detail and
+	// the local party's last round out of a timeout error (kvecdsa.TimeoutError).
+	extractTimeoutInfo func(err error) (culprits []string, details []Culprit, localRound string)
+	perVaultTimeout    time.Duration
 
 	lastTickHeight int64
 	vaultMu        sync.Mutex
@@ -70,25 +72,25 @@ func NewScheduler(
 	localPubKey string,
 	isTimeoutErr func(error) bool,
 	extractCulprits func(err error, members []string) (string, []string, bool),
-	extractTimeoutCulprits func(err error) []string,
+	extractTimeoutInfo func(err error) ([]string, []Culprit, string),
 	perVaultTimeout time.Duration,
 ) *Scheduler {
 	if perVaultTimeout <= 0 {
 		perVaultTimeout = DefaultPerVaultTimeout
 	}
 	return &Scheduler{
-		store:                  store,
-		verifier:               verifier,
-		logger:                 logger.With().Str("module", "keyverify").Logger(),
-		getHeight:              getHeight,
-		listVaults:             listVaults,
-		localPubKey:            localPubKey,
-		isTimeoutErr:           isTimeoutErr,
-		extractCulprits:        extractCulprits,
-		extractTimeoutCulprits: extractTimeoutCulprits,
-		perVaultTimeout:        perVaultTimeout,
-		lastTickHeight:         -1,
-		perVaultLocks:          map[string]*sync.Mutex{},
+		store:              store,
+		verifier:           verifier,
+		logger:             logger.With().Str("module", "keyverify").Logger(),
+		getHeight:          getHeight,
+		listVaults:         listVaults,
+		localPubKey:        localPubKey,
+		isTimeoutErr:       isTimeoutErr,
+		extractCulprits:    extractCulprits,
+		extractTimeoutInfo: extractTimeoutInfo,
+		perVaultTimeout:    perVaultTimeout,
+		lastTickHeight:     -1,
+		perVaultLocks:      map[string]*sync.Mutex{},
 	}
 }
 
@@ -235,26 +237,43 @@ func (s *Scheduler) runOneAttempt(ctx context.Context, height int64, v Vault, st
 		metricFailure.WithLabelValues(v.PubKey, "timeout").Inc()
 		metricDuration.WithLabelValues(v.PubKey, "timeout").Observe(dur)
 		var culprits []string
-		if s.extractTimeoutCulprits != nil {
-			culprits = s.extractTimeoutCulprits(err)
+		var details []Culprit
+		localRound := "none"
+		if s.extractTimeoutInfo != nil {
+			var lr string
+			culprits, details, lr = s.extractTimeoutInfo(err)
+			if lr != "" {
+				localRound = lr
+			}
 			for _, c := range culprits {
-				metricCulprit.WithLabelValues(v.PubKey, c).Inc()
+				metricCulprit.WithLabelValues(v.PubKey, c, localRound).Inc()
 			}
 		}
 		rec := FailureRecord{
-			PubKey:      v.PubKey,
-			Height:      height,
-			AttemptedAt: time.Now().UTC(),
-			Kind:        "timeout",
-			Error:       err.Error(),
-			Culprits:    culprits,
+			PubKey:         v.PubKey,
+			Height:         height,
+			AttemptedAt:    time.Now().UTC(),
+			Kind:           "timeout",
+			Error:          err.Error(),
+			Culprits:       culprits,
+			ReporterPubKey: s.localPubKey,
+			LocalRound:     localRound,
+			CulpritDetails: details,
 		}
 		if werr := s.store.WriteFailure(rec); werr != nil {
 			s.logger.Error().Err(werr).Str("pubkey", v.PubKey).Msg("write .fail marker (timeout)")
 		}
-		logEvt := s.logger.Warn().Err(err).Str("pubkey", v.PubKey).Int64("height", height)
+		// Single structured event per failed attempt — the log-aggregator
+		// channel for fleet-wide blame visibility (design Part B). The
+		// reporter + (pubkey, height) join key reconstructs the directed
+		// who-couldn't-hear-whom graph across all members' events.
+		logEvt := s.logger.Warn().Err(err).Str("pubkey", v.PubKey).Int64("height", height).
+			Str("reporter", s.localPubKey).Str("local_round", localRound)
 		if len(culprits) > 0 {
 			logEvt = logEvt.Strs("non_participating", culprits)
+		}
+		if len(details) > 0 {
+			logEvt = logEvt.Interface("culprit_details", details)
 		}
 		logEvt.Msg("keyverify timeout (peers offline?)")
 	default:
@@ -262,15 +281,17 @@ func (s *Scheduler) runOneAttempt(ctx context.Context, height int64, v Vault, st
 			metricFailure.WithLabelValues(v.PubKey, "culprit").Inc()
 			metricDuration.WithLabelValues(v.PubKey, "culprit").Observe(dur)
 			for _, c := range culprits {
-				metricCulprit.WithLabelValues(v.PubKey, c).Inc()
+				// culprit (*btss.Error) failures carry no round info
+				metricCulprit.WithLabelValues(v.PubKey, c, "none").Inc()
 			}
 			rec := FailureRecord{
-				PubKey:      v.PubKey,
-				Height:      height,
-				AttemptedAt: time.Now().UTC(),
-				Kind:        "culprit",
-				Error:       msg,
-				Culprits:    culprits,
+				PubKey:         v.PubKey,
+				Height:         height,
+				AttemptedAt:    time.Now().UTC(),
+				Kind:           "culprit",
+				Error:          msg,
+				Culprits:       culprits,
+				ReporterPubKey: s.localPubKey,
 			}
 			if werr := s.store.WriteFailure(rec); werr != nil {
 				s.logger.Error().Err(werr).Str("pubkey", v.PubKey).Msg("write .fail marker (culprit)")
@@ -282,12 +303,13 @@ func (s *Scheduler) runOneAttempt(ctx context.Context, height int64, v Vault, st
 		metricFailure.WithLabelValues(v.PubKey, "other").Inc()
 		metricDuration.WithLabelValues(v.PubKey, "other").Observe(dur)
 		rec := FailureRecord{
-			PubKey:      v.PubKey,
-			Height:      height,
-			AttemptedAt: time.Now().UTC(),
-			Kind:        "other",
-			Error:       err.Error(),
-			Culprits:    nil,
+			PubKey:         v.PubKey,
+			Height:         height,
+			AttemptedAt:    time.Now().UTC(),
+			Kind:           "other",
+			Error:          err.Error(),
+			Culprits:       nil,
+			ReporterPubKey: s.localPubKey,
 		}
 		if werr := s.store.WriteFailure(rec); werr != nil {
 			s.logger.Error().Err(werr).Str("pubkey", v.PubKey).Msg("write .fail marker (other)")

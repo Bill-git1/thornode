@@ -18,6 +18,12 @@ import (
 type TimeoutError struct {
 	Culprits []string // thorpubs of peers identified as non-participating; may be empty
 	Reason   string   // optional human-readable detail
+	// Details carries per-culprit round/receipt enrichment, parallel to
+	// Culprits (same order). May be empty when enrichment was unavailable.
+	Details []CulpritDetail
+	// LocalRound is the round of the last message the local party produced
+	// before the timeout fired ("none" if the local party never started).
+	LocalRound string
 }
 
 func (e *TimeoutError) Error() string {

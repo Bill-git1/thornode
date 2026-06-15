@@ -277,11 +277,13 @@ func main() {
 			tssIns.GetBroadcastChan(),
 			stateManager,
 			common.TssConfig{
-				KeyGenTimeout:         cfg.Signer.KeygenTimeout,
-				KeySignTimeout:        cfg.Signer.KeysignTimeout,
-				PartyTimeout:          cfg.Signer.PartyTimeout,
-				PreParamTimeout:       cfg.Signer.PreParamTimeout,
-				KeyverifyRoundTimeout: cfg.Signer.KeyverifyRoundTimeout,
+				KeyGenTimeout:          cfg.Signer.KeygenTimeout,
+				KeySignTimeout:         cfg.Signer.KeysignTimeout,
+				PartyTimeout:           cfg.Signer.PartyTimeout,
+				PreParamTimeout:        cfg.Signer.PreParamTimeout,
+				KeyverifyRoundTimeout:  cfg.Signer.KeyverifyRoundTimeout,
+				KeyverifyRetryInterval: cfg.Signer.KeyverifyRetryInterval,
+				KeyverifyMaxRetries:    cfg.Signer.KeyverifyMaxRetries,
 			},
 			localNodePubKey,
 			tmPrivateKey,
@@ -315,12 +317,23 @@ func main() {
 			return thorchainBridge.GetBlockHeight()
 		}
 		isTimeoutErr := func(err error) bool { return errors.Is(err, blame.ErrTssTimeOut) }
-		extractTimeoutCulprits := func(err error) []string {
+		extractTimeoutInfo := func(err error) ([]string, []keyverify.Culprit, string) {
 			var tErr *kvecdsa.TimeoutError
-			if errors.As(err, &tErr) {
-				return tErr.Culprits
+			if !errors.As(err, &tErr) {
+				return nil, nil, ""
 			}
-			return nil
+			details := make([]keyverify.Culprit, 0, len(tErr.Details))
+			for _, d := range tErr.Details {
+				details = append(details, keyverify.Culprit{
+					PubKey:            d.PubKey,
+					LastAcceptedRound: d.LastAcceptedRound,
+					LastWireRound:     d.LastWireRound,
+					LastSeenAt:        d.LastSeenAt,
+					SharesAccepted:    d.SharesAccepted,
+					SharesExpected:    d.SharesExpected,
+				})
+			}
+			return tErr.Culprits, details, tErr.LocalRound
 		}
 		extractCulprits := func(err error, members []string) (string, []string, bool) {
 			var tssErr *libtss.Error
@@ -353,7 +366,7 @@ func main() {
 			localNodePubKey,
 			isTimeoutErr,
 			extractCulprits,
-			extractTimeoutCulprits,
+			extractTimeoutInfo,
 			cfg.Signer.KeyverifyPerVaultTimeout,
 		)
 		keyverifyWG.Add(1)

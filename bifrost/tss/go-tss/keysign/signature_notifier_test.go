@@ -302,6 +302,59 @@ func TestSignatureNotifierReleaseStream(t *testing.T) {
 	n1.ReleaseStream("unknown-message-id")
 }
 
+// TestSignatureNotifierCleanupReleasesParkedStreams pins the stale-notifier
+// sweep: streams parked under a msgID whose keysign never runs locally (the
+// broadcast-created-notifier case) must be released when that notifier
+// expires — previously nothing ever released them and they leaked.
+func TestSignatureNotifierCleanupReleasesParkedStreams(t *testing.T) {
+	conversion.SetupBech32Prefix()
+	p2p.ApplyDeadline.Store(false)
+
+	id1 := tnet.RandIdentityOrFatal(t)
+	id2 := tnet.RandIdentityOrFatal(t)
+	mn := mocknet.New(context.Background())
+	a1 := tnet.RandLocalTCPAddress()
+	a2 := tnet.RandLocalTCPAddress()
+	h1, err := mn.AddPeer(id1.PrivateKey(), a1)
+	assert.Nil(t, err)
+	h2, err := mn.AddPeer(id2.PrivateKey(), a2)
+	assert.Nil(t, err)
+	assert.Nil(t, mn.LinkAll())
+	assert.Nil(t, mn.ConnectAllButSelf())
+
+	sn := NewSignatureNotifier(h1)
+	defer sn.Stop()
+	// h2 needs the protocol handler registered so h1 can open the stream
+	sn2 := NewSignatureNotifier(h2)
+	defer sn2.Stop()
+
+	stream, err := h1.NewStream(context.Background(), h2.ID(), signatureNotifierProtocol)
+	assert.Nil(t, err)
+	sn.streamMgr.AddStream("msg-stale", stream)
+
+	// broadcast-created notifier for the same msgID, expired on arrival
+	_, err = sn.createOrUpdateNotifier("msg-stale", nil, "", nil, time.Nanosecond)
+	assert.Nil(t, err)
+
+	// h2 never writes on this stream, so this read blocks until the sweep's
+	// Reset aborts it locally — a deterministic probe for the release.
+	readErr := make(chan error, 1)
+	go func() {
+		buf := make([]byte, 1)
+		_, rerr := stream.Read(buf)
+		readErr <- rerr
+	}()
+
+	sn.Start() // initial doCleanup fires immediately
+
+	select {
+	case rerr := <-readErr:
+		assert.NotNil(t, rerr)
+	case <-time.After(5 * time.Second):
+		t.Fatal("parked stream was never reset by the stale-notifier sweep")
+	}
+}
+
 func TestSignatureNotifierGetNotifier(t *testing.T) {
 	conversion.SetupBech32Prefix()
 	p2p.ApplyDeadline.Store(false)

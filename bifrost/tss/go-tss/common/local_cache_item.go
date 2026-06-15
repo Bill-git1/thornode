@@ -30,6 +30,22 @@ func (l *LocalCacheItem) UpdateConfirmList(P2PID, hash string) {
 	l.ConfirmedList[P2PID] = hash
 }
 
+// snapshotMsgAndConfirms returns the current Msg pointer and a copy of the
+// ConfirmedList, read together under the item lock.
+// TEMP: keyverify — the recovery ticker is the only reader of cache items
+// outside the inbound goroutine; it must never iterate the live ConfirmedList
+// (concurrent with UpdateConfirmList it is a runtime fatal) nor read Msg
+// unsynchronized. Pairs with the locked Msg writes in tss.go.
+func (l *LocalCacheItem) snapshotMsgAndConfirms() (*messages.WireMessage, map[string]string) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	confirms := make(map[string]string, len(l.ConfirmedList))
+	for k, v := range l.ConfirmedList {
+		confirms[k] = v
+	}
+	return l.Msg, confirms
+}
+
 // TotalConfirmParty number of parties that already confirmed their hash
 func (l *LocalCacheItem) TotalConfirmParty() int {
 	l.lock.Lock()

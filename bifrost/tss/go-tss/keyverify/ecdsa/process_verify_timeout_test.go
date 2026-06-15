@@ -88,7 +88,7 @@ func TestProcessVerify_TimeoutWithoutMessageReturnsTimeoutError(t *testing.T) {
 	errChan := make(chan struct{})
 
 	start := time.Now()
-	err := tkv.processVerify(context.Background(), errChan, outCh, endCh)
+	err := tkv.processVerify(context.Background(), errChan, outCh, endCh, nil)
 	elapsed := time.Since(start)
 
 	if err == nil {
@@ -214,7 +214,7 @@ func TestProcessVerify_TimeoutWithCulpritsReturnsCulprits(t *testing.T) {
 	errChan := make(chan struct{})
 
 	start := time.Now()
-	err = tkv.processVerify(context.Background(), errChan, outChDrive, endChDrive)
+	err = tkv.processVerify(context.Background(), errChan, outChDrive, endChDrive, partyIDMap)
 	elapsed := time.Since(start)
 
 	if err == nil {
@@ -247,6 +247,26 @@ func TestProcessVerify_TimeoutWithCulpritsReturnsCulprits(t *testing.T) {
 	if got := bm.GetBlame(); got == nil || len(got.BlameNodes) != len(expectedCulpritPubKeys) {
 		t.Errorf("blame manager Blame.BlameNodes not populated; got %+v, want %d entries", got, len(expectedCulpritPubKeys))
 	}
+	// Part B enrichment: LocalRound carries the reporter's last produced
+	// round, and Details is parallel to Culprits with "none" placeholders
+	// (no shares were accepted and no wire receipts recorded in this harness).
+	if tErr.LocalRound != roundName {
+		t.Errorf("LocalRound = %q, want %q", tErr.LocalRound, roundName)
+	}
+	if len(tErr.Details) != len(tErr.Culprits) {
+		t.Fatalf("Details length %d != Culprits length %d", len(tErr.Details), len(tErr.Culprits))
+	}
+	for i, d := range tErr.Details {
+		if d.PubKey != tErr.Culprits[i] {
+			t.Errorf("Details[%d].PubKey = %q, want %q (parallel order)", i, d.PubKey, tErr.Culprits[i])
+		}
+		if d.LastAcceptedRound != "none" || d.LastWireRound != "none" {
+			t.Errorf("Details[%d] rounds = (%q,%q), want (none,none)", i, d.LastAcceptedRound, d.LastWireRound)
+		}
+		if d.SharesExpected != keyverifyRoundCount {
+			t.Errorf("Details[%d].SharesExpected = %d, want %d", i, d.SharesExpected, keyverifyRoundCount)
+		}
+	}
 }
 
 // TestProcessVerify_CtxCancellationReturnsCtxErr asserts the second
@@ -268,7 +288,7 @@ func TestProcessVerify_CtxCancellationReturnsCtxErr(t *testing.T) {
 	endCh := make(chan error)
 	errChan := make(chan struct{})
 
-	err := tkv.processVerify(ctx, errChan, outCh, endCh)
+	err := tkv.processVerify(ctx, errChan, outCh, endCh, nil)
 	if err == nil {
 		t.Fatal("processVerify returned nil, expected ctx cancellation error")
 	}

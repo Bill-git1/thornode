@@ -89,6 +89,18 @@ func (pc *PartyCoordinator) processRespMsg(respMsg *messages.JoinPartyLeaderComm
 	}
 }
 
+// TODO(stream-leak): streams parked here (and in HandleStream /
+// HandleStreamWithLeader) under a msgID whose join-party never runs locally
+// are never released — ReleaseStream only fires at local keygen/keysign
+// completion. Unlike the equivalent fix in communication.go handleStreamTss,
+// resetting eagerly here is NOT a dead-branch change: "party not ready" is
+// often a legitimate early arrival cleaned up by the later ReleaseStream, and
+// some branches ack on the inbound stream (HandleStreamWithLeader "response"),
+// so an eager reset is sender-visible during party formation. Fixing this
+// safely needs a pass over the join-party stream lifecycle (or a TTL sweep
+// like signature_notifier's cleanupStaleNotifiers). Leak volume is the
+// smallest of the family: a few streams per op, only for ops that never run
+// locally.
 func (pc *PartyCoordinator) processReqMsg(requestMsg *messages.JoinPartyLeaderComm, stream network.Stream) {
 	pc.streamMgr.AddStream(requestMsg.ID, stream)
 	pc.joinPartyGroupLock.Lock()

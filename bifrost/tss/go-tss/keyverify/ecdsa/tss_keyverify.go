@@ -40,6 +40,15 @@ import (
 // — otherwise an outer ctx cancellation preempts the per-peer blame path.
 const DefaultKeyverifyRoundTimeout = 120 * time.Second
 
+// DefaultKeyverifyRetryInterval / DefaultKeyverifyMaxRetries are the
+// fallback recovery-ticker settings used when the corresponding TssConfig
+// fields are zero. 3 retries x 5s sit comfortably inside the 120s round
+// budget. See DESIGN_retry_and_blame_visibility.md Part A.
+const (
+	DefaultKeyverifyRetryInterval = 5 * time.Second
+	DefaultKeyverifyMaxRetries    = 3
+)
+
 type TssKeyVerify struct {
 	logger          zerolog.Logger
 	localNodePubKey string
@@ -145,8 +154,15 @@ func (t *TssKeyVerify) VerifyKey(ctx context.Context, req Request) error {
 	t.tssCommonStruct.P2PPeers = conversion.GetPeersID(t.tssCommonStruct.PartyIDtoP2PID, t.tssCommonStruct.GetLocalPeerID())
 	t.tssCommonStruct.P2PPeersLock.Unlock()
 
+	// Recovery ticker (design Part A): enabled before any message is sent so
+	// sendBulkMsg retains outbound payloads from the first round on. The
+	// recovered hook backs tss_keyverify_recovered_total.
+	t.tssCommonStruct.EnableKeyverifyRecovery(func(round string) {
+		metricKeyverifyRecovered.WithLabelValues(req.PoolPubKey, round).Inc()
+	})
+
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	t.logger.Debug().Msg(">>>>>>>>>>>>>.keyverify party starting")
 	go func() {
 		defer wg.Done()
@@ -157,8 +173,9 @@ func (t *TssKeyVerify) VerifyKey(ctx context.Context, req Request) error {
 		}
 	}()
 	go t.tssCommonStruct.ProcessInboundMessages(t.commStopChan, &wg)
+	go t.runRecoveryTicker(&wg, req.PoolPubKey)
 
-	verifyErr := t.processVerify(ctx, errChan, outCh, endCh)
+	verifyErr := t.processVerify(ctx, errChan, outCh, endCh, partyIDMap)
 	if verifyErr != nil {
 		close(t.commStopChan)
 	} else {
@@ -173,11 +190,96 @@ func (t *TssKeyVerify) VerifyKey(ctx context.Context, req Request) error {
 	return verifyErr
 }
 
+// runRecoveryTicker drives the per-attempt recovery actions (re-send dropped
+// unicasts/broadcasts, re-broadcast confirms, re-request missing shares) at
+// KeyverifyRetryInterval until the attempt tears down via commStopChan.
+func (t *TssKeyVerify) runRecoveryTicker(wg *sync.WaitGroup, poolPubKey string) {
+	defer wg.Done()
+	conf := t.tssCommonStruct.GetConf()
+	interval := conf.KeyverifyRetryInterval
+	if interval <= 0 {
+		interval = DefaultKeyverifyRetryInterval
+	}
+	maxRetries := conf.KeyverifyMaxRetries
+	if maxRetries <= 0 {
+		maxRetries = DefaultKeyverifyMaxRetries
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-t.commStopChan:
+			return
+		case <-ticker.C:
+			stats := t.tssCommonStruct.RunKeyverifyRecovery(maxRetries)
+			for action, n := range map[string]int{
+				"unicast_resend":      stats.UnicastResent,
+				"broadcast_resend":    stats.BroadcastResent,
+				"confirm_rebroadcast": stats.ConfirmsRebroadcast,
+				"share_rerequest":     stats.SharesRerequested,
+			} {
+				if n > 0 {
+					metricKeyverifyRetry.WithLabelValues(poolPubKey, action).Add(float64(n))
+				}
+			}
+		}
+	}
+}
+
+// buildCulpritDetails enriches the timeout culprit list with per-peer
+// accepted-share and wire-receipt data (design Part B).
+func (t *TssKeyVerify) buildCulpritDetails(nodes []blame.Node, partyIDMap map[string]*btss.PartyID) []CulpritDetail {
+	pubkeyToPartyID := make(map[string]string, len(partyIDMap))
+	for id, p := range partyIDMap {
+		pk, err := conversion.PartyIDtoPubKey(p)
+		if err != nil {
+			t.logger.Warn().Err(err).Str("party_id", id).Msg("culprit details: party id to pubkey")
+			continue
+		}
+		pubkeyToPartyID[pk] = id
+	}
+	accepted := t.tssCommonStruct.GetBlameMgr().GetAcceptedSharesSnapshot()
+	wire := t.tssCommonStruct.GetKeyverifyWireReceipts()
+
+	details := make([]CulpritDetail, 0, len(nodes))
+	for _, n := range nodes {
+		d := CulpritDetail{
+			PubKey:            n.Pubkey,
+			LastAcceptedRound: "none",
+			LastWireRound:     "none",
+			SharesExpected:    keyverifyRoundCount,
+		}
+		if id, ok := pubkeyToPartyID[n.Pubkey]; ok {
+			bestIdx := -1
+			for round, ids := range accepted {
+				for _, el := range ids {
+					if el != id {
+						continue
+					}
+					d.SharesAccepted++
+					if round.Index > bestIdx {
+						bestIdx = round.Index
+						d.LastAcceptedRound = round.RoundMsg
+					}
+					break
+				}
+			}
+			if w, ok := wire[id]; ok && w.LastRound != "" {
+				d.LastWireRound = w.LastRound
+				d.LastSeenAt = w.LastSeenAt
+			}
+		}
+		details = append(details, d)
+	}
+	return details
+}
+
 func (t *TssKeyVerify) processVerify(
 	ctx context.Context,
 	errChan chan struct{},
 	outCh <-chan btss.Message,
 	endCh <-chan error,
+	partyIDMap map[string]*btss.PartyID,
 ) error {
 	defer t.logger.Debug().Msg("finished keyverify process")
 	t.logger.Debug().Msg("start to read messages from local party")
@@ -208,7 +310,7 @@ func (t *TssKeyVerify) processVerify(
 			}
 			if lastMsg == nil {
 				t.logger.Error().Msg("fail to start the keyverify, no message of this node was produced")
-				return &TimeoutError{Reason: "no message of this node was produced"}
+				return &TimeoutError{Reason: "no message of this node was produced", LocalRound: "none"}
 			}
 			t.tssCommonStruct.P2PPeersLock.RLock()
 			threshold, terr := conversion.GetThreshold(len(t.tssCommonStruct.P2PPeers) + 1)
@@ -227,7 +329,11 @@ func (t *TssKeyVerify) processVerify(
 			for _, n := range blameNodesBroadcast {
 				culprits = append(culprits, n.Pubkey)
 			}
-			return &TimeoutError{Culprits: culprits}
+			return &TimeoutError{
+				Culprits:   culprits,
+				Details:    t.buildCulpritDetails(blameNodesBroadcast, partyIDMap),
+				LocalRound: lastMsg.Type(),
+			}
 
 		case msg := <-outCh:
 			t.logger.Debug().Msgf(">>>>>>>>>>msg: %s", msg.String())

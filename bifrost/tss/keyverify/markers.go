@@ -43,7 +43,30 @@ func validPubKey(pk string) error {
 	return nil
 }
 
+// Culprit is the structured per-culprit entry attached to a FailureRecord.
+// Mirrors kvecdsa.CulpritDetail; defined here so this package keeps no
+// compile-time dependency on the tss packages (the main.go closure converts).
+type Culprit struct {
+	PubKey string `json:"pubkey"`
+	// LastAcceptedRound is the last round whose share from this peer was
+	// accepted (passed hash-check / was applied), or "none".
+	LastAcceptedRound string `json:"last_accepted_round"`
+	// LastWireRound is the last round seen from this peer at the wire level,
+	// including received-but-unconfirmed broadcasts, or "none". A peer with
+	// LastWireRound ahead of LastAcceptedRound delivered messages whose
+	// confirms never assembled — a different failure than total silence.
+	LastWireRound  string    `json:"last_wire_round"`
+	LastSeenAt     time.Time `json:"last_seen_at"`
+	SharesAccepted int       `json:"shares_accepted"`
+	SharesExpected int       `json:"shares_expected"`
+}
+
 // FailureRecord is the on-disk payload of a keyverify-<pubkey>.fail file.
+//
+// Schema-evolution rule: fields may only be ADDED, never have their type
+// changed — older .fail files (and external consumers of /status/keyverify)
+// must keep decoding. Culprits in particular stays []string; the structured
+// counterpart is the additive CulpritDetails.
 type FailureRecord struct {
 	PubKey      string    `json:"pubkey"`
 	Height      int64     `json:"height"`
@@ -53,6 +76,17 @@ type FailureRecord struct {
 	Kind     string   `json:"kind"`
 	Error    string   `json:"error"`
 	Culprits []string `json:"culprits"`
+	// ReporterPubKey identifies the node that emitted this record, enabling
+	// cross-node correlation: all members' records of the same round share
+	// (PubKey, Height), and ReporterPubKey distinguishes the reporters.
+	ReporterPubKey string `json:"reporter_pubkey,omitempty"`
+	// LocalRound is the local party's last produced round at failure time
+	// ("none" if the local party never started). Distinguishes "we never
+	// started" from "peers went silent at round X".
+	LocalRound string `json:"local_round,omitempty"`
+	// CulpritDetails carries per-culprit round/receipt enrichment, parallel
+	// to Culprits. Empty for older records and non-timeout failures.
+	CulpritDetails []Culprit `json:"culprit_details,omitempty"`
 }
 
 // VaultStatus is the API response shape for one vault.
