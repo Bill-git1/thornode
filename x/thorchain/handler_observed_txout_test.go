@@ -413,13 +413,15 @@ func (s *HandlerObservedTxOutSuite) TestHandleStolenFundsInvalidMemo(c *C) {
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 
-	// No slashing occurs, but vault accounting still happens because the
-	// outbound is irrevocable - funds already left the vault on-chain.
-	// Gas is deducted from the vault via addGasFees, and coins are deducted via SubFunds.
+	c.Check(keeper.na.Bond.LT(na.Bond), Equals, true, Commentf("bond: %d", keeper.na.Bond.Uint64()))
+
+	// Slashing debits the pool's asset balance by the stolen coins plus gas
+	// (via SlashVault), rather than routing gas through the fee manager. The
+	// offending node's bond covers the equivalent RUNE value.
 	gasAmount := obTx.Tx.Gas.ToCoins().GetCoin(common.ETHAsset).Amount
-	expectedPoolAfterGas := cosmos.NewUint(300 * common.One).Sub(gasAmount)
 	mgr.GasMgr().EndBlock(ctx, keeper, eventMgr)
-	c.Check(keeper.pool.BalanceAsset.Equal(expectedPoolAfterGas), Equals, true,
+	expectedPool := cosmos.NewUint(300 * common.One).Sub(cosmos.NewUint(100 * common.One)).Sub(gasAmount)
+	c.Check(keeper.pool.BalanceAsset.Equal(expectedPool), Equals, true,
 		Commentf("pool: %d", keeper.pool.BalanceAsset.Uint64()))
 
 	// Vault balance should reflect outbound coins and gas deducted

@@ -755,10 +755,27 @@ func handleObservedTxOutQuorum(
 	// Even if the handler fails, vault accounting must still happen because
 	// the outbound transaction is irrevocable (funds already left the vault).
 	vaultSlash := false
+	slashObservedOutbound := func(reason string, err error) {
+		ctx.Logger().Error("slash observed outbound", "reason", reason, "error", err, "tx", tx.Tx.String())
+		toSlash := make(common.Coins, len(tx.Tx.Coins))
+		copy(toSlash, tx.Tx.Coins)
+		toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
+
+		slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
+			telemetry.NewLabel("reason", reason),
+			telemetry.NewLabel("chain", string(tx.Tx.Chain)),
+		}))
+
+		if slashErr := mgr.Slasher().SlashVault(slashCtx, tx.ObservedPubKey, toSlash, mgr); slashErr != nil {
+			ctx.Logger().Error("fail to slash account for observed outbound", "error", slashErr)
+		} else {
+			vaultSlash = true
+		}
+	}
 	txOut := voter.GetTx(activeNodeAccounts) // get consensus tx, in case our for loop is incorrect
 	if txOut == nil || txOut.IsEmpty() {
 		ctx.Logger().Error("fail to get consensus tx from voter", "txid", tx.Tx.ID)
-		// Continue with vault accounting below - outbound is irrevocable
+		slashObservedOutbound("missing_consensus_tx", nil)
 	} else {
 		txOut.Tx.Memo = tx.Tx.Memo
 
@@ -772,10 +789,12 @@ func handleObservedTxOutQuorum(
 
 		if tx.Tx.Chain.IsEmpty() {
 			ctx.Logger().Error("fail to process txOut: chain is empty", "tx", tx.Tx.String())
+			slashObservedOutbound("empty_chain", nil)
 		} else if m, mErr := processOneTxIn(ctx, k, *txOut, signer); mErr != nil {
 			ctx.Logger().Error("fail to process txOut",
 				"error", mErr,
 				"tx", tx.Tx.String())
+			slashObservedOutbound("invalid_outbound", mErr)
 		} else {
 			// add addresses to observing addresses. This is used to detect
 			// active/inactive observing node accounts
@@ -797,7 +816,7 @@ func handleObservedTxOutQuorum(
 			res, hErr := handler(ctx, m)
 			if hErr != nil {
 				ctx.Logger().Error("handler failed:", "error", hErr)
-				// Continue with vault accounting - outbound is irrevocable
+				slashObservedOutbound("failed_outbound", hErr)
 			} else if res != nil && res.Events != nil {
 				for _, ev := range res.Events {
 					if ev.Type == "vault-slash" {
