@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"math/big"
 	"testing"
 
 	ecommon "github.com/ethereum/go-ethereum/common"
@@ -29,6 +30,47 @@ func (s *UtilsTestSuite) TestIsSmartContractCall(c *C) {
 		Logs: []*etypes.Log{{Address: ecommon.HexToAddress("0x1234")}},
 	}
 	c.Assert(IsSmartContractCall(tx, receipt), Equals, true)
+}
+
+func (s *UtilsTestSuite) TestIsERC20Transfer(c *C) {
+	token := ecommon.HexToAddress("0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483")
+	sender := ecommon.HexToAddress("0x3fd2d4ce97b082d4bce3f9fee2a3d60668d2f473")
+	recipient := ecommon.HexToAddress("0xd58610f89265a2fb637ac40edf59141ff873b266")
+	tx := etypes.NewTransaction(0, token, big.NewInt(0), 100000, big.NewInt(1), append([]byte{}, erc20TransferSelector...))
+	receipt := &etypes.Receipt{
+		Status: 1,
+		Logs: []*etypes.Log{
+			{
+				Address: token,
+				Topics: []ecommon.Hash{
+					ecommon.HexToHash(erc20TransferEvent),
+					ecommon.BytesToHash(ecommon.LeftPadBytes(sender.Bytes(), ecommon.HashLength)),
+					ecommon.BytesToHash(ecommon.LeftPadBytes(recipient.Bytes(), ecommon.HashLength)),
+				},
+				Data: ecommon.LeftPadBytes(big.NewInt(1).Bytes(), ecommon.HashLength),
+			},
+		},
+	}
+	c.Assert(HasERC20TransferSelector(tx), Equals, true)
+	c.Assert(IsERC20Transfer(tx, receipt), Equals, true)
+
+	wrongSelectorTx := etypes.NewTransaction(0, token, big.NewInt(0), 100000, big.NewInt(1), []byte{0x09, 0x5e, 0xa7, 0xb3})
+	c.Assert(HasERC20TransferSelector(wrongSelectorTx), Equals, false)
+	c.Assert(IsERC20Transfer(wrongSelectorTx, receipt), Equals, false)
+	c.Assert(HasERC20TransferSelector(nil), Equals, false)
+
+	noMatchingLogReceipt := &etypes.Receipt{
+		Status: 1,
+		Logs: []*etypes.Log{
+			{
+				Address: ecommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+				Topics:  receipt.Logs[0].Topics,
+				Data:    receipt.Logs[0].Data,
+			},
+		},
+	}
+	c.Assert(IsERC20Transfer(tx, noMatchingLogReceipt), Equals, false)
+	c.Assert(IsERC20Transfer(tx, nil), Equals, false)
 }
 
 func (s *UtilsTestSuite) TestDepositEventRouter(c *C) {

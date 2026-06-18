@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -191,6 +192,44 @@ func (s *PubKeyMgrSuite) TestGetAlgoPubKeys(c *C) {
 	// No match
 	pks = pubkeyMgr.GetAlgoPubKeys(common.SigningAlgo("unknown"), false)
 	c.Assert(pks, HasLen, 0)
+}
+
+func (s *PubKeyMgrSuite) TestPoolAddressLookupCache(c *C) {
+	activePk := types.GetRandomPubKey()
+	inactivePk := types.GetRandomPubKey()
+	addedPk := types.GetRandomPubKey()
+
+	pubkeyMgr, err := NewPubKeyManager(nil, nil)
+	c.Assert(err, IsNil)
+	pubkeyMgr.AddPubKey(activePk, true, common.SigningAlgoSecp256k1)
+	pubkeyMgr.addPubKeyInternal(inactivePk, false, common.SigningAlgoSecp256k1, true)
+
+	activeAddr, err := activePk.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	inactiveAddr, err := inactivePk.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+
+	ok, cpi := pubkeyMgr.IsActivePoolAddress(strings.ToLower(activeAddr.String()), common.ETHChain)
+	c.Assert(ok, Equals, true)
+	c.Assert(cpi.PubKey.Equals(activePk), Equals, true)
+
+	ok, _ = pubkeyMgr.IsActivePoolAddress(inactiveAddr.String(), common.ETHChain)
+	c.Assert(ok, Equals, false)
+
+	ok, cpi = pubkeyMgr.IsValidPoolAddress(inactiveAddr.String(), common.ETHChain)
+	c.Assert(ok, Equals, true)
+	c.Assert(cpi.PubKey.Equals(inactivePk), Equals, true)
+
+	addedAddr, err := addedPk.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	pubkeyMgr.AddPubKey(addedPk, false, common.SigningAlgoSecp256k1)
+	ok, cpi = pubkeyMgr.IsActivePoolAddress(addedAddr.String(), common.ETHChain)
+	c.Assert(ok, Equals, true)
+	c.Assert(cpi.PubKey.Equals(addedPk), Equals, true)
+
+	pubkeyMgr.RemovePubKey(activePk)
+	ok, _ = pubkeyMgr.IsActivePoolAddress(activeAddr.String(), common.ETHChain)
+	c.Assert(ok, Equals, false)
 }
 
 func (s *PubKeyMgrSuite) TestGetContracts(c *C) {

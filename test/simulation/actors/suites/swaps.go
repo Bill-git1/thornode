@@ -1,9 +1,11 @@
 package suites
 
 import (
+	"fmt"
 	rand "math/rand/v2"
 
 	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	acommon "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
@@ -16,6 +18,9 @@ import (
 
 func MemolessSwaps(rng *rand.Rand) *Actor {
 	a := NewActor("Memoless Swaps", rng)
+	directERC20Flags := NewActor("Direct ERC20 Inbound Flags", rng)
+	swaps := NewActor("Memoless Swap Actors", rng)
+	directERC20Chains := make(map[common.Chain]bool)
 
 	// memoless swaps
 	for _, t := range []core.MemolessType{core.MemolessTypeRef, core.MemolessTypeAmount} {
@@ -25,7 +30,7 @@ func MemolessSwaps(rng *rand.Rand) *Actor {
 			for chain.Equals(acommon.SimChains[j]) {
 				j = rng.IntN(len(acommon.SimChains))
 			}
-			a.Children[core.NewSwapMemolessActor(chain.GetGasAsset(), acommon.SimChains[j].GetGasAsset(), t, rng)] = true
+			swaps.Children[core.NewSwapMemolessActor(chain.GetGasAsset(), acommon.SimChains[j].GetGasAsset(), t, rng)] = true
 		}
 		// Add non-gas EVM token sources to exercise memoless router flow.
 		for _, chain := range acommon.SimChains {
@@ -37,11 +42,22 @@ func MemolessSwaps(rng *rand.Rand) *Actor {
 					continue
 				}
 				toAsset := acommon.SimChains[rng.IntN(len(acommon.SimChains))].GetGasAsset()
-				a.Children[core.NewSwapMemolessActor(asset, toAsset, t, rng)] = true
+				swaps.Children[core.NewSwapMemolessActor(asset, toAsset, t, rng)] = true
+				if t == core.MemolessTypeAmount {
+					swaps.Children[core.NewDirectERC20SwapMemolessActor(asset, toAsset, rng)] = true
+					directERC20Chains[chain] = true
+				}
 			}
 		}
 
 	}
+
+	for chain := range directERC20Chains {
+		key := fmt.Sprintf(constants.MimirTemplateEVMDirectERC20Inbound, chain)
+		directERC20Flags.Children[core.NewMimirActor(key, 1, rng)] = true
+	}
+	a.Append(directERC20Flags)
+	a.Append(swaps)
 
 	return a
 }

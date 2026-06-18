@@ -21,6 +21,7 @@ type OnNewPubKey func(pk common.PubKey) error
 // PubKeyValidator define the method that can be used to interact with public keys
 type PubKeyValidator interface {
 	IsValidPoolAddress(addr string, chain common.Chain) (bool, common.ChainPoolInfo)
+	IsActivePoolAddress(addr string, chain common.Chain) (bool, common.ChainPoolInfo)
 	HasPubKey(pk common.PubKey) bool
 	AddPubKey(pk common.PubKey, signer bool, algo common.SigningAlgo)
 	AddNodePubKey(pk common.PubKey, algo common.SigningAlgo)
@@ -44,16 +45,22 @@ type pubKeyInfo struct {
 	Inactive    bool
 }
 
+type poolAddressCacheKey struct {
+	Chain           common.Chain
+	IncludeInactive bool
+}
+
 // PubKeyManager manager an always up to date pubkeys , which implement PubKeyValidator interface
 type PubKeyManager struct {
-	bridge     thorclient.ThorchainBridge
-	pubkeys    []pubKeyInfo
-	rwMutex    *sync.RWMutex
-	logger     zerolog.Logger
-	errCounter *prometheus.CounterVec
-	m          *metrics.Metrics
-	stopChan   chan struct{}
-	callback   []OnNewPubKey
+	bridge           thorclient.ThorchainBridge
+	pubkeys          []pubKeyInfo
+	poolAddressCache map[poolAddressCacheKey]map[string]common.ChainPoolInfo
+	rwMutex          *sync.RWMutex
+	logger           zerolog.Logger
+	errCounter       *prometheus.CounterVec
+	m                *metrics.Metrics
+	stopChan         chan struct{}
+	callback         []OnNewPubKey
 }
 
 // NewPubKeyManager create a new instance of PubKeyManager
@@ -182,7 +189,10 @@ func (pkm *PubKeyManager) addPubKeyInternal(pk common.PubKey, signer bool, algo 
 				if signer {
 					pkm.pubkeys[i].Signer = signer
 				}
-				pkm.pubkeys[i].Inactive = inactive
+				if pkm.pubkeys[i].Inactive != inactive {
+					pkm.pubkeys[i].Inactive = inactive
+					pkm.invalidatePoolAddressCacheNoLock()
+				}
 			}
 		}
 	} else {
@@ -195,6 +205,7 @@ func (pkm *PubKeyManager) addPubKeyInternal(pk common.PubKey, signer bool, algo 
 			Contracts:   map[common.Chain]common.Address{},
 			Inactive:    inactive,
 		})
+		pkm.invalidatePoolAddressCacheNoLock()
 		pkm.fireCallback(pk)
 	}
 }
@@ -220,6 +231,7 @@ func (pkm *PubKeyManager) AddNodePubKey(pk common.PubKey, algo common.SigningAlg
 			NodeAccount: true,
 			Contracts:   map[common.Chain]common.Address{},
 		})
+		pkm.invalidatePoolAddressCacheNoLock()
 		// a new pubkey get added , fire callback
 		pkm.fireCallback(pk)
 	}
@@ -240,6 +252,7 @@ func (pkm *PubKeyManager) removePubKeyInternal(pk common.PubKey) {
 			pkm.pubkeys[i] = pkm.pubkeys[len(pkm.pubkeys)-1] // Copy last element to index i.
 			pkm.pubkeys[len(pkm.pubkeys)-1] = pubKeyInfo{}   // Erase last element (write zero value).
 			pkm.pubkeys = pkm.pubkeys[:len(pkm.pubkeys)-1]   // Truncate slice.
+			pkm.invalidatePoolAddressCacheNoLock()
 			break
 		}
 	}
@@ -297,6 +310,80 @@ func (pkm *PubKeyManager) updatePubKeys() {
 	}
 }
 
+func normalizePoolAddress(addr string) string {
+	return strings.ToLower(addr)
+}
+
+func (pkm *PubKeyManager) invalidatePoolAddressCacheNoLock() {
+	pkm.poolAddressCache = nil
+}
+
+func (pkm *PubKeyManager) buildPoolAddressCacheNoLock(chain common.Chain, includeInactive bool) map[string]common.ChainPoolInfo {
+	result := make(map[string]common.ChainPoolInfo)
+	for _, pk := range pkm.pubkeys {
+		// skip pubkeys with a different algo than the chain
+		if chain.GetSigningAlgo() != pk.Algo {
+			continue
+		}
+		if !includeInactive && pk.Inactive {
+			continue
+		}
+
+		cpi, err := common.NewChainPoolInfo(chain, pk.PubKey)
+		if err != nil {
+			continue
+		}
+		normalizedAddress := normalizePoolAddress(cpi.PoolAddress.String())
+		if _, ok := result[normalizedAddress]; ok {
+			continue
+		}
+		result[normalizedAddress] = cpi
+	}
+	return result
+}
+
+func (pkm *PubKeyManager) isPoolAddress(addr string, chain common.Chain, includeInactive bool) (bool, common.ChainPoolInfo) {
+	normalizedAddress := normalizePoolAddress(addr)
+	if normalizedAddress == "" {
+		return false, common.EmptyChainPoolInfo
+	}
+
+	key := poolAddressCacheKey{
+		Chain:           chain,
+		IncludeInactive: includeInactive,
+	}
+
+	pkm.rwMutex.RLock()
+	if cached, ok := pkm.poolAddressCache[key]; ok {
+		cpi, ok := cached[normalizedAddress]
+		pkm.rwMutex.RUnlock()
+		if ok {
+			return true, cpi
+		}
+		return false, common.EmptyChainPoolInfo
+	}
+	pkm.rwMutex.RUnlock()
+
+	pkm.rwMutex.Lock()
+	defer pkm.rwMutex.Unlock()
+
+	if pkm.poolAddressCache == nil {
+		pkm.poolAddressCache = make(map[poolAddressCacheKey]map[string]common.ChainPoolInfo)
+	}
+
+	cached, ok := pkm.poolAddressCache[key]
+	if !ok {
+		cached = pkm.buildPoolAddressCacheNoLock(chain, includeInactive)
+		pkm.poolAddressCache[key] = cached
+	}
+
+	cpi, ok := cached[normalizedAddress]
+	if ok {
+		return true, cpi
+	}
+	return false, common.EmptyChainPoolInfo
+}
+
 func matchAddress(addr string, chain common.Chain, key common.PubKey) (bool, common.ChainPoolInfo) {
 	cpi, err := common.NewChainPoolInfo(chain, key)
 	if err != nil {
@@ -325,6 +412,11 @@ func (pkm *PubKeyManager) IsValidPoolAddress(addr string, chain common.Chain) (b
 		}
 	}
 	return false, common.EmptyChainPoolInfo
+}
+
+// IsActivePoolAddress check whether the given address is an active pool addr.
+func (pkm *PubKeyManager) IsActivePoolAddress(addr string, chain common.Chain) (bool, common.ChainPoolInfo) {
+	return pkm.isPoolAddress(addr, chain, false)
 }
 
 // getPubkeys from THORChain

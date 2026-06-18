@@ -752,8 +752,30 @@ func (e *ETHScanner) getTokenMeta(token string) (types.TokenMeta, error) {
 	return tokenMeta, nil
 }
 
-// convertAmount will convert the amount to 1e8 , the decimals used by THORChain
-func (e *ETHScanner) convertAmount(token string, amt *big.Int) cosmos.Uint {
+func (e *ETHScanner) isRelevantERC20Token(addr *ecommon.Address) bool {
+	if addr == nil {
+		return false
+	}
+	return evm.IsRelevantToken(addr.String(), e.whitelistTokens, e.tokens, e.logger)
+}
+
+func (e *ETHScanner) directERC20InboundEnabled() bool {
+	enabled, err := e.bridge.GetMimirWithRef(
+		constants.MimirTemplateEVMDirectERC20Inbound,
+		e.cfg.ChainID.String(),
+	)
+	if err != nil {
+		e.logger.Err(err).
+			Str("mimir_template", constants.MimirTemplateEVMDirectERC20Inbound).
+			Str("chain", e.cfg.ChainID.String()).
+			Msg("fail to get direct ERC20 inbound mimir")
+		return false
+	}
+	return enabled > 0
+}
+
+// ConvertAmount will convert the amount to 1e8, the decimals used by THORChain.
+func (e *ETHScanner) ConvertAmount(token string, amt *big.Int) cosmos.Uint {
 	if IsETH(token) {
 		return cosmos.NewUintFromBigInt(amt).QuoUint64(common.One * 100)
 	}
@@ -773,8 +795,9 @@ func (e *ETHScanner) convertAmount(token string, amt *big.Int) cosmos.Uint {
 	return cosmos.NewUintFromBigInt(amt).QuoUint64(common.One * 100)
 }
 
-// return value 0 means use the default value which is common.THORChainDecimals, use 1e8 as precision
-func (e *ETHScanner) getTokenDecimalsForTHORChain(token string) int64 {
+// GetTokenDecimalsForTHORChain returns the coin decimal override for THORChain.
+// A return value of 0 means use common.THORChainDecimals, 1e8 precision.
+func (e *ETHScanner) GetTokenDecimalsForTHORChain(token string) int64 {
 	if IsETH(token) {
 		return 0
 	}
@@ -792,7 +815,8 @@ func (e *ETHScanner) getTokenDecimalsForTHORChain(token string) int64 {
 	return int64(tokenMeta.Decimal)
 }
 
-func (e *ETHScanner) getAssetFromTokenAddress(token string) (common.Asset, error) {
+// GetAssetFromTokenAddress resolves an ETH chain asset from an ERC20 token address.
+func (e *ETHScanner) GetAssetFromTokenAddress(token string) (common.Asset, error) {
 	if IsETH(token) {
 		return common.ETHAsset, nil
 	}
@@ -804,6 +828,23 @@ func (e *ETHScanner) getAssetFromTokenAddress(token string) (common.Asset, error
 		return common.EmptyAsset, fmt.Errorf("token metadata is empty")
 	}
 	return common.NewAsset(fmt.Sprintf("ETH.%s-%s", tokenMeta.Symbol, strings.ToUpper(tokenMeta.Address)))
+}
+
+// getTxInFromDirectERC20Transfer observes direct ERC20 token transfers sent to
+// active vault addresses. These txs bypass the router, so they are emitted as
+// memo-less inbounds and left to THORNode's normal memoless/refund handling.
+func (e *ETHScanner) getTxInFromDirectERC20Transfer(tx *etypes.Transaction, receipt *etypes.Receipt, sender *ecommon.Address) (*stypes.TxInItem, error) {
+	return evm.GetTxInFromDirectERC20Transfer(tx, receipt, evm.DirectERC20TransferTxInOptions{
+		Chain:                 common.ETHChain,
+		Signer:                e.eipSigner,
+		Sender:                sender,
+		MaxContractTxLogs:     int64(e.cfg.MaxContractTxLogs),
+		PoolAddressProvider:   e.pubkeyMgr,
+		TokenResolver:         e,
+		Logger:                e.logger,
+		SenderErrorMessage:    "fail to get sender",
+		ParseLogsErrorMessage: "fail to parse direct ERC20 transfer logs",
+	})
 }
 
 // getTxInFromSmartContract returns txInItem
@@ -823,9 +864,9 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 		return nil, nil
 	}
 	p := evm.NewSmartContractLogParser(e.isToValidContractAddress,
-		e.getAssetFromTokenAddress,
-		e.getTokenDecimalsForTHORChain,
-		e.convertAmount,
+		e.GetAssetFromTokenAddress,
+		e.GetTokenDecimalsForTHORChain,
+		e.ConvertAmount,
 		e.vaultABI,
 		common.ETHAsset,
 		maxLogs)
@@ -902,7 +943,7 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 			txInItem.Memo = string(memo)
 		}
 	}
-	ethValue := e.convertAmount(ethToken, tx.Value())
+	ethValue := e.ConvertAmount(ethToken, tx.Value())
 	txInItem.Coins = append(txInItem.Coins, common.NewCoin(asset, ethValue))
 	txGasPrice := receipt.EffectiveGasPrice
 
@@ -993,6 +1034,26 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 		case isFromVault:
 			// Tx from a vault (outbound, approval, cancel, etc.)
 			return e.getTxInFromTransaction(tx, receipt)
+		case evm.HasERC20TransferSelector(tx):
+			// Reject unknown tokens before the cached Mimir gate.
+			if !e.isRelevantERC20Token(destination) {
+				return nil, nil
+			}
+			// Confirm this is a successful top-level ERC20 transfer from tx.To().
+			if !evm.IsERC20Transfer(tx, receipt) {
+				return nil, nil
+			}
+			// Keep direct inbounds behind the per-chain operator flag.
+			if !e.directERC20InboundEnabled() {
+				return nil, nil
+			}
+			if senderErr != nil {
+				// Match the whitelist-enabled path: ignore txs whose sender we
+				// cannot determine rather than surfacing scanner noise.
+				return nil, nil
+			}
+			// Reuse the sender recovered above to avoid a second ecrecover.
+			return e.getTxInFromDirectERC20Transfer(tx, receipt, &sender)
 		case evm.IsSmartContractCall(tx, receipt):
 			// Tx to a different contract, attempt to parse with max allowable logs
 			return e.getTxInFromSmartContract(tx, receipt, int64(e.cfg.MaxContractTxLogs))
@@ -1015,7 +1076,22 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 		if isFromVault || isToVault {
 			return e.getTxInFromTransaction(tx, receipt)
 		}
-		// ignore tx not involving any vault
+		if evm.HasERC20TransferSelector(tx) {
+			// Reject unknown tokens before the cached Mimir gate.
+			if !e.isRelevantERC20Token(tx.To()) {
+				return nil, nil
+			}
+			// Confirm this is a successful top-level ERC20 transfer from tx.To().
+			if !evm.IsERC20Transfer(tx, receipt) {
+				return nil, nil
+			}
+			// Keep direct inbounds behind the per-chain operator flag.
+			if !e.directERC20InboundEnabled() {
+				return nil, nil
+			}
+			// Reuse the sender recovered above to avoid a second ecrecover.
+			return e.getTxInFromDirectERC20Transfer(tx, receipt, &sender)
+		}
 		return nil, nil
 	}
 }

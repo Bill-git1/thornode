@@ -117,6 +117,30 @@ func (s *TokenManagerTestSuite) TestSaveAndGet(c *C) {
 	c.Assert(meta.Symbol, Equals, "TKN")
 }
 
+func (s *TokenManagerTestSuite) TestIsRelevantToken(c *C) {
+	memStorage := storage.NewMemStorage()
+	db, err := leveldb.Open(memStorage, nil)
+	c.Assert(err, IsNil)
+	manager, err := NewTokenManager(db, s.prefix, common.ETHAsset, 18, time.Second, testWhiteList, s.client, routerContractABI, erc20ContractABI)
+	c.Assert(err, IsNil)
+
+	c.Assert(manager.IsRelevantToken(NativeTokenAddr), Equals, true)
+	c.Assert(IsRelevantToken(NativeTokenAddr, nil, nil, manager.logger), Equals, true)
+
+	whitelisted := "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+	c.Assert(manager.IsRelevantToken(whitelisted), Equals, true)
+	c.Assert(IsRelevantToken(whitelisted, testWhiteList, nil, manager.logger), Equals, true)
+
+	knownPoolAddr := "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+	c.Assert(manager.SaveTokenMeta("USDT", knownPoolAddr, 6), IsNil)
+	c.Assert(manager.IsRelevantToken(knownPoolAddr), Equals, true)
+	c.Assert(IsRelevantToken(knownPoolAddr, testWhiteList, manager.tokenDb, manager.logger), Equals, true)
+
+	unknown := "0x1111111111111111111111111111111111111111"
+	c.Assert(manager.IsRelevantToken(unknown), Equals, false)
+	c.Assert(IsRelevantToken(unknown, testWhiteList, nil, manager.logger), Equals, false)
+}
+
 func (s *TokenManagerTestSuite) TestConvertAmounts(c *C) {
 	memStorage := storage.NewMemStorage()
 	db, err := leveldb.Open(memStorage, nil)

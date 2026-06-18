@@ -58,6 +58,10 @@ func (mpa *MockPoolAddressValidator) IsValidPoolAddress(addr string, chain commo
 	return false, common.EmptyChainPoolInfo
 }
 
+func (mpa *MockPoolAddressValidator) IsActivePoolAddress(addr string, chain common.Chain) (bool, common.ChainPoolInfo) {
+	return false, common.EmptyChainPoolInfo
+}
+
 func (mpa *MockPoolAddressValidator) RegisterCallback(callback OnNewPubKey) {
 }
 

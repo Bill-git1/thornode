@@ -627,6 +627,26 @@ func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.R
 		case isFromVault:
 			// Tx from a vault (outbound, approval, cancel, etc.)
 			return e.getTxInFromTransaction(tx, receipt)
+		case evm.HasERC20TransferSelector(tx):
+			// Reject unknown tokens before the cached Mimir gate.
+			if !e.isRelevantERC20Token(destination) {
+				return nil, nil
+			}
+			// Confirm this is a successful top-level ERC20 transfer from tx.To().
+			if !evm.IsERC20Transfer(tx, receipt) {
+				return nil, nil
+			}
+			// Keep direct inbounds behind the per-chain operator flag.
+			if !e.directERC20InboundEnabled() {
+				return nil, nil
+			}
+			if senderErr != nil {
+				// Match the whitelist-enabled path: ignore txs whose sender we
+				// cannot determine rather than surfacing scanner noise.
+				return nil, nil
+			}
+			// Reuse the sender recovered above to avoid a second ecrecover.
+			return e.getTxInFromDirectERC20Transfer(tx, receipt, &sender)
 		case evm.IsSmartContractCall(tx, receipt):
 			// Tx to a different contract, attempt to parse with max allowable logs
 			return e.getTxInFromSmartContract(tx, receipt, int64(e.cfg.MaxContractTxLogs))
@@ -649,7 +669,22 @@ func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.R
 		if isFromVault || isToVault {
 			return e.getTxInFromTransaction(tx, receipt)
 		}
-		// ignore tx not involving any vault
+		if evm.HasERC20TransferSelector(tx) {
+			// Reject unknown tokens before the cached Mimir gate.
+			if !e.isRelevantERC20Token(tx.To()) {
+				return nil, nil
+			}
+			// Confirm this is a successful top-level ERC20 transfer from tx.To().
+			if !evm.IsERC20Transfer(tx, receipt) {
+				return nil, nil
+			}
+			// Keep direct inbounds behind the per-chain operator flag.
+			if !e.directERC20InboundEnabled() {
+				return nil, nil
+			}
+			// Reuse the sender recovered above to avoid a second ecrecover.
+			return e.getTxInFromDirectERC20Transfer(tx, receipt, &sender)
+		}
 		return nil, nil
 	}
 }
@@ -976,6 +1011,50 @@ func (e *EVMScanner) isToValidContractAddress(addr *ecommon.Address, includeWhit
 		}
 	}
 	return false
+}
+
+func (e *EVMScanner) isRelevantERC20Token(addr *ecommon.Address) bool {
+	if addr == nil || e.tokenManager == nil {
+		return false
+	}
+	return e.tokenManager.IsRelevantToken(addr.String())
+}
+
+func (e *EVMScanner) directERC20InboundEnabled() bool {
+	enabled, err := e.bridge.GetMimirWithRef(
+		constants.MimirTemplateEVMDirectERC20Inbound,
+		e.cfg.ChainID.String(),
+	)
+	if err != nil {
+		e.logger.Err(err).
+			Str("mimir_template", constants.MimirTemplateEVMDirectERC20Inbound).
+			Str("chain", e.cfg.ChainID.String()).
+			Msg("fail to get direct ERC20 inbound mimir")
+		return false
+	}
+	return enabled > 0
+}
+
+// getTxInFromDirectERC20Transfer observes direct ERC20 token transfers sent to
+// active vault addresses. These txs bypass the router, so they are emitted as
+// memo-less inbounds and left to THORNode's normal memoless/refund handling.
+func (e *EVMScanner) getTxInFromDirectERC20Transfer(tx *etypes.Transaction, receipt *etypes.Receipt, sender *ecommon.Address) (*stypes.TxInItem, error) {
+	var l1Fee *big.Int
+	if receipt != nil {
+		l1Fee = receipt.L1Fee
+	}
+	return evm.GetTxInFromDirectERC20Transfer(tx, receipt, evm.DirectERC20TransferTxInOptions{
+		Chain:                 e.cfg.ChainID,
+		Signer:                e.eipSigner,
+		Sender:                sender,
+		MaxContractTxLogs:     int64(e.cfg.MaxContractTxLogs),
+		L1Fee:                 l1Fee,
+		PoolAddressProvider:   e.pubkeyMgr,
+		TokenResolver:         e.tokenManager,
+		Logger:                e.logger,
+		SenderErrorMessage:    "failed to get sender",
+		ParseLogsErrorMessage: "failed to parse direct ERC20 transfer logs",
+	})
 }
 
 // getTxInFromSmartContract returns txInItem

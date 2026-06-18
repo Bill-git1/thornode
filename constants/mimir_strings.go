@@ -13,6 +13,7 @@ const (
 	MimirKeyDisableTSSSignerFiltering = "DisableTSSSignerFiltering"
 
 	MimirTemplateEVMAllowanceCheck         = "EVMAllowanceCheck-%s"         // Use with Chain
+	MimirTemplateEVMDirectERC20Inbound     = "EVMDirectERC20Inbound-%s"     // Use with Chain
 	MimirTemplateConfMultiplierBasisPoints = "ConfMultiplierBasisPoints-%s" // Use with Chain
 	MimirTemplateMaxConfirmations          = "MaxConfirmations-%s"          // Use with Chain
 	MimirTemplateSwapSlipBasisPointsMin    = "SwapSlipBasisPointsMin-%s"    // Use with MimirRef

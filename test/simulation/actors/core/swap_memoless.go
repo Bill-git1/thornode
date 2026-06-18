@@ -32,9 +32,28 @@ const (
 	MemolessTypeAmount                     // reference encoded in amount
 )
 
+type MemolessTransferMode int
+
+const (
+	MemolessTransferModeRouter MemolessTransferMode = iota
+	MemolessTransferModeDirectERC20
+)
+
+func (m MemolessTransferMode) String() string {
+	switch m {
+	case MemolessTransferModeRouter:
+		return "router"
+	case MemolessTransferModeDirectERC20:
+		return "direct_erc20"
+	default:
+		return fmt.Sprintf("unknown_%d", m)
+	}
+}
+
 type SwapMemolessActor struct {
 	SwapActor
 
+	transferMode     MemolessTransferMode
 	memolessType     MemolessType
 	registeredMemo   string
 	registrationTxID common.TxID
@@ -45,12 +64,26 @@ type SwapMemolessActor struct {
 }
 
 func NewSwapMemolessActor(from, to common.Asset, memolessType MemolessType, rng *rand.Rand) *Actor {
+	return newSwapMemolessActor(from, to, memolessType, MemolessTransferModeRouter, rng)
+}
+
+func NewDirectERC20SwapMemolessActor(from, to common.Asset, rng *rand.Rand) *Actor {
+	return newSwapMemolessActor(from, to, MemolessTypeAmount, MemolessTransferModeDirectERC20, rng)
+}
+
+func newSwapMemolessActor(from, to common.Asset, memolessType MemolessType, transferMode MemolessTransferMode, rng *rand.Rand) *Actor {
+	name := fmt.Sprintf("SwapMemoless %s => %s", from, to)
+	if transferMode == MemolessTransferModeDirectERC20 {
+		name = fmt.Sprintf("SwapMemoless direct ERC20 %s => %s", from, to)
+	}
+
 	a := &SwapMemolessActor{
 		SwapActor: SwapActor{
-			Actor: *NewActor(fmt.Sprintf("SwapMemoless %s => %s", from, to), rng),
+			Actor: *NewActor(name, rng),
 			from:  from,
 			to:    to,
 		},
+		transferMode: transferMode,
 		memolessType: memolessType,
 	}
 	a.Timeout = swapMemolessActorTimeout(from, to)
@@ -102,7 +135,10 @@ func swapMemolessActorTimeout(from, to common.Asset) time.Duration {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (a *SwapMemolessActor) updateLogContext(config *OpConfig) OpResult {
-	a.SetLogger(log.With().Stringer("type", a.memolessType).Logger())
+	a.SetLogger(log.With().
+		Stringer("type", a.memolessType).
+		Str("transfer_mode", a.transferMode.String()).
+		Logger())
 	return OpResult{
 		Continue: true,
 	}
@@ -368,6 +404,9 @@ func (a *SwapMemolessActor) requoteEncodedSwap(config *OpConfig) OpResult {
 
 func (a *SwapMemolessActor) signSwap(config *OpConfig) OpResult {
 	if a.from.Chain.IsEVM() && !a.from.IsGasAsset() {
+		if a.transferMode == MemolessTransferModeDirectERC20 {
+			return a.signDirectTokenTransfer()
+		}
 		return a.signTokenSwap()
 	}
 
@@ -412,6 +451,56 @@ func (a *SwapMemolessActor) signSwap(config *OpConfig) OpResult {
 	}
 }
 
+func (a *SwapMemolessActor) signDirectTokenTransfer() OpResult {
+	inboundAddr, _, err := thornode.GetInboundAddress(a.from.Chain)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to get inbound address")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	token, ok := evm.Tokens(a.from.Chain)[a.from]
+	if !ok {
+		a.Log().Error().Stringer("asset", a.from).Msg("failed to find token metadata for source asset")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	tokenAmount := a.tokenAmount(token.Decimals)
+
+	iClient := a.user.ChainClients[a.from.Chain]
+	client, ok := iClient.(*evm.Client)
+	if !ok {
+		a.Log().Error().Msg("failed to get evm client")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	eInboundAddr := ecommon.HexToAddress(inboundAddr.String())
+	directTx := SimContractTx{
+		Chain:    a.from.Chain,
+		Contract: common.Address(token.Address),
+		ABI:      evm.ERC20ABI(),
+		Method:   "transfer",
+		Args:     []interface{}{eInboundAddr, tokenAmount.BigInt()},
+	}
+
+	a.signedSwap, err = client.SignContractTx(directTx)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to sign direct token memoless swap tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	return OpResult{
+		Continue: true,
+	}
+}
+
 func (a *SwapMemolessActor) signTokenSwap() OpResult {
 	// get router address
 	inboundAddr, routerAddr, err := thornode.GetInboundAddress(a.from.Chain)
@@ -436,10 +525,7 @@ func (a *SwapMemolessActor) signTokenSwap() OpResult {
 		}
 	}
 
-	// convert amount to token decimals
-	factor := sdkmath.NewUintFromBigInt(big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil))
-	tokenAmount := a.swapAmount.Mul(factor)
-	tokenAmount = tokenAmount.QuoUint64(common.One)
+	tokenAmount := a.tokenAmount(token.Decimals)
 
 	iClient := a.user.ChainClients[a.from.Chain]
 	client, ok := iClient.(*evm.Client)
@@ -617,4 +703,10 @@ func (a *SwapMemolessActor) maxAmountWithEncodedRefAtOrAbove(target sdkmath.Uint
 	}
 	remainder := normalizedAmount % modulus
 	return sdkmath.NewUint(normalizedAmount - remainder + modulus - 1).MulUint64(scalingDivisor)
+}
+
+func (a *SwapMemolessActor) tokenAmount(decimals int) sdkmath.Uint {
+	factor := sdkmath.NewUintFromBigInt(big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil))
+	tokenAmount := a.swapAmount.Mul(factor)
+	return tokenAmount.QuoUint64(common.One)
 }

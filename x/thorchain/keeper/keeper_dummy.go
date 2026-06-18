@@ -724,7 +724,9 @@ func (k KVStoreDummy) SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddres
 func (k KVStoreDummy) IsOperationalMimir(key string) bool {
 	key = strings.ToUpper(key)
 	// Simplified representation.
-	return strings.Contains(key, "HALT") || strings.Contains(key, "PAUSE")
+	return strings.Contains(key, "HALT") ||
+		strings.Contains(key, "PAUSE") ||
+		strings.Contains(key, "EVMDIRECTERC20INBOUND")
 }
 
 func (k KVStoreDummy) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (NetworkFee, error) {

@@ -21,6 +21,7 @@ import (
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	ethclient "github.com/ethereum/go-ethereum/ethclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
@@ -33,6 +34,7 @@ import (
 	thorcommon "gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 	. "gopkg.in/check.v1"
 )
@@ -41,6 +43,7 @@ const (
 	TestGasPriceResolution = 50  // 50 nAVAX
 	weiPerNanoAvax         = 1e9 // For .gasPrice checks.
 	Mainnet                = 1
+	testERC20TransferEvent = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 )
 
 var (
@@ -88,6 +91,18 @@ func CreateBlock(height int) (*etypes.Header, error) {
 	return header, nil
 }
 
+func erc20TransferCallData(to common.Address, amount *big.Int) []byte {
+	selector := crypto.Keccak256([]byte("transfer(address,uint256)"))[:4]
+	data := append([]byte{}, selector...)
+	data = append(data, common.LeftPadBytes(to.Bytes(), common.HashLength)...)
+	data = append(data, common.LeftPadBytes(amount.Bytes(), common.HashLength)...)
+	return data
+}
+
+func paddedAddressHash(addr common.Address) common.Hash {
+	return common.BytesToHash(common.LeftPadBytes(addr.Bytes(), common.HashLength))
+}
+
 type BlockScannerTestSuite struct {
 	m      *metrics.Metrics
 	bridge thorclient.ThorchainBridge
@@ -95,6 +110,50 @@ type BlockScannerTestSuite struct {
 }
 
 var _ = Suite(&BlockScannerTestSuite{})
+
+type directTransferPubKeyValidator struct {
+	*pubkeymanager.MockPoolAddressValidator
+	pubkey thorcommon.PubKey
+}
+
+type testMimirBridge struct {
+	thorclient.ThorchainBridge
+	getMimir func(string) (int64, error)
+}
+
+func (b testMimirBridge) GetMimir(key string) (int64, error) {
+	return b.getMimir(key)
+}
+
+func (b testMimirBridge) GetMimirWithRef(template, ref string) (int64, error) {
+	return b.GetMimir(fmt.Sprintf(template, ref))
+}
+
+func (v directTransferPubKeyValidator) GetAlgoPubKeys(algo thorcommon.SigningAlgo, includeInactive bool) thorcommon.PubKeys {
+	if v.pubkey.IsEmpty() {
+		return nil
+	}
+	return thorcommon.PubKeys{v.pubkey}
+}
+
+func (v directTransferPubKeyValidator) IsValidPoolAddress(addr string, chain thorcommon.Chain) (bool, thorcommon.ChainPoolInfo) {
+	return v.matchPoolAddress(addr, chain)
+}
+
+func (v directTransferPubKeyValidator) IsActivePoolAddress(addr string, chain thorcommon.Chain) (bool, thorcommon.ChainPoolInfo) {
+	return v.matchPoolAddress(addr, chain)
+}
+
+func (v directTransferPubKeyValidator) matchPoolAddress(addr string, chain thorcommon.Chain) (bool, thorcommon.ChainPoolInfo) {
+	cpi, err := thorcommon.NewChainPoolInfo(chain, v.pubkey)
+	if err != nil {
+		return false, thorcommon.EmptyChainPoolInfo
+	}
+	if strings.EqualFold(cpi.PoolAddress.String(), addr) {
+		return true, cpi
+	}
+	return false, thorcommon.EmptyChainPoolInfo
+}
 
 func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 	setupMocknetThorConfig()
@@ -569,6 +628,241 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	c.Assert(txInItem.Tx, Equals, "1f451e1361a1374d135d3da413391cd0d0510e106488b681bed888f3e141bb04")
 	c.Assert(txInItem.Coins[0].Asset.String(), Equals, "AVAX.TKN-0X333C3310824B7C685133F2BEDB2CA4B8B4DF633D")
 	c.Assert(txInItem.Coins[0].Amount.Equal(cosmos.NewUint(24310000)), Equals, true)
+}
+
+func (s *BlockScannerTestSuite) TestGetTxInFromDirectERC20Transfer(c *C) {
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		c.Assert(err, IsNil)
+		type RPCRequest struct {
+			Method string `json:"method"`
+		}
+		var rpcRequest RPCRequest
+		if err = json.Unmarshal(body, &rpcRequest); err == nil && rpcRequest.Method == "eth_chainId" {
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xa868"}`))
+			c.Assert(err, IsNil)
+			return
+		}
+		_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+		c.Assert(err, IsNil)
+	}))
+	defer server.Close()
+
+	ethClient, err := ethclient.Dial(server.URL)
+	c.Assert(err, IsNil)
+	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(storage.Close(), IsNil) }()
+
+	tokenManager, err := evm.NewTokenManager(
+		storage.GetInternalDb(),
+		"direct-erc20-tokenmeta-",
+		thorcommon.AVAXAsset,
+		defaultDecimals,
+		time.Second,
+		nil,
+		ethClient,
+		routerContractABI,
+		erc20ContractABI,
+	)
+	c.Assert(err, IsNil)
+
+	tokenAddr := common.HexToAddress("0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d")
+	c.Assert(tokenManager.SaveTokenMeta("TKN", tokenAddr.String(), 18), IsNil)
+
+	vaultABI, _, err := evm.GetContractABI(routerContractABI, erc20ContractABI)
+	c.Assert(err, IsNil)
+	priKey, err := s.keys.GetPrivateKey()
+	c.Assert(err, IsNil)
+	tm, err := cryptocodec.ToCmtPubKeyInterface(priKey.PubKey())
+	c.Assert(err, IsNil)
+	pubkey, err := thorcommon.NewPubKeyFromCrypto(tm)
+	c.Assert(err, IsNil)
+	cpi, err := thorcommon.NewChainPoolInfo(thorcommon.AVAXChain, pubkey)
+	c.Assert(err, IsNil)
+	vaultAddr := common.HexToAddress(cpi.PoolAddress.String())
+
+	scanner := &EVMScanner{
+		cfg:          getConfigForTest(),
+		pubkeyMgr:    directTransferPubKeyValidator{MockPoolAddressValidator: pubkeymanager.NewMockPoolAddressValidator(), pubkey: pubkey},
+		eipSigner:    etypes.NewEIP155Signer(big.NewInt(43112)),
+		tokenManager: tokenManager,
+		vaultABI:     vaultABI,
+	}
+
+	privateKey, err := crypto.HexToECDSA(strings.Repeat("1", 64))
+	c.Assert(err, IsNil)
+	senderAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	tokenAmount := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	unsignedTx := etypes.NewTransaction(7, tokenAddr, big.NewInt(0), 100000, big.NewInt(1), erc20TransferCallData(vaultAddr, tokenAmount))
+	tx, err := etypes.SignTx(unsignedTx, etypes.NewEIP155Signer(big.NewInt(43112)), privateKey)
+	c.Assert(err, IsNil)
+
+	receipt := &etypes.Receipt{
+		Status:            1,
+		GasUsed:           21000,
+		EffectiveGasPrice: big.NewInt(1),
+		Logs: []*etypes.Log{
+			{
+				Address: tokenAddr,
+				Topics: []common.Hash{
+					common.HexToHash(testERC20TransferEvent),
+					paddedAddressHash(senderAddr),
+					paddedAddressHash(vaultAddr),
+				},
+				Data: common.LeftPadBytes(tokenAmount.Bytes(), common.HashLength),
+			},
+		},
+	}
+
+	txInItem, err := scanner.getTxInFromDirectERC20Transfer(tx, receipt, nil)
+	c.Assert(err, IsNil)
+	c.Assert(txInItem, NotNil)
+	c.Assert(txInItem.Sender, Equals, strings.ToLower(senderAddr.String()))
+	c.Assert(txInItem.To, Equals, vaultAddr.String())
+	c.Assert(txInItem.Memo, Equals, "")
+	c.Assert(txInItem.Tx, Equals, tx.Hash().Hex()[2:])
+	c.Assert(txInItem.Coins[0].Asset.String(), Equals, "AVAX.TKN-0X333C3310824B7C685133F2BEDB2CA4B8B4DF633D")
+	c.Assert(txInItem.Coins[0].Amount.Equal(cosmos.NewUint(100000000)), Equals, true)
+}
+
+func (s *BlockScannerTestSuite) TestDirectERC20TransferFeatureFlag(c *C) {
+	disableWhitelist := int64(0)
+	directInbound := int64(-1)
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		c.Assert(err, IsNil)
+		type RPCRequest struct {
+			Method string `json:"method"`
+		}
+		var rpcRequest RPCRequest
+		if err = json.Unmarshal(body, &rpcRequest); err == nil && rpcRequest.Method == "eth_chainId" {
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xa868"}`))
+			c.Assert(err, IsNil)
+			return
+		}
+		_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+		c.Assert(err, IsNil)
+	}))
+	defer server.Close()
+
+	ethClient, err := ethclient.Dial(server.URL)
+	c.Assert(err, IsNil)
+	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
+	c.Assert(err, IsNil)
+	defer func() { c.Assert(storage.Close(), IsNil) }()
+	bridge := testMimirBridge{
+		getMimir: func(key string) (int64, error) {
+			switch key {
+			case constants.EVMDisableContractWhitelist.String():
+				return disableWhitelist, nil
+			case fmt.Sprintf(constants.MimirTemplateEVMDirectERC20Inbound, thorcommon.AVAXChain):
+				return directInbound, nil
+			default:
+				return -1, nil
+			}
+		},
+	}
+
+	tokenManager, err := evm.NewTokenManager(
+		storage.GetInternalDb(),
+		"direct-avax-feature-tokenmeta-",
+		thorcommon.AVAXAsset,
+		defaultDecimals,
+		time.Second,
+		nil,
+		ethClient,
+		routerContractABI,
+		erc20ContractABI,
+	)
+	c.Assert(err, IsNil)
+	tokenAddr := common.HexToAddress("0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d")
+	c.Assert(tokenManager.SaveTokenMeta("TKN", tokenAddr.String(), 18), IsNil)
+
+	vaultABI, _, err := evm.GetContractABI(routerContractABI, erc20ContractABI)
+	c.Assert(err, IsNil)
+	priKey, err := s.keys.GetPrivateKey()
+	c.Assert(err, IsNil)
+	tm, err := cryptocodec.ToCmtPubKeyInterface(priKey.PubKey())
+	c.Assert(err, IsNil)
+	pubkey, err := thorcommon.NewPubKeyFromCrypto(tm)
+	c.Assert(err, IsNil)
+	cpi, err := thorcommon.NewChainPoolInfo(thorcommon.AVAXChain, pubkey)
+	c.Assert(err, IsNil)
+	vaultAddr := common.HexToAddress(cpi.PoolAddress.String())
+
+	privateKey, err := crypto.HexToECDSA(strings.Repeat("1", 64))
+	c.Assert(err, IsNil)
+	senderAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	tokenAmount := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	unsignedTx := etypes.NewTransaction(7, tokenAddr, big.NewInt(0), 100000, big.NewInt(1), erc20TransferCallData(vaultAddr, tokenAmount))
+	tx, err := etypes.SignTx(unsignedTx, etypes.NewEIP155Signer(big.NewInt(43112)), privateKey)
+	c.Assert(err, IsNil)
+
+	receipt := &etypes.Receipt{
+		Status:            1,
+		GasUsed:           21000,
+		EffectiveGasPrice: big.NewInt(1),
+		Logs: []*etypes.Log{
+			{
+				Address: tokenAddr,
+				Topics: []common.Hash{
+					common.HexToHash(testERC20TransferEvent),
+					paddedAddressHash(senderAddr),
+					paddedAddressHash(vaultAddr),
+				},
+				Data: common.LeftPadBytes(tokenAmount.Bytes(), common.HashLength),
+			},
+		},
+	}
+
+	scanner := &EVMScanner{
+		cfg:          getConfigForTest(),
+		bridge:       bridge,
+		pubkeyMgr:    directTransferPubKeyValidator{MockPoolAddressValidator: pubkeymanager.NewMockPoolAddressValidator(), pubkey: pubkey},
+		eipSigner:    etypes.NewEIP155Signer(big.NewInt(43112)),
+		tokenManager: tokenManager,
+		vaultABI:     vaultABI,
+	}
+
+	testCases := []struct {
+		name             string
+		disableWhitelist int64
+		directInbound    int64
+		expectObserved   bool
+	}{
+		{"whitelist enabled and direct inbound unset", 0, -1, false},
+		{"whitelist enabled and direct inbound enabled", 0, 1, true},
+		{"whitelist disabled and direct inbound zero", 1, 0, false},
+		{"whitelist disabled and direct inbound enabled", 1, 1, true},
+	}
+
+	for _, tc := range testCases {
+		disableWhitelist = tc.disableWhitelist
+		directInbound = tc.directInbound
+
+		txInItem, txErr := scanner.receiptToTxInItem(tx, receipt)
+		c.Assert(txErr, IsNil, Commentf(tc.name))
+		if !tc.expectObserved {
+			c.Assert(txInItem, IsNil, Commentf(tc.name))
+			continue
+		}
+		c.Assert(txInItem, NotNil, Commentf(tc.name))
+		c.Assert(txInItem.Sender, Equals, strings.ToLower(senderAddr.String()), Commentf(tc.name))
+		c.Assert(txInItem.To, Equals, vaultAddr.String(), Commentf(tc.name))
+		c.Assert(txInItem.Coins[0].Asset.String(), Equals, "AVAX.TKN-0X333C3310824B7C685133F2BEDB2CA4B8B4DF633D", Commentf(tc.name))
+		c.Assert(txInItem.Coins[0].Amount.Equal(cosmos.NewUint(100000000)), Equals, true, Commentf(tc.name))
+	}
+
+	disableWhitelist = 1
+	directInbound = 1
+
+	// Unsigned transfer(...) txs fail sender recovery. The scanner should
+	// quietly ignore them rather than re-running sender recovery and returning
+	// an error from the direct-ERC20 helper.
+	txInItem, err := scanner.receiptToTxInItem(unsignedTx, receipt)
+	c.Assert(err, IsNil)
+	c.Assert(txInItem, IsNil)
 }
 
 func (s *BlockScannerTestSuite) TestRouterValidation(c *C) {

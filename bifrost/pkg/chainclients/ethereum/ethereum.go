@@ -1152,7 +1152,7 @@ func (c *Client) GetBalances(addr string, height *big.Int, contractAddr string) 
 				return nil, err
 			}
 		}
-		bal := c.ethScanner.convertAmount(token.Address, balance)
+		bal := c.ethScanner.ConvertAmount(token.Address, balance)
 		coins = append(coins, common.NewCoin(asset, bal))
 	}
 
@@ -1188,7 +1188,7 @@ func (c *Client) GetVaultBalances(addr string, height *big.Int, contractAddr str
 			c.logger.Err(err).Msgf("fail to get balance for token:%s", tokenAddr)
 			continue
 		}
-		bal := c.ethScanner.convertAmount(tokenAddr, balance)
+		bal := c.ethScanner.ConvertAmount(tokenAddr, balance)
 		coins = append(coins, common.NewCoin(asset, bal))
 	}
 

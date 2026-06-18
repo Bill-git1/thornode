@@ -127,6 +127,39 @@ func (h *TokenManager) SaveTokenMeta(symbol, address string, decimals uint64) er
 	return h.tokenDb.SaveTokenMeta(symbol, address, decimals)
 }
 
+// IsRelevantToken reports whether token is native, already known locally, or
+// configured in the chain token whitelist. It intentionally does not query token
+// contracts.
+func IsRelevantToken(token string, tokenWhitelist []tokenlist.ERC20Token, tokenDb *LevelDBTokenMeta, logger zerolog.Logger) bool {
+	if IsNative(token) {
+		return true
+	}
+	for _, item := range tokenWhitelist {
+		if strings.EqualFold(item.Address, token) {
+			return true
+		}
+	}
+	if tokenDb == nil {
+		return false
+	}
+	tokenMeta, err := tokenDb.GetTokenMeta(token)
+	if err != nil {
+		logger.Err(err).Str("token", token).Msg("failed to get token meta")
+		return false
+	}
+	return !tokenMeta.IsEmpty()
+}
+
+// IsRelevantToken reports whether token is native, already known locally, or
+// configured in the chain token whitelist. It intentionally does not query token
+// contracts.
+func (h *TokenManager) IsRelevantToken(token string) bool {
+	if h == nil {
+		return false
+	}
+	return IsRelevantToken(token, h.tokenWhitelist, h.tokenDb, h.logger)
+}
+
 // IsNative returns true if the token address equals the native token address
 func IsNative(token string) bool {
 	return strings.EqualFold(token, NativeTokenAddr)

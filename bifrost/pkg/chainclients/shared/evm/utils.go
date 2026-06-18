@@ -1,6 +1,8 @@
 package evm
 
 import (
+	"bytes"
+
 	ecommon "github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -21,6 +23,38 @@ func IsSmartContractCall(tx *etypes.Transaction, receipt *etypes.Receipt) bool {
 		return false
 	}
 	return true
+}
+
+// HasERC20TransferSelector determines whether the transaction data starts with
+// the ERC20 transfer(address,uint256) method selector.
+func HasERC20TransferSelector(tx *etypes.Transaction) bool {
+	if tx == nil {
+		return false
+	}
+	data := tx.Data()
+	return len(data) >= len(erc20TransferSelector) && bytes.Equal(data[:len(erc20TransferSelector)], erc20TransferSelector)
+}
+
+// IsERC20Transfer determines if the transaction is a top-level ERC20
+// transfer(address,uint256) call with a matching Transfer log from tx.To().
+func IsERC20Transfer(tx *etypes.Transaction, receipt *etypes.Receipt) bool {
+	if !HasERC20TransferSelector(tx) || tx.To() == nil || receipt == nil || receipt.Status != 1 {
+		return false
+	}
+	if len(receipt.Logs) == 0 {
+		return false
+	}
+
+	tokenAddress := *tx.To()
+	for _, l := range receipt.Logs {
+		if l == nil || l.Address != tokenAddress {
+			continue
+		}
+		if len(l.Topics) == 3 && l.Topics[0].String() == erc20TransferEvent && len(l.Data) == ecommon.HashLength {
+			return true
+		}
+	}
+	return false
 }
 
 // DepositEventRouter returns the address of the contract that emitted the Deposit event
