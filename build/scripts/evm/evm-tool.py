@@ -106,6 +106,7 @@ class EVMSetupTool:
     def deploy_init_contracts(self):
         self.deploy_token()
         self.deploy_router()
+        self.deploy_mocknet_aggregator()
 
     @retry.retry(Exception, delay=1, backoff=2, tries=3)
     def deploy_token(self):
@@ -142,6 +143,31 @@ class EVMSetupTool:
         tx_hash = dex.constructor(*args).transact()
         receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Dex Contract Address: {receipt.get('contractAddress')}")
+
+    @retry.retry(Exception, delay=1, backoff=2, tries=3)
+    def deploy_mocknet_aggregator(self):
+        print("deploying mocknet aggregator contract...")
+        agg = self.mocknet_aggregator_contract()
+        tx_hash = agg.constructor().transact()
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        agg_addr = receipt.get("contractAddress")
+        print(f"Mocknet Aggregator Contract Address: {agg_addr}")
+        if receipt.get("status") != 1:
+            raise Exception(f"failed: {receipt}")
+
+        # Pre-fund the aggregator with TKN so swapOut can deliver finalToken to
+        # the recipient without needing a real DEX pool.
+        token_addr = self._token_address()
+        if token_addr is None:
+            raise Exception("missing token contract address for aggregator funding")
+        token = self.token_contract(address=Web3.to_checksum_address(token_addr))
+        tx_hash = token.functions.transfer(
+            Web3.to_checksum_address(agg_addr), int(100_000e18)
+        ).transact()
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"Aggregator Token Funding Receipt: {receipt}")
+        if receipt.get("status") != 1:
+            raise Exception(f"failed: {receipt}")
 
     # --------------------------------- helpers ---------------------------------
 
@@ -181,6 +207,33 @@ class EVMSetupTool:
         with open(os.path.join(os.path.dirname(__file__), bytecode_file), "r") as f:
             bytecode = f.read()
         return self.web3.eth.contract(abi=abi, bytecode=bytecode, address=address), args
+
+    def mocknet_aggregator_contract(self, address=None):
+        abi_file = "aggregator-mocknet-abi.json"
+        # Polygon's Bor dev mode only supports up to London fork (no PUSH0/Shanghai),
+        # so use the paris-compiled bytecode which avoids the PUSH0 opcode.
+        if self.chain == "POL":
+            bytecode_file = "aggregator-mocknet-bytecode-paris.txt"
+        else:
+            bytecode_file = "aggregator-mocknet-bytecode.txt"
+
+        with open(os.path.join(os.path.dirname(__file__), abi_file), "r") as f:
+            abi = json.load(f)
+        with open(os.path.join(os.path.dirname(__file__), bytecode_file), "r") as f:
+            bytecode = f.read().strip()
+        return self.web3.eth.contract(abi=abi, bytecode=bytecode, address=address)
+
+    def _token_address(self):
+        # The TKN ERC-20 is deployed deterministically by deploy_token at
+        # admin nonce 1. Probe the genesis-derived TKN address used by all
+        # mocknet bifrost configs. Returning None keeps the call site honest
+        # if the deterministic address ever drifts.
+        candidate = Web3.to_checksum_address(
+            "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
+        )
+        if not self.web3.eth.get_code(candidate):
+            return None
+        return candidate
 
     # --------------------------------- utility actions ---------------------------------
 

@@ -57,6 +57,17 @@ func chainGasOffset(chain common.Chain) uint64 {
 	}
 }
 
+// MocknetAggregatorAddress is the deterministic address of the simulation
+// aggregator contract deployed by build/scripts/evm/evm-tool.py. The address
+// is identical on every EVM mocknet chain because the same admin key and
+// deploy nonce sequence is used. The matching whitelist entry lives in
+// x/thorchain/aggregators/dex_mocknet.go.
+const MocknetAggregatorAddress = "0x4ac1d98d9cef99ec6546ded4bd550b0b287aad6d"
+
+// MocknetAggregatorSuffix is the trailing fragment used by simulation memos
+// to reference MocknetAggregatorAddress through FetchDexAggregator.
+const MocknetAggregatorSuffix = "aad6d"
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Init
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -67,7 +78,10 @@ var routerABIJson string
 //go:embed abi/erc20.json
 var erc20ABIJson string
 
-var routerABI, erc20ABI abi.ABI
+//go:embed abi/aggregator.json
+var aggregatorABIJson string
+
+var routerABI, erc20ABI, aggregatorABI abi.ABI
 
 func init() {
 	var err error
@@ -79,6 +93,11 @@ func init() {
 	erc20ABI, err = abi.JSON(strings.NewReader(erc20ABIJson))
 	if err != nil {
 		panic(fmt.Errorf("failed to parse erc20 contract abi: %w", err))
+	}
+
+	aggregatorABI, err = abi.JSON(strings.NewReader(aggregatorABIJson))
+	if err != nil {
+		panic(fmt.Errorf("failed to parse aggregator contract abi: %w", err))
 	}
 }
 
@@ -92,6 +111,10 @@ func RouterABI() abi.ABI {
 
 func ERC20ABI() abi.ABI {
 	return erc20ABI
+}
+
+func AggregatorABI() abi.ABI {
+	return aggregatorABI
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -433,6 +456,44 @@ func (c *Client) GetTokenDecimals(address string) (int, error) {
 	decimals := new(big.Int)
 	decimals.SetBytes(result)
 	return int(decimals.Uint64()), nil
+}
+
+// GetTokenBalance reads the ERC20 balance of the given owner address for the
+// token at tokenAddress. The result is returned in token-native decimals so
+// callers can compare against amounts sent through aggregator finalToken
+// deliveries that bypass THORChain accounting.
+func (c *Client) GetTokenBalance(tokenAddress, ownerAddress string) (*big.Int, error) {
+	tokenAddr := ecommon.HexToAddress(tokenAddress)
+	ownerAddr := ecommon.HexToAddress(ownerAddress)
+	abi := ERC20ABI()
+	data, err := abi.Pack("balanceOf", ownerAddr)
+	if err != nil {
+		return nil, fmt.Errorf("fail to pack balanceOf call: %w", err)
+	}
+
+	result, err := c.rpc.CallContract(ctx(), ethereum.CallMsg{
+		To:   &tokenAddr,
+		Data: data,
+	}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("fail to call contract: %w", err)
+	}
+
+	balance := new(big.Int)
+	balance.SetBytes(result)
+	return balance, nil
+}
+
+// HasContractCode returns true when the address has bytecode deployed. This is
+// used by simulation actors to decide whether the aggregator they intend to
+// reach is a deployed contract or only a whitelisted address.
+func (c *Client) HasContractCode(address string) (bool, error) {
+	addr := ecommon.HexToAddress(address)
+	code, err := c.rpc.CodeAt(ctx(), addr, nil)
+	if err != nil {
+		return false, fmt.Errorf("fail to get code: %w", err)
+	}
+	return len(code) > 0, nil
 }
 
 func (c *Client) GetVaultAllowance(router, vault common.Address, asset common.Asset) (cosmos.Uint, error) {

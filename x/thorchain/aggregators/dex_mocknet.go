@@ -9,9 +9,21 @@ import (
 
 func DexAggregators() []Aggregator {
 	return []Aggregator{
-		// mocknet mock aggregator
+		// Mocknet aggregator deployed by build/scripts/evm/evm-tool.py at the
+		// deterministic admin-key nonce 4 address. The address is shared
+		// across every EVM mocknet chain because the same deployer key and
+		// pre-deploy nonce sequence is used. The simulation framework
+		// references this entry by suffix `aad6d` to exercise both swap-in
+		// (contract -> router.deposit) and swap-out
+		// (router.transferOutAndCall -> aggregator.swapOut -> finalToken).
+		{common.ETHChain, `0x4ac1d98d9cef99ec6546ded4bd550b0b287aad6d`, 400_000},
+		{common.AVAXChain, `0x4ac1d98d9cef99ec6546ded4bd550b0b287aad6d`, 400_000},
+		{common.BASEChain, `0x4ac1d98d9cef99ec6546ded4bd550b0b287aad6d`, 400_000},
+		{common.POLChain, `0x4ac1d98d9cef99ec6546ded4bd550b0b287aad6d`, 400_000},
+		// Legacy mocknet vanity placeholders (no contract code is deployed
+		// at these addresses; kept for backward compatibility with existing
+		// regression test fixtures and exports).
 		{common.ETHChain, `0x69800327b38A4CeF30367Dec3f64c2f2386f3848`, 400_000},
-		// mocknet avax aggregator
 		{common.AVAXChain, `0x1429859428C0aBc9C2C47C8Ee9FBaf82cFA0F20f`, 400_000},
 
 		// the following contracts are latest mainnet - for forked EVM testing

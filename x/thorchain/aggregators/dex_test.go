@@ -80,3 +80,16 @@ func (s *DexAggregatorSuite) TestDexAggregatorsNotEmpty(c *C) {
 	aggs := DexAggregators()
 	c.Assert(len(aggs) > 0, Equals, true)
 }
+
+func (s *DexAggregatorSuite) TestMocknetSimulationAggregator(c *C) {
+	// The simulation aggregator is deployed deterministically by
+	// build/scripts/evm/evm-tool.py at admin nonce 4 on every EVM mocknet
+	// chain. The whitelist must reference this address by suffix `aad6d` so
+	// the simulation framework can exercise full swap-in and swap-out flows
+	// through the deployed contract.
+	for _, chain := range []common.Chain{common.ETHChain, common.AVAXChain, common.BASEChain, common.POLChain} {
+		addr, err := FetchDexAggregator(chain, "aad6d")
+		c.Assert(err, IsNil, Commentf("chain=%s", chain))
+		c.Assert(addr, Equals, "0x4ac1d98d9cef99ec6546ded4bd550b0b287aad6d", Commentf("chain=%s", chain))
+	}
+}
