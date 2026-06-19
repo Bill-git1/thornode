@@ -336,6 +336,12 @@ build-events:
     - make events-gitlab-push
 
 test-simulation:
+  # Run the cluster sim at P=8 by default. Data (last 75 runs, all on the project
+  # runner): zero runner_system_failures, and P=8 finished in ~23m vs the ~70m P=1
+  # median (~3x faster) with no resource strain. Override per-pipeline with a
+  # PARALLELISM CI variable; capped at 12 by the sim's user-mnemonic count.
+  variables:
+    PARALLELISM: "8"
   rules:
     - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
       when: never

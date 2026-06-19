@@ -4,7 +4,14 @@ set -e
 
 BLOCK_TIME=${BLOCK_TIME:-1}
 RPC_URL="http://127.0.0.1:18232"
-INIT_BLOCKS=${INIT_BLOCKS:=250}
+# Pre-mine enough blocks up front that the master holds more MATURE coinbases than
+# the seed funding will ever spend, independent of how fast the sim reaches funding.
+# Transparent coinbases need 100 confirmations, and ZEC seed funding spends ~20*(#users)
+# coinbases (chainSeedTxs=20, up to 12 user mnemonics). Required mature supply therefore
+# = 100 (maturity) + 20*12 (worst-case fan-out demand) = 340; 400 leaves headroom so a
+# fast boot can never reach funding before enough coinbases have matured. This one RPC
+# `generate` burst is effectively instant in Regtest (no PoW).
+INIT_BLOCKS=${INIT_BLOCKS:=400}
 
 # Start zebrad in the background with config
 zebrad --config /etc/zebrad.toml &

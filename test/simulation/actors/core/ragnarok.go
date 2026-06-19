@@ -28,6 +28,9 @@ func NewRagnarokPoolActor(asset common.Asset, rng *rand.Rand) *Actor {
 		asset: asset,
 	}
 	a.Timeout = 5 * time.Minute
+	// Tighten the poll cadence between ragnarok ops (sendMimir -> verifyPoolRemoval)
+	// to cut overshoot waiting for on-chain pool removal. Same ops, same checks.
+	a.Interval = 500 * time.Millisecond
 
 	// TODO: get all LPs for the asset and store in state
 

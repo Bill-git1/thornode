@@ -55,6 +55,12 @@ PY
 }
 
 deploy_evm_contracts() {
+  # Deploy each EVM chain's contracts in parallel (each subshell waits for its
+  # own RPC then deploys, writing only the router address to a per-chain file).
+  # The genesis.json edits are applied serially afterwards because they all
+  # read/modify the same file. set -e is NOT in effect, so each background job's
+  # exit status is checked explicitly (a bare `wait` would mask failures).
+  local pids=() chains=()
   for CHAIN in ETH AVAX BASE POL; do
     RPC_VAR="${CHAIN}_HOST"
     RPC_URL="$(eval echo "\$${RPC_VAR}")"
@@ -63,24 +69,45 @@ deploy_evm_contracts() {
       REQUIRE_ACCOUNTS=1
     fi
 
-    wait_for_evm_rpc "$CHAIN" "$RPC_URL" "$REQUIRE_ACCOUNTS" || return 1
+    (
+      wait_for_evm_rpc "$CHAIN" "$RPC_URL" "$REQUIRE_ACCOUNTS" || exit 1
 
-    # deploy contract and get address from output
-    echo "Deploying $CHAIN contracts"
-    if ! PYTHONUNBUFFERED=1 python3 scripts/evm/evm-tool.py --chain "$CHAIN" --rpc "$RPC_URL" --action deploy >/tmp/evm-tool-$CHAIN.log 2>&1; then
+      # deploy contract and get address from output
+      echo "Deploying $CHAIN contracts"
+      if ! PYTHONUNBUFFERED=1 python3 scripts/evm/evm-tool.py --chain "$CHAIN" --rpc "$RPC_URL" --action deploy >/tmp/evm-tool-$CHAIN.log 2>&1; then
+        cat /tmp/evm-tool-$CHAIN.log
+        exit 1
+      fi
       cat /tmp/evm-tool-$CHAIN.log
-      return 1
+      CONTRACT=$(grep </tmp/evm-tool-$CHAIN.log "Router Contract Address" | awk '{print $NF}')
+      if [ -z "$CONTRACT" ]; then
+        echo "Failed to determine $CHAIN router contract address"
+        exit 1
+      fi
+      echo "$CONTRACT" >"/tmp/evm-router-$CHAIN.addr"
+    ) &
+    pids+=("$!")
+    chains+=("$CHAIN")
+  done
+
+  # wait for every deploy; fail loudly if any did
+  local rc=0
+  for i in "${!pids[@]}"; do
+    if ! wait "${pids[$i]}"; then
+      echo "EVM contract deploy failed for ${chains[$i]}"
+      rc=1
     fi
-    cat /tmp/evm-tool-$CHAIN.log
-    CONTRACT=$(grep </tmp/evm-tool-$CHAIN.log "Router Contract Address" | awk '{print $NF}')
+  done
+  [ "$rc" -eq 0 ] || return 1
+
+  # add contract addresses to genesis serially (shared genesis.json)
+  for CHAIN in ETH AVAX BASE POL; do
+    CONTRACT=$(cat "/tmp/evm-router-$CHAIN.addr" 2>/dev/null)
     if [ -z "$CONTRACT" ]; then
       echo "Failed to determine $CHAIN router contract address"
       return 1
     fi
-
-    # add contract address to genesis
     echo "$CHAIN Contract Address: $CONTRACT"
-
     jq --arg CHAIN "$CHAIN" --arg CONTRACT "$CONTRACT" \
       '.app_state.thorchain.chain_contracts += [{"chain": $CHAIN, "router": $CONTRACT}]' \
       ~/.thornode/config/genesis.json >/tmp/genesis-$CHAIN.json

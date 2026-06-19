@@ -64,8 +64,30 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 
 	// execute dag
 	log.Info().Int("actors", total).Int("parallelism", parallelism).Msg("executing dag")
-	tick := time.NewTicker(time.Second)
+	// Scheduler re-evaluation cadence. This only controls how often the DAG is
+	// polled for ready actors/free slots; on-chain pacing is governed by each
+	// actor's Interval, not this tick. Default 100ms (was 1s) to cut idle gap
+	// between an actor finishing and the next ready actor being admitted.
+	// Override with DAG_TICK_INTERVAL (e.g. "1s") for an instant rollback.
+	tickInterval := 100 * time.Millisecond
+	if v := os.Getenv("DAG_TICK_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d >= 10*time.Millisecond {
+			tickInterval = d
+		} else {
+			// don't silently swallow a misconfigured override (e.g. "100" missing a
+			// unit, or a below-floor "5ms") — log and fall back to the default.
+			log.Warn().Str("DAG_TICK_INTERVAL", v).Dur("using", tickInterval).
+				Msg("ignoring invalid DAG_TICK_INTERVAL (must parse as a duration >= 10ms)")
+		}
+	}
+	tick := time.NewTicker(tickInterval)
 	defer tick.Stop()
+
+	// Throttle the "waiting" log: only emit when the wait situation actually
+	// changes, not on every tick. At a 100ms tick and low parallelism the
+	// scheduler is almost always waiting, so logging every tick floods CI logs
+	// (e.g. GitLab's 4MB trace cap). Key = the counts shown in that log line.
+	lastWaitKey := [6]int{-1, -1, -1, -1, -1, -1}
 	for range tick.C {
 		ready, running, backgrounded, finished := status()
 
@@ -103,11 +125,25 @@ func Execute(c *OpConfig, root *Actor, parallelism int, rng *rand.Rand) {
 
 		// backgrounded actors should not consume a foreground execution slot.
 		if len(ready) == 0 || availableUsers == 0 || len(running) >= parallelism {
-			infoLog.
-				Int("available_users", availableUsers).
-				Int("locked_users", lockedUsers).
-				Int("parallelism", parallelism).
-				Msg("waiting for ready actors, users, and slots")
+			// only log when the wait situation changes (see lastWaitKey above),
+			// so a fast tick at low parallelism doesn't flood the log
+			waitKey := [6]int{len(finished), len(backgrounded), len(running), len(ready), availableUsers, lockedUsers}
+			if waitKey != lastWaitKey {
+				lastWaitKey = waitKey
+				infoLog.
+					Int("available_users", availableUsers).
+					Int("locked_users", lockedUsers).
+					Int("parallelism", parallelism).
+					Msg("waiting for ready actors, users, and slots")
+			} else {
+				// not logging this tick: Discard() disables the event so the
+				// following Send() writes nothing, and Send() runs the finalizer
+				// (write -> putEvent) that returns the event to zerolog's pool.
+				// Discard() alone does NOT pool it — in zerolog it just sets
+				// level=Disabled and returns nil without recycling.
+				infoLog.Discard()
+				infoLog.Send()
+			}
 
 			continue
 		}
