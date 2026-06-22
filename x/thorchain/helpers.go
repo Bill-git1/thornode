@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
@@ -178,6 +180,11 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				AggregatorTargetLimit: &cosmos.Uint{},
 			}
 
+			if refundActionAlreadyScheduled(ctx, mgr, toi) {
+				ctx.Logger().Info("skip duplicate refund action", "in_hash", toi.InHash.String(), "coin", toi.Coin.String(), "memo", toi.GetMemo())
+				continue
+			}
+
 			sender := tx.Tx.ObservedSender()
 			if coin.Asset.GetChain().Equals(common.XMRChain) && usesSourceSender && sender.RefundAddressRequired {
 				ctx.Logger().Info("skip xmr refund to unknown sender marker", "in_hash", tx.Tx.ID.String(), "coin", coin.String())
@@ -216,14 +223,55 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 	return nil
 }
 
+func refundActionAlreadyScheduled(ctx cosmos.Context, mgr Manager, toi TxOutItem) bool {
+	memoIdentity := func(memo string) string {
+		base, _, _ := strings.Cut(memo, "|")
+		return base
+	}
+	voter, err := mgr.Keeper().GetObservedTxInVoter(ctx, toi.InHash)
+	if err != nil {
+		return false
+	}
+	for _, action := range voter.Actions {
+		// Deliberately match on the stable refund action identity rather than
+		// amount or destination, which may vary after fee or vault selection.
+		if action.Coin.Asset.Equals(toi.Coin.Asset) &&
+			memoIdentity(action.GetMemo()) == memoIdentity(toi.GetMemo()) &&
+			action.Chain.Equals(toi.Chain) {
+			return true
+		}
+	}
+	return false
+}
+
+func refundCleanupKey(toi TxOutItem, burnReason string) string {
+	key := strings.Join([]string{
+		toi.InHash.String(),
+		toi.Chain.String(),
+		toi.Coin.String(),
+		toi.GetMemo(),
+		toi.GetModuleName(),
+		burnReason,
+	}, "|")
+	sum := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(sum[:])
+}
+
 // unrefundableCoinCleanup - update the accounting for a failed outbound of toi.Coin
 // native rune: send to the reserve
 // native coin besides rune: burn
 // non-native coin: donate to its pool
 func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, burnReason string) {
 	coin := toi.Coin
+	cleanupKey := refundCleanupKey(toi, burnReason)
+
+	if mgr.Keeper().HasRefundCleanup(ctx, cleanupKey) {
+		ctx.Logger().Info("skip duplicate unrefundable coin cleanup", "in_hash", toi.InHash.String(), "coin", coin.String(), "reason", burnReason)
+		return
+	}
 
 	if coin.Asset.IsTradeAsset() {
+		mgr.Keeper().SetRefundCleanup(ctx, cleanupKey)
 		return
 	}
 
@@ -260,6 +308,7 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 				"error", poolErr, "toi.InHash", toi.InHash, "toi.Coin", toi.Coin)
 			return
 		}
+		mgr.Keeper().SetRefundCleanup(ctx, cleanupKey)
 		donateEvt := NewEventDonate(coin.Asset.GetLayer1Asset(), tx)
 		if emitErr := mgr.EventMgr().EmitEvent(ctx, donateEvt); emitErr != nil {
 			ctx.Logger().Error("fail to emit donate event for unrefundable coin", "error", emitErr)
@@ -271,6 +320,7 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 			ctx.Logger().Error("fail to send native coin to Reserve during cleanup", "error", err)
 			return
 		}
+		mgr.Keeper().SetRefundCleanup(ctx, cleanupKey)
 
 		reserveContributor := NewReserveContributor(tx.FromAddress, coin.Amount)
 		reserveEvent := NewEventReserve(reserveContributor, tx)
@@ -280,6 +330,7 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 	default:
 		// If not satisfying the other conditions this coin should be a native coin in the Reserve,
 		// so leave it there.
+		mgr.Keeper().SetRefundCleanup(ctx, cleanupKey)
 	}
 }
 

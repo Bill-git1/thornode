@@ -12,7 +12,6 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
-	kvTypes "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/types"
 )
 
 const xmrSpentOutputRefRetentionBlocks int64 = 432000
@@ -129,8 +128,4 @@ func (k KVStore) pruneXMRSpentOutputRefs(ctx cosmos.Context, vaultPubKey common.
 	for _, key := range deleteKeys {
 		store.Delete(key)
 	}
-}
-
-func kvPrefix(key []byte) kvTypes.DbPrefix {
-	return kvTypes.DbPrefix(key)
 }

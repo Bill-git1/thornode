@@ -177,6 +177,165 @@ func (s *HandlerObservedTxInSuite) TestXMRRefundSkipsUnknownSenderWithoutExplici
 	c.Check(items[0].ToAddress.Equals(refundAddress), Equals, true)
 }
 
+func (s *HandlerObservedTxInSuite) TestRefundDoesNotDuplicatePendingOutbound(c *C) {
+	w := getHandlerTestWrapper(c, 12345, true, false)
+
+	pool := NewPool()
+	pool.Asset = common.XMRAsset
+	pool.Status = PoolAvailable
+	pool.BalanceRune = cosmos.NewUint(200000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(300000 * common.One)
+	pool.LPUnits = cosmos.NewUint(200000 * common.One)
+	c.Assert(w.keeper.SetPool(w.ctx, pool), IsNil)
+	c.Assert(w.keeper.SaveNetworkFee(w.ctx, common.XMRChain, NewNetworkFee(common.XMRChain, 10000, 10000)), IsNil)
+	w.keeper.SetMimir(w.ctx, constants.EnableMemolessOutbound.String(), 1)
+
+	sourceVault := NewVaultV2(1, InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.XMRChain}.Strings(), nil, GetRandomEd25519PubKey())
+	sourceVault.PubKeyFrost = GetRandomEd25519PubKey()
+	sourceVault.AddFunds(common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50000*common.One))))
+	c.Assert(w.keeper.SetVault(w.ctx, sourceVault), IsNil)
+
+	activeVault := NewVaultV2(2, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.XMRChain}.Strings(), nil, GetRandomEd25519PubKey())
+	activeVault.PubKeyFrost = GetRandomEd25519PubKey()
+	activeVault.AddFunds(common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50000*common.One))))
+	c.Assert(w.keeper.SetVault(w.ctx, activeVault), IsNil)
+
+	tx := NewObservedTx(GetRandomTx(), 3673000, sourceVault.PubKey, w.ctx.BlockHeight())
+	tx.Tx.Chain = common.XMRChain
+	tx.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(20000*common.One)))
+	tx.Tx.Gas = common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))}
+	var err error
+	tx.Tx.ToAddress, err = sourceVault.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	refundAddr := common.Address(common.XMRSeededDummyAddress('8', []byte("xmr-refund-sender")))
+	tx.Tx.FromAddress, err = common.NewAddress(refundAddr.String())
+	c.Assert(err, IsNil)
+	tx.Tx.Memo = fmt.Sprintf("ADD:%s:%s", common.XMRAsset.String(), GetRandomTHORAddress().String())
+
+	voter := NewObservedTxVoter(tx.Tx.ID, ObservedTxs{tx})
+	voter.Tx = tx
+	voter.Height = w.ctx.BlockHeight()
+	voter.FinalisedHeight = w.ctx.BlockHeight()
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
+	c.Assert(refundTx(w.ctx, tx, w.mgr, CodeInvalidVault, "observed inbound tx to an inactive vault", ""), IsNil)
+	c.Assert(refundTx(w.ctx, tx, w.mgr, CodeInvalidVault, "observed inbound tx to an inactive vault", ""), IsNil)
+
+	voter, err = w.keeper.GetObservedTxInVoter(w.ctx, tx.Tx.ID)
+	c.Assert(err, IsNil)
+	c.Assert(voter.Actions, HasLen, 1)
+	c.Check(voter.Actions[0].ToAddress.Equals(refundAddr), Equals, true)
+	c.Check(voter.Actions[0].GetMemo(), Equals, NewRefundMemo(tx.Tx.ID).String())
+	c.Check(voter.Actions[0].Memo, Equals, "")
+	c.Check(voter.Actions[0].OriginalMemo, Equals, NewRefundMemo(tx.Tx.ID).String())
+	c.Check(voter.Actions[0].VaultPubKey.Equals(sourceVault.PubKey), Equals, true)
+	blockOut, err := w.keeper.GetTxOut(w.ctx, voter.OutboundHeight)
+	c.Assert(err, IsNil)
+	c.Assert(blockOut.TxArray, HasLen, 1)
+	c.Check(blockOut.TxArray[0].InHash.Equals(tx.Tx.ID), Equals, true)
+	c.Check(blockOut.TxArray[0].Coin.Asset.Equals(common.XMRAsset), Equals, true)
+}
+
+func (s *HandlerObservedTxInSuite) TestRefundDoesNotDuplicatePendingOutboundWithMemoPassthrough(c *C) {
+	w := getHandlerTestWrapper(c, 12345, true, false)
+
+	pool := NewPool()
+	pool.Asset = common.XMRAsset
+	pool.Status = PoolAvailable
+	pool.BalanceRune = cosmos.NewUint(200000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(300000 * common.One)
+	pool.LPUnits = cosmos.NewUint(200000 * common.One)
+	c.Assert(w.keeper.SetPool(w.ctx, pool), IsNil)
+	c.Assert(w.keeper.SaveNetworkFee(w.ctx, common.XMRChain, NewNetworkFee(common.XMRChain, 10000, 10000)), IsNil)
+	w.keeper.SetMimir(w.ctx, constants.EnableMemolessOutbound.String(), 1)
+
+	sourceVault := NewVaultV2(1, InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.XMRChain}.Strings(), nil, GetRandomEd25519PubKey())
+	sourceVault.PubKeyFrost = GetRandomEd25519PubKey()
+	sourceVault.AddFunds(common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50000*common.One))))
+	c.Assert(w.keeper.SetVault(w.ctx, sourceVault), IsNil)
+
+	activeVault := NewVaultV2(2, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.XMRChain}.Strings(), nil, GetRandomEd25519PubKey())
+	activeVault.PubKeyFrost = GetRandomEd25519PubKey()
+	activeVault.AddFunds(common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50000*common.One))))
+	c.Assert(w.keeper.SetVault(w.ctx, activeVault), IsNil)
+
+	tx := NewObservedTx(GetRandomTx(), 3673000, sourceVault.PubKey, w.ctx.BlockHeight())
+	tx.Tx.Chain = common.XMRChain
+	tx.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(20000*common.One)))
+	tx.Tx.Gas = common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))}
+	var err error
+	tx.Tx.ToAddress, err = sourceVault.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	refundAddr := common.Address(common.XMRSeededDummyAddress('8', []byte("xmr-refund-sender")))
+	tx.Tx.FromAddress, err = common.NewAddress(refundAddr.String())
+	c.Assert(err, IsNil)
+	tx.Tx.Memo = fmt.Sprintf("ADD:%s:%s|memo-passthrough", common.XMRAsset.String(), GetRandomTHORAddress().String())
+
+	voter := NewObservedTxVoter(tx.Tx.ID, ObservedTxs{tx})
+	voter.Tx = tx
+	voter.Height = w.ctx.BlockHeight()
+	voter.FinalisedHeight = w.ctx.BlockHeight()
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
+	c.Assert(refundTx(w.ctx, tx, w.mgr, CodeInvalidVault, "observed inbound tx to an inactive vault", ""), IsNil)
+	c.Assert(refundTx(w.ctx, tx, w.mgr, CodeInvalidVault, "observed inbound tx to an inactive vault", ""), IsNil)
+
+	expectedMemo := NewRefundMemo(tx.Tx.ID).String() + "|memo-passthrough"
+	voter, err = w.keeper.GetObservedTxInVoter(w.ctx, tx.Tx.ID)
+	c.Assert(err, IsNil)
+	c.Assert(voter.Actions, HasLen, 1)
+	c.Check(voter.Actions[0].ToAddress.Equals(refundAddr), Equals, true)
+	c.Check(voter.Actions[0].GetMemo(), Equals, expectedMemo)
+	c.Check(voter.Actions[0].Memo, Equals, expectedMemo)
+	c.Check(voter.Actions[0].OriginalMemo, Equals, expectedMemo)
+	c.Check(voter.Actions[0].VaultPubKey.Equals(sourceVault.PubKey), Equals, true)
+	blockOut, err := w.keeper.GetTxOut(w.ctx, voter.OutboundHeight)
+	c.Assert(err, IsNil)
+	c.Assert(blockOut.TxArray, HasLen, 1)
+	c.Check(blockOut.TxArray[0].InHash.Equals(tx.Tx.ID), Equals, true)
+	c.Check(blockOut.TxArray[0].Coin.Asset.Equals(common.XMRAsset), Equals, true)
+}
+
+func (s *HandlerObservedTxInSuite) TestRefundCleanupDoesNotDuplicatePoolAccounting(c *C) {
+	w := getHandlerTestWrapper(c, 12345, true, false)
+
+	refundAmount := cosmos.NewUint(20000 * common.One)
+	pool := NewPool()
+	pool.Asset = common.XMRAsset
+	pool.Status = PoolAvailable
+	pool.BalanceRune = cosmos.NewUint(200000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(300000 * common.One)
+	pool.LPUnits = cosmos.NewUint(200000 * common.One)
+	c.Assert(w.keeper.SetPool(w.ctx, pool), IsNil)
+
+	tx := NewObservedTx(GetRandomTx(), 3673000, common.EmptyPubKey, w.ctx.BlockHeight())
+	tx.Tx.Chain = common.XMRChain
+	tx.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, refundAmount))
+	tx.Tx.Gas = common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))}
+	tx.Tx.ToAddress = common.Address(common.XMRSeededDummyAddress('8', []byte("xmr-refund-vault")))
+	destination := common.Address(common.XMRSeededDummyAddress('8', []byte("xmr-refund-destination")))
+	tx.Tx.Memo = fmt.Sprintf("=:%s:%s", common.XMRAsset.String(), destination.String())
+	var err error
+	tx.Tx.FromAddress, err = common.NewAddress(common.XMRUnknownSenderAddress(tx.Tx.ID.String(), tx.Tx.ToAddress.String()))
+	c.Assert(err, IsNil)
+
+	voter := NewObservedTxVoter(tx.Tx.ID, ObservedTxs{tx})
+	voter.Tx = tx
+	voter.Height = w.ctx.BlockHeight()
+	voter.FinalisedHeight = w.ctx.BlockHeight()
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
+	c.Assert(refundTx(w.ctx, tx, w.mgr, CodeInvalidMemo, "Invalid memo", ""), IsNil)
+	c.Assert(refundTx(w.ctx, tx, w.mgr, CodeInvalidMemo, "Invalid memo", ""), IsNil)
+
+	pool, err = w.keeper.GetPool(w.ctx, common.XMRAsset)
+	c.Assert(err, IsNil)
+	c.Check(pool.BalanceAsset.Equal(cosmos.NewUint(300000*common.One).Add(refundAmount)), Equals, true)
+	items, err := w.mgr.TxOutStore().GetOutboundItems(w.ctx)
+	c.Assert(err, IsNil)
+	c.Check(items, HasLen, 0)
+}
+
 type TestObservedTxInHandleKeeper struct {
 	keeper.KVStoreDummy
 	nas                  NodeAccounts

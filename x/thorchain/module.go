@@ -275,6 +275,8 @@ func (am AppModule) EndBlock(goCtx context.Context) ([]abci.ValidatorUpdate, err
 		ctx.Logger().Error("fail to process scheduled migration", "error", err)
 	}
 
+	am.mgr.Keeper().PruneRefundCleanups(ctx)
+
 	return validators, nil
 }
 

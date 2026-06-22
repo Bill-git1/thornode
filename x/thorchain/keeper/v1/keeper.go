@@ -30,6 +30,8 @@ const (
 	prefixObservedTxIn              types.DbPrefix = "observed_tx_in/"
 	prefixObservedTxOut             types.DbPrefix = "observed_tx_out/"
 	prefixObservedLink              types.DbPrefix = "ob_link/"
+	prefixRefundCleanup             types.DbPrefix = "refund_cleanup/"
+	prefixRefundCleanupExpiry       types.DbPrefix = "refund_cleanup_expiry/"
 	prefixPool                      types.DbPrefix = "pool/"
 	prefixPoolLUVI                  types.DbPrefix = "luvi/"
 	prefixTxOut                     types.DbPrefix = "txout/"
@@ -586,4 +588,8 @@ func (k KVStore) RagnarokAccount(ctx cosmos.Context, addr cosmos.AccAddress) {
 		}
 		k.accountKeeper.RemoveAccount(ctx, acc)
 	}
+}
+
+func kvPrefix(key []byte) types.DbPrefix {
+	return types.DbPrefix(key)
 }
