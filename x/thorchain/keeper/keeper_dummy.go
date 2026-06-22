@@ -634,6 +634,14 @@ func (k KVStoreDummy) RemoveAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
 	return kaboom
 }
 
+func (k KVStoreDummy) RemoveMarketAdvSwapQueueIndexEntry(_ cosmos.Context, _ common.TxID, _ int) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) RemoveLimitAdvSwapQueueIndexEntry(_ cosmos.Context, _ []byte, _ common.TxID, _ int) error {
+	return kaboom
+}
+
 func (k KVStoreDummy) SetLimitSwapTTL(ctx cosmos.Context, blockHeight int64, txHashes []common.TxID) error {
 	return kaboom
 }

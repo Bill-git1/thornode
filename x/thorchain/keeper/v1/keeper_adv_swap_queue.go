@@ -222,6 +222,51 @@ func (k KVStore) RemoveAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error 
 	return nil
 }
 
+// RemoveMarketAdvSwapQueueIndexEntry removes a single market index entry by
+// TxID and Index. Used to clean up orphaned index entries when the
+// corresponding swap queue item is missing — without it, every block would
+// keep retrying the failed lookup, allowing the market index list to grow
+// unbounded.
+func (k KVStore) RemoveMarketAdvSwapQueueIndexEntry(ctx cosmos.Context, txID common.TxID, index int) error {
+	key := k.GetKey(prefixAdvSwapQueueMarketIndex, "")
+	return k.removeAdvSwapQueueIndexEntry(ctx, key, txID, index)
+}
+
+// RemoveLimitAdvSwapQueueIndexEntry removes a single limit index entry from
+// the bucket at the given key by TxID and Index. Used to clean up orphaned
+// limit index entries discovered during iteration — without it, every block
+// would keep probing the missing item from a price-favorable bucket.
+func (k KVStore) RemoveLimitAdvSwapQueueIndexEntry(ctx cosmos.Context, key []byte, txID common.TxID, index int) error {
+	return k.removeAdvSwapQueueIndexEntry(ctx, key, txID, index)
+}
+
+func (k KVStore) removeAdvSwapQueueIndexEntry(ctx cosmos.Context, key []byte, txID common.TxID, index int) error {
+	record := make([]string, 0)
+	_, err := k.getStrings(ctx, key, &record)
+	if err != nil {
+		return err
+	}
+
+	found := false
+	idStr := formatSwapQueueItemKey(txID, index)
+	for i, rec := range record {
+		if strings.EqualFold(rec, idStr) {
+			record = removeString(record, i)
+			found = true
+			break
+		}
+	}
+
+	if len(record) == 0 {
+		k.del(ctx, key)
+		return nil
+	}
+	if found {
+		k.setStrings(ctx, key, record)
+	}
+	return nil
+}
+
 func (k KVStore) getAdvSwapQueueIndexKey(ctx cosmos.Context, msg MsgSwap) []byte {
 	switch msg.SwapType {
 	case types.SwapType_limit:

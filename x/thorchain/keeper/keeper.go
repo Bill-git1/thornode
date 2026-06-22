@@ -424,6 +424,8 @@ type KeeperAdvSwapQueues interface {
 	GetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) ([]types.AdvSwapQueueIndexItem, error)
 	HasAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) (bool, error)
 	RemoveAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
+	RemoveMarketAdvSwapQueueIndexEntry(_ cosmos.Context, _ common.TxID, _ int) error
+	RemoveLimitAdvSwapQueueIndexEntry(_ cosmos.Context, _ []byte, _ common.TxID, _ int) error
 	SetLimitSwapTTL(ctx cosmos.Context, blockHeight int64, txHashes []common.TxID) error
 	GetLimitSwapTTL(ctx cosmos.Context, blockHeight int64) ([]common.TxID, error)
 	RemoveLimitSwapTTL(ctx cosmos.Context, blockHeight int64)

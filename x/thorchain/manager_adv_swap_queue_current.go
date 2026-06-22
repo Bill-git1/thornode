@@ -116,7 +116,10 @@ func (vm *SwapQueueAdv) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradeP
 	for _, item := range marketItems {
 		msg, err := vm.k.GetAdvSwapQueueItem(ctx, item.TxID, item.Index)
 		if err != nil {
-			ctx.Logger().Error("fail to fetch adv swap item", "error", err)
+			ctx.Logger().Error("fail to fetch adv swap item, removing orphan index entry", "tx_id", item.TxID, "index", item.Index, "error", err)
+			if rmErr := vm.k.RemoveMarketAdvSwapQueueIndexEntry(ctx, item.TxID, item.Index); rmErr != nil {
+				ctx.Logger().Error("fail to remove orphan adv swap index entry", "tx_id", item.TxID, "index", item.Index, "error", rmErr)
+			}
 			continue
 		}
 
@@ -231,7 +234,10 @@ func (vm *SwapQueueAdv) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, pair
 
 			msg, err := vm.k.GetAdvSwapQueueItem(ctx, hash, index)
 			if err != nil {
-				ctx.Logger().Error("fail to fetch msg swap", "error", err)
+				ctx.Logger().Error("fail to fetch msg swap, removing orphan limit index entry", "tx_id", hash, "index", index, "error", err)
+				if rmErr := vm.k.RemoveLimitAdvSwapQueueIndexEntry(ctx, iter.Key(), hash, index); rmErr != nil {
+					ctx.Logger().Error("fail to remove orphan limit adv swap index entry", "tx_id", hash, "index", index, "error", rmErr)
+				}
 				continue
 			}
 

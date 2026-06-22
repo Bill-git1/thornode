@@ -438,31 +438,7 @@ func (vm *NetworkMgr) calculateWeightedMeanSlip(ctx cosmos.Context, asset common
 	medianSlipsDepths := make([]cosmos.Uint, 0)
 
 	for i, anchorAsset := range availableAnchors {
-		slips := make([]int64, 0)
-		iter := mgr.Keeper().GetSwapSlipSnapShotIterator(ctx, anchorAsset)
-		defer iter.Close()
-		for ; iter.Valid(); iter.Next() {
-			key := iter.Key()
-			parts := strings.Split(string(key), "/")
-			i, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
-			if err != nil || i < ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks {
-				mgr.Keeper().DeleteKey(ctx, key)
-				continue
-			}
-
-			value := ProtoInt64{}
-			if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &value); err != nil {
-				ctx.Logger().Error("fail to unmarshal swap slip snapshot", "key", string(key), "error", err)
-				continue
-			}
-			slip := value.GetValue()
-			if slip <= 0 {
-				mgr.Keeper().DeleteKey(ctx, key)
-				continue
-			}
-
-			slips = append(slips, slip)
-		}
+		slips := vm.collectAnchorSlips(ctx, mgr, anchorAsset, dynamicMaxAnchorSlipBlocks)
 
 		// if there are no slips, skip this anchor
 		if len(slips) == 0 {
@@ -482,6 +458,39 @@ func (vm *NetworkMgr) calculateWeightedMeanSlip(ctx cosmos.Context, asset common
 	}
 
 	return int64(weightedMeanSlip.Uint64())
+}
+
+// collectAnchorSlips iterates swap slip snapshots for an anchor asset and
+// returns the slips. The iterator is closed before this function returns so
+// resources are released per-anchor rather than accumulating until the
+// enclosing function returns.
+func (vm *NetworkMgr) collectAnchorSlips(ctx cosmos.Context, mgr Manager, anchorAsset common.Asset, dynamicMaxAnchorSlipBlocks int64) []int64 {
+	slips := make([]int64, 0)
+	iter := mgr.Keeper().GetSwapSlipSnapShotIterator(ctx, anchorAsset)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		parts := strings.Split(string(key), "/")
+		i, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
+		if err != nil || i < ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks {
+			mgr.Keeper().DeleteKey(ctx, key)
+			continue
+		}
+
+		value := ProtoInt64{}
+		if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &value); err != nil {
+			ctx.Logger().Error("fail to unmarshal swap slip snapshot", "key", string(key), "error", err)
+			continue
+		}
+		slip := value.GetValue()
+		if slip <= 0 {
+			mgr.Keeper().DeleteKey(ctx, key)
+			continue
+		}
+
+		slips = append(slips, slip)
+	}
+	return slips
 }
 
 // EndBlock move funds from retiring asgard vaults
