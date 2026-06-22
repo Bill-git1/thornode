@@ -53,6 +53,9 @@ func (m *EventMgr) EmitSwapEvent(ctx cosmos.Context, swap *EventSwap) error {
 
 // EmitFeeEvent emit a fee event through event manager
 func (m *EventMgr) EmitFeeEvent(ctx cosmos.Context, feeEvent *EventFee) error {
+	if feeEvent == nil {
+		return nil
+	}
 	if feeEvent.Fee.Coins.IsEmpty() && feeEvent.Fee.PoolDeduct.IsZero() {
 		return nil
 	}

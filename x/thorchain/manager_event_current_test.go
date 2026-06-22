@@ -53,3 +53,16 @@ func (s *EventManagerTestSuite) TestEmitGasEvent(c *C) {
 	c.Assert(eventMgr.EmitGasEvent(ctx, gasEvent), IsNil)
 	c.Assert(eventMgr.EmitGasEvent(ctx, nil), IsNil)
 }
+
+func (s *EventManagerTestSuite) TestEmitFeeEvent(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	eventMgr, err := GetEventManager(GetCurrentVersion())
+	c.Assert(err, IsNil)
+	c.Assert(eventMgr, NotNil)
+	ctx = ctx.WithBlockHeight(1024)
+	fee := common.NewFee(common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(1024))), cosmos.ZeroUint())
+	feeEvent := NewEventFee(common.BlankTxID, fee, cosmos.ZeroUint())
+	c.Assert(eventMgr.EmitFeeEvent(ctx, feeEvent), IsNil)
+	// a nil fee event must not panic and should be ignored
+	c.Assert(eventMgr.EmitFeeEvent(ctx, nil), IsNil)
+}

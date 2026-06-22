@@ -4408,6 +4408,58 @@ func (s *NetworkManagerTestSuite) TestUpdateNetworkDrainsRevShareBeforeEarlyRetu
 			"accumulator still has %d entries after UpdateNetwork", len(got)))
 }
 
+// TestUpdateNetworkBurnDoesNotUnderflow locks in the guard at
+// manager_network_current.go:1940-1942: when system income burning is enabled
+// and the MaxRuneSupply mimir is smaller than the amount of RUNE burnt this
+// block, decrementing it must clamp to zero via common.SafeSub rather than
+// panicking on cosmos.Uint underflow. UpdateNetwork runs in EndBlock, so a
+// panic here would halt the chain. A regression that reverts to plain .Sub
+// would panic in this test instead of returning nil.
+func (s *NetworkManagerTestSuite) TestUpdateNetworkBurnDoesNotUnderflow(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	helper := NewVaultGenesisSetupTestHelper(mgr.Keeper())
+	mgr.K = helper
+	networkMgr := newNetworkMgr(helper, mgr.TxOutStore(), mgr.EventMgr())
+
+	c.Assert(mgr.Keeper().SetNetwork(ctx, NewNetwork()), IsNil)
+
+	// Available pool with RUNE so UpdateNetwork passes the availablePoolsRune guard.
+	p := NewPool()
+	p.Asset = common.ETHAsset
+	p.BalanceRune = cosmos.NewUint(common.One * 100)
+	p.BalanceAsset = cosmos.NewUint(common.One * 100)
+	p.Status = PoolAvailable
+	c.Assert(helper.SetPool(ctx, p), IsNil)
+
+	// Vault for getVaultsLiquidityRune.
+	vault := NewVault(0, ActiveVault, AsgardVault, GetRandomPubKey(), []string{p.Asset.GetChain().String()}, []ChainContract{})
+	vault.Coins = common.NewCoins(common.NewCoin(p.Asset, p.BalanceAsset))
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Liquidity fees + active bonds produce non-zero system income.
+	c.Assert(helper.Keeper.AddToLiquidityFees(ctx, common.ETHAsset, cosmos.NewUint(50*common.One)), IsNil)
+	c.Assert(helper.Keeper.SetNodeAccount(ctx, GetRandomValidatorNode(NodeActive)), IsNil)
+	c.Assert(helper.Keeper.SetNodeAccount(ctx, GetRandomValidatorNode(NodeActive)), IsNil)
+
+	// Enable burning (mocknet defaults this to 0) and set MaxRuneSupply to a
+	// value far below the amount that will be burnt this block, so the
+	// decrement would underflow without the SafeSub guard.
+	mgr.Keeper().SetMimir(ctx, constants.SystemIncomeBurnRateBps.String(), 5_000)
+	mgr.Keeper().SetMimir(ctx, constants.MaxRuneSupply.String(), 1)
+
+	// Sanity: burning is enabled, so a non-zero burn will be produced from the
+	// block reward + liquidity fees above (the actual deduct is verified
+	// indirectly by the MaxRuneSupply clamp assertion below).
+	burnRateBps := mgr.Keeper().GetConfigInt64(ctx, constants.SystemIncomeBurnRateBps)
+	c.Assert(burnRateBps > 0, Equals, true)
+
+	// Must not panic on underflow; the EndBlock path returns nil.
+	c.Assert(networkMgr.UpdateNetwork(ctx, mgr), IsNil)
+
+	// SafeSub clamps the decremented MaxRuneSupply mimir to zero.
+	c.Check(mgr.Keeper().GetConfigInt64(ctx, constants.MaxRuneSupply), Equals, int64(0))
+}
+
 // TestProcessRevShareTriggersPreferredAssetFlush asserts that when a thorname
 // has a preferred asset configured, a successful REVSHARE credit that pushes
 // the AffiliateCollector balance over the threshold triggers
