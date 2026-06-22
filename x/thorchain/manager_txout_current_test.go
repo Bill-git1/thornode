@@ -1845,3 +1845,52 @@ func (s TxOutStoreSuite) TestDiscoverOutboundsRagnarokXRPLeavesReserve(c *C) {
 	c.Assert(remaining.IsZero(), Equals, true)
 	c.Assert(eventMgr.securityEvents(), HasLen, 0)
 }
+
+// TestDiscoverOutboundsRagnarokSOLLeavesRentReserve covers the SOL Ragnarok
+// failure seen in simulation: txout discovery scheduled a near-full SOL sweep,
+// the transaction signed, and Solana rejected every broadcast because the
+// source account would fall below rent-exempt balance. The fix must cap only the
+// sweep amount and then treat the left-behind rent reserve as an intentional
+// Ragnarok residual rather than a security/recovery deficit.
+func (s TxOutStoreSuite) TestDiscoverOutboundsRagnarokSOLLeavesRentReserve(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = RetiringVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.SOLAsset, cosmos.NewUint(2524534019)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	eventMgr := newRecordingEventMgr()
+	txOutStore := newTxOutStorage(mgr.Keeper(), mgr.GetConstants(), eventMgr, mgr.GasMgr())
+
+	// This request mirrors the stuck RAGNAROK:2520 item from the default
+	// simulation run: it leaves only gas-sized dust unless txout discovery first
+	// subtracts the same SOL account reserve used by migration.
+	toi := TxOutItem{
+		Chain:     common.SOLChain,
+		ToAddress: common.Address("AfzXzUhKw57x9Pub9Dj4CxYovYCktSrXY7mcr1XEcftY"),
+		InHash:    common.BlankTxID,
+		Coin:      common.NewCoin(common.SOLAsset, cosmos.NewUint(2524532519)),
+		Memo:      NewRagnarokMemo(ctx.BlockHeight()).String(),
+	}
+
+	outputs, remaining := txOutStore.DiscoverOutbounds(
+		ctx,
+		cosmos.NewUint(1000),
+		common.NewCoin(common.SOLAsset, cosmos.NewUint(750)),
+		toi,
+		Vaults{vault},
+	)
+
+	// The scheduled outbound is capped to the vault balance minus the chain dust
+	// threshold, matching migration's SOL account-reserve convention. The
+	// leftover Ragnarok residual is intentionally zeroed instead of being routed
+	// into fallback/security handling.
+	c.Assert(outputs, HasLen, 1)
+	c.Assert(outputs[0].Coin.Amount.Equal(cosmos.NewUint(2524434019)), Equals, true)
+	c.Assert(remaining.IsZero(), Equals, true)
+	c.Assert(eventMgr.securityEvents(), HasLen, 0)
+}
