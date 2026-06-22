@@ -1,4 +1,4 @@
-image: golang:1.24.6
+image: golang:1.26.4
 
 workflow:
   rules:
@@ -19,6 +19,9 @@ variables:
   # tss-lib-private is a private GitLab subgroup repo; skip proxy.golang.org / sumdb
   # and resolve directly so the per-job git auth below takes effect.
   GOPRIVATE: gitlab.com/thorchain/tss/tss-lib-private.git
+  # Alpine's go package defaults GOTOOLCHAIN=local; override so jobs that bootstrap
+  # Go via `apk add go` download the toolchain pinned in go.mod (toolchain go1.26.4).
+  GOTOOLCHAIN: auto
   SAST_EXCLUDED_ANALYZERS: eslint,bandit,semgrep
   SAST_EXCLUDED_PATHS: spec, test, tests, tmp, .cache
 
@@ -128,8 +131,8 @@ generate:
       if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
         export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
         echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
-        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.24.6" >/dev/null 2>&1; then
-          echo "Dependency proxy missing golang:1.24.6; falling back to Docker Hub"
+        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.26.4" >/dev/null 2>&1; then
+          echo "Dependency proxy missing golang:1.26.4; falling back to Docker Hub"
           unset DOCKER_MIRROR
         fi
       fi
@@ -264,8 +267,8 @@ build-thornode:
       if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
         export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
         echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
-        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.24.6" >/dev/null 2>&1; then
-          echo "Dependency proxy missing golang:1.24.6; falling back to Docker Hub"
+        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.26.4" >/dev/null 2>&1; then
+          echo "Dependency proxy missing golang:1.26.4; falling back to Docker Hub"
           unset DOCKER_MIRROR
         fi
       fi
@@ -370,8 +373,8 @@ test-simulation:
       if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
         export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
         echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
-        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.24.6" >/dev/null 2>&1; then
-          echo "Dependency proxy missing golang:1.24.6; falling back to Docker Hub"
+        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.26.4" >/dev/null 2>&1; then
+          echo "Dependency proxy missing golang:1.26.4; falling back to Docker Hub"
           unset DOCKER_MIRROR
         fi
       fi
@@ -433,8 +436,8 @@ test-regression:
       if [ -n "$CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX" ]; then
         export DOCKER_MIRROR="${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/"
         echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login "$CI_DEPENDENCY_PROXY_SERVER" -u "$CI_DEPENDENCY_PROXY_USER" --password-stdin
-        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.24.6" >/dev/null 2>&1; then
-          echo "Dependency proxy missing golang:1.24.6; falling back to Docker Hub"
+        if ! docker manifest inspect "${DOCKER_MIRROR}golang:1.26.4" >/dev/null 2>&1; then
+          echo "Dependency proxy missing golang:1.26.4; falling back to Docker Hub"
           unset DOCKER_MIRROR
         fi
       fi

@@ -177,7 +177,7 @@ build:
 	go build ${BUILD_FLAGS} ${BINARIES}
 
 test-xmr-frost-e2e:
-	GOTOOLCHAIN=go1.23.10 go test -count=1 -tags=mocknet ./bifrost/pkg/chainclients/monero/... -run '$${XMR_FROST_E2E_RUN}'
+	go test -count=1 -tags=mocknet ./bifrost/pkg/chainclients/monero/... -run '$${XMR_FROST_E2E_RUN}'
 
 install:
 	go install ${BUILD_FLAGS} ${BINARIES}

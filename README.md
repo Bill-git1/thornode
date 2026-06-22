@@ -70,11 +70,11 @@ ln -sf $(which gawk) /usr/local/bin/awk
 
 Install [Docker and Docker Compose V2](https://docs.docker.com/engine/install/).
 
-This project must be built with **Go `1.23.10`** (see `go.mod` and `.go-version`).<br/>
+This project must be built with **Go `1.26.4`** (see `go.mod` and `.go-version`).<br/>
 If your workspace has multiple Go versions, set:
 
 ```bash
-go env -w GOTOOLCHAIN=go1.23.10
+go env -w GOTOOLCHAIN=go1.26.4
 ```
 
 Ensure go modules are enabled.<br/>
