@@ -30,17 +30,26 @@ func (vm *SwapQueueImpl) FetchQueue(ctx cosmos.Context) (swapItems, error) { // 
 	items := make(swapItems, 0)
 	iterator := vm.k.GetSwapQueueIterator(ctx)
 	defer iterator.Close()
+	// Collect keys for malformed items that cannot be processed, so they can
+	// be removed after iteration completes. Without this, a corrupted entry
+	// would be re-encountered every block forever, never executed and never
+	// refunded.
+	var malformedKeys [][]byte
 	for ; iterator.Valid(); iterator.Next() {
 		var msg MsgSwap
 		if err := vm.k.Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
-			ctx.Logger().Error("fail to fetch swap msg from queue", "error", err)
+			ctx.Logger().Error("fail to fetch swap msg from queue, removing malformed item", "key", iterator.Key(), "error", err)
+			key := append([]byte(nil), iterator.Key()...)
+			malformedKeys = append(malformedKeys, key)
 			continue
 		}
 
 		ss := strings.Split(string(iterator.Key()), "-")
 		i, err := strconv.Atoi(ss[len(ss)-1])
 		if err != nil {
-			ctx.Logger().Error("fail to parse swap queue msg index", "key", iterator.Key(), "error", err)
+			ctx.Logger().Error("fail to parse swap queue msg index, removing malformed item", "key", iterator.Key(), "error", err)
+			key := append([]byte(nil), iterator.Key()...)
+			malformedKeys = append(malformedKeys, key)
 			continue
 		}
 
@@ -85,6 +94,10 @@ func (vm *SwapQueueImpl) FetchQueue(ctx cosmos.Context) (swapItems, error) { // 
 			fee:   cosmos.ZeroUint(),
 			slip:  cosmos.ZeroUint(),
 		})
+	}
+
+	for _, key := range malformedKeys {
+		vm.k.DeleteKey(ctx, key)
 	}
 
 	return items, nil
