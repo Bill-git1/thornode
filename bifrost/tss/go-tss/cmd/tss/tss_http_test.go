@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,9 +21,11 @@ type TssHttpServerTestSuite struct{}
 
 var _ = Suite(&TssHttpServerTestSuite{})
 
+const normalKeygenRequest = `{"keys":["thorpub1addwnpepqtdklw8tf3anjz7nn5fly3uvq2e67w2apn560s4smmrt9e3x52nt2svmmu3", "thorpub1addwnpepqtspqyy6gk22u37ztra4hq3hdakc0w0k60sfy849mlml2vrpfr0wvm6uz09", "thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69", "thorpub1addwnpepqfjcw5l4ay5t00c32mmlky7qrppepxzdlkcwfs2fd5u73qrwna0vzag3y4j"]}`
+
 func (TssHttpServerTestSuite) TestNewTssHttpServer(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewTssHttpServer("127.0.0.1:8080", tssServer)
+	s := NewTssHttpServer("127.0.0.1:0", tssServer)
 	c.Assert(s, NotNil)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -35,6 +38,33 @@ func (TssHttpServerTestSuite) TestNewTssHttpServer(c *C) {
 	c.Assert(s.Stop(), IsNil)
 	tssServer.failToStart = true
 	c.Assert(s.Start(), NotNil)
+}
+
+func (TssHttpServerTestSuite) TestLoopbackBindAccepted(c *C) {
+	for _, addr := range []string{
+		"127.0.0.1:8080",
+		"localhost:8080",
+		"[::1]:8080",
+	} {
+		c.Log(addr)
+		c.Assert(validateLoopbackListenAddr(addr), IsNil)
+	}
+}
+
+func (TssHttpServerTestSuite) TestNonLoopbackBindRejected(c *C) {
+	for _, addr := range []string{
+		"0.0.0.0:8080",
+		":8080",
+		"10.0.0.1:8080",
+		"192.168.1.1:8080",
+		"8.8.8.8:8080",
+	} {
+		c.Log(addr)
+		c.Assert(validateLoopbackListenAddr(addr), NotNil)
+	}
+
+	s := NewTssHttpServer("0.0.0.0:0", &MockTssServer{})
+	c.Assert(s.Start(), ErrorMatches, ".*loopback.*")
 }
 
 func (TssHttpServerTestSuite) TestPingHandler(c *C) {
@@ -58,7 +88,6 @@ func (TssHttpServerTestSuite) TestGetP2pIDHandler(c *C) {
 }
 
 func (TssHttpServerTestSuite) TestKeygenHandler(c *C) {
-	normalKeygenRequest := `{"keys":["thorpub1addwnpepqtdklw8tf3anjz7nn5fly3uvq2e67w2apn560s4smmrt9e3x52nt2svmmu3", "thorpub1addwnpepqtspqyy6gk22u37ztra4hq3hdakc0w0k60sfy849mlml2vrpfr0wvm6uz09", "thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69", "thorpub1addwnpepqfjcw5l4ay5t00c32mmlky7qrppepxzdlkcwfs2fd5u73qrwna0vzag3y4j"]}`
 	testCases := []struct {
 		name          string
 		reqProvider   func() *http.Request
@@ -123,6 +152,89 @@ func (TssHttpServerTestSuite) TestKeygenHandler(c *C) {
 		s.keygenHandler(res, req)
 		tc.resultChecker(c, res)
 	}
+}
+
+func (TssHttpServerTestSuite) TestPostBodyTooLargeRejected(c *C) {
+	tooLargeValue := strings.Repeat("a", int(tssHTTPMaxRequestBodyBytes))
+	tooLargeKeygenRequest := `{"keys":["` + tooLargeValue + `"]}`
+	tooLargeKeysignRequest := `{"pool_pub_key":"pool","messages":["` + tooLargeValue + `"],"signer_pub_keys":["signer"]}`
+
+	testCases := []struct {
+		name    string
+		path    string
+		body    string
+		handler func(*TssHttpServer, http.ResponseWriter, *http.Request)
+	}{
+		{
+			name:    "keygen",
+			path:    "/keygen",
+			body:    tooLargeKeygenRequest,
+			handler: (*TssHttpServer).keygenHandler,
+		},
+		{
+			name:    "keygenall",
+			path:    "/keygenall",
+			body:    tooLargeKeygenRequest,
+			handler: (*TssHttpServer).keygenAllHandler,
+		},
+		{
+			name:    "keysign",
+			path:    "/keysign",
+			body:    tooLargeKeysignRequest,
+			handler: (*TssHttpServer).keySignHandler,
+		},
+	}
+	for _, tc := range testCases {
+		c.Log(tc.name)
+		s := NewTssHttpServer("127.0.0.1:8080", &MockTssServer{})
+		req := httptest.NewRequest(http.MethodPost, tc.path, bytes.NewBufferString(tc.body))
+		res := httptest.NewRecorder()
+		tc.handler(s, res, req)
+		c.Assert(res.Code, Equals, http.StatusRequestEntityTooLarge)
+	}
+}
+
+func (TssHttpServerTestSuite) TestAuthRequiredWhenSecretConfigured(c *C) {
+	testCases := []struct {
+		name   string
+		header string
+	}{
+		{
+			name: "missing auth",
+		},
+		{
+			name:   "invalid auth",
+			header: "Bearer wrong-secret",
+		},
+	}
+	for _, tc := range testCases {
+		c.Log(tc.name)
+		s := NewTssHttpServerWithAuth("127.0.0.1:8080", &MockTssServer{}, "test-secret")
+		req := httptest.NewRequest(http.MethodPost, "/keygen", bytes.NewBufferString(normalKeygenRequest))
+		if tc.header != "" {
+			req.Header.Set("Authorization", tc.header)
+		}
+		res := httptest.NewRecorder()
+		s.keygenHandler(res, req)
+		c.Assert(res.Code, Equals, http.StatusUnauthorized)
+	}
+}
+
+func (TssHttpServerTestSuite) TestValidAuthAcceptedWhenSecretConfigured(c *C) {
+	s := NewTssHttpServerWithAuth("127.0.0.1:8080", &MockTssServer{}, "test-secret")
+	req := httptest.NewRequest(http.MethodPost, "/keygen", bytes.NewBufferString(normalKeygenRequest))
+	req.Header.Set("Authorization", "Bearer test-secret")
+	res := httptest.NewRecorder()
+	s.keygenHandler(res, req)
+	c.Assert(res.Code, Equals, http.StatusOK)
+}
+
+func (TssHttpServerTestSuite) TestAuthDisabledLoopbackModeWorks(c *C) {
+	s := NewTssHttpServer("127.0.0.1:8080", &MockTssServer{})
+	req := httptest.NewRequest(http.MethodPost, "/keygen", bytes.NewBufferString(normalKeygenRequest))
+	res := httptest.NewRecorder()
+	s.tssNewHandler().ServeHTTP(res, req)
+	c.Assert(res.Code, Equals, http.StatusOK)
 }
 
 func (TssHttpServerTestSuite) TestKeysignHandler(c *C) {

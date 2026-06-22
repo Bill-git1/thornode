@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,11 +21,13 @@ import (
 )
 
 var (
-	help       bool
-	logLevel   string
-	pretty     bool
-	baseFolder string
-	tssAddr    string
+	help          bool
+	logLevel      string
+	pretty        bool
+	baseFolder    string
+	tssAddr       string
+	tssAuthFile   string
+	tssAuthPrompt bool
 )
 
 func main() {
@@ -42,8 +45,14 @@ func main() {
 	// Setup Bech32 Prefixes
 	conversion.SetupBech32Prefix()
 
-	// Read stdin for the private key
 	inBuf := bufio.NewReader(os.Stdin)
+	tssAuth, err := resolveTssAuthSecret(tssAuthFile, tssAuthPrompt, inBuf)
+	if err != nil {
+		fmt.Printf("error in get the tss auth secret: %s\n", err.Error())
+		return
+	}
+
+	// Read stdin for the private key
 	priKeyBytes, err := input.GetPassword("input node secret key:", inBuf)
 	if err != nil {
 		fmt.Printf("error in get the secret key: %s\n", err.Error())
@@ -67,7 +76,7 @@ func main() {
 	if nil != err {
 		log.Fatal(err)
 	}
-	s := NewTssHttpServer(tssAddr, tss)
+	s := NewTssHttpServerWithAuth(tssAddr, tss, tssAuth)
 	go func() {
 		if err := s.Start(); err != nil {
 			fmt.Println(err)
@@ -84,6 +93,8 @@ func main() {
 func parseFlags() (tssConf common.TssConfig, p2pConf p2p.Config) {
 	// we setup the configure for the general configuration
 	flag.StringVar(&tssAddr, "tss-port", "127.0.0.1:8080", "tss port")
+	flag.StringVar(&tssAuthFile, "tss-auth-secret-file", "", "path to a file containing the optional bearer token required for go-tss HTTP control endpoints")
+	flag.BoolVar(&tssAuthPrompt, "tss-auth-prompt", false, "prompt for the optional bearer token required for go-tss HTTP control endpoints")
 	flag.BoolVar(&help, "h", false, "Display Help")
 	flag.StringVar(&logLevel, "loglevel", "info", "Log Level")
 	flag.BoolVar(&pretty, "pretty-log", false, "Enables unstructured prettified logging. This is useful for local debugging")
@@ -103,4 +114,26 @@ func parseFlags() (tssConf common.TssConfig, p2pConf p2p.Config) {
 	flag.Var(&p2pConf.BootstrapPeers, "peer", "Adds a peer multiaddress to the bootstrap list")
 	flag.Parse()
 	return
+}
+
+func resolveTssAuthSecret(secretFile string, prompt bool, inBuf *bufio.Reader) (string, error) {
+	secretFile = strings.TrimSpace(secretFile)
+	if secretFile != "" && prompt {
+		return "", fmt.Errorf("tss-auth-secret-file and tss-auth-prompt are mutually exclusive")
+	}
+	if secretFile != "" {
+		secretBytes, err := os.ReadFile(secretFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to read tss auth secret file %q: %w", secretFile, err)
+		}
+		secret := strings.TrimSpace(string(secretBytes))
+		if secret == "" {
+			return "", fmt.Errorf("tss auth secret file %q is empty", secretFile)
+		}
+		return secret, nil
+	}
+	if prompt {
+		return input.GetPassword("input tss auth secret:", inBuf)
+	}
+	return "", nil
 }

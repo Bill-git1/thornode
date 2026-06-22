@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -20,16 +23,28 @@ import (
 
 // TssHttpServer provide http endpoint for tss server
 type TssHttpServer struct {
-	logger    zerolog.Logger
-	tssServer tss.Server
-	s         *http.Server
+	logger     zerolog.Logger
+	tssServer  tss.Server
+	s          *http.Server
+	authSecret string
 }
 
-// NewTssHttpServer should only listen to the loopback
+// tssHTTPMaxRequestBodyBytes is intentionally small: keygen/keysign requests
+// carry pubkeys and a bounded batch of encoded signing messages, so 1 MiB is
+// generous for normal operation while still capping trivial memory abuse.
+const tssHTTPMaxRequestBodyBytes int64 = 1 << 20
+
+// NewTssHttpServer creates the TSS HTTP server without optional bearer auth.
 func NewTssHttpServer(tssAddr string, t tss.Server) *TssHttpServer {
+	return NewTssHttpServerWithAuth(tssAddr, t, "")
+}
+
+// NewTssHttpServerWithAuth should only listen to the loopback.
+func NewTssHttpServerWithAuth(tssAddr string, t tss.Server, authSecret string) *TssHttpServer {
 	hs := &TssHttpServer{
-		logger:    log.With().Str("module", "http").Logger(),
-		tssServer: t,
+		logger:     log.With().Str("module", "http").Logger(),
+		tssServer:  t,
+		authSecret: strings.TrimSpace(authSecret),
 	}
 	s := &http.Server{
 		Addr:    tssAddr,
@@ -42,6 +57,9 @@ func NewTssHttpServer(tssAddr string, t tss.Server) *TssHttpServer {
 // NewHandler registers the API routes and returns a new HTTP handler
 func (t *TssHttpServer) tssNewHandler() http.Handler {
 	router := mux.NewRouter()
+	// All non-metrics endpoints use optional bearer auth. If no secret is
+	// configured, loopback-only mode preserves existing behavior. /metrics
+	// stays unauthenticated because Start enforces loopback binding.
 	router.Handle("/keygen", http.HandlerFunc(t.keygenHandler)).Methods(http.MethodPost)
 	router.Handle("/keygenall", http.HandlerFunc(t.keygenAllHandler)).Methods(http.MethodPost)
 	router.Handle("/keysign", http.HandlerFunc(t.keySignHandler)).Methods(http.MethodPost)
@@ -57,17 +75,17 @@ func (t *TssHttpServer) keygenHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	if !t.ensureAuthorized(w, r) {
+		return
+	}
 	defer func() {
 		if err := r.Body.Close(); nil != err {
 			t.logger.Error().Err(err).Msg("fail to close request body")
 		}
 	}()
 	t.logger.Info().Msg("receive key gen request")
-	decoder := json.NewDecoder(r.Body)
 	var keygenReq keygen.Request
-	if err := decoder.Decode(&keygenReq); nil != err {
-		t.logger.Error().Err(err).Msg("fail to decode keygen request")
-		w.WriteHeader(http.StatusBadRequest)
+	if !t.decodeJSONRequest(w, r, &keygenReq, "keygen") {
 		return
 	}
 
@@ -93,17 +111,17 @@ func (t *TssHttpServer) keygenAllHandler(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	if !t.ensureAuthorized(w, r) {
+		return
+	}
 	defer func() {
 		if err := r.Body.Close(); nil != err {
 			t.logger.Error().Err(err).Msg("fail to close request body")
 		}
 	}()
 	t.logger.Info().Msg("receive key gen request")
-	decoder := json.NewDecoder(r.Body)
 	var keygenReq keygen.Request
-	if err := decoder.Decode(&keygenReq); nil != err {
-		t.logger.Error().Err(err).Msg("fail to decode keygen request")
-		w.WriteHeader(http.StatusBadRequest)
+	if !t.decodeJSONRequest(w, r, &keygenReq, "keygenall") {
 		return
 	}
 
@@ -129,6 +147,9 @@ func (t *TssHttpServer) keySignHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	if !t.ensureAuthorized(w, r) {
+		return
+	}
 	defer func() {
 		if err := r.Body.Close(); nil != err {
 			t.logger.Error().Err(err).Msg("fail to close request body")
@@ -137,10 +158,7 @@ func (t *TssHttpServer) keySignHandler(w http.ResponseWriter, r *http.Request) {
 	t.logger.Info().Msg("receive key sign request")
 
 	var keySignReq keysign.Request
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&keySignReq); nil != err {
-		t.logger.Error().Err(err).Msg("fail to decode key sign request")
-		w.WriteHeader(http.StatusBadRequest)
+	if !t.decodeJSONRequest(w, r, &keySignReq, "keysign") {
 		return
 	}
 	t.logger.Info().Msgf("request:%+v", keySignReq)
@@ -166,6 +184,12 @@ func (t *TssHttpServer) keySignHandler(w http.ResponseWriter, r *http.Request) {
 func (t *TssHttpServer) Start() error {
 	if t.s == nil {
 		return errors.New("invalid http server instance")
+	}
+	if err := validateLoopbackListenAddr(t.s.Addr); err != nil {
+		return fmt.Errorf("refusing to start tss http server: %w", err)
+	}
+	if t.authSecret == "" {
+		t.logger.Warn().Str("addr", t.s.Addr).Msg("tss http auth is disabled; relying on loopback bind only")
 	}
 	if err := t.tssServer.Start(); err != nil {
 		return fmt.Errorf("fail to start tss server: %w", err)
@@ -193,6 +217,73 @@ func logMiddleware() mux.MiddlewareFunc {
 	}
 }
 
+func validateLoopbackListenAddr(addr string) error {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(addr))
+	if err != nil {
+		return fmt.Errorf("invalid bind address %q: %w", addr, err)
+	}
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return fmt.Errorf("bind address %q must specify a loopback host", addr)
+	}
+	if strings.EqualFold(host, "localhost") {
+		return nil
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLoopback() {
+			return nil
+		}
+		return fmt.Errorf("bind address host %q is not loopback", host)
+	}
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return fmt.Errorf("failed to resolve bind address host %q: %w", host, err)
+	}
+	if len(ips) == 0 {
+		return fmt.Errorf("bind address host %q did not resolve to any addresses", host)
+	}
+	for _, ip := range ips {
+		if !ip.IsLoopback() {
+			return fmt.Errorf("bind address host %q resolved to non-loopback address %s", host, ip)
+		}
+	}
+	return nil
+}
+
+func (t *TssHttpServer) ensureAuthorized(w http.ResponseWriter, r *http.Request) bool {
+	if t.authSecret == "" {
+		return true
+	}
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		w.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	if subtle.ConstantTimeCompare([]byte(token), []byte(t.authSecret)) == 1 {
+		return true
+	}
+	w.WriteHeader(http.StatusUnauthorized)
+	return false
+}
+
+func (t *TssHttpServer) decodeJSONRequest(w http.ResponseWriter, r *http.Request, out interface{}, name string) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, tssHTTPMaxRequestBodyBytes)
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(out); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			t.logger.Error().Err(err).Str("request", name).Msg("tss http request body too large")
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return false
+		}
+		t.logger.Error().Err(err).Str("request", name).Msg("fail to decode tss http request")
+		w.WriteHeader(http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
 func (t *TssHttpServer) Stop() error {
 	c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -204,11 +295,17 @@ func (t *TssHttpServer) Stop() error {
 	return err
 }
 
-func (t *TssHttpServer) pingHandler(w http.ResponseWriter, _ *http.Request) {
+func (t *TssHttpServer) pingHandler(w http.ResponseWriter, r *http.Request) {
+	if !t.ensureAuthorized(w, r) {
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }
 
-func (t *TssHttpServer) getP2pIDHandler(w http.ResponseWriter, _ *http.Request) {
+func (t *TssHttpServer) getP2pIDHandler(w http.ResponseWriter, r *http.Request) {
+	if !t.ensureAuthorized(w, r) {
+		return
+	}
 	localPeerID := t.tssServer.GetLocalPeerID()
 	_, err := w.Write([]byte(localPeerID))
 	if err != nil {
