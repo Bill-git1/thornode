@@ -445,13 +445,23 @@ func (s *SOLScanner) scanVault(
 	var newestSig string
 	before := ""
 	for {
-		res, err := s.solRpc.GetSignaturesForAddressUntil(vaultAddr, rpc.GetSignaturesForAddressUntilParams{
-			Commitment:     "finalized",
-			MinContextSlot: minContextSlot,
-			Before:         before,
-			Until:          queryLastSig,
-			Limit:          transactionQueryLimit,
-		})
+		params := rpc.GetSignaturesForAddressUntilParams{
+			Commitment: "finalized",
+			Before:     before,
+			Until:      queryLastSig,
+			Limit:      transactionQueryLimit,
+		}
+		// Only pin minContextSlot when there is no until-cursor. With an until-cursor,
+		// minContextSlot tracks the scanner's near-tip position, which for an idle
+		// vault (no new tx) can exceed the cursor signature's slot. The RPC then
+		// returns -32020 "Transaction not found" trying to resolve a cursor below the
+		// required context, which marks the whole scanner unhealthy and halts signing
+		// and observation for the chain. The until-cursor already bounds the query, so
+		// minContextSlot is redundant once a cursor is set.
+		if queryLastSig == "" {
+			params.MinContextSlot = minContextSlot
+		}
+		res, err := s.solRpc.GetSignaturesForAddressUntil(vaultAddr, params)
 		if err != nil {
 			s.logger.Error().Err(err).Msgf("failed to get signatures for address %s", vaultAddr)
 			setUnhealthy()
