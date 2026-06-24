@@ -172,15 +172,16 @@ func IsLoopbackHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// AllowInsecureHTTP decides whether http:// endpoints are accepted. Used only
-// in mocknet / non-public environments.
+// AllowInsecureHTTP decides whether http:// endpoints are accepted. Allowed on
+// the non-public networks (mocknet, chainnet, stagenet), where the sidecar and
+// monerod are reached over internal cluster traffic; mainnet requires TLS.
 func AllowInsecureHTTP(cfg config.BifrostChainConfiguration) bool {
 	chainNetwork := strings.TrimSpace(cfg.ChainNetwork)
 	if strings.EqualFold(chainNetwork, "mocknet") {
 		return true
 	}
 	net := common.CurrentChainNetwork
-	return net == common.MockNet || net == common.ChainNet
+	return net == common.MockNet || net == common.ChainNet || net == common.StageNet
 }
 
 // --- FROST DKG ---

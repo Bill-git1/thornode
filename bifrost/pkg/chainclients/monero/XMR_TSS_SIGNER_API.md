@@ -14,9 +14,9 @@ Bifrost (`bifrost.chains.xmr`):
 
 Sidecar (`xmr-frost-signer` environment):
 
-- `XMR_FROST_CHAIN_NETWORK=mocknet|public` (required; controls XMR address encoding mode)
+- `XMR_FROST_CHAIN_NETWORK=mocknet|chainnet|stagenet|mainnet` (required; controls XMR vault pubkey HRP)
 - `XMR_FROST_DAEMON_URL` (required)
-- `XMR_FROST_STORE_SECRET` (required; public mode requires strong secret material)
+- `XMR_FROST_STORE_SECRET` (required; mainnet mode requires strong secret material)
 - `XMR_FROST_AUTH_BEARER` or (`XMR_FROST_AUTH_USERNAME` + `XMR_FROST_AUTH_PASSWORD`) (required)
 - `XMR_FROST_MAX_SIGN_SCAN_LAG_BLOCKS` (optional; default `3`)
 

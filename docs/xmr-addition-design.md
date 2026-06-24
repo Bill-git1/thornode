@@ -176,10 +176,10 @@ Design choices:
   - no legacy runtime compatibility path,
   - no in-place migration,
   - clean sidecar data directory required for cutover upgrade.
-- `XMR_FROST_CHAIN_NETWORK` must be explicit (`mocknet` or `public`).
+- `XMR_FROST_CHAIN_NETWORK` must be explicit (`mocknet`, `chainnet`, `stagenet`, or `mainnet`).
 - Sidecar protected routes require configured auth (`XMR_FROST_AUTH_BEARER` or basic auth vars).
-- In public mode, sidecar daemon endpoint hardening is stricter (TLS/auth requirements).
-- In public mode, `XMR_FROST_STORE_SECRET` must be strong (32-byte hex/base64 equivalent).
+- In mainnet mode, sidecar daemon endpoint hardening is stricter (TLS/auth requirements).
+- In mainnet mode, `XMR_FROST_STORE_SECRET` must be strong (32-byte hex/base64 equivalent).
 - `XMR_FROST_MAX_SIGN_SCAN_LAG_BLOCKS` controls fail-closed signing when scan state is stale (default `3`).
 
 ## Current `x/thorchain` Follow-Up Findings
