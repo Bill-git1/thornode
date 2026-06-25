@@ -694,7 +694,7 @@ services:
     image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101609.1
     restart: unless-stopped
     environment:
-      BLOCK_TIME: ${BLOCK_TIME:-2}
+      BLOCK_TIME: ${BLOCK_TIME:-3}
       OP_NODE_L1_ETH_RPC: ${ETH_HOST:-http://ethereum:8545}
     ports:
       - 8547:8545
