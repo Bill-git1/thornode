@@ -105,6 +105,33 @@ func TestXMRPlannedOutboundMatcherRejectsMismatches(t *testing.T) {
 		assert.True(t, xmrObservedTxMatchesPlanned(obsTx, planned))
 	})
 
+	t.Run("accepts migration amount with exact unused max gas sweep", func(t *testing.T) {
+		mutated := obsTx
+		plannedCoin := planned.coins.GetCoin(common.XMRAsset)
+		observedGas := mutated.Tx.Gas.ToCoins().GetCoin(common.XMRAsset)
+		plannedMaxGas := planned.maxGas.ToCoins().GetCoin(common.XMRAsset)
+		unusedMaxGas := common.SafeSub(plannedMaxGas.Amount, observedGas.Amount)
+		mutated.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, plannedCoin.Amount.Add(unusedMaxGas)))
+		assert.True(t, xmrObservedTxMatchesPlanned(mutated, planned))
+	})
+
+	t.Run("accepts migration amount rounded down for non-aligned atomic fee", func(t *testing.T) {
+		mutated := obsTx
+		plannedCoin := planned.coins.GetCoin(common.XMRAsset)
+		mutated.Tx.Gas = common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))}
+		// feeAtomic=12345 floors to observed gas 1, while the swept unused
+		// MaxGas is floor((5*10000 - 12345)/10000) = 3.
+		mutated.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, plannedCoin.Amount.Add(cosmos.NewUint(3))))
+		assert.True(t, xmrObservedTxMatchesPlanned(mutated, planned))
+	})
+
+	t.Run("rejects migration amount above unused max gas sweep", func(t *testing.T) {
+		mutated := obsTx
+		plannedCoin := planned.coins.GetCoin(common.XMRAsset)
+		mutated.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, plannedCoin.Amount.Add(cosmos.NewUint(4))))
+		assert.False(t, xmrObservedTxMatchesPlanned(mutated, planned))
+	})
+
 	t.Run("rejects wrong destination", func(t *testing.T) {
 		mutated := obsTx
 		mutated.Tx.ToAddress = common.Address(common.XMRSeededDummyAddress('8', []byte("wrong-xmr-dest")))

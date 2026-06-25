@@ -256,13 +256,52 @@ func xmrObservedTxMatchesPlanned(obsTx common.ObservedTx, planned plannedXMROutb
 	if planned.toAddress.IsEmpty() || !obsTx.Tx.ToAddress.Equals(planned.toAddress) {
 		return false
 	}
-	if !obsTx.Tx.Coins.EqualsEx(planned.coins) {
-		return false
-	}
 	if !strings.EqualFold(obsTx.Tx.Memo, planned.memo) {
 		return false
 	}
+	if !observedCoinsMatchPlannedXMR(obsTx, planned) {
+		return false
+	}
 	return observedGasWithinPlannedMax(obsTx.Tx.Gas, planned.maxGas)
+}
+
+// observedCoinsMatchPlannedXMR accepts the exact planned amount for normal XMR
+// outbounds, and also accepts MIGRATE observations where the signer swept the
+// unused MaxGas budget into the destination output. Without this exception,
+// Bifrost rejects a successful full-vault migration observation and THORNode
+// keeps retrying a txout after the old vault has already been drained.
+func observedCoinsMatchPlannedXMR(obsTx common.ObservedTx, planned plannedXMROutbound) bool {
+	if obsTx.Tx.Coins.EqualsEx(planned.coins) {
+		return true
+	}
+	parsed, err := memo.ParseMemo(common.LatestVersion, obsTx.Tx.Memo)
+	if err != nil || !parsed.IsType(memo.TxMigrate) {
+		return false
+	}
+	observedCoin := obsTx.Tx.Coins.GetCoin(common.XMRAsset)
+	plannedCoin := planned.coins.GetCoin(common.XMRAsset)
+	observedGas := obsTx.Tx.Gas.ToCoins().GetCoin(common.XMRAsset)
+	plannedMaxGas := planned.maxGas.ToCoins().GetCoin(common.XMRAsset)
+	if observedCoin.IsEmpty() || plannedCoin.IsEmpty() || observedGas.IsEmpty() || plannedMaxGas.IsEmpty() {
+		return false
+	}
+	if observedGas.Amount.GT(plannedMaxGas.Amount) {
+		return false
+	}
+	unusedMaxGas := common.SafeSub(plannedMaxGas.Amount, observedGas.Amount)
+	expectedAmount := plannedCoin.Amount.Add(unusedMaxGas)
+	if observedCoin.Amount.Equal(expectedAmount) {
+		return true
+	}
+	if unusedMaxGas.IsZero() {
+		return false
+	}
+
+	// XMR observations are converted from atomic units to THORChain units by
+	// flooring. For a MIGRATE sweep whose atomic fee has a remainder, observed gas
+	// is floor(fee), while the swept amount is floor(maxGas-fee), making the
+	// observed amount one THORChain unit lower than maxGas-floor(fee).
+	return observedCoin.Amount.Equal(expectedAmount.Sub(cosmos.OneUint()))
 }
 
 // observedGasWithinPlannedMax rejects zero-fee observations and enforces the

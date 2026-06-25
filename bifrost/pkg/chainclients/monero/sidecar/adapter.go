@@ -35,6 +35,7 @@ func (a *FrostAdapter) FrostSignPrepare(req tssp.FrostSidecarPrepareReq) (tssp.F
 		MaxInputs:                   req.MaxInputs,
 		DustThreshold:               req.DustThreshold,
 		MaxSelectedInputValueAtomic: req.MaxSelectedInputValueAtomic,
+		MaxGasAtomic:                req.MaxGasAtomic,
 	})
 	if err != nil {
 		return tssp.FrostSidecarPrepareResp{}, err

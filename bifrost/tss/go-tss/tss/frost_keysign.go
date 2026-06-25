@@ -95,6 +95,7 @@ func FrostKeySignMsgID(req FrostKeySignRequest) (string, error) {
 		"required_inputs_hash=" + requiredInputsHash,
 		"max_inputs=" + strconv.FormatInt(req.MaxInputs, 10),
 		"max_selected_input_value_atomic=" + strconv.FormatUint(req.MaxSelectedInputValueAtomic, 10),
+		"max_gas_atomic=" + strconv.FormatUint(req.MaxGasAtomic, 10),
 		"tx_in_hash=" + strings.ToLower(strings.TrimSpace(req.TxInHash)),
 		"request_id=" + strings.TrimSpace(req.RequestID),
 		"block_height=" + strconv.FormatInt(req.BlockHeight, 10),
@@ -196,6 +197,7 @@ func FrostPlanHash(req FrostKeySignRequest, msgID string) (string, error) {
 		"required_inputs_hash=" + requiredInputsHash,
 		"max_inputs=" + strconv.FormatInt(req.MaxInputs, 10),
 		"max_selected_input_value_atomic=" + strconv.FormatUint(req.MaxSelectedInputValueAtomic, 10),
+		"max_gas_atomic=" + strconv.FormatUint(req.MaxGasAtomic, 10),
 		"signer_set_hash=" + signerSetHash,
 		"active_signer_set_hash=" + activeSignerSetHash,
 	}, "\n")
@@ -527,6 +529,7 @@ func (c *FrostSignCoordinator) Execute(
 		MaxInputs:                   req.MaxInputs,
 		DustThreshold:               req.DustThreshold,
 		MaxSelectedInputValueAtomic: req.MaxSelectedInputValueAtomic,
+		MaxGasAtomic:                req.MaxGasAtomic,
 	})
 	if err != nil {
 		return FrostKeySignResponse{
@@ -584,6 +587,19 @@ func (c *FrostSignCoordinator) Execute(
 		return FrostKeySignResponse{
 			Status: tcommon.Fail,
 			Blame:  blame.NewBlame(fmt.Sprintf("frost combine failed: %v", err), nil),
+		}
+	}
+	// The sidecar enforces MaxGas during transaction construction, but keep the
+	// same cap check here so a buggy or mismatched signer cannot return an
+	// over-cap transaction that Bifrost would later observe.
+	if req.MaxGasAtomic > 0 && combineResp.FeeAtomic > req.MaxGasAtomic {
+		return FrostKeySignResponse{
+			FeeAtomic: combineResp.FeeAtomic,
+			Status:    tcommon.Fail,
+			Blame: blame.NewBlame(
+				fmt.Sprintf("%s actual_fee_atomic=%d max_gas_atomic=%d", FrostFailReasonXMRMaxGasExceeded, combineResp.FeeAtomic, req.MaxGasAtomic),
+				nil,
+			),
 		}
 	}
 	eventuality, err := BuildFrostEventuality(c.expectedPlanHash, combineResp.TxHash, combineResp.TxHex, combineResp.FeeAtomic)

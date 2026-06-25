@@ -28,6 +28,8 @@ var Upgrades = []upgrades.Upgrade{
 	// v3_12_0.NewUpgrade(),
 	//
 	// Example pattern: https://gitlab.com/thorchain/thornode/-/merge_requests/3837
+
+	standard.NewUpgrade("3.19.0"),
 }
 
 // RegisterUpgradeHandlers registers the chain upgrade handlers

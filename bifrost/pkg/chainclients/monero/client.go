@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -98,6 +99,7 @@ type validatedSignRequest struct {
 	fromAddress  string
 	toAddress    string
 	amountAtomic uint64
+	maxGasAtomic uint64
 }
 
 type consolidationSettings struct {
@@ -153,6 +155,7 @@ type Client struct {
 	vaultLockMu             sync.Mutex
 	vaultLocks              map[string]*sync.Mutex
 	emptyVaultLock          sync.Mutex
+	sidecarSignMu           sync.Mutex
 	consolidationStateMu    sync.Mutex
 	consolidationState      map[string]consolidationVaultState
 	consolidateInProgress   *atomic.Bool
@@ -1287,6 +1290,32 @@ func (c *Client) broadcastTx(tx stypes.TxOutItem, payload signedTxPayload) (stri
 	return txHash, nil
 }
 
+// clearSidecarSessionsAfterFrostFailure releases sidecar-held signing sessions
+// after Bifrost has decided the FROST result is unusable. The sidecar reserves
+// XMR inputs during prepare, so failed or abandoned rounds must be cleared
+// before the next txout retry or the vault can appear to have zero spendable
+// balance even though its outputs are unlocked.
+func (c *Client) clearSidecarSessionsAfterFrostFailure(reason string, err error) {
+	if c.sidecar == nil {
+		return
+	}
+	cleared, clearErr := c.sidecar.ClearSessions()
+	if clearErr != nil {
+		c.logger.Warn().
+			Err(clearErr).
+			Str("reason", reason).
+			AnErr("sign_error", err).
+			Msg("fail to clear sidecar sessions after failed XMR FROST signing")
+		return
+	}
+	if cleared > 0 {
+		c.logger.Info().
+			Int("cleared", cleared).
+			Str("reason", reason).
+			Msg("cleared sidecar sessions after failed XMR FROST signing")
+	}
+}
+
 func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error) {
 	if c.sidecar == nil {
 		return nil, nil, nil, fmt.Errorf("%w: sidecar is not initialized", ErrSidecarNotConfigured)
@@ -1388,9 +1417,17 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		MaxInputs:                   maxInputs,
 		DustThreshold:               dustThreshold,
 		MaxSelectedInputValueAtomic: maxSelectedInputValueAtomic,
+		MaxGasAtomic:                signReqCtx.maxGasAtomic,
 	}
+
+	// ClearSessions is sidecar-global, so only one XMR FROST ceremony may be
+	// active on this sidecar while Bifrost may need to clean up a failed round.
+	c.sidecarSignMu.Lock()
+	defer c.sidecarSignMu.Unlock()
+
 	resp, err := c.tssServer.FrostKeySign(frostReq, sidecar.NewFrostAdapter(c.sidecar))
 	if err != nil {
+		c.clearSidecarSessionsAfterFrostFailure("frost_keysign_error", err)
 		return nil, nil, nil, fmt.Errorf("fail to execute FROST keysign: %w", err)
 	}
 	if resp.Status == gotsscommon.NA && strings.TrimSpace(resp.TxHex) == "" && strings.TrimSpace(resp.Blame.FailReason) == "" && len(resp.Blame.BlameNodes) == 0 {
@@ -1398,6 +1435,13 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		return nil, nil, nil, nil
 	}
 	if resp.Status != gotsscommon.Success {
+		signErr := fmt.Errorf("FROST keysign returned status %d: %s", resp.Status, resp.Blame.FailReason)
+		c.clearSidecarSessionsAfterFrostFailure("frost_non_success_status", signErr)
+		// MaxGas overages are deterministic local policy failures, not signer
+		// misbehavior, so return them directly instead of submitting blame.
+		if maxGasErr, ok := xmrMaxGasExceededFromFrostResponse(resp, signReqCtx.maxGasAtomic); ok {
+			return nil, nil, nil, maxGasErr
+		}
 		if len(resp.Blame.BlameNodes) > 0 {
 			return nil, nil, nil, bifrosttss.NewKeysignError(frostBlameToThorchainBlame(resp.Blame))
 		}
@@ -1405,7 +1449,15 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 	msgID := strings.TrimSpace(resp.MsgID)
 	if msgID == "" {
-		return nil, nil, nil, fmt.Errorf("FROST keysign returned empty msg_id")
+		signErr := fmt.Errorf("FROST keysign returned empty msg_id")
+		c.clearSidecarSessionsAfterFrostFailure("frost_empty_msg_id", signErr)
+		return nil, nil, nil, signErr
+	}
+	// Treat the TSS response as untrusted until Bifrost independently verifies
+	// the actual fee against the scheduled cap. This is the local guard for
+	// signers that predate sidecar-side MaxGas enforcement.
+	if maxGasErr := enforceXMRMaxGas(resp.FeeAtomic, signReqCtx.maxGasAtomic); maxGasErr != nil {
+		return nil, nil, nil, maxGasErr
 	}
 	if validateErr := tssp.ValidateFrostEventuality(
 		frostReq,
@@ -1415,7 +1467,9 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		resp.FeeAtomic,
 		resp.Eventuality,
 	); validateErr != nil {
-		return nil, nil, nil, fmt.Errorf("invalid FROST eventuality: %w", validateErr)
+		signErr := fmt.Errorf("invalid FROST eventuality: %w", validateErr)
+		c.clearSidecarSessionsAfterFrostFailure("frost_invalid_eventuality", signErr)
+		return nil, nil, nil, signErr
 	}
 	var localSpentRefs []sidecar.SpentRef
 	for _, ref := range resp.SpentOutputRefs {
@@ -1488,6 +1542,10 @@ func (c *Client) validateSignTx(tx stypes.TxOutItem, thorchainHeight int64, requ
 	if amountAtomic == 0 {
 		return validatedSignRequest{}, fmt.Errorf("xmr outbound amount converted to zero atomic units")
 	}
+	maxGasAtomic, err := maxGasToAtomic(tx.MaxGas)
+	if err != nil {
+		return validatedSignRequest{}, fmt.Errorf("fail to convert xmr max gas for signing: %w", err)
+	}
 
 	vaultPubKey := txVaultPubKey(tx)
 	if vaultPubKey.IsEmpty() {
@@ -1505,7 +1563,7 @@ func (c *Client) validateSignTx(tx stypes.TxOutItem, thorchainHeight int64, requ
 		return validatedSignRequest{}, fmt.Errorf("derived monero vault address %s is not on %s", fromAddress, c.chain.String())
 	}
 
-	if err = c.ensureVaultBalance(vaultPubKey, amountAtomic, tx.MaxGas); err != nil {
+	if err = c.ensureVaultBalance(vaultPubKey, amountAtomic, maxGasAtomic); err != nil {
 		return validatedSignRequest{}, err
 	}
 
@@ -1514,6 +1572,7 @@ func (c *Client) validateSignTx(tx stypes.TxOutItem, thorchainHeight int64, requ
 		fromAddress:  fromAddress,
 		toAddress:    tx.ToAddress.String(),
 		amountAtomic: amountAtomic,
+		maxGasAtomic: maxGasAtomic,
 	}, nil
 }
 
@@ -1524,7 +1583,7 @@ func isValidXMROutboundDestination(chain common.Chain, address common.Address) b
 	return common.IsSupportedXMRAddress(address.String())
 }
 
-func (c *Client) ensureVaultBalance(vaultPubKey common.PubKey, amountAtomic uint64, maxGas common.Gas) error {
+func (c *Client) ensureVaultBalance(vaultPubKey common.PubKey, amountAtomic, maxGasAtomic uint64) error {
 	if c.sidecar == nil {
 		return nil
 	}
@@ -1538,11 +1597,6 @@ func (c *Client) ensureVaultBalance(vaultPubKey common.PubKey, amountAtomic uint
 		return fmt.Errorf("fail to verify xmr vault balance for %s: %w", vaultPubKey.String(), err)
 	}
 	availableAtomic := spendableBalanceAtomic(balance)
-
-	maxGasAtomic, err := maxGasToAtomic(maxGas)
-	if err != nil {
-		return fmt.Errorf("fail to convert xmr max gas for balance guard: %w", err)
-	}
 
 	requiredAtomic := amountAtomic
 	if maxGasAtomic > 0 {
@@ -1611,6 +1665,71 @@ func maxGasToAtomic(maxGas common.Gas) (uint64, error) {
 	return thorchainAmountToAtomic(xmrGasCoin.Amount)
 }
 
+type xmrMaxGasExceededError struct {
+	actualFeeAtomic uint64
+	maxGasAtomic    uint64
+}
+
+func (e xmrMaxGasExceededError) Error() string {
+	return fmt.Sprintf(
+		"%s actual_fee_atomic=%d max_gas_atomic=%d",
+		tssp.FrostFailReasonXMRMaxGasExceeded,
+		e.actualFeeAtomic,
+		e.maxGasAtomic,
+	)
+}
+
+// enforceXMRMaxGas is the Bifrost-side safety check for older or mismatched
+// signers. The sidecar should reject over-cap transactions during planning,
+// but Bifrost must still refuse any signed result whose actual fee exceeds the
+// scheduled MaxGas.
+func enforceXMRMaxGas(actualFeeAtomic, maxGasAtomic uint64) error {
+	if maxGasAtomic == 0 || actualFeeAtomic <= maxGasAtomic {
+		return nil
+	}
+	return xmrMaxGasExceededError{
+		actualFeeAtomic: actualFeeAtomic,
+		maxGasAtomic:    maxGasAtomic,
+	}
+}
+
+// xmrMaxGasExceededFromFrostResponse converts the stable FROST blame prefix
+// back into the local typed error. MaxGas overages are deterministic fee-policy
+// failures, so they should not be turned into signer-blame transactions.
+func xmrMaxGasExceededFromFrostResponse(resp tssp.FrostKeySignResponse, maxGasAtomic uint64) (error, bool) {
+	reason := strings.TrimSpace(resp.Blame.FailReason)
+	if reason == "" || !strings.Contains(reason, tssp.FrostFailReasonXMRMaxGasExceeded) {
+		return nil, false
+	}
+
+	actualFeeAtomic := resp.FeeAtomic
+	if parsed, ok := parseUintReasonField(reason, "actual_fee_atomic"); ok {
+		actualFeeAtomic = parsed
+	}
+	if parsed, ok := parseUintReasonField(reason, "max_gas_atomic"); ok {
+		maxGasAtomic = parsed
+	}
+	return xmrMaxGasExceededError{
+		actualFeeAtomic: actualFeeAtomic,
+		maxGasAtomic:    maxGasAtomic,
+	}, true
+}
+
+// parseUintReasonField accepts the simple key=value fields emitted in FROST
+// blame text. It intentionally stays narrow so arbitrary signer error strings
+// do not become part of the protocol surface.
+func parseUintReasonField(reason, key string) (uint64, bool) {
+	for _, field := range strings.Fields(reason) {
+		name, value, ok := strings.Cut(field, "=")
+		if !ok || name != key {
+			continue
+		}
+		parsed, err := strconv.ParseUint(strings.Trim(value, ",;"), 10, 64)
+		return parsed, err == nil
+	}
+	return 0, false
+}
+
 func fallbackOutboundObservationFee(scanner *Scanner) uint64 {
 	if scanner == nil {
 		return 0
@@ -1650,13 +1769,14 @@ func (c *Client) buildOutboundObservation(tx stypes.TxOutItem, txHash string, fe
 	if fee == 0 && c.scanner != nil {
 		fee = fallbackOutboundObservationFee(c.scanner)
 	}
+	coins := xmrObservedCoinsForSignedOutbound(tx, feeAtomic)
 	item := stypes.NewTxInItem(
 		height,
 		txHash,
 		tx.GetMemo(),
 		from,
 		tx.ToAddress.String(),
-		tx.Coins,
+		coins,
 		common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(fee))},
 		vaultPubKey,
 		"",
@@ -1676,6 +1796,37 @@ func (c *Client) buildOutboundObservation(tx stypes.TxOutItem, txHash string, fe
 		item.SpentOutputRefs = refs
 	}
 	return item
+}
+
+// xmrObservedCoinsForSignedOutbound mirrors the signer-side migration sweep
+// rule: XMR migrations schedule amount + MaxGas, and the sidecar sends any
+// unused MaxGas to the destination vault instead of leaving it behind in the
+// source vault. The synthetic Bifrost observation must therefore credit the
+// actual migrated amount for MIGRATE only; normal outbound observations keep
+// the scheduled coin amount.
+func xmrObservedCoinsForSignedOutbound(tx stypes.TxOutItem, feeAtomic uint64) common.Coins {
+	parsedMemo, err := memo.ParseMemo(common.LatestVersion, tx.GetMemo())
+	if err != nil || !parsedMemo.IsType(memo.TxMigrate) {
+		return tx.Coins
+	}
+
+	xmrCoin := tx.Coins.GetCoin(common.XMRAsset)
+	if xmrCoin.IsEmpty() {
+		return tx.Coins
+	}
+	maxGasAtomic, err := maxGasToAtomic(tx.MaxGas)
+	if err != nil || maxGasAtomic <= feeAtomic {
+		return tx.Coins
+	}
+
+	unusedMaxGasThorchain := (maxGasAtomic - feeAtomic) / moneroAtomicToThorchain
+	if unusedMaxGasThorchain == 0 {
+		return tx.Coins
+	}
+	return common.NewCoins(common.NewCoin(
+		common.XMRAsset,
+		xmrCoin.Amount.Add(cosmos.NewUint(unusedMaxGasThorchain)),
+	))
 }
 
 func (c *Client) ExportKeyshare(groupKey common.PubKey) ([]byte, error) {

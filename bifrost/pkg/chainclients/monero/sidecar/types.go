@@ -69,6 +69,10 @@ type SignPrepareReq struct {
 	MaxInputs                   int64      `json:"max_inputs,omitempty"`
 	DustThreshold               uint64     `json:"dust_threshold,omitempty"`
 	MaxSelectedInputValueAtomic uint64     `json:"max_selected_input_value_atomic,omitempty"`
+	// MaxGasAtomic is optional so this client remains wire-compatible with
+	// 3.19-era signers that ignore unknown JSON fields, while newer signers use
+	// it to cap fees and migration sweep math.
+	MaxGasAtomic uint64 `json:"max_gas_atomic,omitempty"`
 }
 
 type SignPrepareResp struct {

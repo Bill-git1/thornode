@@ -68,6 +68,7 @@ func TestFrostAdapterTranslation(t *testing.T) {
 		FeeRate:                     7,
 		DecoyContext:                "ctx-123",
 		MaxSelectedInputValueAtomic: 123456789,
+		MaxGasAtomic:                987654321,
 	}
 	prepareResp, err := adapter.FrostSignPrepare(prepareReq)
 	if err != nil {
@@ -82,7 +83,8 @@ func TestFrostAdapterTranslation(t *testing.T) {
 		gotPrepare.Memo != prepareReq.Memo ||
 		gotPrepare.FeeRate != prepareReq.FeeRate ||
 		gotPrepare.DecoyContext != prepareReq.DecoyContext ||
-		gotPrepare.MaxSelectedInputValueAtomic != prepareReq.MaxSelectedInputValueAtomic {
+		gotPrepare.MaxSelectedInputValueAtomic != prepareReq.MaxSelectedInputValueAtomic ||
+		gotPrepare.MaxGasAtomic != prepareReq.MaxGasAtomic {
 		t.Fatalf("prepare request translation mismatch: %+v", gotPrepare)
 	}
 

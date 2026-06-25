@@ -136,7 +136,7 @@ func TestClientEnsureXMRVaultBalanceRegistersVault(t *testing.T) {
 		vaultAddressMap: make(map[string]common.Address),
 	}
 
-	if err := client.ensureVaultBalance(vaultPubKey, 1000, nil); err != nil {
+	if err := client.ensureVaultBalance(vaultPubKey, 1000, 0); err != nil {
 		t.Fatalf("ensureVaultBalance failed: %v", err)
 	}
 

@@ -10,6 +10,11 @@ import (
 	tcommon "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 )
 
+// FrostFailReasonXMRMaxGasExceeded is intentionally a stable machine-readable
+// prefix so Bifrost can recognize the local fee-cap failure without depending
+// on the full human-readable blame text.
+const FrostFailReasonXMRMaxGasExceeded = "xmr_max_gas_exceeded"
+
 // FrostKeySignRequest is the canonical request context for a FROST signing ceremony.
 type FrostKeySignRequest struct {
 	VaultPubKey   string
@@ -32,6 +37,10 @@ type FrostKeySignRequest struct {
 	// MaxSelectedInputValueAtomic caps the total value of selected inputs for
 	// management transactions such as XMR consolidation.
 	MaxSelectedInputValueAtomic uint64
+	// MaxGasAtomic is the scheduled THORChain MaxGas cap converted to Monero
+	// atomic units. The sidecar uses it to bound the fee and, for migrations,
+	// sweep unused gas into the destination vault.
+	MaxGasAtomic uint64
 }
 
 // FrostKeySignResponse is the result of a FROST signing ceremony.
@@ -145,6 +154,9 @@ type FrostSidecarPrepareReq struct {
 	MaxInputs                   int64                 `json:"max_inputs,omitempty"`
 	DustThreshold               uint64                `json:"dust_threshold,omitempty"`
 	MaxSelectedInputValueAtomic uint64                `json:"max_selected_input_value_atomic,omitempty"`
+	// MaxGasAtomic keeps the Rust signer bound to THORChain's scheduled gas
+	// cap while staying optional for older 3.19-compatible sidecar payloads.
+	MaxGasAtomic uint64 `json:"max_gas_atomic,omitempty"`
 }
 
 type FrostSidecarPrepareResp struct {

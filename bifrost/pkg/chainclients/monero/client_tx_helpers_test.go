@@ -285,3 +285,50 @@ func TestBuildOutboundObservationConvertsFallbackNetworkFeeToThorchainUnits(t *t
 		t.Fatalf("expected fallback fee %d thorchain units, got %d", expectedFallbackFee, observation.Gas[0].Amount.Uint64())
 	}
 }
+
+// TestBuildOutboundObservationAddsUnusedMaxGasForMigration captures the XMR
+// migration-specific rule that unused scheduled gas becomes migrated value.
+func TestBuildOutboundObservationAddsUnusedMaxGasForMigration(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey, vaultAddr := testVaultPubKeyAndAddress(t)
+	client := &Client{
+		chain: common.XMRChain,
+		scanner: &Scanner{
+			currentBlockHeight: atomic.NewInt64(123),
+			lastFee:            atomic.NewUint64(77),
+		},
+		vaultAddressMap: map[string]common.Address{
+			vaultPubKey.String(): vaultAddr,
+		},
+	}
+
+	// XMR migration signing can sweep unused MaxGas into the destination vault.
+	// The synthetic outbound observation should therefore credit amount plus
+	// unused gas, while still reporting the actual fee separately in Gas.
+	observation := client.buildOutboundObservation(
+		stypes.TxOutItem{
+			Chain:            common.XMRChain,
+			ToAddress:        common.Address(common.XMRChecksummedDummyAddress('8')),
+			Coins:            common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(100))),
+			Memo:             "MIGRATE:123",
+			MaxGas:           common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(10))},
+			VaultPubKeyFrost: vaultPubKey,
+		},
+		strings.Repeat("c", 64),
+		3*moneroAtomicToThorchain,
+		nil,
+	)
+	if observation == nil {
+		t.Fatal("expected outbound observation")
+	}
+
+	expectedAmount := uint64(107)
+	if observation.Coins.GetCoin(common.XMRAsset).Amount.Uint64() != expectedAmount {
+		t.Fatalf("expected migration amount %d including unused max gas, got %d", expectedAmount, observation.Coins.GetCoin(common.XMRAsset).Amount.Uint64())
+	}
+	expectedFee := uint64(3)
+	if observation.Gas.ToCoins().GetCoin(common.XMRAsset).Amount.Uint64() != expectedFee {
+		t.Fatalf("expected actual fee %d, got %d", expectedFee, observation.Gas.ToCoins().GetCoin(common.XMRAsset).Amount.Uint64())
+	}
+}
