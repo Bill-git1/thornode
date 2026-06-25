@@ -90,7 +90,7 @@ func swapActorTimeout(from, to common.Asset) time.Duration {
 	if from.Chain.Equals(common.SOLChain) || to.Chain.Equals(common.SOLChain) {
 		return 4 * time.Minute
 	}
-	if to.Chain.Equals(common.TRONChain) {
+	if from.Chain.Equals(common.TRONChain) || to.Chain.Equals(common.TRONChain) {
 		return 6 * time.Minute
 	}
 	return 2 * time.Minute

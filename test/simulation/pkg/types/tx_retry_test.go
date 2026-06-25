@@ -62,9 +62,10 @@ func TestSignAndBroadcastTxRetriesTronConfirmationFailures(t *testing.T) {
 	}()
 
 	client := &retryLiteChainClient{
+		broadcastTxIDs: []string{"unmined", "invisible", "confirmed"},
 		broadcastErrs: []error{
-			errors.New("broadcasted tx a not confirmed on tron node"),
-			errors.New("broadcasted tx b not observed on tron node"),
+			errors.New("broadcasted tx unmined not confirmed on tron node"),
+			errors.New("broadcasted tx invisible not observed on tron node"),
 			nil,
 		},
 	}
@@ -73,7 +74,7 @@ func TestSignAndBroadcastTxRetriesTronConfirmationFailures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected tron retry helper to recover, got %v", err)
 	}
-	if txid != "ok" {
+	if txid != "confirmed" {
 		t.Fatalf("expected successful txid, got %s", txid)
 	}
 	if client.signCalls != 3 {
@@ -84,7 +85,47 @@ func TestSignAndBroadcastTxRetriesTronConfirmationFailures(t *testing.T) {
 	}
 }
 
-func TestSignAndBroadcastTxDoesNotReplaceSubmittedOneShotMemo(t *testing.T) {
+// TestSignAndBroadcastTxRetriesTronUnobservedTxID covers the failure mode
+// where the TRON node accepts a broadcast response shape but the transaction
+// never becomes queryable by txid. Treating that as submitted makes the
+// simulation wait for an inbound Bifrost can never observe.
+func TestSignAndBroadcastTxRetriesTronUnobservedTxID(t *testing.T) {
+	prevDelay := tronSimTxBroadcastRetryDelay
+	prevAttempts := tronSimTxMaxBroadcastAttempts
+	tronSimTxBroadcastRetryDelay = 0
+	tronSimTxMaxBroadcastAttempts = 4
+	defer func() {
+		tronSimTxBroadcastRetryDelay = prevDelay
+		tronSimTxMaxBroadcastAttempts = prevAttempts
+	}()
+
+	// The first attempt returns a txid, but the TRON client reported that the
+	// tx never materialized on the fullnode. The retry helper should build and
+	// broadcast a replacement instead of exposing that invisible txid.
+	client := &retryLiteChainClient{
+		broadcastTxIDs: []string{"invisible", "confirmed"},
+		broadcastErrs: []error{
+			errors.New("broadcasted tx invisible not observed on tron node"),
+			nil,
+		},
+	}
+
+	txid, err := SignAndBroadcastTx(client, SimTx{Chain: common.TRONChain})
+	if err != nil {
+		t.Fatalf("expected tron retry helper to recover from unobserved txid, got %v", err)
+	}
+	if txid != "confirmed" {
+		t.Fatalf("expected replacement txid, got %s", txid)
+	}
+	if client.signCalls != 2 {
+		t.Fatalf("expected 2 sign attempts, got %d", client.signCalls)
+	}
+	if client.broadcastCalls != 2 {
+		t.Fatalf("expected 2 broadcast attempts, got %d", client.broadcastCalls)
+	}
+}
+
+func TestSignAndBroadcastTxRetriesUnconfirmedTronOneShotMemo(t *testing.T) {
 	prevDelay := tronSimTxBroadcastRetryDelay
 	prevAttempts := tronSimTxMaxBroadcastAttempts
 	tronSimTxBroadcastRetryDelay = 0
@@ -95,9 +136,10 @@ func TestSignAndBroadcastTxDoesNotReplaceSubmittedOneShotMemo(t *testing.T) {
 	}()
 
 	client := &retryLiteChainClient{
-		broadcastTxIDs: []string{"submitted"},
+		broadcastTxIDs: []string{"unmined", "confirmed"},
 		broadcastErrs: []error{
-			errors.New("broadcasted tx submitted not confirmed on tron node"),
+			errors.New("broadcasted tx unmined not confirmed on tron node"),
+			nil,
 		},
 	}
 
@@ -107,16 +149,16 @@ func TestSignAndBroadcastTxDoesNotReplaceSubmittedOneShotMemo(t *testing.T) {
 		OneShotMemo: true,
 	})
 	if err != nil {
-		t.Fatalf("expected submitted one-shot txid to be accepted, got %v", err)
+		t.Fatalf("expected one-shot memo to retry unconfirmed TRON tx, got %v", err)
 	}
-	if txid != "submitted" {
-		t.Fatalf("expected submitted txid, got %s", txid)
+	if txid != "confirmed" {
+		t.Fatalf("expected confirmed replacement txid, got %s", txid)
 	}
-	if client.signCalls != 1 {
-		t.Fatalf("expected 1 sign attempt, got %d", client.signCalls)
+	if client.signCalls != 2 {
+		t.Fatalf("expected 2 sign attempts, got %d", client.signCalls)
 	}
-	if client.broadcastCalls != 1 {
-		t.Fatalf("expected 1 broadcast attempt, got %d", client.broadcastCalls)
+	if client.broadcastCalls != 2 {
+		t.Fatalf("expected 2 broadcast attempts, got %d", client.broadcastCalls)
 	}
 }
 

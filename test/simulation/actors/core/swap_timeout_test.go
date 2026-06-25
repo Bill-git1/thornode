@@ -33,6 +33,13 @@ func TestNewSwapActorTimeouts(t *testing.T) {
 		t.Fatalf("expected TRON-destination swap timeout to be 6m, got %s", btcToTron.Timeout)
 	}
 
+	// TRON source broadcasts can spend a significant part of the actor budget
+	// waiting until the local fullnode can query the tx by id.
+	trxToPolygon := NewSwapActor(common.TRXAsset, common.POLAsset, rng)
+	if trxToPolygon.Timeout != 6*time.Minute {
+		t.Fatalf("expected TRON-source swap timeout to be 6m, got %s", trxToPolygon.Timeout)
+	}
+
 	solToPolygon := NewSwapActor(common.SOLAsset, common.POLAsset, rng)
 	if solToPolygon.Timeout != 4*time.Minute {
 		t.Fatalf("expected SOL swap timeout to be 4m, got %s", solToPolygon.Timeout)
