@@ -50,7 +50,7 @@ From these logs, we can identify the pools that transferred RUNE to the Reserve 
 In the THORNode code, pools are set to `Staged` immediately after RUNE transfer to Reserve. We can use this to identify the block number where the RUNE was transferred to Resreve for each pool.
 
 ```text
-$ docker run --rm --network host -e RPC_ENDPOINT=http://localhost:27148 registry.gitlab.com/ninerealms/cosmoscan 'block_events_listener(lambda h,e: (h,e), types={"pool"}), start=15206145, end=15269760, progress=True'
+$ docker run --rm --network host -e RPC_ENDPOINT=http://localhost:27148 cosmoscan 'block_events_listener(lambda h,e: (h,e), types={"pool"}), start=15206145, end=15269760, progress=True'
 
 [15207120, {"type": "pool", "pool": "BNB.ETH-1C9", "pool_status": "Staged"}]
 [15207120, {"type": "pool", "pool": "BNB.TWT-8C2", "pool_status": "Staged"}]

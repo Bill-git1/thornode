@@ -77,6 +77,6 @@ In addition to the user-side affiliate fee described above, an affiliate's THORN
 REVSHARE is opt-in by node operators on a per-affiliate basis (low-quorum operational mimir, churned out like other operational keys). To be eligible:
 
 1. Register a THORName whose name uses only `[a-zA-Z0-9-]`. Thornames containing `_` or `+` register cleanly but cannot have a `REVSHARE-<thorname>` mimir set, because mimir keys do not accept those characters.
-2. Coordinate with node operators (e.g. via 9R) to set `REVSHARE-<thorname>` to your agreed basis points.
+2. Coordinate with node operators to set `REVSHARE-<thorname>` to your agreed basis points.
 
 See [ADR 027](../architecture/adr-027-affiliate-revshare.md) for the full rationale and design.

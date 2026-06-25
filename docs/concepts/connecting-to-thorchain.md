@@ -8,10 +8,6 @@ This guide helps developers connect to THORChain's network for querying data, bu
 - **Tendermint RPC**: Consensus and node status data for monitoring.
 - **gRPC**: Full Cosmos SDK interface via protocol buffers.
 
-```admonish warning
-**Endpoint Migration (April 2025)**: Nine Realms is retiring all `*.ninerealms.com` endpoints. 301 redirects are being placed starting the week of April 7, redirects will be removed around April 14, and all endpoints will be fully shut down after **April 20, 2025**. Clients must migrate to the new endpoints listed below before that date.
-```
-
 ```admonish info
 The below endpoints are run by specific organisations for public use. There is a cost to running these services. If you want to run your own full node, please see [https://docs.thorchain.org/thornodes/overview.](https://docs.thorchain.org/thornodes/overview)
 ```
@@ -134,29 +130,11 @@ curl -X GET "https://gateway.liquify.com/chain/thorchain_rpc/net_info" -H "accep
 
 ## Other Services
 
-The following services have also moved:
-
-| Old URL                      | New URL                                             |
-| ---------------------------- | --------------------------------------------------- |
-| `track.ninerealms.com`       | [track.thorchain.org](https://track.thorchain.org/) |
-| `haskoin.ninerealms.com/bch` | [api.haskoin.com/bch](https://api.haskoin.com/bch)  |
-| `dashboards.ninerealms.com`  | TBD                                                 |
-| `ops.ninerealms.com/tools`   | Deprecated                                          |
+| Service              | URL                                                 |
+| -------------------- | --------------------------------------------------- |
+| Transaction tracking | [track.thorchain.org](https://track.thorchain.org/) |
+| Haskoin (BCH)        | [api.haskoin.com/bch](https://api.haskoin.com/bch)  |
 
 ## External Chain RPCs
 
-Nine Realms previously provided public RPC proxies for external chains (e.g., `bitcoin.ninerealms.com`, `ethereum.ninerealms.com`). These endpoints are being retired. Clients should migrate to a provider of their choice for external chain RPC access.
-
-The following endpoints are affected:
-
-- `avalanche.ninerealms.com`
-- `base.ninerealms.com`
-- `binance-smart.ninerealms.com`
-- `bitcoin-cash.ninerealms.com`
-- `bitcoin.ninerealms.com`
-- `dogecoin.ninerealms.com`
-- `ethereum.ninerealms.com`
-- `gaia.ninerealms.com`
-- `litecoin.ninerealms.com`
-- `tron.ninerealms.com`
-- `xrp.ninerealms.com`
+THORChain does not provide public RPC proxies for external chains (Bitcoin, Ethereum, etc.). For external chain RPC access, use a provider of your choice or run your own node.

@@ -10,7 +10,7 @@ Proposed
 
 ## Context
 
-Currently churns are roughly 3 days and migrations take about 7 hours to complete after keygen for the new vaults has succeeded. Nine Realms has been working hard with many wallets to integrate Thorchain as a backend swap provider, and there have been a few cases where wallet bugs resulted in inbounds sent to retired vaults.
+Currently churns are roughly 3 days and migrations take about 7 hours to complete after keygen for the new vaults has succeeded. The development team has been working hard with many wallets to integrate Thorchain as a backend swap provider, and there have been a few cases where wallet bugs resulted in inbounds sent to retired vaults.
 
 One recent example of a significant instance was a retired vault (https://blockstream.info/address/bc1q7zgtsnxhu7q4v467aqfj646s2ksps2rumhq0pz) that had almost a full BTC sent to it within a few hours of being retired - and the wallet claimed to the user that the lost funds were Thorchain's responsibility. While we still maintain that this is a wallet error and responsibility, in the ideal scenario we would still handle the inbound. The general perspective is that there is high likelihood over coming years that wallet bugs may lead to retired vault inbounds and lost user funds, and we should make the system as forgiving as possible to protect those relations.
 
@@ -18,7 +18,7 @@ The simplest way to ensure late inbounds to old vaults are handled is by increas
 
 ## Proposed Change
 
-Nine Realms proposes rolling out this change in 2 stages:
+This ADR proposes rolling out this change in 2 stages:
 
 1. Increase `FundMigrationInterval` to `3600` (5x current), which will result in the time to churn out taking roughly half of a current churn cycle.
 1. Allow nodes a few weeks to prepare for the change in cadence and then increase the churn interval to `129600` (3x current) and `FundMigrationInterval` to `14400`, which will result in churns approximately every 9 days with vaults remaining retiring for approximately 7 days. If nodes want to churn out and then back in within one round, they will have roughly 2 days at the end of the churn to do so.

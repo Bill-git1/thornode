@@ -20,8 +20,6 @@ Lending has been shown to be safe, controlled and has almost reached caps. It is
 
 https://flipsidecrypto.xyz/banbannard/⚡-thor-chain-lending-thorchain-lending-fOAKej
 
-https://dashboards.ninerealms.com/#lending
-
 ### Standby Reserve
 
 The Standby Reserve has 60,000,000 RUNE held in idle, waiting to be deployed. This was allocated since Genesis to be used by the protocol when it was ready for it.

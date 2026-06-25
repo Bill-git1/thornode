@@ -28,7 +28,7 @@ The dial must be:
 
 - Per-thorname (different affiliates earn different shares).
 - Operationally controlled (low-quorum mimir, churned out like other
-  operational keys), so 9R / node operators can iterate without an upgrade.
+  operational keys), so node operators can iterate without an upgrade.
 - Capped (the protocol cannot give away more than half its own income on
   a per-affiliate basis under any setting).
 - Paid out of protocol income, not user funds, so the user-side affiliate

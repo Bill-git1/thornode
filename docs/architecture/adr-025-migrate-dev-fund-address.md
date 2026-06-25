@@ -12,7 +12,7 @@ Proposed
 
 [ADR 018](./adr-018-core-protocol-sustainability.md) established the Dev Fund mechanism, allocating 5% of System Income (`DevFundSystemIncomeBps = 500`) to a designated address controlled by the Core Protocol Team. This funding supports protocol engineering, security, maintenance, and feature development.
 
-ADR 018 includes a 3-year Sunset Clause requiring a new ADR to refresh the custodian address and team. The current Dev Fund address (`thor1d8c0wv4y72kmlytegjmgx825xwumt9qt5xe07k`) is controlled by 9R (NineRealms). As part of the periodic refresh, this ADR proposes migrating custody to a new team via a new address.
+ADR 018 includes a 3-year Sunset Clause requiring a new ADR to refresh the custodian address and team. The current Dev Fund address (`thor1d8c0wv4y72kmlytegjmgx825xwumt9qt5xe07k`) is controlled by 9R. As part of the periodic refresh, this ADR proposes migrating custody to a new team via a new address.
 
 ## Decision
 

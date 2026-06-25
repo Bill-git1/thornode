@@ -208,7 +208,7 @@ The fund may need to save up cash to make large purchases in the future. Such as
 
 #### Governance
 
-The marketing fund will be overseen and managed by a marketing committee made up of two node operators, Kenton and Scorch, and a member of Nine Realms (9R).
+The marketing fund will be overseen and managed by a marketing committee made up of two node operators, Kenton and Scorch, and a member of the development team.
 
 To assure no conflicts of interest, none of the committee members are asking to be paid to do this. They stand to benefit from the growth of THORChain. This enables as much money as possible going towards marketing efforts.
 

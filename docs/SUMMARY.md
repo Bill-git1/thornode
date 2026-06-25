@@ -102,8 +102,13 @@
     - [ADR 017: Burn System Income Lever](architecture/adr-017-burn-system-income-lever.md)
     - [ADR 018: Core Protocol Sustainability](architecture/adr-018-core-protocol-sustainability.md)
     - [ADR 019: AutoBond](architecture/adr-019-auto-bond.md)
+    - [ADR 020: App-layer](architecture/adr-020-app-layer.md)
     - [ADR 021: Marketing Fund Allocation](architecture/ADR-021-marketing-fund-allocation.md)
+    - [ADR 023: $RUNE Supply Restructure](architecture/adr-023-rune-supply-restructure.md)
+    - [ADR 025: Migrate Dev Fund Address](architecture/adr-025-migrate-dev-fund-address.md)
+    - [ADR 026: Dynamic L1 Min Swap Fee Per Thorname & Pair](architecture/adr-026-dynamic-l1-min-fee-per-thorname.md)
     - [ADR 027: Affiliate Revenue Share (REVSHARE)](architecture/adr-027-affiliate-revshare.md)
+    - [ADR 028: Exploit Conciliation](architecture/adr-028-exploit-conciliation.md)
 
 - [Archived](archived/archived.md)
 
