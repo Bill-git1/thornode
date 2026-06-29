@@ -39,9 +39,12 @@ func (h TradeAccountDepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosm
 
 func (h TradeAccountDepositHandler) validate(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
 	tradeAccountsEnabled := h.mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
-	tradeAccountsDespositEnabled := h.mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsDepositEnabled)
-	if tradeAccountsEnabled <= 0 || tradeAccountsDespositEnabled <= 0 {
+	tradeAccountsDepositEnabled := h.mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsDepositEnabled)
+	if tradeAccountsEnabled <= 0 || tradeAccountsDepositEnabled <= 0 {
 		return fmt.Errorf("trade accounts are disabled")
+	}
+	if err := h.checkHalt(ctx, msg.Asset.Chain.String()); err != nil {
+		return err
 	}
 	return msg.ValidateBasic()
 }
@@ -52,6 +55,17 @@ func (h TradeAccountDepositHandler) handle(ctx cosmos.Context, msg MsgTradeAccou
 	if err != nil {
 		ctx.Logger().Error("fail to handle Deposit", "error", err)
 		return err
+	}
+	return nil
+}
+
+func (h TradeAccountDepositHandler) checkHalt(ctx cosmos.Context, val string) error {
+	m, err := h.mgr.Keeper().GetMimirWithRef(ctx, constants.MimirTemplateTradeAssetHaltDeposit, val)
+	if err != nil {
+		return err
+	}
+	if m > 0 && m <= ctx.BlockHeight() {
+		return fmt.Errorf("%s trade asset deposits are disabled", val)
 	}
 	return nil
 }

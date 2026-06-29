@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"fmt"
 	"strings"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -70,6 +71,42 @@ func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawalNetworkValidation
 	c.Check(bal.String(), Equals, "500")
 
 	// Verify no outbound created
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 0)
+}
+
+func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawalHaltWithdraw(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	asset := common.BTCAsset
+	addr := GetRandomBech32Addr()
+	bc1Addr := GetRandomBTCAddress()
+	dummyTx := common.Tx{ID: "test"}
+
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsEnabled.String(), 1)
+	mgr.Keeper().SetMimir(ctx, constants.TradeAccountsDepositEnabled.String(), 1)
+
+	{
+		msg := NewMsgTradeAccountDeposit(asset, cosmos.NewUint(500), addr, addr, dummyTx)
+		h := NewTradeAccountDepositHandler(mgr)
+		_, err := h.Run(ctx, msg)
+		c.Assert(err, IsNil)
+
+		bal := mgr.TradeAccountManager().BalanceOf(ctx, asset, addr)
+		c.Check(bal.String(), Equals, "500")
+	}
+
+	mgr.Keeper().SetMimir(ctx, fmt.Sprintf(constants.MimirTemplateTradeAssetHaltWithdraw, asset.Chain), 1)
+
+	msg := NewMsgTradeAccountWithdrawal(asset.GetTradeAsset(), cosmos.NewUint(350), bc1Addr, addr, dummyTx)
+	h := NewTradeAccountWithdrawalHandler(mgr)
+	_, err := h.Run(ctx, msg)
+	c.Assert(err, NotNil)
+	c.Check(err.Error(), Matches, ".*trade asset withdrawals are disabled.*")
+
+	bal := mgr.TradeAccountManager().BalanceOf(ctx, asset, addr)
+	c.Check(bal.String(), Equals, "500")
+
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 0)

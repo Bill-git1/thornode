@@ -44,6 +44,9 @@ func (h TradeAccountWithdrawalHandler) validate(ctx cosmos.Context, msg MsgTrade
 	if tradeAccountsEnabled <= 0 {
 		return fmt.Errorf("trade accounts are disabled")
 	}
+	if err := h.checkHalt(ctx, msg.Asset.GetLayer1Asset().Chain.String()); err != nil {
+		return err
+	}
 
 	// Validate that the address network matches the current chain network
 	if msg.AssetAddress.GetNetwork(msg.AssetAddress.GetChain()) != common.CurrentChainNetwork {
@@ -78,5 +81,16 @@ func (h TradeAccountWithdrawalHandler) handle(ctx cosmos.Context, msg MsgTradeAc
 		return errFailAddOutboundTx
 	}
 
+	return nil
+}
+
+func (h TradeAccountWithdrawalHandler) checkHalt(ctx cosmos.Context, val string) error {
+	m, err := h.mgr.Keeper().GetMimirWithRef(ctx, constants.MimirTemplateTradeAssetHaltWithdraw, val)
+	if err != nil {
+		return err
+	}
+	if m > 0 && m <= ctx.BlockHeight() {
+		return fmt.Errorf("%s trade asset withdrawals are disabled", val)
+	}
 	return nil
 }
