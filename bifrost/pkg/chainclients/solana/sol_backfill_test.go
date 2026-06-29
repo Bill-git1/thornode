@@ -120,7 +120,11 @@ type mockSOLSolvencyBridge struct {
 }
 
 func (m *mockSOLSolvencyBridge) GetAsgards() (types2.Vaults, error) {
-	return m.asgards, nil
+	// Return a fresh copy per call, matching production (GetAsgards deserializes a
+	// new slice each time). ReportSolvency filters asgards in place via asgards[:0],
+	// so handing one shared backing array to concurrent callers would race in tests
+	// even though production never does.
+	return append(types2.Vaults(nil), m.asgards...), nil
 }
 
 // -------------------------------------------------------------------------
@@ -866,6 +870,24 @@ func (s *ClientBackfillSuite) TestShouldReportSolvency(c *C) {
 	c.Assert(client.ShouldReportSolvency(100), Equals, false)
 }
 
+func (s *ClientBackfillSuite) TestNextSolvencyReportSlotMultiple(c *C) {
+	server := makeSolRPCServer(c, map[string]string{
+		"getSlot": `{"jsonrpc":"2.0","result":1,"id":1}`,
+	})
+	defer server.Close()
+	client := s.makeClient(c, server)
+	client.cfg.SolvencyBlocks = 50
+
+	c.Assert(client.nextSolvencyReportSlotMultiple(50), Equals, int64(0))
+	c.Assert(client.nextSolvencyReportSlotMultiple(51), Equals, int64(1))
+	c.Assert(client.nextSolvencyReportSlotMultiple(260), Equals, int64(5))
+
+	client.solvencySlotMultiple = 2
+	c.Assert(client.nextSolvencyReportSlotMultiple(150), Equals, int64(2))
+	c.Assert(client.nextSolvencyReportSlotMultiple(151), Equals, int64(3))
+	c.Assert(client.nextSolvencyReportSlotMultiple(260), Equals, int64(3))
+}
+
 // -------------------------------------------------------------------------
 // BroadcastTx
 // -------------------------------------------------------------------------
@@ -1169,11 +1191,12 @@ func (s *ClientBackfillSuite) TestReportSolvencyUnhealthyScannerRunnerHeight(c *
 
 func (s *ClientBackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults(c *C) {
 	server := makeSolRPCServer(c, map[string]string{
-		"getSlot":    `{"jsonrpc":"2.0","result":11,"id":1}`,
-		"getBalance": `{"jsonrpc":"2.0","result":{"context":{"slot":11},"value":10000000000},"id":1}`,
+		"getSlot":    `{"jsonrpc":"2.0","result":111,"id":1}`,
+		"getBalance": `{"jsonrpc":"2.0","result":{"context":{"slot":111},"value":10000000000},"id":1}`,
 	})
 	defer server.Close()
 	client := s.makeClient(c, server)
+	client.cfg.SolvencyBlocks = 50
 	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
 	client.solScanner.healthy.Store(false)
 	client.solScanner.lastFeeRate = 1
@@ -1191,12 +1214,12 @@ func (s *ClientBackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults
 		asgards: types2.Vaults{solVault, unrelatedBTCVault},
 	}
 
-	err := client.ReportSolvency(11)
+	err := client.ReportSolvency(111)
 	c.Assert(err, IsNil)
 
 	select {
 	case msg := <-client.globalSolvencyQueue:
-		c.Assert(msg.Height, Equals, int64(10))
+		c.Assert(msg.Height, Equals, int64(100))
 		c.Assert(msg.Chain, Equals, common.SOLChain)
 		c.Assert(msg.PubKey.Equals(solVault.PubKey), Equals, true)
 	case <-time.After(time.Second):
@@ -1212,12 +1235,13 @@ func (s *ClientBackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults
 
 func (s *ClientBackfillSuite) TestReportSolvencyConvertsLamportFeeToThorchainUnits(c *C) {
 	server := makeSolRPCServer(c, map[string]string{
-		"getSlot":    `{"jsonrpc":"2.0","result":11,"id":1}`,
-		"getBalance": `{"jsonrpc":"2.0","result":{"context":{"slot":11},"value":10000000000},"id":1}`,
+		"getSlot":    `{"jsonrpc":"2.0","result":111,"id":1}`,
+		"getBalance": `{"jsonrpc":"2.0","result":{"context":{"slot":111},"value":10000000000},"id":1}`,
 	})
 	defer server.Close()
 
 	client := s.makeClient(c, server)
+	client.cfg.SolvencyBlocks = 50
 	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
 	client.solScanner.lastFeeRate = 1
 
@@ -1230,17 +1254,88 @@ func (s *ClientBackfillSuite) TestReportSolvencyConvertsLamportFeeToThorchainUni
 		asgards: types2.Vaults{solVault},
 	}
 
-	err := client.ReportSolvency(11)
+	err := client.ReportSolvency(111)
 	c.Assert(err, IsNil)
 
 	select {
 	case msg := <-client.globalSolvencyQueue:
-		c.Assert(msg.Height, Equals, int64(10))
+		c.Assert(msg.Height, Equals, int64(100))
 		c.Assert(msg.Chain, Equals, common.SOLChain)
 		c.Assert(msg.PubKey.Equals(solVault.PubKey), Equals, true)
 	case <-time.After(time.Second):
 		c.Fatal("expected insolvency report when SOL fee buffer is converted to THORChain units")
 	}
+}
+
+// TestReportSolvencyConcurrentNoRace exercises the data race that motivated
+// solvencySlotMultipleMu: on a healthy scanner BOTH the block-scanner solvency
+// reporter and the SolvencyCheckRunner reach ReportSolvency and read/write
+// solvencySlotMultiple. Several goroutines hammer the solvency path with
+// advancing heights; under `go test -race` this fails on the unguarded field and
+// passes once access is serialized. The counter must also end monotonic at the
+// highest crossed boundary (no torn/lost write).
+func (s *ClientBackfillSuite) TestReportSolvencyConcurrentNoRace(c *C) {
+	server := makeSolRPCServer(c, map[string]string{
+		"getSlot":    `{"jsonrpc":"2.0","result":1,"id":1}`,
+		"getBalance": `{"jsonrpc":"2.0","result":{"context":{"slot":1},"value":10000000000},"id":1}`,
+	})
+	defer server.Close()
+	client := s.makeClient(c, server)
+	client.cfg.SolvencyBlocks = 50
+	client.globalSolvencyQueue = make(chan stypes.Solvency, 1024)
+	// Healthy => the unhealthy dedup guard does not fire, so both goroutines run
+	// the full path and contend on solvencySlotMultiple — the production race.
+	client.solScanner.healthy.Store(true)
+	client.solScanner.lastFeeRate = 1
+
+	solVault := types2.Vault{
+		PubKey:      types2.GetRandomPubKey(),
+		PubKeyEddsa: types2.GetRandomEd25519PubKey(),
+		Coins:       common.NewCoins(common.NewCoin(common.SOLAsset, cosmos.NewUint(1_000_000_000))),
+	}
+	client.bridge = &mockSOLSolvencyBridge{asgards: types2.Vaults{solVault}}
+
+	const goroutines, steps = 4, 100
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+			for i := 1; i <= steps; i++ {
+				h := int64(i) * client.cfg.SolvencyBlocks // height on/just past boundary i
+				if client.ShouldReportSolvency(h) {
+					_ = client.ReportSolvency(h)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	// height == steps*SolvencyBlocks sits exactly on boundary `steps`, which is not
+	// yet crossed, so the highest reportable multiple is steps-1.
+	c.Assert(client.getSolvencySlotMultiple(), Equals, int64(steps-1))
+}
+
+// TestAdvanceSolvencySlotMultipleNeverRegresses pins the monotonic compare-and-set.
+// The check-then-set in ReportSolvency is not atomic, so a reporter racing on the
+// fresh-node catch-up path can hand back a lower boundary than one already
+// recorded. advanceSolvencySlotMultiple must drop the stale lower value rather than
+// regress the counter (which would re-report already-reported boundaries).
+func (s *ClientBackfillSuite) TestAdvanceSolvencySlotMultipleNeverRegresses(c *C) {
+	server := makeSolRPCServer(c, map[string]string{
+		"getSlot": `{"jsonrpc":"2.0","result":1,"id":1}`,
+	})
+	defer server.Close()
+	client := s.makeClient(c, server)
+
+	client.advanceSolvencySlotMultiple(5)
+	c.Assert(client.getSolvencySlotMultiple(), Equals, int64(5))
+
+	client.advanceSolvencySlotMultiple(2) // stale lower boundary from a racing reporter
+	c.Assert(client.getSolvencySlotMultiple(), Equals, int64(5))
+
+	client.advanceSolvencySlotMultiple(7) // a genuine advance still moves forward
+	c.Assert(client.getSolvencySlotMultiple(), Equals, int64(7))
 }
 
 // Note: Full ReportSolvency with vault fetching requires bridge to be pointed at test server.

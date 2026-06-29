@@ -566,7 +566,7 @@ bifrost:
         max_contract_tx_logs: 0
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
-      solvency_blocks: 50
+      solvency_blocks: 500
 
     zec:
       <<: *default-chain
