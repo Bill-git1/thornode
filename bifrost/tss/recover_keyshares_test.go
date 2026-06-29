@@ -110,6 +110,100 @@ func (s *RecoverKeysharesSuite) TestRecoverySeedPhraseUsesSharedSignerSeed(c *C)
 	c.Assert(seedPhrase, Equals, Mnemonic)
 }
 
+func (s *RecoverKeysharesSuite) TestRecoverLegacyKeySharesRecoversMissingEddsaWhenECDSAExists(c *C) {
+	dir, cleanup := setupRecoveryKeysharesTest(c)
+	defer cleanup()
+
+	legacyPubKey := types.GetRandomPubKey()
+	eddsaPubKey := types.GetRandomEd25519PubKey()
+	signer, err := types.GetRandomPubKey().GetThorAddress()
+	c.Assert(err, IsNil)
+	target := keyshareRecoveryTarget{
+		kind:            recoveryTargetLegacy,
+		pubKey:          legacyPubKey,
+		poolPubKeyEddsa: eddsaPubKey,
+	}
+	vaults := types.Vaults{{PubKey: legacyPubKey, PubKeyEddsa: eddsaPubKey, BlockHeight: 123}}
+	original := readLocalStateTestFile(c)
+	c.Assert(os.WriteFile(localstateKeysharePath(legacyPubKey), original, 0o600), IsNil)
+
+	err = recoverLegacyKeySharesFromBackups(signer, target, vaults, recoveryBackups{
+		eddsa: encryptedLocalStateTestFile(c),
+	})
+	c.Assert(err, IsNil)
+	assertRecoveredLocalState(c, filepath.Join(dir, "localstate-"+eddsaPubKey.String()+".json"), original)
+}
+
+func (s *RecoverKeysharesSuite) TestRecoverLegacyKeySharesRecoversMissingECDSAWhenEddsaExists(c *C) {
+	_, cleanup := setupRecoveryKeysharesTest(c)
+	defer cleanup()
+
+	legacyPubKey := types.GetRandomPubKey()
+	eddsaPubKey := types.GetRandomEd25519PubKey()
+	signer, err := types.GetRandomPubKey().GetThorAddress()
+	c.Assert(err, IsNil)
+	target := keyshareRecoveryTarget{
+		kind:            recoveryTargetLegacy,
+		pubKey:          legacyPubKey,
+		poolPubKeyEddsa: eddsaPubKey,
+	}
+	vaults := types.Vaults{{PubKey: legacyPubKey, PubKeyEddsa: eddsaPubKey, BlockHeight: 123}}
+	original := readLocalStateTestFile(c)
+	c.Assert(os.WriteFile(localstateKeysharePath(eddsaPubKey), original, 0o600), IsNil)
+
+	err = recoverLegacyKeySharesFromBackups(signer, target, vaults, recoveryBackups{
+		secp256k1: encryptedLocalStateTestFile(c),
+	})
+	c.Assert(err, IsNil)
+	assertRecoveredLocalState(c, localstateKeysharePath(legacyPubKey), original)
+}
+
+func (s *RecoverKeysharesSuite) TestRecoverLegacyKeySharesBothExistingSkipsBackupsAndSeed(c *C) {
+	_, cleanup := setupRecoveryKeysharesTest(c)
+	defer cleanup()
+	c.Assert(os.Unsetenv("SIGNER_SEED_PHRASE"), IsNil)
+
+	legacyPubKey := types.GetRandomPubKey()
+	eddsaPubKey := types.GetRandomEd25519PubKey()
+	signer, err := types.GetRandomPubKey().GetThorAddress()
+	c.Assert(err, IsNil)
+	target := keyshareRecoveryTarget{
+		kind:            recoveryTargetLegacy,
+		pubKey:          legacyPubKey,
+		poolPubKeyEddsa: eddsaPubKey,
+	}
+	vaults := types.Vaults{{PubKey: legacyPubKey, PubKeyEddsa: eddsaPubKey, BlockHeight: 123}}
+	original := readLocalStateTestFile(c)
+	c.Assert(os.WriteFile(localstateKeysharePath(legacyPubKey), original, 0o600), IsNil)
+	c.Assert(os.WriteFile(localstateKeysharePath(eddsaPubKey), original, 0o600), IsNil)
+
+	err = recoverLegacyKeySharesFromBackups(signer, target, vaults, recoveryBackups{})
+	c.Assert(err, IsNil)
+}
+
+func (s *RecoverKeysharesSuite) TestRecoverLegacyKeySharesMissingEddsaBackupReturnsError(c *C) {
+	_, cleanup := setupRecoveryKeysharesTest(c)
+	defer cleanup()
+
+	legacyPubKey := types.GetRandomPubKey()
+	eddsaPubKey := types.GetRandomEd25519PubKey()
+	signer, err := types.GetRandomPubKey().GetThorAddress()
+	c.Assert(err, IsNil)
+	target := keyshareRecoveryTarget{
+		kind:            recoveryTargetLegacy,
+		pubKey:          legacyPubKey,
+		poolPubKeyEddsa: eddsaPubKey,
+	}
+	vaults := types.Vaults{{PubKey: legacyPubKey, PubKeyEddsa: eddsaPubKey, BlockHeight: 123}}
+	c.Assert(os.WriteFile(localstateKeysharePath(legacyPubKey), readLocalStateTestFile(c), 0o600), IsNil)
+
+	err = recoverLegacyKeySharesFromBackups(signer, target, vaults, recoveryBackups{})
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "eddsa key shares backup not found for "+eddsaPubKey.String())
+	_, statErr := os.Stat(localstateKeysharePath(eddsaPubKey))
+	c.Assert(os.IsNotExist(statErr), Equals, true)
+}
+
 func (s *RecoverKeysharesSuite) TestWriteRecoveredDecompressedKeysharesWritesOwnerOnlyFile(c *C) {
 	encrypted, err := EncryptKeyshares(LocalStateTestFile, Mnemonic)
 	c.Assert(err, IsNil)
@@ -170,4 +264,53 @@ func (s *RecoverKeysharesSuite) TestWriteRecoveredRawKeysharesWritesOwnerOnlyFil
 	recovered, err := os.ReadFile(path)
 	c.Assert(err, IsNil)
 	c.Assert(recovered, DeepEquals, rawKeyshares)
+}
+
+func setupRecoveryKeysharesTest(c *C) (string, func()) {
+	dir, err := os.MkdirTemp("", "recover-keyshares-home-*")
+	c.Assert(err, IsNil)
+
+	originalHome := keyshareRecoveryNodeHome
+	originalSeedPhrase, hadOriginalSeedPhrase := os.LookupEnv("SIGNER_SEED_PHRASE")
+	originalSeedPhraseFile, hadOriginalSeedPhraseFile := os.LookupEnv("SIGNER_SEED_PHRASE_FILE")
+
+	keyshareRecoveryNodeHome = dir
+	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", Mnemonic), IsNil)
+	c.Assert(os.Unsetenv("SIGNER_SEED_PHRASE_FILE"), IsNil)
+
+	return dir, func() {
+		keyshareRecoveryNodeHome = originalHome
+		if hadOriginalSeedPhrase {
+			_ = os.Setenv("SIGNER_SEED_PHRASE", originalSeedPhrase)
+		} else {
+			_ = os.Unsetenv("SIGNER_SEED_PHRASE")
+		}
+		if hadOriginalSeedPhraseFile {
+			_ = os.Setenv("SIGNER_SEED_PHRASE_FILE", originalSeedPhraseFile)
+		} else {
+			_ = os.Unsetenv("SIGNER_SEED_PHRASE_FILE")
+		}
+		_ = os.RemoveAll(dir)
+	}
+}
+
+func encryptedLocalStateTestFile(c *C) []byte {
+	encrypted, err := EncryptKeyshares(LocalStateTestFile, Mnemonic)
+	c.Assert(err, IsNil)
+	return encrypted
+}
+
+func readLocalStateTestFile(c *C) []byte {
+	original, err := os.ReadFile(LocalStateTestFile)
+	c.Assert(err, IsNil)
+	return original
+}
+
+func assertRecoveredLocalState(c *C, path string, original []byte) {
+	recovered, err := os.ReadFile(path)
+	c.Assert(err, IsNil)
+	c.Assert(recovered, DeepEquals, original)
+	fi, err := os.Stat(path)
+	c.Assert(err, IsNil)
+	c.Assert(fi.Mode().Perm(), Equals, os.FileMode(0o600))
 }
