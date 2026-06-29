@@ -99,18 +99,19 @@ func (s *VaultSuite) TestPendingTxBlockHeights(c *C) {
 	version := GetCurrentVersion()
 	constAccessor := constants.GetConstantValues(version)
 	vault.AppendPendingTxBlockHeights(1, constAccessor)
-	c.Assert(vault.LenPendingTxBlockHeights(2, 300), Equals, 1)
-	c.Assert(vault.LenPendingTxBlockHeights(302, 300), Equals, 0)
-	for i := 0; i < 100; i++ {
-		vault.AppendPendingTxBlockHeights(int64(i), constAccessor)
-	}
-	c.Assert(vault.LenPendingTxBlockHeights(100, 300), Equals, 101)
+	c.Assert(vault.PendingTxBlockHeights, DeepEquals, []int64{1})
+	vault.AppendPendingTxBlockHeights(2, constAccessor)
+	c.Assert(vault.PendingTxBlockHeights, DeepEquals, []int64{2, 1})
+	vault.AppendPendingTxBlockHeights(2, constAccessor)
+	c.Assert(vault.PendingTxBlockHeights, DeepEquals, []int64{2, 2, 1})
 	vault.AppendPendingTxBlockHeights(1000, constAccessor)
-	c.Assert(vault.LenPendingTxBlockHeights(1001, 300), Equals, 1)
+	c.Assert(vault.PendingTxBlockHeights, DeepEquals, []int64{1000, 2, 2, 1})
 	vault.RemovePendingTxBlockHeights(1000)
-	c.Assert(vault.LenPendingTxBlockHeights(1002, 300), Equals, 0)
+	c.Assert(vault.PendingTxBlockHeights, DeepEquals, []int64{2, 2, 1})
+	vault.RemovePendingTxBlockHeights(2)
+	c.Assert(vault.PendingTxBlockHeights, DeepEquals, []int64{2, 1})
 	vault.RemovePendingTxBlockHeights(1001)
-	c.Assert(vault.LenPendingTxBlockHeights(1002, 300), Equals, 0)
+	c.Assert(vault.PendingTxBlockHeights, DeepEquals, []int64{2, 1})
 }
 
 func (s *VaultSuite) TestVaultSort(c *C) {

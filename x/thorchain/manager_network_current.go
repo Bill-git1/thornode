@@ -579,24 +579,19 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	signingTransactionPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	if signingTransactionPeriod <= 0 {
+		return fmt.Errorf("invalid signing transaction period: %d", signingTransactionPeriod)
+	}
 	startHeight := ctx.BlockHeight() - signingTransactionPeriod
 	if startHeight < 1 {
 		startHeight = 1
 	}
 	txOutDelayMax := mgr.Keeper().GetConfigInt64(ctx, constants.TxOutDelayMax)
 	maxTxOutOffset := mgr.Keeper().GetConfigInt64(ctx, constants.MaxTxOutOffset)
-	for height := startHeight; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
-		var blockOut *TxOut
-		blockOut, err = mgr.Keeper().GetTxOut(ctx, height)
-		if err != nil {
-			ctx.Logger().Error("fail to get block tx out", "error", err)
-			continue
-		}
-		if height > ctx.BlockHeight()+maxTxOutOffset && len(blockOut.TxArray) == 0 {
-			// we've hit our max offset, and an empty block, we can assume the
-			// rest will be empty as well
-			break
-		}
+	staleMigratePendingBlocks := signingTransactionPeriod * constants.StaleMigratePendingSigningPeriodMultiplier
+	// Keep pending outbound accounting in one place because migrateFunds scans both
+	// the normal signing window and explicit stale migrate heights below.
+	processBlockOut := func(blockOut *TxOut) {
 		for _, toi := range blockOut.TxArray {
 			// only still outstanding txout will be considered
 			if !toi.OutHash.IsEmpty() {
@@ -617,6 +612,106 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 			// Having deducted from the Coins, ensure the map reflects the new amounts.
 			vaultsAvailableCoins[toi.VaultPubKey] = availableCoins
 		}
+	}
+	for height := startHeight; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
+		var blockOut *TxOut
+		blockOut, err = mgr.Keeper().GetTxOut(ctx, height)
+		if err != nil {
+			ctx.Logger().Error("fail to get block tx out", "error", err)
+			continue
+		}
+		if height > ctx.BlockHeight()+maxTxOutOffset && len(blockOut.TxArray) == 0 {
+			// we've hit our max offset, and an empty block, we can assume the
+			// rest will be empty as well
+			break
+		}
+		processBlockOut(blockOut)
+	}
+
+	// Migrate outbounds may remain unobserved past SigningTransactionPeriod. The
+	// vault's pending heights are durable references to those txouts, so scan them
+	// explicitly even when they are older than the rolling txout window.
+	stalePendingBlockOuts := make(map[int64]*TxOut)
+	stalePendingHeights := make([]int64, 0)
+	for vaultIdx := range retiring {
+		vault := retiring[vaultIdx]
+		for _, height := range vault.PendingTxBlockHeights {
+			if height < 1 || height >= startHeight {
+				continue
+			}
+			// Multiple retiring vaults may reference the same txout height, so
+			// keep one loaded blockOut for both stale pruning and later accounting.
+			blockOut, ok := stalePendingBlockOuts[height]
+			if !ok {
+				var blockOutErr error
+				blockOut, blockOutErr = mgr.Keeper().GetTxOut(ctx, height)
+				if blockOutErr != nil {
+					ctx.Logger().Error("fail to get stale pending migrate tx out", "error", blockOutErr, "height", height)
+					continue
+				}
+				stalePendingBlockOuts[height] = blockOut
+				stalePendingHeights = append(stalePendingHeights, height)
+			}
+
+			if staleMigratePendingBlocks > 0 && ctx.BlockHeight()-height > staleMigratePendingBlocks {
+				prunedMigrateCount := 0
+				// Only expire unobserved migrate requests for this vault and exact
+				// memo height. Unrelated pending txouts at the same height still count.
+				for itemIdx := range blockOut.TxArray {
+					toi := &blockOut.TxArray[itemIdx]
+					if !toi.OutHash.IsEmpty() || !toi.VaultPubKey.Equals(vault.PubKey) {
+						continue
+					}
+					memo, memoErr := ParseMemo(mgr.GetVersion(), toi.Memo)
+					if memoErr != nil {
+						ctx.Logger().Error("fail to parse stale pending migrate memo", "error", memoErr, "height", height, "memo", toi.Memo)
+						continue
+					}
+					if !memo.IsType(TxMigrate) {
+						continue
+					}
+					if memo.GetBlockHeight() != height {
+						ctx.Logger().Info("stale pending migrate memo height does not match txout height",
+							"vault_pubkey", vault.PubKey,
+							"txout_height", height,
+							"memo_height", memo.GetBlockHeight(),
+							"chain", toi.Chain)
+						continue
+					}
+					ctx.Logger().Info("marking stale pending migrate txout for retry",
+						"vault_pubkey", vault.PubKey,
+						"height", height,
+						"age", ctx.BlockHeight()-height,
+						"chain", toi.Chain)
+					// Mark the old request as replaced so bifrost will not sign it after
+					// the pending height is cleared and a fresh migrate is scheduled.
+					toi.OutHash = common.BlankTxID
+					prunedMigrateCount++
+				}
+				if prunedMigrateCount > 0 {
+					// Clear one durable pending-height entry per expired migrate so
+					// duplicate same-height migrations stay in sync with the txout block.
+					for i := 0; i < prunedMigrateCount; i++ {
+						vault.RemovePendingTxBlockHeights(height)
+					}
+					retiring[vaultIdx] = vault
+					if err = mgr.Keeper().SetTxOut(ctx, blockOut); err != nil {
+						return fmt.Errorf("fail to save stale pending migrate tx out: %w", err)
+					}
+					if err = mgr.Keeper().SetVault(ctx, vault); err != nil {
+						return fmt.Errorf("fail to save vault after stale pending migrate retry: %w", err)
+					}
+				}
+			}
+		}
+	}
+	// Process cached stale txouts in height order; map iteration is not
+	// deterministic and this path affects consensus accounting.
+	sort.Slice(stalePendingHeights, func(i, j int) bool {
+		return stalePendingHeights[i] < stalePendingHeights[j]
+	})
+	for _, height := range stalePendingHeights {
+		processBlockOut(stalePendingBlockOuts[height])
 	}
 
 	for _, vault := range retiring {

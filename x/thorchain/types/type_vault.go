@@ -294,14 +294,13 @@ func (m *Vault) DeductVaultPendingOutbounds(pendingOutbounds []TxOutItem) {
 	}
 }
 
-// AppendPendingTxBlockHeights will add current block height into the list , also remove the block height that is too old
-func (m *Vault) AppendPendingTxBlockHeights(blockHeight int64, constAccessor constants.ConstantValues) {
+// AppendPendingTxBlockHeights adds the current block height into the list.
+// Heights are removed when the corresponding migrate outbound is observed.
+func (m *Vault) AppendPendingTxBlockHeights(blockHeight int64, _ constants.ConstantValues) {
+	// Do not prune by SigningTransactionPeriod here. Migrate scheduling uses these
+	// heights to find outstanding txouts until the matching observation removes them.
 	heights := []int64{blockHeight}
-	for _, item := range m.PendingTxBlockHeights {
-		if (blockHeight - item) <= constAccessor.GetInt64Value(constants.SigningTransactionPeriod) {
-			heights = append(heights, item)
-		}
-	}
+	heights = append(heights, m.PendingTxBlockHeights...)
 	m.PendingTxBlockHeights = heights
 }
 
@@ -317,18 +316,6 @@ func (m *Vault) RemovePendingTxBlockHeights(blockHeight int64) {
 	if idxToRemove != -1 {
 		m.PendingTxBlockHeights = append(m.PendingTxBlockHeights[:idxToRemove], m.PendingTxBlockHeights[idxToRemove+1:]...)
 	}
-}
-
-// LenPendingTxBlockHeights count how many outstanding block heights in the vault
-// if the a block height is older than SigningTransactionPeriod , it will ignore
-func (m *Vault) LenPendingTxBlockHeights(currentBlockHeight, maxBlocks int64) int {
-	total := 0
-	for _, item := range m.PendingTxBlockHeights {
-		if (currentBlockHeight - item) <= maxBlocks {
-			total++
-		}
-	}
-	return total
 }
 
 func (m *Vault) AlgoPubKey(chain common.Chain) (common.PubKey, error) {

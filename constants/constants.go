@@ -39,6 +39,10 @@ const MaxDepositSaltSize = 64
 // streaming swap math
 const StreamingSwapMinBPFeeMulti = int64(100)
 
+// StaleMigratePendingSigningPeriodMultiplier is larger than the 3x XMR signing
+// window before retrying a dead migrate.
+const StaleMigratePendingSigningPeriodMultiplier = int64(10)
+
 // "width" of a volume bucket (15min)
 const VolumeBucketSeconds = int64(900)
 

@@ -301,21 +301,36 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	item := items[0]
 	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(1579996250), Commentf("%d", item.Coin.Amount.Uint64()))
 
+	// Simulate the first migrate outbound being observed before jumping past the
+	// signing period. Production observation handling records the OutHash, clears
+	// the exact memo height from PendingTxBlockHeights, and debits the retiring
+	// vault by the sent coin plus gas. Without this fixture step, the stale
+	// pending migrate should correctly block another migration from being queued.
+	firstMigrationHeight := ctx.BlockHeight()
+	txOut, err := mgr.Keeper().GetTxOut(ctx, firstMigrationHeight)
+	c.Assert(err, IsNil)
+	c.Assert(txOut.TxArray, HasLen, 1)
+	txOut.TxArray[0].OutHash = GetRandomTxHash()
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+	// Mirror the vault-side accounting done after a migrate outbound observation.
+	vault.RemovePendingTxBlockHeights(firstMigrationHeight)
+	vault.SubFunds(common.NewCoins(item.Coin).Add(item.MaxGas.ToCoins()...))
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
 	// check we empty the rest at the last migration event
-	// Ensure that the height is past the SigningTransactionPeriod,
-	// so not deducting the previous migrate amount as a pending outbound.
+	// Ensure that the height is past the SigningTransactionPeriod. The first
+	// migration was observed and cleared, so it should not block the final round.
 	migrateInterval := consts.GetInt64Value(constants.FundMigrationInterval)
-	signingTranactionPeriod := consts.GetInt64Value(constants.SigningTransactionPeriod)
-	ctx = ctx.WithBlockHeight(vault.StatusSince + (migrateInterval * signingTranactionPeriod))
+	signingTransactionPeriod := consts.GetInt64Value(constants.SigningTransactionPeriod)
+	ctx = ctx.WithBlockHeight(vault.StatusSince + (migrateInterval * signingTransactionPeriod))
 	vault, err = mgr.Keeper().GetVault(ctx, vault.PubKey)
 	c.Assert(err, IsNil)
-	c.Assert(vault.LenPendingTxBlockHeights(ctx.BlockHeight(), signingTranactionPeriod), Equals, 0)
 	c.Check(mgr.NetworkMgr().EndBlock(ctx, mgr), IsNil) // should attempt to send 100% of the coin values
 	items, err = mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1, Commentf("%d", len(items)))
 	item = items[0]
-	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(7899996250), Commentf("%d", item.Coin.Amount.Uint64()))
+	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(6319996250), Commentf("%d", item.Coin.Amount.Uint64()))
 }
 
 func (s *ThorchainSuite) TestRagnarok(c *C) {
