@@ -41,6 +41,20 @@ volumes:
   xmr-frost-data-cat: {}
   xmr-frost-data-fox: {}
 
+# Per-node signer seed phrases delivered as mounted files (SIGNER_SEED_PHRASE_FILE)
+# rather than container env vars, matching how real nodes provision the secret.
+# These are well-known public chainnet test mnemonics, not real secrets.
+# WARNING: this committed-file pattern is for local dev ONLY. Never commit a real
+# seed phrase or point a committed file at one on stagenet/mainnet/node-launcher --
+# real seeds must come from a tmpfs mount that is never written to git or disk.
+configs:
+  seed-dog:
+    file: ./chainnet-seeds/dog.txt
+  seed-cat:
+    file: ./chainnet-seeds/cat.txt
+  seed-fox:
+    file: ./chainnet-seeds/fox.txt
+
 x-disabled-chains: &disabled-chains
   BIFROST_CHAINS_BTC_DISABLED: "true"
   BIFROST_CHAINS_BCH_DISABLED: "true"
@@ -65,6 +79,7 @@ x-thorchain-env: &thorchain-env
   CHAIN_ID: thorchain
   SIGNER_NAME: thorchain
   SIGNER_PASSWD: password
+  SIGNER_SEED_PHRASE_FILE: /run/thornode/seed_phrase
   THORNODE_GRPC_ENABLE: "true"
   THOR_COSMOS_EBIFROST_ADDRESS: "0.0.0.0:50051"
   THOR_BLOCK_TIME: "6s"
@@ -81,6 +96,7 @@ x-bifrost-env: &bifrost-env
   CHAIN_ID: thorchain
   SIGNER_NAME: thorchain
   SIGNER_PASSWD: password
+  SIGNER_SEED_PHRASE_FILE: /run/thornode/seed_phrase
   THOR_SEED_NODES_ENDPOINT: ""
   THOR_BLOCK_TIME: "6s"
   BLOCK_SCANNER_BACKOFF: "5s"
@@ -217,7 +233,9 @@ services:
     environment:
       <<: *thorchain-env
       SEED: thornode
-      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+    configs:
+      - source: seed-dog
+        target: /run/thornode/seed_phrase
     ports:
       - "27147:27147"
       - "1317:1317"
@@ -249,7 +267,9 @@ services:
       SEED: thornode-cat
       SEEDS: thornode,thornode-fox
       AUTO_BOND: "true"
-      SIGNER_SEED_PHRASE: "cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat crawl"
+    configs:
+      - source: seed-cat
+        target: /run/thornode/seed_phrase
     volumes:
       - "../scripts:/docker/scripts"
       - thornode-cat:/root/.thornode
@@ -275,7 +295,9 @@ services:
       SEED: thornode-fox
       SEEDS: thornode,thornode-cat
       AUTO_BOND: "true"
-      SIGNER_SEED_PHRASE: "fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox filter"
+    configs:
+      - source: seed-fox
+        target: /run/thornode/seed_phrase
     volumes:
       - "../scripts:/docker/scripts"
       - thornode-fox:/root/.thornode
@@ -302,11 +324,13 @@ services:
         condition: service_healthy
     environment:
       <<: *bifrost-env
-      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
       CHAIN_API: thornode:1317
       CHAIN_RPC: thornode:27147
       BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode:50051
       BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer:8283"
+    configs:
+      - source: seed-dog
+        target: /run/thornode/seed_phrase
     volumes:
       - "../scripts:/docker/scripts"
       - bifrost:/var/data/bifrost
@@ -326,12 +350,14 @@ services:
         condition: service_healthy
     environment:
       <<: *bifrost-env
-      SIGNER_SEED_PHRASE: "cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat crawl"
       PEER: bifrost
       CHAIN_API: thornode-cat:1317
       CHAIN_RPC: thornode-cat:27147
       BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-cat:50051
       BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer-cat:8283"
+    configs:
+      - source: seed-cat
+        target: /run/thornode/seed_phrase
     volumes:
       - "../scripts:/docker/scripts"
       - bifrost-cat:/var/data/bifrost
@@ -349,12 +375,14 @@ services:
         condition: service_healthy
     environment:
       <<: *bifrost-env
-      SIGNER_SEED_PHRASE: "fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox filter"
       PEER: bifrost
       CHAIN_API: thornode-fox:1317
       CHAIN_RPC: thornode-fox:27147
       BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-fox:50051
       BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer-fox:8283"
+    configs:
+      - source: seed-fox
+        target: /run/thornode/seed_phrase
     volumes:
       - "../scripts:/docker/scripts"
       - bifrost-fox:/var/data/bifrost

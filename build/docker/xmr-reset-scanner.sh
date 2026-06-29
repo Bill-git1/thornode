@@ -17,7 +17,8 @@ set -euo pipefail
 #   2. Recreates the local bifrost with a temporary compose override so XMR
 #      restarts from the requested height
 #
-# Auth: derive the sidecar bearer token from SIGNER_SEED_PHRASE.
+# Auth: derive the sidecar bearer token from the signer seed phrase, read from
+# SIGNER_SEED_PHRASE_FILE (falling back to the SIGNER_SEED_PHRASE env var).
 #
 # If the host has more than one local signer or bifrost container, pass
 # --signer-container / --bifrost-container explicitly.
@@ -109,8 +110,16 @@ reset_vault_on_local_signer() {
   local vault_pubkey="$2"
   local height="$3"
   local seed token
-  seed="$(docker exec "$signer" printenv SIGNER_SEED_PHRASE | trim)"
-  [ -n "$seed" ] || fail "SIGNER_SEED_PHRASE missing in $signer"
+  # Prefer the file mount (SIGNER_SEED_PHRASE_FILE) so we don't depend on the
+  # seed living in the signer container's environment; fall back to the env var
+  # for compose-based dev nets that still inject it directly.
+  seed="$(docker exec "$signer" sh -c '
+    if [ -n "$SIGNER_SEED_PHRASE_FILE" ] && [ -r "$SIGNER_SEED_PHRASE_FILE" ]; then
+      cat "$SIGNER_SEED_PHRASE_FILE"
+    else
+      printf "%s" "$SIGNER_SEED_PHRASE"
+    fi' | trim)"
+  [ -n "$seed" ] || fail "seed phrase missing in $signer (neither SIGNER_SEED_PHRASE_FILE nor SIGNER_SEED_PHRASE available)"
   token="$(printf '%s' "${seed}xmr-frost-auth" | sha256sum | cut -d' ' -f1)"
 
   local payload

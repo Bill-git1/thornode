@@ -100,7 +100,7 @@ func (s *RecoverKeysharesSuite) TestRecoverySeedPhraseUsesSharedSignerSeed(c *C)
 	_ = os.Unsetenv("SIGNER_SEED_PHRASE_FILE")
 	seedPhrase, err := recoverySeedPhrase()
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "failed to get signer seed phrase: neither SIGNER_SEED_PHRASE_FILE nor SIGNER_SEED_PHRASE is set")
+	c.Assert(err.Error(), Equals, "failed to get signer seed phrase: could not load signer seed phrase: SIGNER_SEED_PHRASE_FILE is unset or invalid (SIGNER_SEED_PHRASE env var is only honored on mocknet)")
 	c.Assert(seedPhrase, Equals, "")
 
 	err = os.Setenv("SIGNER_SEED_PHRASE", "  "+Mnemonic+"  ")

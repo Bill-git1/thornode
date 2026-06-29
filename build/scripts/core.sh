@@ -22,6 +22,34 @@ if [ -z "$SIGNER_PASSWD" ]; then
   exit 1
 fi
 
+# Resolve the signer seed phrase for roles that need one (validator, genesis,
+# bifrost). Prefer the file mount (SIGNER_SEED_PHRASE_FILE) so the secret stays
+# in tmpfs and is never persisted to the worker node's disk via the container
+# env. The SIGNER_SEED_PHRASE env var is only honored on mocknet for local
+# development. This is a function rather than top-level code so non-signing roles
+# (e.g. fullnode.sh) that source core.sh are not forced to supply a seed phrase.
+resolve_signer_seed_phrase() {
+  if [ -n "$SIGNER_SEED_PHRASE_FILE" ] && [ -r "$SIGNER_SEED_PHRASE_FILE" ]; then
+    SIGNER_SEED_PHRASE="$(cat "$SIGNER_SEED_PHRASE_FILE")"
+    # Trim leading/trailing whitespace for parity with the Go reader (strings.TrimSpace).
+    SIGNER_SEED_PHRASE="${SIGNER_SEED_PHRASE#"${SIGNER_SEED_PHRASE%%[![:space:]]*}"}"
+    SIGNER_SEED_PHRASE="${SIGNER_SEED_PHRASE%"${SIGNER_SEED_PHRASE##*[![:space:]]}"}"
+  elif [ "$NET" != "mocknet" ] || [ -z "$SIGNER_SEED_PHRASE" ]; then
+    echo "SIGNER_SEED_PHRASE_FILE must point to a readable seed phrase file (SIGNER_SEED_PHRASE env var is only honored on mocknet)"
+    exit 1
+  fi
+  # Fail loudly on a missing, empty, or corrupt phrase rather than letting
+  # create_thor_user silently fall through to generating a brand-new key. This
+  # uses the same validation as the Go reader (common.IsValidMnemonic).
+  if ! printf '%s' "$SIGNER_SEED_PHRASE" | thornode validate-seed-phrase >/dev/null 2>&1; then
+    echo "SIGNER_SEED_PHRASE is not a valid 24-word BIP39 mnemonic (refusing to start)"
+    exit 1
+  fi
+  # Intentionally NOT exported: every consumer takes the phrase as a positional
+  # arg or via a stdin pipe, so it must never enter the daemon's environment on
+  # real networks -- that env exposure is exactly what the file mount removes.
+}
+
 # adds an account node into the genesis file
 add_node_account() {
   NODE_ADDRESS=$1

@@ -9,6 +9,8 @@ if [ "$NET" = "mocknet" ]; then
   . "$(dirname "$0")/core-unsafe.sh"
 fi
 
+resolve_signer_seed_phrase
+
 PEER="${PEER:=none}"          # the hostname of a seed node set as tendermint persistent peer
 PEER_API="${PEER_API:=$PEER}" # the hostname of a seed node API if different
 

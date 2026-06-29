@@ -133,6 +133,7 @@ func initRootCmd(
 		renderConfigCommand(),
 		cmd.GetEd25519Keys(),
 		cmd.GetPubKeyCmd(),
+		cmd.GetValidateSeedPhraseCmd(),
 	)
 
 	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, appExport, addModuleInitFlags)

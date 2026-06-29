@@ -23,12 +23,21 @@ func (s *SeedPhraseSuite) TearDownTest(c *C) {
 	c.Assert(os.Unsetenv("SIGNER_SEED_PHRASE_FILE"), IsNil)
 }
 
+// envVarHonored reports whether the SIGNER_SEED_PHRASE env-var fallback is
+// active for the build's network. It is only honored on mocknet.
+func envVarHonored() bool { return CurrentChainNetwork == MockNet }
+
 func (s SeedPhraseSuite) TestGetSignerSeedPhrase_EnvVarOnly(c *C) {
 	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testMnemonic), IsNil)
 
 	got, err := GetSignerSeedPhrase()
-	c.Assert(err, IsNil)
-	c.Check(got, Equals, testMnemonic)
+	if envVarHonored() {
+		c.Assert(err, IsNil)
+		c.Check(got, Equals, testMnemonic)
+	} else {
+		c.Assert(err, NotNil)
+		c.Check(got, Equals, "")
+	}
 }
 
 func (s SeedPhraseSuite) TestGetSignerSeedPhrase_FileOnly(c *C) {
@@ -64,8 +73,13 @@ func (s SeedPhraseSuite) TestGetSignerSeedPhrase_FileMissingFallsBackToEnvVar(c 
 	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testMnemonic), IsNil)
 
 	got, err := GetSignerSeedPhrase()
-	c.Assert(err, IsNil)
-	c.Check(got, Equals, testMnemonic)
+	if envVarHonored() {
+		c.Assert(err, IsNil)
+		c.Check(got, Equals, testMnemonic)
+	} else {
+		c.Assert(err, NotNil)
+		c.Check(got, Equals, "")
+	}
 }
 
 func (s SeedPhraseSuite) TestGetSignerSeedPhrase_FileMissingNoEnvVarReturnsError(c *C) {
@@ -82,8 +96,13 @@ func (s SeedPhraseSuite) TestGetSignerSeedPhrase_FileCorruptFallsBackToEnvVar(c 
 	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testMnemonic), IsNil)
 
 	got, err := GetSignerSeedPhrase()
-	c.Assert(err, IsNil)
-	c.Check(got, Equals, testMnemonic)
+	if envVarHonored() {
+		c.Assert(err, IsNil)
+		c.Check(got, Equals, testMnemonic)
+	} else {
+		c.Assert(err, NotNil)
+		c.Check(got, Equals, "")
+	}
 }
 
 func (s SeedPhraseSuite) TestGetSignerSeedPhrase_FileEmptyFallsBackToEnvVar(c *C) {
@@ -93,6 +112,11 @@ func (s SeedPhraseSuite) TestGetSignerSeedPhrase_FileEmptyFallsBackToEnvVar(c *C
 	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testMnemonic), IsNil)
 
 	got, err := GetSignerSeedPhrase()
-	c.Assert(err, IsNil)
-	c.Check(got, Equals, testMnemonic)
+	if envVarHonored() {
+		c.Assert(err, IsNil)
+		c.Check(got, Equals, testMnemonic)
+	} else {
+		c.Assert(err, NotNil)
+		c.Check(got, Equals, "")
+	}
 }

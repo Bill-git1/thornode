@@ -5,6 +5,9 @@ set -o pipefail
 CHAIN_API="${CHAIN_API:=127.0.0.1:1317}"
 
 . "$(dirname "$0")/core.sh"
+
+resolve_signer_seed_phrase
+
 "$(dirname "$0")/wait-for-thorchain-api.sh" "$CHAIN_API"
 
 wait_for_tss_bootstrap_peer() {
