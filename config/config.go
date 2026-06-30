@@ -382,26 +382,36 @@ func InitThornode(ctx context.Context) {
 	tendermintPath := filepath.Join(home, "config", "config.toml")
 	cosmosPath := filepath.Join(home, "config", "app.toml")
 
-	// template tendermint config into place
+	// template config files into place
 	t := template.Must(template.ParseFS(templates, "*.tmpl"))
-	tendermintFile, err := os.OpenFile(tendermintPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to open config.toml")
-	}
-	err = t.ExecuteTemplate(tendermintFile, "config.toml.tmpl", config.Thornode.Tendermint)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to render config.toml")
+
+	// renderConfigFile templates tmpl into path, truncating any existing file.
+	// When preserve is set and the target already exists, the existing file is
+	// left untouched so operators can manage it themselves across restarts
+	// (render-config runs on every boot from Docker). Each file has its own
+	// toggle: THORNODE_PRESERVE_CONFIG_TOML and THORNODE_PRESERVE_APP_TOML.
+	// NOTE: preserving config.toml opts out of the dynamic seed and external
+	// address injection above, so the operator becomes responsible for
+	// maintaining seeds/persistent_peers/external_address.
+	renderConfigFile := func(path, tmpl string, data any, preserve bool) {
+		if preserve {
+			if _, statErr := os.Stat(path); statErr == nil {
+				log.Info().Str("path", path).Msg("preserve env var set and file exists, skipping render")
+				return
+			}
+		}
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("failed to open %s", filepath.Base(path))
+		}
+		defer f.Close()
+		if err = t.ExecuteTemplate(f, tmpl, data); err != nil {
+			log.Fatal().Err(err).Msgf("failed to render %s", filepath.Base(path))
+		}
 	}
 
-	// template cosmos config into place
-	cosmosFile, err := os.OpenFile(cosmosPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to open app.toml")
-	}
-	err = t.ExecuteTemplate(cosmosFile, "app.toml.tmpl", config.Thornode.Cosmos)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to render app.toml")
-	}
+	renderConfigFile(tendermintPath, "config.toml.tmpl", config.Thornode.Tendermint, envToBool("THORNODE_PRESERVE_CONFIG_TOML"))
+	renderConfigFile(cosmosPath, "app.toml.tmpl", config.Thornode.Cosmos, envToBool("THORNODE_PRESERVE_APP_TOML"))
 
 	// fetch genesis
 	if len(seedAddrs) > 0 {
@@ -409,6 +419,20 @@ func InitThornode(ctx context.Context) {
 	} else {
 		log.Warn().Msg("no seeds, skipping genesis fetch")
 	}
+}
+
+func envToBool(name string) bool {
+	v := os.Getenv(name)
+	if v == "" {
+		// env doesn't exist return false
+		return false
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		log.Warn().Str("env", name).Str("value", v).Msg("invalid boolean, ignoring (treating as false)")
+		return false
+	}
+	return b
 }
 
 // -------------------------------------------------------------------------------------
