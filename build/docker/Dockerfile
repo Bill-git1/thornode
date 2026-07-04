@@ -55,7 +55,7 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   ca-certificates=20230311+deb12u1 \
   curl=7.88.1-10+deb12u* \
-  jq=1.6-2.1+deb12u1 \
+  jq=1.6-2.1+deb12u* \
   libffi-dev=3.4.4-1 \
   libssl-dev=3.0.* \
   openssl=3.0.* \
