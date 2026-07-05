@@ -1553,3 +1553,239 @@ func (m Migrator) Migrate15to16(ctx sdk.Context) error {
 
 	return nil
 }
+
+// Migrate16to17 requeues dangling ETH, GAIA, BTC, and LTC user settlement outbounds
+// whose planned voter actions are no longer present in the live outbound queue.
+func (m Migrator) Migrate16to17(ctx sdk.Context) error {
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	specs, err := mainnetDanglingSettlementSpecs16to17()
+	if err != nil {
+		return err
+	}
+
+	requeueDanglingSettlementOutbounds(ctx, m.mgr, specs, ctx.BlockHeight()+300)
+
+	return nil
+}
+
+// requeueDanglingSettlementOutbounds applies best-effort requeues for the fixed
+// mainnet migration batch. One bad or already-settled row is logged and skipped
+// so drifted live-chain state does not abort the whole store migration.
+func requeueDanglingSettlementOutbounds(ctx cosmos.Context, mgr *Mgrs, specs []danglingSettlementSpec, outboundHeight int64) {
+	for _, spec := range specs {
+		if err := requeueDanglingSettlementOutbound(ctx, mgr, spec, outboundHeight); err != nil {
+			ctx.Logger().Error("failed to requeue dangling settlement outbound",
+				"tx_id", spec.TxID.String(),
+				"chain", spec.Chain.String(),
+				"asset", spec.Asset.String(),
+				"amount", spec.Amount.String(),
+				"error", err)
+			continue
+		}
+		ctx.Logger().Info("requeued dangling settlement outbound",
+			"tx_id", spec.TxID.String(),
+			"chain", spec.Chain.String(),
+			"asset", spec.Asset.String(),
+			"amount", spec.Amount.String())
+	}
+}
+
+func mainnetDanglingSettlementSpecs16to17() ([]danglingSettlementSpec, error) {
+	ethUSDT, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ETH.USDT: %w", err)
+	}
+	ethUSDC, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ETH.USDC: %w", err)
+	}
+	ethWBTC, err := common.NewAsset("ETH.WBTC-0X2260FAC5E5542A773AA44FBCFEDF7C193BC2C599")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ETH.WBTC: %w", err)
+	}
+
+	rows := []struct {
+		txID   string
+		chain  common.Chain
+		asset  common.Asset
+		amount uint64
+	}{
+		{
+			txID:   "62566F78A66B8C1D6D756A93E28CA0AD07532FF5949A1393B5828429A1AD0A7B",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 236_382_280_700,
+		},
+		{
+			txID:   "15D63325B96BD0FE409EB1FDE21D8A6145894D364D14F98C17068C704CFBE749",
+			chain:  common.ETHChain,
+			asset:  ethUSDT,
+			amount: 499_997_734_700,
+		},
+		{
+			txID:   "74D5D2F1BE68CB15DF9656BD2A11733FC64FE17CF0DC030A9F5948D93AC5A561",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 499_997_734_500,
+		},
+		{
+			txID:   "4FE29CBBB8A82728E7A1A8E5E4527830B53E6132E74BCB51B02EBBB94CC26597",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 742_745_645_600,
+		},
+		{
+			txID:   "D8A75A8427814347C36AFB1E972785C90D1AF2BCDA8195DAD152AE5C15E08D62",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 97_734_500,
+		},
+		{
+			txID:   "EBE39D82C348CCE1F004D61870C458BD86D1BE6AD202C7C6A1B33989B6774D14",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 97_734_500,
+		},
+		{
+			txID:   "84AF6BC1ABEE78AD1B2EBCD5F1A6FF4773B53E734F57EC840B55BE55039A2163",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 2_981_767_801_900,
+		},
+		{
+			txID:   "D537A15D820D9A800ECCEB5735C1A01ACB89F7EE9CB9D5F0F041DD60403EADDB",
+			chain:  common.ETHChain,
+			asset:  ethUSDT,
+			amount: 799_997_967_100,
+		},
+		{
+			txID:   "DC1F405EA046C804B857321504EF1A8EDBEFED942D26F40EF80311DAA943BF11",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 627_955_000,
+		},
+		{
+			txID:   "93FD5B47E74B7C20881464641FF0A753B65A9BB64E70B75C176B353B31B23779",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 997_734_500,
+		},
+		{
+			txID:   "C53DEFFCF8A62C80F0EB3DD0C97E35C6AAE67BD725C8B070A2EAF619EBDCA367",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 124_436_600,
+		},
+		{
+			txID:   "3C1F5BE0E6AD5296A95B539F137EED2BAC649FFF869F7CCD6245A70CA12569BE",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 4_997_734_500,
+		},
+		{
+			txID:   "28D17EC1B66DEABCC9325C532D471D61B9E2276FF8AD6314908783EF50BEBDD0",
+			chain:  common.ETHChain,
+			asset:  ethWBTC,
+			amount: 972,
+		},
+		{
+			txID:   "33BFFE8CABAD8BF30ECDCE39EC6A2FCFB081F85E707B8BCAD8657997C8535FE4",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 203_911_502_000,
+		},
+		{
+			txID:   "46994110DB09621EC5D793EF57C17A00580E4E25F72252B8F6617955CA9C8671",
+			chain:  common.ETHChain,
+			asset:  ethUSDC,
+			amount: 51_517_759_500,
+		},
+		{
+			txID:   "DC8EEB91473665D60E8CE09A7BB65AB1D66026CD90159A5794FCD1FE7DC832C8",
+			chain:  common.GAIAChain,
+			asset:  common.ATOMAsset,
+			amount: 12_599_998_000,
+		},
+		{
+			txID:   "71633631A00B7085E202351DBF3B7AE52A573BAB15FE6F2D8165878A8A7D8883",
+			chain:  common.GAIAChain,
+			asset:  common.ATOMAsset,
+			amount: 249_997_000,
+		},
+		{
+			txID:   "14A6024EC7688F3243937F43E302FB1D934D7B55AA9CDB28D352E118D96969E3",
+			chain:  common.GAIAChain,
+			asset:  common.ATOMAsset,
+			amount: 9_996_000,
+		},
+		{
+			txID:   "4C0FE03225B88FC460118285D43BE60AB903DFDDE95EE0AB12443CE17C35DB75",
+			chain:  common.GAIAChain,
+			asset:  common.ATOMAsset,
+			amount: 19_998_000,
+		},
+		{
+			txID:   "202B832EA7EB06C5BDFAF9459E1ED7C143A67B557FB6DFF43C8956FB030BFAD5",
+			chain:  common.GAIAChain,
+			asset:  common.ATOMAsset,
+			amount: 8_869_997_000,
+		},
+		{
+			txID:   "A509E8F11121122BD4A8DC87103D2BA3141885A4EDD2413A2CBF3FDF6D2CF495",
+			chain:  common.LTCChain,
+			asset:  common.LTCAsset,
+			amount: 6_814_283,
+		},
+		{
+			txID:   "07612B63ACFFDDCBD3B005324BC20F316E527959F74155823DE3B85E5878D1AD",
+			chain:  common.LTCChain,
+			asset:  common.LTCAsset,
+			amount: 6_482_864_307,
+		},
+		{
+			txID:   "B06FFD1F8DC8B3101760F7EDB52C861EDA1877956A6FACDCBCF7910A522BFB11",
+			chain:  common.BTCChain,
+			asset:  common.BTCAsset,
+			amount: 387_417_726,
+		},
+		// These BTC rows are safe as-is: miner fees reduce the vault change,
+		// so the recipient output still delivers the full amount.
+		{
+			txID:   "FA0FE33222A00020D6B1A4091828518E41CC792AA47F8C2CAE31B8DA4A7249BC",
+			chain:  common.BTCChain,
+			asset:  common.BTCAsset,
+			amount: 2_370,
+		},
+		{
+			txID:   "C36C8291FC97B421B2498DCFD88AAD0979FDBD4941DB43802F90BFDC5E11A77C",
+			chain:  common.BTCChain,
+			asset:  common.BTCAsset,
+			amount: 4_572,
+		},
+		{
+			txID:   "E3097EA59345B8908A91FCA42E567E025515E8143890481BC75F7E85BE8C6315",
+			chain:  common.BTCChain,
+			asset:  common.BTCAsset,
+			amount: 10_169,
+		},
+	}
+
+	specs := make([]danglingSettlementSpec, 0, len(rows))
+	for _, row := range rows {
+		txID, err := common.NewTxID(row.txID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse settlement tx id %s: %w", row.txID, err)
+		}
+		specs = append(specs, danglingSettlementSpec{
+			TxID:   txID,
+			Chain:  row.chain,
+			Asset:  row.asset,
+			Amount: cosmos.NewUint(row.amount),
+		})
+	}
+
+	return specs, nil
+}

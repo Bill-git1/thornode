@@ -9,6 +9,17 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
+// danglingSettlementSpec identifies one already-planned outbound action that
+// should be requeued by a migration. It deliberately uses the existing voter
+// action as the source of truth for destination, memo, and net amount; these
+// fields only disambiguate which action is expected.
+type danglingSettlementSpec struct {
+	TxID   common.TxID
+	Chain  common.Chain
+	Asset  common.Asset
+	Amount cosmos.Uint
+}
+
 // unsafeAddRefundOutbound - schedules a REFUND outbound to destAddr with coin amount
 // - inHash: the tx hash being refunded
 // - destAddr: the address to refund to
@@ -72,6 +83,148 @@ func unsafeAddRefundOutbound(ctx cosmos.Context, mgr *Mgrs, inHash, destAddr str
 	}
 
 	return nil
+}
+
+// requeueDanglingSettlementOutbound requeues one dangling voter action without
+// running normal outbound scheduling. The action amount is already the user's
+// planned/net settlement amount, so this uses UnSafeAddTxOutItem to avoid
+// deducting another outbound fee and updates only operational signing fields.
+func requeueDanglingSettlementOutbound(ctx cosmos.Context, mgr *Mgrs, spec danglingSettlementSpec, outboundHeight int64) error {
+	if spec.TxID.IsEmpty() {
+		return fmt.Errorf("tx id cannot be empty")
+	}
+	if spec.Chain.IsEmpty() {
+		return fmt.Errorf("chain cannot be empty")
+	}
+	if spec.Asset.IsEmpty() {
+		return fmt.Errorf("asset cannot be empty")
+	}
+	if spec.Amount.IsZero() {
+		return fmt.Errorf("amount cannot be zero")
+	}
+
+	voter, err := mgr.Keeper().GetObservedTxInVoter(ctx, spec.TxID)
+	if err != nil {
+		return fmt.Errorf("fail to get observed tx voter: %w", err)
+	}
+	if len(voter.OutTxs) > 0 {
+		return fmt.Errorf("observed outbound txs already exist")
+	}
+
+	actionIndex, action, err := findDanglingSettlementAction(voter, spec)
+	if err != nil {
+		return err
+	}
+	if !action.OutHash.IsEmpty() {
+		return fmt.Errorf("matching action already has an outbound hash")
+	}
+
+	maxGasCoin, err := mgr.GasMgr().GetMaxGas(ctx, action.Chain)
+	if err != nil {
+		return fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	vault, err := selectDanglingSettlementVault(ctx, mgr, action, maxGasCoin)
+	if err != nil {
+		return err
+	}
+
+	action.VaultPubKey = vault.PubKey
+	action.VaultPubKeyEddsa = txOutVaultPubKeyEddsa(action.Chain, vault.PubKeyEddsa)
+	action.VaultPubKeyFrost = vault.PubKeyFrost
+	action.MaxGas = common.Gas{maxGasCoin}
+	action.GasRate = int64(mgr.GasMgr().GetGasRate(ctx, action.Chain).Uint64())
+
+	voter.Actions[actionIndex].VaultPubKey = action.VaultPubKey
+	voter.Actions[actionIndex].VaultPubKeyEddsa = action.VaultPubKeyEddsa
+	voter.Actions[actionIndex].VaultPubKeyFrost = action.VaultPubKeyFrost
+	voter.Actions[actionIndex].MaxGas = action.MaxGas
+	voter.Actions[actionIndex].GasRate = action.GasRate
+	voter.FinalisedHeight = ctx.BlockHeight()
+	mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+
+	if err := mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, action, outboundHeight); err != nil {
+		return fmt.Errorf("fail to add outbound tx: %w", err)
+	}
+
+	return nil
+}
+
+// findDanglingSettlementAction requires an exact single action match so the
+// migration cannot accidentally requeue the wrong outbound from a multi-action
+// voter or from a voter whose live-chain state no longer matches the snapshot.
+func findDanglingSettlementAction(voter ObservedTxVoter, spec danglingSettlementSpec) (int, TxOutItem, error) {
+	actionIndex := -1
+	var action TxOutItem
+	for i, candidate := range voter.Actions {
+		if !candidate.InHash.Equals(spec.TxID) {
+			continue
+		}
+		if !candidate.Chain.Equals(spec.Chain) {
+			continue
+		}
+		if !candidate.Coin.Asset.Equals(spec.Asset) {
+			continue
+		}
+		if !candidate.Coin.Amount.Equal(spec.Amount) {
+			continue
+		}
+		if actionIndex != -1 {
+			return -1, TxOutItem{}, fmt.Errorf("multiple matching actions found")
+		}
+		actionIndex = i
+		action = candidate
+	}
+	if actionIndex == -1 {
+		return -1, TxOutItem{}, fmt.Errorf("matching action not found")
+	}
+
+	return actionIndex, action, nil
+}
+
+// selectDanglingSettlementVault mirrors the outbound safety checks that matter
+// when bypassing prepareTxOutItem: exclude compromised vaults, respect chain
+// capability, deduct pending outbounds, and require the selected active Asgard
+// to cover both the settlement coin and the refreshed max gas.
+func selectDanglingSettlementVault(ctx cosmos.Context, mgr *Mgrs, action TxOutItem, maxGasCoin common.Coin) (Vault, error) {
+	activeAsgards, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, types.VaultStatus_ActiveVault)
+	if err != nil {
+		return Vault{}, fmt.Errorf("fail to get active asgard vaults: %w", err)
+	}
+	if len(activeAsgards) == 0 {
+		return Vault{}, fmt.Errorf("no active asgard vaults")
+	}
+
+	activeAsgards = filterCompromisedVaults(ctx, mgr.Keeper(), activeAsgards)
+	activeAsgards = filterActiveVaultsForOutboundChain(activeAsgards, action.Chain)
+	if len(activeAsgards) == 0 {
+		return Vault{}, fmt.Errorf("no active asgard vaults available for chain %s", action.Chain.String())
+	}
+
+	pendingOutbounds := mgr.Keeper().GetPendingOutbounds(ctx, action.Coin.Asset)
+	for i := range activeAsgards {
+		activeAsgards[i].DeductVaultPendingOutbounds(pendingOutbounds)
+	}
+
+	available := activeAsgards
+	coinNeed := action.Coin
+	if !maxGasCoin.IsEmpty() {
+		if coinNeed.Asset.Equals(maxGasCoin.Asset) {
+			coinNeed.Amount = coinNeed.Amount.Add(maxGasCoin.Amount)
+		} else {
+			available = available.Has(maxGasCoin)
+		}
+	}
+	available = available.Has(coinNeed)
+	if len(available) == 0 {
+		return Vault{}, fmt.Errorf("no active asgard vault can cover settlement coin and gas")
+	}
+
+	available = available.SortBy(coinNeed.Asset)
+	if _, err := available[0].GetAddress(action.Chain); err != nil {
+		return Vault{}, fmt.Errorf("selected vault cannot derive address for chain %s: %w", action.Chain.String(), err)
+	}
+	return available[0], nil
 }
 
 // When an ObservedTxInVoter has dangling Actions items swallowed by the vaults, requeue

@@ -190,3 +190,9 @@ func (m Migrator) Migrate14to15(_ sdk.Context) error {
 func (m Migrator) Migrate15to16(_ sdk.Context) error {
 	return nil
 }
+
+// Migrate16to17 migrates from version 16 to 17.
+// No-op on stagenet - the dangling settlement requeue only applies to mainnet state.
+func (m Migrator) Migrate16to17(_ sdk.Context) error {
+	return nil
+}
