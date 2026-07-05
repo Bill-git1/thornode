@@ -926,3 +926,65 @@ status: 400
 asserts:
   - .code|tonumber == 3
   - .message|contains("recommended_min_amount_in")
+---
+########################################################################################
+# Dynamic L1 fee floor applies to cold quote records for an active thorname.
+#
+# Kept last in the suite: it enables L1DynamicFeeEnabled (a network-wide mimir)
+# and registers/whitelists an affiliate, state that would otherwise leak into
+# the quote checks above.
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_cat }}
+coins:
+  - amount: "1000000001"
+    asset: "rune"
+memo: "~:dyn:THOR:{{ addr_thor_cat }}"
+---
+type: create-blocks
+count: 1
+---
+# Each mimir below is signed by the same node (dog); a create-blocks between
+# them keeps their account sequences from colliding within one block, which
+# would otherwise drop all but the first. DYNAMICFEE-WHITELIST-DYN is an
+# operational mimir, so it must actually land for the affiliate to reach
+# whitelist state 1 and drive the dynamic fee floor.
+type: tx-mimir
+key: L1DynamicFeeEnabled
+value: 1
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-mimir
+key: L1DynamicFeeFloorBPS
+value: 500
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-mimir
+key: DYNAMICFEE-WHITELIST-DYN
+value: 1
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: THOR.RUNE
+  to_asset: BTC.BTC
+  amount: 1000000000
+  affiliate: dyn
+  affiliate_bps: 1
+  destination: {{ addr_btc_fox }}
+asserts:
+  # The dynamic fee floor sets the swap's minimum slip to 500 bps. Slippage is
+  # reported from the derived liquidity fee across the streaming sub-swaps, so
+  # it lands at or just above the floor rather than exactly on it.
+  - .fees.slippage_bps >= 500
+  - .fees.total_bps >= 500

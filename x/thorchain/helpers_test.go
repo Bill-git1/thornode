@@ -2585,14 +2585,14 @@ func (s *HelperSuite) TestGetMinSlipBpsDynamicOverridesStable(c *C) {
 	result = getMinSlipBps(ctx, k, common.NoAddress, btc, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
 	c.Assert(result.Uint64(), Equals, uint64(25))
 
-	// Clear dynamic record → stable override should now apply (3).
+	// Clear dynamic record → dynamic floor still applies for the active thorname.
 	c.Assert(k.DeleteDynamicFeeRecord(ctx, "mytn", pairA, pairB), IsNil)
 	result = getMinSlipBps(ctx, k, common.NoAddress, btc, true, affiliates, affBps, btc, common.RuneAsset(), dfm)
-	c.Assert(result.Uint64(), Equals, uint64(3))
+	c.Assert(result.Uint64(), Equals, uint64(1))
 
-	// No dynamic record, no stable override → L1 default (10).
+	// No dynamic record, no stable override → dynamic floor (1) for the active thorname.
 	result = getMinSlipBps(ctx, k, common.NoAddress, btc, false, affiliates, affBps, btc, common.RuneAsset(), dfm)
-	c.Assert(result.Uint64(), Equals, uint64(10))
+	c.Assert(result.Uint64(), Equals, uint64(1))
 }
 
 // TestGetMinSlipBpsNonL1IgnoresDynamic verifies that synth, trade and derived

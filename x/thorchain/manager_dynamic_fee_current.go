@@ -205,8 +205,11 @@ func (m *DynamicFeeMgr) GetDynamicBps(ctx cosmos.Context, affiliates []string, a
 	}
 
 	rec, err := m.keeper.GetDynamicFeeRecord(ctx, thorname, pairA, pairB)
-	if err != nil || (rec.DynamicBps == 0 && len(rec.History) == 0) {
+	if err != nil {
 		return 0
+	}
+	if rec.DynamicBps == 0 && len(rec.History) == 0 {
+		return nonNegUint64(m.keeper.GetConfigInt64(ctx, constants.L1DynamicFeeFloorBPS))
 	}
 
 	return rec.DynamicBps

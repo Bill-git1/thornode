@@ -170,6 +170,55 @@ func (s *DynamicFeeMgrSuite) TestGetDynamicBpsBasic(c *C) {
 	c.Assert(bps, Equals, uint64(42))
 }
 
+func (s *DynamicFeeMgrSuite) TestGetDynamicBpsActiveWithoutRecordReturnsFloor(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	setDynamicFeeTestMimirs(ctx, k)
+	k.SetMimir(ctx, "L1DynamicFeeFloorBPS", 3)
+	dfm := newDynamicFeeMgr(k)
+
+	registerThorname(ctx, k, "mytn", 1)
+
+	bps := dfm.GetDynamicBps(
+		ctx,
+		[]string{"mytn"}, []cosmos.Uint{cosmos.NewUint(100)},
+		common.BTCAsset, common.RuneAsset(),
+	)
+	c.Assert(bps, Equals, uint64(3))
+
+	pairA, pairB, ok := dynamicFeePairKey(common.BTCAsset, common.RuneAsset())
+	c.Assert(ok, Equals, true)
+	rec, err := k.GetDynamicFeeRecord(ctx, "mytn", pairA, pairB)
+	c.Assert(err, IsNil)
+	c.Assert(rec.DynamicBps, Equals, uint64(0), Commentf("quote lookup must not create records"))
+	c.Assert(len(rec.History), Equals, 0, Commentf("quote lookup must not create records"))
+}
+
+func (s *DynamicFeeMgrSuite) TestGetDynamicBpsInactiveWithoutRecordReturnsZero(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	setDynamicFeeTestMimirs(ctx, k)
+	dfm := newDynamicFeeMgr(k)
+
+	registerThorname(ctx, k, "rando", 0)
+	registerThorname(ctx, k, "monitor", 2)
+
+	for _, tc := range []struct {
+		name      string
+		affiliate string
+	}{
+		{name: "unwhitelisted", affiliate: "rando"},
+		{name: "monitor", affiliate: "monitor"},
+	} {
+		bps := dfm.GetDynamicBps(
+			ctx,
+			[]string{tc.affiliate}, []cosmos.Uint{cosmos.NewUint(100)},
+			common.BTCAsset, common.RuneAsset(),
+		)
+		c.Assert(bps, Equals, uint64(0), Commentf(tc.name))
+	}
+}
+
 // TestGetDynamicBpsMonitorMode verifies that monitor mode (state=2) causes GetDynamicBps to
 // return 0 (monitoring only, no fee adjustment applied), while CreditSwap still accumulates.
 func (s *DynamicFeeMgrSuite) TestGetDynamicBpsMonitorMode(c *C) {
