@@ -2741,6 +2741,61 @@ func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvency(c *C) {
 	// Should complete without error even when under-solvent
 }
 
+func (s *NetworkManagerTestSuite) TestProcessOverSolvencyUsesPerAssetBps(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+	mgr.Keeper().SetMimir(ctx, constants.EnableAdvSwapQueue.String(), 1)
+
+	ctx = ctx.WithBlockHeight(432000)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyCheckInterval.String(), 432000)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String(), 0)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String()+"-"+common.BTCAsset.MimirString(), 5000)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String()+"-"+common.ETHAsset.MimirString(), 0)
+
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	ethPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain, common.ETHChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(160*common.One)),
+	})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	err := nmgr.processOverSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	iter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+	defer iter.Close()
+
+	var btcSwaps, ethSwaps int
+	for ; iter.Valid(); iter.Next() {
+		var msg types.MsgSwap
+		c.Assert(mgr.Keeper().Cdc().Unmarshal(iter.Value(), &msg), IsNil)
+		switch {
+		case msg.Tx.Coins[0].Asset.Equals(common.BTCAsset):
+			btcSwaps++
+			c.Assert(msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(25*common.One)), Equals, true)
+		case msg.Tx.Coins[0].Asset.Equals(common.ETHAsset):
+			ethSwaps++
+		}
+	}
+
+	c.Assert(btcSwaps, Equals, 1)
+	c.Assert(ethSwaps, Equals, 0)
+}
+
 func (s *NetworkManagerTestSuite) TestCreateSwapToOverSolvency(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())

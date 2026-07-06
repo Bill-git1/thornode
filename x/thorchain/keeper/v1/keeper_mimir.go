@@ -162,6 +162,9 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 	if strings.HasPrefix(key, "L1DYNAMICFEE") {
 		return true
 	}
+	if strings.HasPrefix(key, "OVERSOLVENCYTOTREASURYBPS-") {
+		return true
+	}
 
 	// all min slip mimirs are operational, but not SlipMinBpsMax
 	return strings.HasSuffix(key, "SLIPMINBPS")

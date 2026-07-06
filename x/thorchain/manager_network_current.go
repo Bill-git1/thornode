@@ -33,6 +33,11 @@ type assetAmount struct {
 	Amount math.Int
 }
 
+type overSolvencyEventGroup struct {
+	bps    int64
+	assets []types.AssetOverSolvency
+}
+
 const xmrMonovaultGenesisBootstrapDelayBlocks int64 = 128
 
 func xmrMonovaultGenesisKeygenHeight(currentHeight int64) int64 {
@@ -3113,18 +3118,11 @@ func (vm *NetworkMgr) processOverSolvency(ctx cosmos.Context, mgr Manager) error
 		return nil // No over-solvency, nothing to do
 	}
 
-	// Get the mimir setting for how much to swap to over-solvency address
-	overSolvencyBps := vm.k.GetConfigInt64(ctx, constants.OverSolvencyToTreasuryBps)
-	if overSolvencyBps < 0 {
-		overSolvencyBps = 0
-	}
-	if overSolvencyBps > int64(constants.MaxBasisPts) {
-		overSolvencyBps = int64(constants.MaxBasisPts)
-	}
-
 	// Build event data
-	assetOverSolvencies := make([]types.AssetOverSolvency, 0, len(overSolventAssets))
+	eventGroups := make([]overSolvencyEventGroup, 0, len(overSolventAssets))
 	for _, assetAmt := range overSolventAssets {
+		overSolvencyBps := vm.getOverSolvencyToTreasuryBps(ctx, assetAmt.Asset)
+
 		// Convert signed Int to unsigned Uint for the amount
 		overSolventAmount := math.NewUintFromBigInt(assetAmt.Amount.BigInt())
 
@@ -3147,22 +3145,51 @@ func (vm *NetworkMgr) processOverSolvency(ctx cosmos.Context, mgr Manager) error
 		if swapCreated {
 			eventSwapAmount = swapAmount
 		}
-		assetOverSolvencies = append(assetOverSolvencies, types.AssetOverSolvency{
+		eventAsset := types.AssetOverSolvency{
 			Asset:               assetAmt.Asset,
 			OverSolventAmount:   overSolventAmount,
 			SwapToReserveAmount: eventSwapAmount,
-		})
+		}
+
+		grouped := false
+		for i := range eventGroups {
+			if eventGroups[i].bps == overSolvencyBps {
+				eventGroups[i].assets = append(eventGroups[i].assets, eventAsset)
+				grouped = true
+				break
+			}
+		}
+		if !grouped {
+			eventGroups = append(eventGroups, overSolvencyEventGroup{
+				bps:    overSolvencyBps,
+				assets: []types.AssetOverSolvency{eventAsset},
+			})
+		}
 	}
 
 	// Emit event (only if there are over-solvent assets)
-	if len(assetOverSolvencies) > 0 {
-		evt := types.NewEventVaultOverSolvency(assetOverSolvencies, overSolvencyBps)
+	for _, group := range eventGroups {
+		evt := types.NewEventVaultOverSolvency(group.assets, group.bps)
 		if err := vm.eventMgr.EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("failed to emit vault over-solvency event", "error", err)
 		}
 	}
 
 	return nil
+}
+
+func (vm *NetworkMgr) getOverSolvencyToTreasuryBps(ctx cosmos.Context, asset common.Asset) int64 {
+	bps, err := vm.k.GetMimirWithRef(ctx, constants.MimirTemplateOverSolvencyToTreasuryBps, asset.MimirString())
+	if err != nil || bps < 0 {
+		bps = vm.k.GetConfigInt64(ctx, constants.OverSolvencyToTreasuryBps)
+	}
+	if bps < 0 {
+		return 0
+	}
+	if bps > int64(constants.MaxBasisPts) {
+		return int64(constants.MaxBasisPts)
+	}
+	return bps
 }
 
 // createSwapToOverSolvency creates a swap from the over-solvent asset to RUNE and sends to over-solvency address

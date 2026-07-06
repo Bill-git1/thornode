@@ -59,6 +59,20 @@ func (s *KeeperMimirSuite) TestIsOperationalMimirCompromisedVault(c *C) {
 	c.Check(k.IsOperationalMimir("CompromisedVault"), Equals, false)
 }
 
+func (s *KeeperMimirSuite) TestIsOperationalMimirOverSolvencyToTreasuryBps(c *C) {
+	_, k := setupKeeperForTest(c)
+
+	c.Check(k.IsOperationalMimir("OverSolvencyToTreasuryBps-BTC-BTC"), Equals, true)
+	c.Check(
+		k.IsOperationalMimir("OverSolvencyToTreasuryBps-ETH-USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48"),
+		Equals, true,
+	)
+	c.Check(k.IsOperationalMimir("OVERSOLVENCYTOTREASURYBPS-ETH-ETH"), Equals, true)
+	c.Check(k.IsOperationalMimir("oversolvencytotreasurybps-btc-btc"), Equals, true)
+	c.Check(k.IsOperationalMimir("OverSolvencyToTreasuryBps"), Equals, true)
+	c.Check(k.IsOperationalMimir("OverSolvencyToTreasuryFoo-BTC-BTC"), Equals, false)
+}
+
 func (s *KeeperMimirSuite) TestDisableTSSSignerFilteringIsEconomicMimir(c *C) {
 	_, k := setupKeeperForTest(c)
 
