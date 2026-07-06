@@ -14,7 +14,7 @@ This document explains how the XMR integration works in THORNode, with emphasis 
 
 ## Provenance
 
-The Rust sidecar is consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:3f9c6b66a11e175741b914e401c09d0a048d833ca9a45000dd3d0bba4a659553` by default on this branch, overridable via `XMR_FROST_SIGNER_IMAGE`.
+The Rust sidecar is consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:49752e667970026bba9c8efe4119530668e5f1f53c6a87284e7106a6f89d41a5` by default on this branch, overridable via `XMR_FROST_SIGNER_IMAGE`.
 
 - The THORNode-specific HTTP service, scanner wiring, and deployment glue live in-tree in this repository.
 - The Serai-derived Rust cryptography/request crates are attributed and pinned in `Cargo.toml` to `https://github.com/serai-dex/serai` at rev `737dbcbaa78ab817cc1c435cb2b6c5d24d1c4391`.
@@ -291,7 +291,7 @@ ps -p <make-pid> -o pid,ppid,stat,etime,command
 - go-tss DKG/sign coordinators:
   - `bifrost/tss/go-tss/tss/frost_keygen.go`
   - `bifrost/tss/go-tss/tss/frost_keysign.go`
-- Sidecar: consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:3f9c6b66a11e175741b914e401c09d0a048d833ca9a45000dd3d0bba4a659553` by default on this branch, overridable via `XMR_FROST_SIGNER_IMAGE`
+- Sidecar: consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:49752e667970026bba9c8efe4119530668e5f1f53c6a87284e7106a6f89d41a5` by default on this branch, overridable via `XMR_FROST_SIGNER_IMAGE`
 
 ## Monero User Flows — Privacy Chain Considerations
 

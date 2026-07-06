@@ -363,7 +363,7 @@ _test-regression:
 test-simulation: build-mocknet reset-mocknet test-simulation-no-reset
 
 TEST_SIMULATION_STAGES ?= seed,bootstrap,xmr-coverage,arb,swaps,memoless-swaps,consolidate,inactive-vault-refunds,solvency,ragnarok
-TEST_SIMULATION_CLUSTER_STAGES ?= seed,bootstrap,swaps,memoless-swaps,inactive-vault-refunds,solvency,ragnarok,xmr-post-churn
+TEST_SIMULATION_CLUSTER_STAGES ?= seed,bootstrap,swaps,memoless-swaps,inactive-vault-refunds,solvency,xmr-post-churn,ragnarok
 
 test-simulation-cluster: build-test-simulation build-mocknet-cluster reset-mocknet-cluster
 	@docker stop docker-midgard-1 docker-midgard-db-1 >/dev/null 2>&1 || true

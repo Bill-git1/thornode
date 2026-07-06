@@ -172,22 +172,12 @@ func (a *XMRPostChurnActor) waitForVaultRotation(config *OpConfig) OpResult {
 		a.Log().Info().Err(err).Msg("waiting for active XMR vault spendable balance")
 		return OpResult{Continue: false}
 	}
-	if snapshot.spendable.IsZero() {
+	if !xmrPostChurnReady(vaults, a.inboundBefore, inboundAddress, activeNodes, snapshot) {
 		a.Log().Info().
 			Stringer("vault_pubkey", snapshot.pubKey).
 			Stringer("total", snapshot.total).
 			Stringer("spendable", snapshot.spendable).
 			Msg("waiting for active XMR vault spendable balance")
-		return OpResult{Continue: false}
-	}
-
-	network, err := thornode.GetNetwork()
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to get network")
-		return OpResult{Continue: false}
-	}
-	if network.VaultsMigrating {
-		a.Log().Info().Msg("waiting for post-churn vault migrations to settle")
 		return OpResult{Continue: false}
 	}
 
@@ -197,6 +187,10 @@ func (a *XMRPostChurnActor) waitForVaultRotation(config *OpConfig) OpResult {
 		Stringer("inbound_after", a.inboundAfter).
 		Msg("XMR active vault rotated")
 	return OpResult{Continue: true}
+}
+
+func xmrPostChurnReady(vaults []openapi.Vault, inboundBefore, inboundAfter common.Address, activeNodes int, snapshot xmrVaultBalanceSnapshot) bool {
+	return xmrVaultRotationReady(vaults, inboundBefore, inboundAfter, activeNodes) && !snapshot.spendable.IsZero()
 }
 
 func xmrVaultRotationReady(vaults []openapi.Vault, inboundBefore, inboundAfter common.Address, activeNodes int) bool {

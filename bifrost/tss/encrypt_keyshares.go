@@ -58,20 +58,28 @@ func EncryptKeyshares(path, passphrase string) ([]byte, error) {
 	}
 
 	// open keyshares
-	f, err := os.Open(path)
+	fileData, err := os.ReadFile(path)
 	if err != nil {
 		log.Error().Str("path", path).Msg("failed to open file")
 		return nil, fmt.Errorf("failed keyshare encrypt - cannot open key file: %w", err)
 	}
-	defer f.Close()
 
-	// tee reader for verification
+	// decrypt at-rest encrypted files before JSON parsing
+	rawData := fileData
+	if storage.IsEncryptedAtRest(fileData) {
+		atRestKey := storage.DeriveAtRestKey(passphrase)
+		rawData, err = storage.DecryptAtRest(atRestKey, fileData)
+		if err != nil {
+			return nil, fmt.Errorf("failed keyshare encrypt - cannot decrypt at-rest keyshares: %w", err)
+		}
+	}
+
 	var teeRaw bytes.Buffer
-	tr := io.TeeReader(f, &teeRaw)
+	teeRaw.Write(rawData)
 
 	// read keyshares
 	var ks storage.KeygenLocalState
-	err = json.NewDecoder(tr).Decode(&ks)
+	err = json.Unmarshal(rawData, &ks)
 	if err != nil {
 		return nil, fmt.Errorf("failed keyshare encrypt - cannot decode keyshares: %w", err)
 	}

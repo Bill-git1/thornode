@@ -322,13 +322,13 @@ func (c *Client) restoreKeysharesFromRecoveryFiles() {
 			continue
 		}
 
-		keyHex, readErr := os.ReadFile(path)
+		keyBlob, readErr := os.ReadFile(path)
 		if readErr != nil {
 			c.logger.Err(readErr).Str("file", base).Msg("xmr recovery: failed to read recovery file")
 			continue
 		}
 
-		restoreErr := c.RestoreKeyshare(vaultPubKey, string(keyHex))
+		restoreErr := c.RestoreKeyshare(vaultPubKey, keyBlob)
 		if restoreErr != nil {
 			c.logger.Err(restoreErr).Str("vault", vaultPubKeyStr).Msg("xmr recovery: failed to restore frost keyshare")
 			continue
@@ -1840,11 +1840,11 @@ func (c *Client) ExportKeyshare(groupKey common.PubKey) ([]byte, error) {
 	return []byte(hexKey), nil
 }
 
-func (c *Client) RestoreKeyshare(vaultPubKey common.PubKey, keyBytesHex string) error {
+func (c *Client) RestoreKeyshare(vaultPubKey common.PubKey, keyBlob []byte) error {
 	if c.sidecar == nil {
 		return fmt.Errorf("sidecar not configured")
 	}
-	restored, err := c.sidecar.RestoreKeys(vaultPubKey.String(), keyBytesHex)
+	restored, err := c.sidecar.RestoreKeys(vaultPubKey.String(), keyBlob)
 	if err != nil {
 		return err
 	}

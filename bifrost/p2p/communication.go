@@ -29,6 +29,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 var (
@@ -103,7 +104,13 @@ func StartP2PWithBridge(
 	baseFolder string,
 	bridge thorclient.ThorchainBridge,
 ) (*Communication, *storage.FileStateMgr, error) {
-	stateManager, err := storage.NewFileStateMgr(baseFolder)
+	var stateOpts []storage.FileStateMgrOption
+	if seedPhrase, err := common.GetSignerSeedPhrase(); err == nil {
+		stateOpts = append(stateOpts, storage.WithAtRestEncryption(seedPhrase))
+	} else {
+		log.Warn().Err(err).Msg("signer seed phrase unavailable, keyshare at-rest encryption disabled")
+	}
+	stateManager, err := storage.NewFileStateMgr(baseFolder, stateOpts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("fail to create file state manager")
 	}

@@ -91,13 +91,13 @@ func simulationStages() []simulationStage {
 		{name: "memoless-swaps", defaultOn: true, constructor: suites.MemolessSwaps},
 		{name: "consolidate", defaultOn: true, constructor: features.Consolidate},
 		{name: "churn", defaultOn: false, constructor: core.NewChurnActor},
-		{name: "xmr-post-churn", defaultOn: false, constructor: suites.XMRPostChurn},
 		{name: "xmr-spent-refs", defaultOn: false, constructor: suites.XMRSpentRefTracking},
 		{name: "forced-to-leave-keygen", defaultOn: false, constructor: core.NewForcedToLeaveKeygenActor},
 		{name: "forced-to-leave-keysign", defaultOn: false, constructor: core.NewForcedToLeaveKeysignActor},
 		{name: "jailed-keysign-fallback", defaultOn: false, constructor: core.NewJailedKeysignFallbackActor},
 		{name: "inactive-vault-refunds", defaultOn: false, constructor: features.InactiveVaultRefunds},
 		{name: "solvency", defaultOn: true, constructor: core.NewSolvencyCheckActor},
+		{name: "xmr-post-churn", defaultOn: false, constructor: suites.XMRPostChurn},
 		{name: "ragnarok", defaultOn: true, constructor: suites.Ragnarok},
 	}
 }

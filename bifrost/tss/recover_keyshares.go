@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"gitlab.com/thorchain/thornode/v3/app"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
@@ -373,7 +374,11 @@ func writeRecoveredDecompressedKeyshares(path string, encrypted []byte, seedPhra
 		return fmt.Errorf("failed to decompress key shares: %w", err)
 	}
 
-	return writeRecoveredBytes(path, rawKeyshares)
+	encryptedAtRest, err := encryptAtRestForRecovery(rawKeyshares, seedPhrase)
+	if err != nil {
+		return err
+	}
+	return writeRecoveredBytes(path, encryptedAtRest)
 }
 
 func writeRecoveredRawKeyshares(path string, encrypted []byte, seedPhrase string) error {
@@ -386,7 +391,24 @@ func writeRecoveredRawKeyshares(path string, encrypted []byte, seedPhrase string
 		return fmt.Errorf("failed to decrypt raw key shares: %w", err)
 	}
 
-	return writeRecoveredBytes(path, rawKeyshares)
+	encryptedAtRest, err := encryptAtRestForRecovery(rawKeyshares, seedPhrase)
+	if err != nil {
+		return err
+	}
+	return writeRecoveredBytes(path, encryptedAtRest)
+}
+
+// encryptAtRestForRecovery at-rest encrypts recovered key material before it is
+// written to disk. It fails hard rather than falling back to plaintext: the xmr
+// sidecar rejects plaintext keyshares on restore, and key material must never be
+// persisted or transported in the clear.
+func encryptAtRestForRecovery(data []byte, seedPhrase string) ([]byte, error) {
+	atRestKey := storage.DeriveAtRestKey(seedPhrase)
+	encrypted, err := storage.EncryptAtRest(atRestKey, data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to at-rest encrypt recovered keyshares: %w", err)
+	}
+	return encrypted, nil
 }
 
 func writeRecoveredBytes(path string, data []byte) error {

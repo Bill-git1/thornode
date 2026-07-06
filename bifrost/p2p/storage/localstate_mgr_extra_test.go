@@ -182,6 +182,109 @@ func (s *FileStateMgrExtraSuite) TestUnmarshalJSON_InvalidBothFormats(c *C) {
 	c.Assert(err, NotNil)
 }
 
+// ── At-Rest Encryption ──────────────────────────────────────────────────
+
+func (s *FileStateMgrExtraSuite) TestSaveLoadWithEncryption(c *C) {
+	dir := c.MkDir()
+	fsm, err := NewFileStateMgr(dir, WithAtRestEncryption("test seed phrase for testing only not real"))
+	c.Assert(err, IsNil)
+
+	pubKey := "thorpub1addwnpepqf90u7n3nr2jwsw4t2gzhzqfdlply8dlzv3mdj4dr22uvhe04azq5gac3gq"
+	state := KeygenLocalState{
+		PubKey:          pubKey,
+		LocalData:       []byte(`{"key":"value"}`),
+		ParticipantKeys: []string{"A", "B"},
+		LocalPartyKey:   "A",
+	}
+
+	c.Assert(fsm.SaveLocalState(state), IsNil)
+
+	// verify file on disk is encrypted (starts with magic)
+	fname := filepath.Join(dir, "localstate-"+pubKey+".json")
+	raw, err := os.ReadFile(fname)
+	c.Assert(err, IsNil)
+	c.Assert(IsEncryptedAtRest(raw), Equals, true)
+
+	// verify round-trip
+	loaded, err := fsm.GetLocalState(pubKey)
+	c.Assert(err, IsNil)
+	c.Assert(loaded.PubKey, Equals, state.PubKey)
+	c.Assert(loaded.LocalPartyKey, Equals, state.LocalPartyKey)
+}
+
+func (s *FileStateMgrExtraSuite) TestPlaintextMigration(c *C) {
+	dir := c.MkDir()
+	pubKey := "thorpub1addwnpepqf90u7n3nr2jwsw4t2gzhzqfdlply8dlzv3mdj4dr22uvhe04azq5gac3gq"
+	fname := filepath.Join(dir, "localstate-"+pubKey+".json")
+
+	// write a plaintext keyshare file (pre-upgrade)
+	state := KeygenLocalState{
+		PubKey:          pubKey,
+		LocalData:       []byte(`{"key":"value"}`),
+		ParticipantKeys: []string{"A"},
+		LocalPartyKey:   "A",
+	}
+	buf, err := json.Marshal(state)
+	c.Assert(err, IsNil)
+	c.Assert(os.WriteFile(fname, buf, 0o600), IsNil)
+
+	// open with encryption enabled — should auto-migrate
+	fsm, err := NewFileStateMgr(dir, WithAtRestEncryption("test seed phrase for testing only not real"))
+	c.Assert(err, IsNil)
+
+	loaded, err := fsm.GetLocalState(pubKey)
+	c.Assert(err, IsNil)
+	c.Assert(loaded.PubKey, Equals, pubKey)
+
+	// verify file on disk is now encrypted
+	raw, err := os.ReadFile(fname)
+	c.Assert(err, IsNil)
+	c.Assert(IsEncryptedAtRest(raw), Equals, true)
+}
+
+func (s *FileStateMgrExtraSuite) TestEncryptedFileWithoutKey(c *C) {
+	dir := c.MkDir()
+	pubKey := "thorpub1addwnpepqf90u7n3nr2jwsw4t2gzhzqfdlply8dlzv3mdj4dr22uvhe04azq5gac3gq"
+	fname := filepath.Join(dir, "localstate-"+pubKey+".json")
+
+	// write an encrypted file
+	key := DeriveAtRestKey("some phrase")
+	plaintext := []byte(`{"pub_key":"` + pubKey + `","local_data":"dGVzdA==","participant_keys":["A"],"local_party_key":"A"}`)
+	encrypted, err := EncryptAtRest(key, plaintext)
+	c.Assert(err, IsNil)
+	c.Assert(os.WriteFile(fname, encrypted, 0o600), IsNil)
+
+	// open without encryption — should fail
+	fsm, err := NewFileStateMgr(dir)
+	c.Assert(err, IsNil)
+	_, err = fsm.GetLocalState(pubKey)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "keyshare file is encrypted but no at-rest key is configured")
+}
+
+func (s *FileStateMgrExtraSuite) TestNoEncryptionUnchanged(c *C) {
+	dir := c.MkDir()
+	pubKey := "thorpub1addwnpepqf90u7n3nr2jwsw4t2gzhzqfdlply8dlzv3mdj4dr22uvhe04azq5gac3gq"
+
+	// save without encryption
+	fsm, err := NewFileStateMgr(dir)
+	c.Assert(err, IsNil)
+	state := KeygenLocalState{
+		PubKey:          pubKey,
+		LocalData:       []byte(`{"k":"v"}`),
+		ParticipantKeys: []string{"A"},
+		LocalPartyKey:   "A",
+	}
+	c.Assert(fsm.SaveLocalState(state), IsNil)
+
+	// verify file is plaintext JSON
+	fname := filepath.Join(dir, "localstate-"+pubKey+".json")
+	raw, err := os.ReadFile(fname)
+	c.Assert(err, IsNil)
+	c.Assert(IsEncryptedAtRest(raw), Equals, false)
+	c.Assert(raw[0], Equals, byte('{'))
+}
+
 // ── MockLocalStateManager ────────────────────────────────────────────────
 
 func (s *FileStateMgrExtraSuite) TestMockLocalStateManager(c *C) {

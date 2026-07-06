@@ -13,6 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/addr"
 	maddr "github.com/multiformats/go-multiaddr"
+	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/ecdsa/keygen"
 	"gitlab.com/thorchain/tss/tss-lib-private.git/v3/tss"
 
@@ -91,10 +92,24 @@ type LocalStateManager interface {
 type FileStateMgr struct {
 	folder    string
 	writeLock *sync.RWMutex
+	atRestKey []byte // XChaCha20-Poly1305 key for at-rest encryption; nil = disabled
+}
+
+// FileStateMgrOption is a functional option for NewFileStateMgr.
+type FileStateMgrOption func(*FileStateMgr)
+
+// WithAtRestEncryption enables at-rest encryption of keyshare files using a key
+// derived from the signer seed phrase.
+func WithAtRestEncryption(seedPhrase string) FileStateMgrOption {
+	return func(fsm *FileStateMgr) {
+		if seedPhrase != "" {
+			fsm.atRestKey = DeriveAtRestKey(seedPhrase)
+		}
+	}
 }
 
 // NewFileStateMgr create a new instance of the FileStateMgr which implements LocalStateManager
-func NewFileStateMgr(folder string) (*FileStateMgr, error) {
+func NewFileStateMgr(folder string, opts ...FileStateMgrOption) (*FileStateMgr, error) {
 	if len(folder) > 0 {
 		_, err := os.Stat(folder)
 		if err != nil && os.IsNotExist(err) {
@@ -103,10 +118,14 @@ func NewFileStateMgr(folder string) (*FileStateMgr, error) {
 			}
 		}
 	}
-	return &FileStateMgr{
+	fsm := &FileStateMgr{
 		folder:    folder,
 		writeLock: &sync.RWMutex{},
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(fsm)
+	}
+	return fsm, nil
 }
 
 func (fsm *FileStateMgr) getFilePathName(pubKey string) (string, error) {
@@ -131,11 +150,17 @@ func (fsm *FileStateMgr) SaveLocalState(state KeygenLocalState) error {
 	if err != nil {
 		return fmt.Errorf("fail to marshal KeygenLocalState to json: %w", err)
 	}
+	if fsm.atRestKey != nil {
+		buf, err = EncryptAtRest(fsm.atRestKey, buf)
+		if err != nil {
+			return fmt.Errorf("fail to encrypt keyshare at rest: %w", err)
+		}
+	}
 	filePathName, err := fsm.getFilePathName(state.PubKey)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filePathName, buf, 0o600)
+	return atomicWriteFile(filePathName, buf, 0o600)
 }
 
 // GetLocalState read the local state from file system
@@ -155,8 +180,26 @@ func (fsm *FileStateMgr) GetLocalState(pubKey string) (KeygenLocalState, error) 
 	if err != nil {
 		return KeygenLocalState{}, fmt.Errorf("file to read from file(%s): %w", filePathName, err)
 	}
+
+	jsonBytes := buf
+	if IsEncryptedAtRest(buf) {
+		if fsm.atRestKey == nil {
+			return KeygenLocalState{}, errors.New("keyshare file is encrypted but no at-rest key is configured")
+		}
+		jsonBytes, err = DecryptAtRest(fsm.atRestKey, buf)
+		if err != nil {
+			return KeygenLocalState{}, fmt.Errorf("fail to decrypt keyshare at rest: %w", err)
+		}
+	} else if fsm.atRestKey != nil {
+		if encrypted, encErr := EncryptAtRest(fsm.atRestKey, buf); encErr != nil {
+			log.Warn().Err(encErr).Str("file", filePathName).Msg("failed to encrypt keyshare for migration")
+		} else if writeErr := atomicWriteFile(filePathName, encrypted, 0o600); writeErr != nil {
+			log.Warn().Err(writeErr).Str("file", filePathName).Msg("failed to write migrated keyshare")
+		}
+	}
+
 	var localState KeygenLocalState
-	if err := json.Unmarshal(buf, &localState); nil != err {
+	if err := json.Unmarshal(jsonBytes, &localState); nil != err {
 		return KeygenLocalState{}, fmt.Errorf("fail to unmarshal KeygenLocalState: %w", err)
 	}
 	return localState, nil
@@ -218,4 +261,33 @@ func (fsm *FileStateMgr) RetrieveP2PAddresses() (addr.AddrList, error) {
 		peerAddresses = append(peerAddresses, addr)
 	}
 	return peerAddresses, nil
+}
+
+func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	success := false
+	defer func() {
+		_ = tmp.Close()
+		if !success {
+			_ = os.Remove(tmpPath)
+		}
+	}()
+	if err := tmp.Chmod(perm); err != nil {
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return err
+	}
+	success = true
+	return nil
 }

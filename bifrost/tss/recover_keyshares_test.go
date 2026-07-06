@@ -6,6 +6,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -83,6 +84,7 @@ func (s *RecoverKeysharesSuite) TestMsgMatchesRecoveryTargetRequiresExactKeyType
 func (s *RecoverKeysharesSuite) TestRecoverySeedPhraseUsesSharedSignerSeed(c *C) {
 	originalSeedPhrase, hadOriginalSeedPhrase := os.LookupEnv("SIGNER_SEED_PHRASE")
 	originalSeedPhraseFile, hadOriginalSeedPhraseFile := os.LookupEnv("SIGNER_SEED_PHRASE_FILE")
+	seedPhraseFile := filepath.Join(c.MkDir(), "seed-phrase")
 	defer func() {
 		if hadOriginalSeedPhrase {
 			_ = os.Setenv("SIGNER_SEED_PHRASE", originalSeedPhrase)
@@ -103,7 +105,8 @@ func (s *RecoverKeysharesSuite) TestRecoverySeedPhraseUsesSharedSignerSeed(c *C)
 	c.Assert(err.Error(), Equals, "failed to get signer seed phrase: could not load signer seed phrase: SIGNER_SEED_PHRASE_FILE is unset or invalid (SIGNER_SEED_PHRASE env var is only honored on mocknet)")
 	c.Assert(seedPhrase, Equals, "")
 
-	err = os.Setenv("SIGNER_SEED_PHRASE", "  "+Mnemonic+"  ")
+	c.Assert(os.WriteFile(seedPhraseFile, []byte("  "+Mnemonic+"  "), 0o600), IsNil)
+	err = os.Setenv("SIGNER_SEED_PHRASE_FILE", seedPhraseFile)
 	c.Assert(err, IsNil)
 	seedPhrase, err = recoverySeedPhrase()
 	c.Assert(err, IsNil)
@@ -222,7 +225,13 @@ func (s *RecoverKeysharesSuite) TestWriteRecoveredDecompressedKeysharesWritesOwn
 
 	original, err := os.ReadFile(LocalStateTestFile)
 	c.Assert(err, IsNil)
-	recovered, err := os.ReadFile(path)
+	recoveredRaw, err := os.ReadFile(path)
+	c.Assert(err, IsNil)
+
+	// recovered file should be at-rest encrypted
+	c.Assert(storage.IsEncryptedAtRest(recoveredRaw), Equals, true)
+	atRestKey := storage.DeriveAtRestKey(Mnemonic)
+	recovered, err := storage.DecryptAtRest(atRestKey, recoveredRaw)
 	c.Assert(err, IsNil)
 	c.Assert(recovered, DeepEquals, original)
 }
@@ -261,7 +270,13 @@ func (s *RecoverKeysharesSuite) TestWriteRecoveredRawKeysharesWritesOwnerOnlyFil
 	c.Assert(err, IsNil)
 	c.Assert(fi.Mode().Perm(), Equals, os.FileMode(0o600))
 
-	recovered, err := os.ReadFile(path)
+	recoveredRaw, err := os.ReadFile(path)
+	c.Assert(err, IsNil)
+
+	// recovered file should be at-rest encrypted
+	c.Assert(storage.IsEncryptedAtRest(recoveredRaw), Equals, true)
+	atRestKey := storage.DeriveAtRestKey(Mnemonic)
+	recovered, err := storage.DecryptAtRest(atRestKey, recoveredRaw)
 	c.Assert(err, IsNil)
 	c.Assert(recovered, DeepEquals, rawKeyshares)
 }
@@ -275,8 +290,9 @@ func setupRecoveryKeysharesTest(c *C) (string, func()) {
 	originalSeedPhraseFile, hadOriginalSeedPhraseFile := os.LookupEnv("SIGNER_SEED_PHRASE_FILE")
 
 	keyshareRecoveryNodeHome = dir
-	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", Mnemonic), IsNil)
-	c.Assert(os.Unsetenv("SIGNER_SEED_PHRASE_FILE"), IsNil)
+	seedPhraseFile := filepath.Join(dir, "seed-phrase")
+	c.Assert(os.WriteFile(seedPhraseFile, []byte(Mnemonic), 0o600), IsNil)
+	c.Assert(os.Setenv("SIGNER_SEED_PHRASE_FILE", seedPhraseFile), IsNil)
 
 	return dir, func() {
 		keyshareRecoveryNodeHome = originalHome
@@ -309,7 +325,11 @@ func readLocalStateTestFile(c *C) []byte {
 func assertRecoveredLocalState(c *C, path string, original []byte) {
 	recovered, err := os.ReadFile(path)
 	c.Assert(err, IsNil)
-	c.Assert(recovered, DeepEquals, original)
+	c.Assert(storage.IsEncryptedAtRest(recovered), Equals, true)
+	atRestKey := storage.DeriveAtRestKey(Mnemonic)
+	decrypted, err := storage.DecryptAtRest(atRestKey, recovered)
+	c.Assert(err, IsNil)
+	c.Assert(decrypted, DeepEquals, original)
 	fi, err := os.Stat(path)
 	c.Assert(err, IsNil)
 	c.Assert(fi.Mode().Perm(), Equals, os.FileMode(0o600))

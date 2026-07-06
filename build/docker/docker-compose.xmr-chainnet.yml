@@ -176,7 +176,7 @@ services:
   # ================================ FROST signers =================================
 
   xmr-frost-signer: &frost-signer
-    image: ${XMR_FROST_SIGNER_IMAGE:-registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:3f9c6b66a11e175741b914e401c09d0a048d833ca9a45000dd3d0bba4a659553}
+    image: ${XMR_FROST_SIGNER_IMAGE:-registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:49752e667970026bba9c8efe4119530668e5f1f53c6a87284e7106a6f89d41a5}
     restart: unless-stopped
     user: root
     entrypoint:
