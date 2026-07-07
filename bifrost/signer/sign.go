@@ -477,6 +477,22 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 	// Process XMR/FROST keygens before regular TSS keygens so every node enters
 	// the sidecar ceremony before regular keygen self-checks can delay a leader.
 	for _, keygenReq := range orderedKeygensForProcessing(keygenBlock.Keygens) {
+		// Skip the XMR/FROST monovault keygen network-wide until the keygen
+		// scale/coordination fix ships. The full-active-set (~95-party) sidecar
+		// DKG fails at scale and mass-jails members (judgeLateSigner fires on a
+		// retry-round success). A keygen with zero MsgTssPool reports reaches no
+		// consensus, so no jail/slash fires (x/thorchain/handler_tss.go); and no
+		// XMR monovault exists on mainnet, so skipping strands no funds. Remove
+		// once the FROST keygen reliability fix (or the HaltMonovaultKeygen mimir)
+		// lands. Must be deployed to ALL active + ready nodes before churn
+		// resumes: partial coverage (<1/3 of members) can let the failure-blame
+		// path jail the patched members.
+		if keygenReq.Type == ttypes.KeygenType_XMRMonovaultKeygen {
+			s.logger.Info().
+				Int64("height", keygenBlock.Height).
+				Msg("skipping XMR monovault keygen (network-wide skip pending keygen fix)")
+			continue
+		}
 		keygenStart := time.Now()
 		keygenTime := time.Since(keygenStart).Milliseconds()
 		keygenChains := s.keygenChainsForType(keygenReq.Type)

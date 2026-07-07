@@ -1221,7 +1221,13 @@ func (s *SignSuite) TestOrderedKeygensForProcessingPrioritizesXMR(c *C) {
 	c.Assert(ordered[2].GetMembers(), DeepEquals, asgardA.GetMembers())
 }
 
-func (s *SignSuite) TestProcessKeygenBlockKeepsSuccessfulSiblingWhenAnotherFails(c *C) {
+// TestProcessKeygenBlockSkipsXMRMonovaultKeygen verifies the temporary
+// network-wide XMR/FROST monovault keygen skip: XMR keygens in the block must
+// never reach the custom keygen hooks, schedule retries, or broadcast a
+// MsgTssPool. The mocks stay armed with results that would be consumed if the
+// keygens were processed. Remove/revert to sibling-failure coverage once the
+// FROST keygen scale fix lands and the skip is removed from processKeygenBlock.
+func (s *SignSuite) TestProcessKeygenBlockSkipsXMRMonovaultKeygen(c *C) {
 	bridge := &retryAwareKeygenBridge{
 		batchingKeygenBridge: batchingKeygenBridge{fakeBridge: fakeBridge{s.bridge}},
 		mimirs: map[string]int64{
@@ -1265,7 +1271,9 @@ func (s *SignSuite) TestProcessKeygenBlockKeepsSuccessfulSiblingWhenAnotherFails
 		Keygens: []types2.Keygen{keygenA, keygenB},
 	})
 
-	c.Assert(custom.callCount, Equals, 2)
-	c.Assert(bridge.batchSizes, HasLen, 1)
-	c.Assert(bridge.batchSizes[0], Equals, 1)
+	// Both XMR monovault keygens are skipped: no custom keygen hook runs and
+	// no MsgTssPool broadcast is made, so no keygen result (success or blame)
+	// can ever reach consensus on thorchain.
+	c.Assert(custom.callCount, Equals, 0)
+	c.Assert(bridge.batchSizes, HasLen, 0)
 }

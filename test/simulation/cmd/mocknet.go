@@ -574,6 +574,22 @@ func fundUserXMRAccounts(master *User, users []*User, amount sdkmath.Uint) {
 		log.Fatal().Msg("failed to get monero simulation client")
 	}
 
+	birthdayHeight, err := client.GetHeight()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get XMR simulation birthday height")
+	}
+	client.SetBirthdayHeight(uint64(birthdayHeight))
+	for _, user := range users {
+		userClient, ok := user.ChainClients[common.XMRChain].(*monero.Client)
+		if !ok {
+			log.Fatal().Str("user", user.Name()).Msg("failed to get user monero simulation client")
+		}
+		userClient.SetBirthdayHeight(uint64(birthdayHeight))
+	}
+	log.Info().
+		Uint64("birthday_height", uint64(birthdayHeight)).
+		Msg("set XMR simulation account birthday height")
+
 	for _, user := range users {
 		addr, err := user.PubKey(common.XMRChain).GetAddress(common.XMRChain)
 		if err != nil {

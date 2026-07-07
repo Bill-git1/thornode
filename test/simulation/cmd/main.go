@@ -22,6 +22,7 @@ import (
 	"golang.org/x/term"
 
 	"gitlab.com/thorchain/thornode/v3/common"
+	acommon "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/features"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/suites"
@@ -31,6 +32,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/monero"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/solana"
+	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/tron"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/utxo"
@@ -49,6 +51,7 @@ const (
 	tronRPCReadinessTimeout   = 4 * time.Minute
 	solanaRPCReadinessTimeout = 4 * time.Minute
 	zecRPCReadinessTimeout    = 8 * time.Minute
+	xmrSimulationWaitTimeout  = 30 * time.Second
 )
 
 var bifrostReadinessEndpoints = []string{
@@ -123,6 +126,60 @@ func appendSimulationStages(root *Actor, enabledStages map[string]bool, rng *ran
 
 	for _, stage := range simulationStages() {
 		appendIfEnabled(stage.name, stage.constructor)
+	}
+}
+
+// configureXMRSimulationProfile disables XMR simulation coverage when no XMR inbound address is available.
+func configureXMRSimulationProfile() {
+	inboundAddress, err := waitForXMRSimulationInbound(
+		xmrSimulationWaitTimeout,
+		thornode.GetInboundAddress,
+		time.Sleep,
+	)
+	if err == nil {
+		acommon.SetXMRChainEnabled(true)
+		log.Info().
+			Stringer("inbound_address", inboundAddress).
+			Msg("XMR inbound address available; enabling XMR simulation coverage")
+		return
+	}
+
+	acommon.SetXMRChainEnabled(false)
+	log.Warn().
+		Err(err).
+		Dur("timeout", xmrSimulationWaitTimeout).
+		Msg("XMR inbound address unavailable; skipping XMR simulation coverage")
+}
+
+type inboundAddressGetter func(common.Chain) (common.Address, *common.Address, error)
+
+// waitForXMRSimulationInbound waits for the XMR inbound address required by XMR simulation actors.
+func waitForXMRSimulationInbound(timeout time.Duration, get inboundAddressGetter, sleep func(time.Duration)) (common.Address, error) {
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for {
+		inboundAddress, _, err := get(common.XMRChain)
+		if err == nil && !inboundAddress.IsEmpty() {
+			return inboundAddress, nil
+		}
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = fmt.Errorf("empty XMR inbound address")
+		}
+
+		if timeout <= 0 || !time.Now().Before(deadline) {
+			return common.NoAddress, lastErr
+		}
+
+		delay := time.Second
+		if remaining := time.Until(deadline); remaining < delay {
+			delay = remaining
+		}
+		if delay <= 0 {
+			return common.NoAddress, lastErr
+		}
+		sleep(delay)
 	}
 }
 
@@ -212,10 +269,6 @@ func main() {
 	log.Info().Msgf("Random seed set to `%s`", new(big.Int).SetBytes(randSeed[:]).Text(16))
 	rng := rand.New(rand.NewChaCha8(randSeed))
 
-	// combine all actor dags for the complete test run
-	root := NewActor("Root", rng)
-	appendSimulationStages(root, enabledStages, rng)
-
 	// gather config from the environment
 	parallelism := os.Getenv("PARALLELISM")
 	if parallelism == "" {
@@ -227,6 +280,11 @@ func main() {
 	}
 
 	cfg := InitConfig(parallelismInt, enabledStages["seed"] || enabledStages["all"], rng)
+	configureXMRSimulationProfile()
+
+	// combine all actor dags for the complete test run
+	root := NewActor("Root", rng)
+	appendSimulationStages(root, enabledStages, rng)
 
 	// start watchers
 	enabledWatchers := []*Watcher{

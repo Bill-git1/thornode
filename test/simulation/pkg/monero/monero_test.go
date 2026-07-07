@@ -69,6 +69,9 @@ func TestGetAccountUsesUnlockedUserBalanceAndTotalVaultBalance(t *testing.T) {
 			if req.SpendKeyHex != spendKeyHex {
 				t.Fatalf("expected spend key %s, got %s", spendKeyHex, req.SpendKeyHex)
 			}
+			if req.BirthdayHeight == nil || *req.BirthdayHeight != 123 {
+				t.Fatalf("expected birthday height 123, got %v", req.BirthdayHeight)
+			}
 
 			_ = json.NewEncoder(w).Encode(helperBalanceResponse{
 				Address:               address.String(),
@@ -100,6 +103,7 @@ func TestGetAccountUsesUnlockedUserBalanceAndTotalVaultBalance(t *testing.T) {
 		frostBearer:    "frost-token",
 		httpClient:     server.Client(),
 	}
+	client.SetBirthdayHeight(123)
 
 	userAccount, err := client.GetAccount(nil)
 	if err != nil {
@@ -162,6 +166,34 @@ func ptrUint64(v uint64) *uint64 {
 	return &v
 }
 
+func TestGetHeightUsesHelperChainHeight(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/v1/monero/chain/height" {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer helper-token" {
+			t.Fatalf("unexpected helper auth header: %s", got)
+		}
+
+		_ = json.NewEncoder(w).Encode(chainHeightResponse{Height: 123})
+	}))
+	defer server.Close()
+
+	client := &Client{
+		helperEndpoint: server.URL,
+		helperBearer:   "helper-token",
+		httpClient:     server.Client(),
+	}
+
+	height, err := client.GetHeight()
+	if err != nil {
+		t.Fatalf("failed to get XMR chain height: %v", err)
+	}
+	if height != 123 {
+		t.Fatalf("expected height 123, got %d", height)
+	}
+}
+
 func TestSignAndBroadcastTxUsesHelperTransferContract(t *testing.T) {
 	spendKeyHex, address := testSpendKeyHexAndAddress(t)
 	swapAmount := sdkmath.NewUint(5 * common.One)
@@ -180,6 +212,9 @@ func TestSignAndBroadcastTxUsesHelperTransferContract(t *testing.T) {
 		}
 		if req.SpendKeyHex != spendKeyHex {
 			t.Fatalf("expected spend key %s, got %s", spendKeyHex, req.SpendKeyHex)
+		}
+		if req.BirthdayHeight == nil || *req.BirthdayHeight != 456 {
+			t.Fatalf("expected birthday height 456, got %v", req.BirthdayHeight)
 		}
 		if req.AmountAtomic != toAtomic(swapAmount) {
 			t.Fatalf("expected atomic amount %d, got %d", toAtomic(swapAmount), req.AmountAtomic)
@@ -200,6 +235,7 @@ func TestSignAndBroadcastTxUsesHelperTransferContract(t *testing.T) {
 		helperBearer:   "helper-token",
 		httpClient:     server.Client(),
 	}
+	client.SetBirthdayHeight(456)
 
 	signed, err := client.SignTx(SimTx{
 		Chain:     common.XMRChain,

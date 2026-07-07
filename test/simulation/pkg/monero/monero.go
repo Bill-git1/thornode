@@ -40,8 +40,9 @@ const (
 type Client struct {
 	chain common.Chain
 
-	address     common.Address
-	spendKeyHex string
+	address        common.Address
+	spendKeyHex    string
+	birthdayHeight *uint64
 
 	helperEndpoint string
 	helperBearer   string
@@ -52,7 +53,8 @@ type Client struct {
 }
 
 type helperBalanceRequest struct {
-	SpendKeyHex string `json:"spend_key_hex"`
+	SpendKeyHex    string  `json:"spend_key_hex"`
+	BirthdayHeight *uint64 `json:"birthday_height,omitempty"`
 }
 
 type helperBalanceResponse struct {
@@ -62,14 +64,19 @@ type helperBalanceResponse struct {
 }
 
 type helperTransferRequest struct {
-	SpendKeyHex  string `json:"spend_key_hex"`
-	ToAddress    string `json:"to_address"`
-	AmountAtomic uint64 `json:"amount_atomic"`
-	Memo         string `json:"memo,omitempty"`
+	SpendKeyHex    string  `json:"spend_key_hex"`
+	BirthdayHeight *uint64 `json:"birthday_height,omitempty"`
+	ToAddress      string  `json:"to_address"`
+	AmountAtomic   uint64  `json:"amount_atomic"`
+	Memo           string  `json:"memo,omitempty"`
 }
 
 type helperTransferResponse struct {
 	TxHash string `json:"tx_hash"`
+}
+
+type chainHeightResponse struct {
+	Height uint64 `json:"height"`
 }
 
 type helperFaucetRequest struct {
@@ -134,7 +141,10 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	if err := c.postJSON(
 		c.helperEndpoint+"/v1/monero/sim/balance",
 		c.helperBearer,
-		helperBalanceRequest{SpendKeyHex: c.spendKeyHex},
+		helperBalanceRequest{
+			SpendKeyHex:    c.spendKeyHex,
+			BirthdayHeight: c.birthdayHeight,
+		},
 		&response,
 	); err != nil {
 		return nil, err
@@ -147,6 +157,24 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	return &common.Account{
 		Coins: common.NewCoins(common.NewCoin(common.XMRAsset, fromAtomic(response.UnlockedBalanceAtomic))),
 	}, nil
+}
+
+func (c *Client) GetHeight() (int64, error) {
+	var response chainHeightResponse
+	if err := c.getJSON(c.helperEndpoint+"/v1/monero/chain/height", c.helperBearer, &response); err != nil {
+		return 0, err
+	}
+
+	const maxInt64 = uint64(1<<63 - 1)
+	if response.Height > maxInt64 {
+		return 0, fmt.Errorf("monero height %d exceeds int64 range", response.Height)
+	}
+
+	return int64(response.Height), nil
+}
+
+func (c *Client) SetBirthdayHeight(height uint64) {
+	c.birthdayHeight = &height
 }
 
 func (c *Client) GetVaultBalance(pk common.PubKey) (sdkmath.Uint, sdkmath.Uint, error) {
@@ -182,10 +210,11 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	}
 
 	return json.Marshal(helperTransferRequest{
-		SpendKeyHex:  c.spendKeyHex,
-		ToAddress:    tx.ToAddress.String(),
-		AmountAtomic: toAtomic(tx.Coin.Amount),
-		Memo:         tx.Memo,
+		SpendKeyHex:    c.spendKeyHex,
+		BirthdayHeight: c.birthdayHeight,
+		ToAddress:      tx.ToAddress.String(),
+		AmountAtomic:   toAtomic(tx.Coin.Amount),
+		Memo:           tx.Memo,
 	})
 }
 
