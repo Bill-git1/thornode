@@ -76,6 +76,7 @@ const (
 	defaultXMRConsolidationMaxLockBps          = int64(1000)        // 10.00%
 	defaultXMRConsolidationMinReserveAtomic    = uint64(50_000_000) // 0.00005 XMR (piconero)
 	defaultXMRSpentRefsRetryMaxAttempts        = 60                 // bounded peer-import retry window after the first failed attempt
+	defaultXMRRecoveryRetryMaxAttempts         = 10                 // startup window for the sidecar to come up before keyshare restore gives up
 )
 
 var ErrSidecarNotConfigured = errors.New("xmr sidecar requires signer_endpoint or api_host configuration")
@@ -166,6 +167,9 @@ type Client struct {
 
 	spentRefsRetryInterval    time.Duration
 	spentRefsRetryMaxAttempts int
+
+	recoveryRetryInterval    time.Duration
+	recoveryRetryMaxAttempts int
 }
 
 // NewClient creates a monero chain client backed by the shared block scanner.
@@ -242,6 +246,8 @@ func NewClient(
 		stopchan:                  make(chan struct{}),
 		spentRefsRetryInterval:    constants.ThorchainBlockTime,
 		spentRefsRetryMaxAttempts: defaultXMRSpentRefsRetryMaxAttempts,
+		recoveryRetryInterval:     constants.ThorchainBlockTime,
+		recoveryRetryMaxAttempts:  defaultXMRRecoveryRetryMaxAttempts,
 	}
 
 	var path string
@@ -303,10 +309,14 @@ func (c *Client) Start(
 }
 
 func (c *Client) restoreKeysharesFromRecoveryFiles() {
+	c.restoreKeysharesFromDir(app.DefaultNodeHome)
+}
+
+func (c *Client) restoreKeysharesFromDir(dir string) {
 	if c.sidecar == nil {
 		return
 	}
-	pattern := filepath.Join(app.DefaultNodeHome, "frost-recovery-*.hex")
+	pattern := filepath.Join(dir, "frost-recovery-*.hex")
 	matches, err := filepath.Glob(pattern)
 	if err != nil || len(matches) == 0 {
 		return
@@ -328,9 +338,9 @@ func (c *Client) restoreKeysharesFromRecoveryFiles() {
 			continue
 		}
 
-		restoreErr := c.RestoreKeyshare(vaultPubKey, keyBlob)
+		restoreErr := c.registerAndRestoreKeyshare(vaultPubKey, keyBlob)
 		if restoreErr != nil {
-			c.logger.Err(restoreErr).Str("vault", vaultPubKeyStr).Msg("xmr recovery: failed to restore frost keyshare")
+			c.logger.Err(restoreErr).Str("vault", vaultPubKeyStr).Msg("xmr recovery: failed to restore frost keyshare, keeping recovery file for next startup")
 			continue
 		}
 
@@ -344,6 +354,40 @@ func (c *Client) restoreKeysharesFromRecoveryFiles() {
 		}
 		c.logger.Info().Str("vault", vaultPubKeyStr).Msg("xmr recovery: frost keyshare restored and recovery file removed")
 	}
+}
+
+// registerAndRestoreKeyshare registers the vault with the sidecar before
+// restoring the keyshare: the sidecar resolves bech32 vault identifiers only
+// for registered vaults, so restoring first races the independent vault
+// registration path and 400s until it happens to land. Registration is
+// idempotent and derived entirely from local inputs. The pair is retried
+// together because at bifrost startup the sidecar may not be reachable yet.
+func (c *Client) registerAndRestoreKeyshare(vaultPubKey common.PubKey, keyBlob []byte) error {
+	interval := c.recoveryRetryInterval
+	if interval <= 0 {
+		interval = constants.ThorchainBlockTime
+	}
+	maxAttempts := c.recoveryRetryMaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = defaultXMRRecoveryRetryMaxAttempts
+	}
+
+	var err error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			time.Sleep(interval)
+		}
+		if err = c.ensureVaultRegistered(vaultPubKey); err != nil {
+			c.logger.Warn().Err(err).Str("vault", vaultPubKey.String()).Int("attempt", attempt).Msg("xmr recovery: failed to register vault with sidecar before restore")
+			continue
+		}
+		if err = c.RestoreKeyshare(vaultPubKey, keyBlob); err != nil {
+			c.logger.Warn().Err(err).Str("vault", vaultPubKey.String()).Int("attempt", attempt).Msg("xmr recovery: failed to restore frost keyshare")
+			continue
+		}
+		return nil
+	}
+	return err
 }
 
 func wipeAndRemoveRecoveryFile(path string) error {
