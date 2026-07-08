@@ -93,6 +93,19 @@ func solvencyMismatchRetryable(mismatches []solvencyMismatch) bool {
 	return true
 }
 
+// ed25519SolvencyPubKey returns the vault pubkey holding the asset's L1 funds. XMR
+// monovaults keep their FROST group key in pub_key_frost and leave pub_key_eddsa empty.
+func ed25519SolvencyPubKey(asset common.Asset, vaultPubKeyEddsa, vaultPubKeyFrost common.PubKey) common.PubKey {
+	if asset.Chain.Equals(common.XMRChain) {
+		return vaultPubKeyFrost
+	}
+	return vaultPubKeyEddsa
+}
+
+func skipSolvencyVaultCoin(asset common.Asset, vaultPubKeyEddsa, vaultPubKeyFrost common.PubKey) bool {
+	return asset.Equals(common.XMRAsset) && ed25519SolvencyPubKey(asset, vaultPubKeyEddsa, vaultPubKeyFrost).IsEmpty()
+}
+
 func appendUniqueString(items []string, item string) []string {
 	if item == "" {
 		return items
@@ -148,15 +161,31 @@ func (a *SolvencyCheckActor) checkSolvency(config *OpConfig) OpResult {
 		}
 		vaultCoinAmounts := make(map[string]cosmos.Uint)
 		for _, vault := range vaults {
+			vaultPubKeyEddsa, err := common.NewPubKey(vault.GetPubKeyEddsa())
+			if err != nil && vault.GetPubKeyEddsa() != "" {
+				a.Log().Error().Err(err).Str("pubkey_eddsa", vault.GetPubKeyEddsa()).Msg("failed to parse vault eddsa pubkey")
+				return OpResult{Continue: false}
+			}
+			vaultPubKeyFrost, err := common.NewPubKey(vault.GetPubKeyFrost())
+			if err != nil && vault.GetPubKeyFrost() != "" {
+				a.Log().Error().Err(err).Str("pubkey_frost", vault.GetPubKeyFrost()).Msg("failed to parse vault frost pubkey")
+				return OpResult{Continue: false}
+			}
 			for _, coin := range vault.Coins {
+				asset, err := common.NewAsset(coin.Asset)
+				if err != nil {
+					a.Log().Fatal().Err(err).Msg("failed to parse asset")
+				}
+				if skipSolvencyVaultCoin(asset, vaultPubKeyEddsa, vaultPubKeyFrost) {
+					a.Log().Warn().Str("asset", coin.Asset).Msg("skipping XMR vault coin without ed25519 pubkey")
+					continue
+				}
 				if _, ok := vaultCoinAmounts[coin.Asset]; !ok {
 					vaultCoinAmounts[coin.Asset] = cosmos.ZeroUint()
 				}
 				vaultCoinAmounts[coin.Asset] = vaultCoinAmounts[coin.Asset].Add(cosmos.NewUintFromString(coin.Amount))
 			}
 		}
-
-		xmrPubKey := common.EmptyPubKey
 
 		// get all L1 balances
 		l1CoinAmounts := make(map[string]cosmos.Uint)
@@ -187,6 +216,16 @@ func (a *SolvencyCheckActor) checkSolvency(config *OpConfig) OpResult {
 				}
 			}
 
+			vaultPubKeyFrostStr := vault.GetPubKeyFrost()
+			var vaultPubKeyFrost common.PubKey
+			if vaultPubKeyFrostStr != "" {
+				vaultPubKeyFrost, err = common.NewPubKey(vaultPubKeyFrostStr)
+				if err != nil {
+					a.Log().Error().Err(err).Str("pubkey_frost", vaultPubKeyFrostStr).Msg("failed to parse vault frost pubkey")
+					return OpResult{Continue: false}
+				}
+			}
+
 			for _, coin := range vault.Coins {
 				assetStr := coin.Asset
 				asset, err := common.NewAsset(assetStr)
@@ -194,26 +233,16 @@ func (a *SolvencyCheckActor) checkSolvency(config *OpConfig) OpResult {
 					a.Log().Fatal().Err(err).Msg("failed to parse asset")
 				}
 				vaultAssets[assetStr] = asset
+				if skipSolvencyVaultCoin(asset, vaultPubKeyEddsa, vaultPubKeyFrost) {
+					continue
+				}
 
 				switch {
 				case asset.IsGasAsset():
 					switch asset.Chain.GetSigningAlgo() {
 					case common.SigningAlgoEd25519:
-						algoPubKey := vaultPubKeyEddsa
-						queryKey := vaultPubKeyEddsaStr
-						if asset.Chain.Equals(common.XMRChain) {
-							if xmrPubKey.IsEmpty() {
-								xmrPubKey, err = thornode.GetInboundAddressPubKey(common.XMRChain)
-								if err != nil {
-									a.Log().Error().Err(err).Msg("failed to get active XMR inbound pubkey")
-									return OpResult{
-										Continue: false,
-									}
-								}
-							}
-							algoPubKey = xmrPubKey
-							queryKey = xmrPubKey.String()
-						}
+						algoPubKey := ed25519SolvencyPubKey(asset, vaultPubKeyEddsa, vaultPubKeyFrost)
+						queryKey := algoPubKey.String()
 						if algoPubKey.IsEmpty() {
 							a.Log().Error().Str("asset", assetStr).Msg("missing ed25519 vault pubkey")
 							return OpResult{Continue: false}

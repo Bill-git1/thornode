@@ -3724,6 +3724,7 @@ components:
       type: object
     Vault:
       example:
+        pub_key_frost: pub_key_frost
         addresses:
         - chain: BTC
           address: bc1qd45uzetakjvdy5ynjjyp4nlnj89am88e4e5jeq
@@ -3768,6 +3769,8 @@ components:
         pub_key:
           type: string
         pub_key_eddsa:
+          type: string
+        pub_key_frost:
           type: string
         coins:
           items:

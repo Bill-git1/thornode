@@ -3,6 +3,7 @@ package tss
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -200,10 +201,21 @@ func (t *TssServer) FrostKeygen(req FrostKeygenRequest, sidecar FrostSidecarKeyg
 		}
 	}
 
-	quorum := len(activeSet.originalByNormalized)
+	// Wait for peer results at the on-chain supermajority threshold
+	// (frostKeygenAdoptionQuorum mirrors HasSuperMajority), not the full set.
+	// THORChain finalizes the vault once ceil(2n/3) members report the same
+	// success, and after any local failure at most n-1 peers can have
+	// succeeded, so a full-set wait can never be met - it times out and this
+	// node votes a failure whose (blame-hashed) tss ID differs from the
+	// success, which judgeLateSigner never releases: a completed DKG turned into
+	// a permanent keygen jail. Both the non-active observer path and the
+	// failed-local-execution path below use this same threshold; a non-active
+	// waiter left at full-set quorum would re-introduce exactly that spurious
+	// failure/jailing for its node class.
+	adoptionQuorum := frostKeygenAdoptionQuorum(len(activeSet.originalByNormalized))
 	if !isActive {
 		t.logger.Info().Str("msg_id", msgID).Msg("not active FROST keygen member, waiting for result")
-		waitResp, waitErr := coordinator.WaitForResult(activeParticipants, quorum, coordinator.timeout+5*time.Second)
+		waitResp, waitErr := coordinator.WaitForResult(activeParticipants, adoptionQuorum, coordinator.timeout+5*time.Second)
 		if waitErr != nil {
 			return FrostKeygenResponse{
 				Status: tcommon.Fail,
@@ -225,10 +237,23 @@ func (t *TssServer) FrostKeygen(req FrostKeygenRequest, sidecar FrostSidecarKeyg
 		return resp, nil
 	}
 
-	waitResp, waitErr := coordinator.WaitForResult(activeParticipants, quorum, coordinator.timeout+5*time.Second)
+	// The local execution failed; wait for and adopt the quorum success at the
+	// same supermajority threshold (see the comment above).
+	waitResp, waitErr := coordinator.WaitForResult(activeParticipants, adoptionQuorum, coordinator.timeout+5*time.Second)
 	if waitErr == nil && waitResp.Status == tcommon.Success {
-		t.persistPeerAddressBook()
-		return waitResp, nil
+		if adopted, ok := coordinator.AdoptQuorumSuccess(req, waitResp); ok {
+			t.persistPeerAddressBook()
+			t.logger.Info().
+				Str("msg_id", msgID).
+				Str("address", adopted.Address).
+				Msg("local frost keygen failed but quorum succeeded; adopted result with locally finalized keyshare")
+			if err := coordinator.BroadcastResult(adopted, allPeerIDs); err != nil {
+				t.logger.Warn().Err(err).Msg("fail to broadcast adopted frost keygen result")
+			}
+			return adopted, nil
+		}
+		// This node cannot prove it holds a keyshare for the quorum vault, so
+		// it must not report success; fall through to the local failure.
 	}
 	if err := coordinator.BroadcastResult(resp, allPeerIDs); err != nil {
 		t.logger.Warn().Err(err).Msg("fail to broadcast local frost keygen failure result")
@@ -237,6 +262,48 @@ func (t *TssServer) FrostKeygen(req FrostKeygenRequest, sidecar FrostSidecarKeyg
 		return waitResp, nil
 	}
 	return resp, nil
+}
+
+// frostKeygenAdoptionQuorum mirrors the on-chain supermajority rule
+// (x/thorchain/types.HasSuperMajority): ceil(2/3 * total). Once that many
+// members report the same keygen success, THORChain will finalize the vault,
+// so adopting the result is the only outcome consistent with the network.
+//
+// For total < 3 this exceeds total-1 (e.g. total=2 -> quorum 2), so adoption
+// after a local failure is intentionally unreachable: at most total-1 peers
+// can have succeeded, and the vault likewise cannot finalize (it needs 2/2).
+// Declining to adopt there matches the network - do not "relax" it into
+// over-eager adoption.
+func frostKeygenAdoptionQuorum(total int) int {
+	if total <= 0 {
+		return 0
+	}
+	quorum := total * 2 / 3
+	if (total*2)%3 > 0 {
+		quorum++
+	}
+	return quorum
+}
+
+// validateFinalizeKeyshare verifies a sidecar FrostDKGFinalize response proves
+// this node holds a usable keyshare for the finalized vault, and returns the
+// validated key-bytes hex. The direct keygen path (exchangeRound3) and the
+// quorum-adoption path (AdoptQuorumSuccess) gate on this identical proof;
+// sharing it keeps the two copies from drifting the day one side gains a check
+// the other misses. Callers map the returned error to their own blame/bool
+// result shape.
+func validateFinalizeKeyshare(finalizeResp FrostSidecarDKGFinalizeResp) (string, error) {
+	if !finalizeResp.Success {
+		return "", errors.New("frost dkg finalize returned unsuccessful response")
+	}
+	keyBytesHex := strings.TrimSpace(finalizeResp.KeyBytesHex)
+	if keyBytesHex == "" {
+		return "", errors.New("frost dkg finalize returned empty key bytes")
+	}
+	if _, err := hex.DecodeString(keyBytesHex); err != nil {
+		return "", errors.New("frost dkg finalize returned invalid key bytes hex")
+	}
+	return keyBytesHex, nil
 }
 
 func frostKeygenJoinThreshold(participantCount int) int {
@@ -436,23 +503,11 @@ func (c *FrostKeygenCoordinator) Execute(
 			Blame:  blame.NewBlame(fmt.Sprintf("frost dkg finalize failed: %v", err), nil),
 		}
 	}
-	if !finalizeResp.Success {
+	keyBytesHex, err := validateFinalizeKeyshare(finalizeResp)
+	if err != nil {
 		return FrostKeygenResponse{
 			Status: tcommon.Fail,
-			Blame:  buildBlame("frost dkg finalize returned unsuccessful response", frostDKGRound3, nil),
-		}
-	}
-	keyBytesHex := strings.TrimSpace(finalizeResp.KeyBytesHex)
-	if keyBytesHex == "" {
-		return FrostKeygenResponse{
-			Status: tcommon.Fail,
-			Blame:  buildBlame("frost dkg finalize returned empty key bytes", frostDKGRound3, nil),
-		}
-	}
-	if _, err := hex.DecodeString(keyBytesHex); err != nil {
-		return FrostKeygenResponse{
-			Status: tcommon.Fail,
-			Blame:  buildBlame("frost dkg finalize returned invalid key bytes hex", frostDKGRound3, nil),
+			Blame:  buildBlame(err.Error(), frostDKGRound3, nil),
 		}
 	}
 
@@ -834,7 +889,18 @@ func (c *FrostKeygenCoordinator) exchangeRound3(
 		resp := c.failForPubKeys(failure.reason, frostDKGRound3, failure.blamePubKey)
 		return "", "", 0, &resp
 	}
-	timer := time.NewTimer(c.timeout)
+	// Test-only fault injection for the keygen-jail simulation: shrink ONLY the
+	// round-3 wait so this node abandons the DKG after it has sent everything
+	// peers need to finish without it, reproducing the timing-skew split behind
+	// the chainnet keygen mass-jailing. Unset in production; empty is a no-op.
+	round3Timeout := c.timeout
+	if ms := frostKeygenTestRound3TimeoutMS(); ms > 0 {
+		round3Timeout = time.Duration(ms) * time.Millisecond
+		c.logger.Warn().
+			Dur("round3_timeout", round3Timeout).
+			Msg("TEST override active: XMR_FROST_KEYGEN_TEST_ROUND3_TIMEOUT_MS shrinks the round-3 wait")
+	}
+	timer := time.NewTimer(round3Timeout)
 	defer timer.Stop()
 
 	for !verifier.isComplete() {
@@ -965,6 +1031,66 @@ func (c *FrostKeygenCoordinator) exchangeRound3(
 	return groupAddress, groupKey, minMoneroHeight, nil
 }
 
+// AdoptQuorumSuccess turns a quorum keygen success into this node's own
+// result after a failed local execution, if and only if the node can prove it
+// holds a keyshare for exactly that vault: the sidecar finalize validates the
+// stored DKG session key material against the adopted group key and address
+// and returns the keyshare backup. This heals the timing-skew split where a
+// round timer expires moments before the last peer message and a completed
+// DKG would otherwise be reported as a keygen failure - whose tss ID differs
+// from the success, jailing this node with no path to release. A node whose
+// DKG session did not complete fails the finalize and keeps its failure
+// result: a member without a keyshare must never report success.
+func (c *FrostKeygenCoordinator) AdoptQuorumSuccess(req FrostKeygenRequest, quorumResp FrostKeygenResponse) (FrostKeygenResponse, bool) {
+	address := strings.TrimSpace(quorumResp.Address)
+	groupKey := strings.TrimSpace(quorumResp.GroupKey)
+	if address == "" || groupKey == "" {
+		c.logger.Warn().Msg("skip adopting quorum keygen success: empty address or group key")
+		return FrostKeygenResponse{}, false
+	}
+	if req.ExpectedAddr != "" && address != req.ExpectedAddr {
+		c.logger.Error().
+			Str("expected", req.ExpectedAddr).
+			Str("address", address).
+			Msg("skip adopting quorum keygen success: address does not match expected")
+		return FrostKeygenResponse{}, false
+	}
+	if quorumResp.ObservedMoneroHeight <= 0 {
+		c.logger.Warn().Msg("skip adopting quorum keygen success: missing observed monero height")
+		return FrostKeygenResponse{}, false
+	}
+	finalizeResp, err := c.sidecar.FrostDKGFinalize(FrostSidecarDKGFinalizeReq{
+		SessionID: c.msgID,
+		GroupKey:  groupKey,
+		Address:   address,
+	})
+	if err != nil {
+		c.logger.Warn().Err(err).Msg("cannot adopt quorum keygen success: local keyshare finalize failed")
+		return FrostKeygenResponse{}, false
+	}
+	keyBytesHex, err := validateFinalizeKeyshare(finalizeResp)
+	if err != nil {
+		c.logger.Warn().Err(err).Msg("cannot adopt quorum keygen success: finalize keyshare proof invalid")
+		return FrostKeygenResponse{}, false
+	}
+	// The observed monero height is adopted from the quorum result, not observed
+	// independently by this node: the sidecar finalize proof binds the group key
+	// and address but not the height, and the on-chain success vote's tss ID only
+	// matches the finishers when the height matches theirs. Adopting their value
+	// is therefore required, not optional - so this node attests to a height it
+	// did not itself observe. The `> 0` guard above is the only local sanity
+	// check; a stricter bound (height within a window of this node's last-seen
+	// XMR height) would harden against a fully hostile quorum but cannot be
+	// enforced here without breaking tss-ID agreement.
+	return FrostKeygenResponse{
+		Address:              address,
+		GroupKey:             groupKey,
+		KeyBytesHex:          keyBytesHex,
+		ObservedMoneroHeight: quorumResp.ObservedMoneroHeight,
+		Status:               tcommon.Success,
+	}, true
+}
+
 func (c *FrostKeygenCoordinator) WaitForResult(activeParticipants []string, quorum int, timeout time.Duration) (FrostKeygenResponse, error) {
 	_, _, activeByNormalized, err := buildParticipantIndex(activeParticipants)
 	if err != nil {
@@ -984,6 +1110,11 @@ func (c *FrostKeygenCoordinator) WaitForResult(activeParticipants []string, quor
 	}
 
 	buckets := make(map[string]*dkgResultVoteBucket)
+	// Last write wins per sender: an active sender re-voting with a different
+	// result moves between buckets instead of inflating the map, so a single
+	// hostile member can neither grow memory without bound nor hold votes in
+	// two buckets at once.
+	voteBySender := make(map[string]string)
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
@@ -996,31 +1127,49 @@ func (c *FrostKeygenCoordinator) WaitForResult(activeParticipants []string, quor
 			if strings.TrimSpace(wrapped.MsgID) != c.msgID {
 				continue
 			}
+			// Invalid result messages are gossip noise and must never end the
+			// wait: the msg ID is derivable by any connected peer, so a single
+			// malformed or unauthorized message arriving before the genuine
+			// quorum would otherwise veto the adoption path and every
+			// non-active waiter. Mirror the keysign result waiter: log, skip,
+			// and keep waiting for quorum or timeout.
 			var payload FrostDKGResultPayload
 			if err := json.Unmarshal(wrapped.Payload, &payload); err != nil {
-				resp := c.failForMalformed(msg.PeerID, "invalid frost dkg result payload", frostDKGResult)
-				return resp, nil
+				c.logger.Warn().Err(err).Str("peer", msg.PeerID.String()).Msg("skipping malformed frost dkg result payload")
+				continue
 			}
 
 			senderNorm := normalizePubKey(payload.SenderPubKey)
 			if senderNorm == "" {
-				resp := c.failForMalformed(msg.PeerID, "empty sender pubkey in frost dkg result", frostDKGResult)
-				return resp, nil
+				c.logger.Warn().Str("peer", msg.PeerID.String()).Msg("skipping frost dkg result with empty sender pubkey")
+				continue
 			}
 			if _, ok := activeByNormalized[senderNorm]; !ok {
-				resp := c.failForPubKeys("result sender is not in active signer set", frostDKGResult, []string{payload.SenderPubKey})
-				return resp, nil
+				c.logger.Warn().Str("sender", payload.SenderPubKey).Msg("skipping frost dkg result from non-active participant")
+				continue
 			}
 			if err := c.validateSenderPeerBinding(msg.PeerID, payload.SenderPubKey); err != nil {
-				resp := c.failForPubKeys(err.Error(), frostDKGResult, []string{payload.SenderPubKey})
-				return resp, nil
+				c.logger.Warn().Err(err).Str("sender", payload.SenderPubKey).Msg("skipping frost dkg result with peer binding mismatch")
+				continue
 			}
 
 			normalized, matchKey, err := normalizeDKGResultPayload(payload.Response)
 			if err != nil {
-				resp := c.failForPubKeys(err.Error(), frostDKGResult, []string{payload.SenderPubKey})
-				return resp, nil
+				c.logger.Warn().Err(err).Str("sender", payload.SenderPubKey).Msg("skipping malformed frost dkg result")
+				continue
 			}
+			if prevKey, voted := voteBySender[senderNorm]; voted {
+				if prevKey == matchKey {
+					continue
+				}
+				if prev := buckets[prevKey]; prev != nil {
+					delete(prev.voters, senderNorm)
+					if len(prev.voters) == 0 {
+						delete(buckets, prevKey)
+					}
+				}
+			}
+			voteBySender[senderNorm] = matchKey
 			bucket := buckets[matchKey]
 			if bucket == nil {
 				bucket = &dkgResultVoteBucket{

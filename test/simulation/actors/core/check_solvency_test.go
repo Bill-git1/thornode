@@ -152,3 +152,33 @@ func TestSolvencyMismatchRetryable(t *testing.T) {
 		})
 	}
 }
+
+func TestEd25519SolvencyPubKeyUsesVaultKeyForXMR(t *testing.T) {
+	eddsaKey := common.PubKey("tthorpub1zcjduepqamk0ywsr8x95evuv4xm85p225sd7w763y69l9lyclznp6eyqqv9qgvhalh")
+	frostKey := common.PubKey("tthorpub1zcjduepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vskkjr3d")
+
+	got := ed25519SolvencyPubKey(common.XMRAsset, eddsaKey, frostKey)
+	if !got.Equals(frostKey) {
+		t.Fatalf("expected XMR solvency to query vault frost pubkey %s, got %s", frostKey, got)
+	}
+
+	got = ed25519SolvencyPubKey(common.SOLAsset, eddsaKey, frostKey)
+	if !got.Equals(eddsaKey) {
+		t.Fatalf("expected SOL solvency to query vault eddsa pubkey %s, got %s", eddsaKey, got)
+	}
+}
+
+func TestSolvencySkipsXMRVaultWithoutPubKey(t *testing.T) {
+	eddsaKey := common.PubKey("tthorpub1zcjduepqamk0ywsr8x95evuv4xm85p225sd7w763y69l9lyclznp6eyqqv9qgvhalh")
+	frostKey := common.PubKey("tthorpub1zcjduepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vskkjr3d")
+
+	if !skipSolvencyVaultCoin(common.XMRAsset, "", "") {
+		t.Fatal("expected XMR without a frost pubkey to be skipped")
+	}
+	if skipSolvencyVaultCoin(common.XMRAsset, "", frostKey) {
+		t.Fatal("expected XMR with a frost pubkey to be checked")
+	}
+	if skipSolvencyVaultCoin(common.SOLAsset, eddsaKey, "") {
+		t.Fatal("expected SOL with an eddsa pubkey to be checked")
+	}
+}

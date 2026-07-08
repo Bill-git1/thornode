@@ -813,6 +813,167 @@ func (s *HandlerTssSuite) TestXMRMonovaultKeygenFinalizesOnSuperMajority(c *C) {
 	c.Assert(vault.VaultCreationHeightXmr, Equals, observedMoneroHeight)
 }
 
+// TestXMRMonovaultKeygenFailureSubmitterStaysJailedAfterSuccessConsensus pins
+// the mass-jailing mechanism observed on chainnet. Two defects compound:
+//
+// Defect 1 (different-ID trap): a member whose local FROST DKG timed out
+// submits a keygen *failure* with blame, which carries a different msg ID
+// than the success (getTssID hashes the blame). When the finishers reach 2/3
+// success consensus, judgeLateSigner jails every member that has not signed
+// the success ID — and a failure submitter can never sign it, so its jail
+// sticks for the full JailTimeKeygen.
+//
+// Defect 2 (broken self-heal): judgeLateSigner receives the voter by value
+// and persists MajorityConsensusBlockHeight itself, but the vault-finalize
+// path that runs right after it calls SetTssVoter with the handler's stale
+// copy, zeroing the field again. XMR monovault keygen always finalizes on
+// the consensus-reaching message, so the first late same-ID signer hits the
+// "first consensus" branch instead of the release branch: it is NOT released,
+// and every remaining absentee is RE-jailed with a fresh release height.
+//
+// The assertions encode the CURRENT (buggy) on-chain behavior. The bifrost
+// half of the fix has landed (AdoptQuorumSuccess: a timed-out member with a
+// completed DKG session adopts the quorum success and votes the same ID, so
+// the failure vote below mostly stops being produced). This test's
+// expectations flip with the on-chain half: MajorityConsensusBlockHeight
+// persisted correctly so late same-ID signers are released (defect 2), and
+// optionally a grace window / no-jail for XMRMonovaultKeygen (defect 1 for
+// members that genuinely cannot adopt).
+func (s *HandlerTssSuite) TestXMRMonovaultKeygenFailureSubmitterStaysJailedAfterSuccessConsensus(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	dummySlasher, ok := handler.mgr.Slasher().(*DummySlasher)
+	c.Assert(ok, Equals, true)
+
+	keygenBlock := NewKeygenBlock(helper.ctx.BlockHeight())
+	keygenBlock.Keygens = []Keygen{{
+		Type:    XMRMonovaultKeygen,
+		Members: helper.members.Strings(),
+	}}
+	helper.keeper.SetKeygenBlock(helper.ctx, keygenBlock)
+
+	poolPubKey := GetRandomPubKey()
+	frostPubKey := GetRandomEd25519PubKey()
+	observedMoneroHeight := int64(777)
+	keygenTime := int64(1024)
+	keygenHeight := helper.ctx.BlockHeight()
+
+	// members[0] is the victim: its DKG timed out waiting for peers, so it
+	// blames the members it did not hear from. members[1] is merely slow.
+	// members[2:] finish in time; 6 of 8 is a supermajority.
+	victim := helper.members[0]
+	victimAddr, err := victim.GetThorAddress()
+	c.Assert(err, IsNil)
+	slowMember := helper.members[1]
+	slowAddr, err := slowMember.GetThorAddress()
+	c.Assert(err, IsNil)
+
+	failureMsg, err := NewMsgTssPoolV3(
+		helper.members.Strings(),
+		poolPubKey,
+		nil,
+		nil,
+		XMRMonovaultKeygen,
+		keygenHeight,
+		[]Blame{{
+			FailReason: "round1 commitments timeout",
+			Round:      "frostDKGRound1",
+			BlameNodes: []Node{
+				{Pubkey: helper.members[6].String()},
+				{Pubkey: helper.members[7].String()},
+			},
+		}},
+		xmrMonovaultChains().Strings(),
+		victimAddr,
+		keygenTime,
+		common.EmptyPubKey,
+		nil,
+		nil,
+		common.EmptyPubKey,
+		0,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(handler.handle(helper.ctx, failureMsg), IsNil)
+
+	successMsgFor := func(member common.PubKey) *MsgTssPool {
+		addr, addrErr := member.GetThorAddress()
+		c.Assert(addrErr, IsNil)
+		msg, msgErr := NewMsgTssPoolV3(
+			helper.members.Strings(),
+			poolPubKey,
+			nil,
+			nil,
+			XMRMonovaultKeygen,
+			keygenHeight,
+			nil,
+			xmrMonovaultChains().Strings(),
+			addr,
+			keygenTime,
+			common.EmptyPubKey,
+			nil,
+			validTssKeyshareBackup(),
+			frostPubKey,
+			observedMoneroHeight,
+		)
+		c.Assert(msgErr, IsNil)
+		return msg
+	}
+
+	var successID string
+	for _, member := range helper.members[2:] {
+		msg := successMsgFor(member)
+		successID = msg.ID
+		c.Assert(handler.handle(helper.ctx, msg), IsNil)
+	}
+	c.Assert(successID == failureMsg.ID, Equals, false)
+
+	// Success consensus reached and the vault finalized, despite the victim.
+	voter, err := helper.keeper.GetTssVoter(helper.ctx, successID)
+	c.Assert(err, IsNil)
+	c.Assert(voter.HasConsensus(), Equals, true)
+	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, true)
+
+	// judgeLateSigner jailed both non-signers of the success ID.
+	failKeygenSlashPoints := helper.constAccessor.GetInt64Value(constants.FailKeygenSlashPoints)
+	for _, addr := range []cosmos.AccAddress{victimAddr, slowAddr} {
+		jail, jailErr := helper.keeper.GetNodeAccountJail(helper.ctx, addr)
+		c.Assert(jailErr, IsNil)
+		c.Assert(jail.ReleaseHeight > helper.ctx.BlockHeight(), Equals, true)
+		points, pointsOk := dummySlasher.pts[addr.String()]
+		c.Assert(pointsOk, Equals, true)
+		c.Assert(points >= failKeygenSlashPoints, Equals, true)
+	}
+
+	victimJailAtConsensus, err := helper.keeper.GetNodeAccountJail(helper.ctx, victimAddr)
+	c.Assert(err, IsNil)
+
+	// Defect 2: the slow member signs the same success ID late. By
+	// judgeLateSigner's design this must release it, but the finalize path
+	// zeroed MajorityConsensusBlockHeight (SetTssVoter with a stale voter
+	// copy), so the release branch never runs: the slow member stays jailed,
+	// and the victim is RE-jailed with a fresh release height.
+	helper.ctx = helper.ctx.WithBlockHeight(helper.ctx.BlockHeight() + 10)
+	c.Assert(handler.handle(helper.ctx, successMsgFor(slowMember)), IsNil)
+	slowJail, err := helper.keeper.GetNodeAccountJail(helper.ctx, slowAddr)
+	c.Assert(err, IsNil)
+	c.Assert(slowJail.ReleaseHeight > helper.ctx.BlockHeight(), Equals, true)
+	victimJailAfterLateSign, err := helper.keeper.GetNodeAccountJail(helper.ctx, victimAddr)
+	c.Assert(err, IsNil)
+	c.Assert(victimJailAfterLateSign.ReleaseHeight > victimJailAtConsensus.ReleaseHeight, Equals, true)
+
+	// Defect 1: the victim's failure carries a different ID, so no success-ID
+	// signature can ever come from it. Re-submitting the failure is silently
+	// ignored as a duplicate vote (handle returns nil without any state
+	// change). This is the jail that stuck on chainnet.
+	c.Assert(handler.handle(helper.ctx, failureMsg), IsNil)
+	victimJail, err := helper.keeper.GetNodeAccountJail(helper.ctx, victimAddr)
+	c.Assert(err, IsNil)
+	c.Assert(victimJail.ReleaseHeight > helper.ctx.BlockHeight(), Equals, true)
+	victimPoints, ok := dummySlasher.pts[victimAddr.String()]
+	c.Assert(ok, Equals, true)
+	c.Assert(victimPoints >= failKeygenSlashPoints, Equals, true)
+}
+
 func (s *HandlerTssSuite) TestXMRMonovaultKeygenRejectsMismatchedLatchedFields(c *C) {
 	helper := newTssHandlerTestHelper(c)
 	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))

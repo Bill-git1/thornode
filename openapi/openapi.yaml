@@ -2504,6 +2504,8 @@ components:
           type: string
         pub_key_eddsa:
           type: string
+        pub_key_frost:
+          type: string
         coins:
           type: array
           items:

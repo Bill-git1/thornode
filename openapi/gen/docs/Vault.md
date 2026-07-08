@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **BlockHeight** | Pointer to **int64** |  | [optional] 
 **PubKey** | Pointer to **string** |  | [optional] 
 **PubKeyEddsa** | Pointer to **string** |  | [optional] 
+**PubKeyFrost** | Pointer to **string** |  | [optional] 
 **Coins** | [**[]Coin**](Coin.md) |  | 
 **Type** | Pointer to **string** |  | [optional] 
 **Status** | **string** |  | 
@@ -113,6 +114,31 @@ SetPubKeyEddsa sets PubKeyEddsa field to given value.
 `func (o *Vault) HasPubKeyEddsa() bool`
 
 HasPubKeyEddsa returns a boolean if a field has been set.
+
+### GetPubKeyFrost
+
+`func (o *Vault) GetPubKeyFrost() string`
+
+GetPubKeyFrost returns the PubKeyFrost field if non-nil, zero value otherwise.
+
+### GetPubKeyFrostOk
+
+`func (o *Vault) GetPubKeyFrostOk() (*string, bool)`
+
+GetPubKeyFrostOk returns a tuple with the PubKeyFrost field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPubKeyFrost
+
+`func (o *Vault) SetPubKeyFrost(v string)`
+
+SetPubKeyFrost sets PubKeyFrost field to given value.
+
+### HasPubKeyFrost
+
+`func (o *Vault) HasPubKeyFrost() bool`
+
+HasPubKeyFrost returns a boolean if a field has been set.
 
 ### GetCoins
 

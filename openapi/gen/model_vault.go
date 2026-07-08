@@ -19,6 +19,7 @@ type Vault struct {
 	BlockHeight *int64 `json:"block_height,omitempty"`
 	PubKey *string `json:"pub_key,omitempty"`
 	PubKeyEddsa *string `json:"pub_key_eddsa,omitempty"`
+	PubKeyFrost *string `json:"pub_key_frost,omitempty"`
 	Coins []Coin `json:"coins"`
 	Type *string `json:"type,omitempty"`
 	Status string `json:"status"`
@@ -149,6 +150,38 @@ func (o *Vault) HasPubKeyEddsa() bool {
 // SetPubKeyEddsa gets a reference to the given string and assigns it to the PubKeyEddsa field.
 func (o *Vault) SetPubKeyEddsa(v string) {
 	o.PubKeyEddsa = &v
+}
+
+// GetPubKeyFrost returns the PubKeyFrost field value if set, zero value otherwise.
+func (o *Vault) GetPubKeyFrost() string {
+	if o == nil || o.PubKeyFrost == nil {
+		var ret string
+		return ret
+	}
+	return *o.PubKeyFrost
+}
+
+// GetPubKeyFrostOk returns a tuple with the PubKeyFrost field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Vault) GetPubKeyFrostOk() (*string, bool) {
+	if o == nil || o.PubKeyFrost == nil {
+		return nil, false
+	}
+	return o.PubKeyFrost, true
+}
+
+// HasPubKeyFrost returns a boolean if a field has been set.
+func (o *Vault) HasPubKeyFrost() bool {
+	if o != nil && o.PubKeyFrost != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPubKeyFrost gets a reference to the given string and assigns it to the PubKeyFrost field.
+func (o *Vault) SetPubKeyFrost(v string) {
+	o.PubKeyFrost = &v
 }
 
 // GetCoins returns the Coins field value
@@ -513,6 +546,9 @@ func (o Vault) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.PubKeyEddsa != nil {
 		toSerialize["pub_key_eddsa"] = o.PubKeyEddsa
+	}
+	if o.PubKeyFrost != nil {
+		toSerialize["pub_key_frost"] = o.PubKeyFrost
 	}
 	if true {
 		toSerialize["coins"] = o.Coins

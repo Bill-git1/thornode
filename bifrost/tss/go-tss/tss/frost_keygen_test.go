@@ -12,6 +12,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	tcommon "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
+	thorchaintypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type mockFrostSidecarKeygen struct {
@@ -906,6 +907,398 @@ func TestFrostKeygenExecuteSuccess(t *testing.T) {
 	}
 	if sidecar.finalizeReqs[0].GroupKey != groupKey || sidecar.finalizeReqs[0].Address != groupAddress {
 		t.Fatalf("unexpected finalize payload: %+v", sidecar.finalizeReqs[0])
+	}
+}
+
+// TestFrostKeygenExecuteBlamesAlmostCompleteFinisherOnLastRoundTimeout pins
+// the bifrost half of the chainnet mass-jailing mechanism and its fix. The
+// remote peer participates fully through rounds 1 and 2 — payloads and
+// transcript verifications — and goes silent only in round 3, after the
+// local sidecar has already derived the group key. The DKG was one peer
+// message away from completing, and Execute still fails with a round-3
+// timeout blame (unchanged: the coordinator cannot know the peers finished).
+//
+// The healing now happens one level up: when the peers' result broadcasts
+// reach the on-chain supermajority threshold, AdoptQuorumSuccess proves the
+// local keyshare against the adopted group key via the sidecar finalize and
+// converts the failure into the same success the finishers report — same tss
+// ID, so the node votes with the quorum instead of filing a permanently
+// unreleasable failure (see
+// TestXMRMonovaultKeygenFailureSubmitterStaysJailedAfterSuccessConsensus in
+// x/thorchain for the on-chain half, which still needs the
+// MajorityConsensusBlockHeight fix for reports landing after consensus).
+// The tail of this test covers exactly that adoption.
+func TestFrostKeygenExecuteBlamesAlmostCompleteFinisherOnLastRoundTimeout(t *testing.T) {
+	ensureBech32Prefix()
+
+	members := []string{testPubKeys[0], testPubKeys[1]}
+	_, participantIndexMap, signerByNormalized, err := buildParticipantIndex(members)
+	if err != nil {
+		t.Fatalf("build participant index: %v", err)
+	}
+	activeSet, err := buildActiveSet(members, signerByNormalized)
+	if err != nil {
+		t.Fatalf("build active set: %v", err)
+	}
+	activePeerIDs, err := conversion.GetPeerIDsFromPubKeys(members)
+	if err != nil {
+		t.Fatalf("peer ids: %v", err)
+	}
+
+	localIndex := participantIndexMap[normalizePubKey(testPubKeys[0])]
+	remoteIndex := participantIndexMap[normalizePubKey(testPubKeys[1])]
+	localIndexKey := strconv.FormatUint(uint64(localIndex), 10)
+	remoteIndexKey := strconv.FormatUint(uint64(remoteIndex), 10)
+
+	msgChan := make(chan *p2p.Message, 32)
+	groupAddress := "48xmrvaultaddress"
+	groupKey := strings.Repeat("ab", 32)
+
+	localRound1 := FrostDKGRound1Payload{
+		SenderPubKey:     testPubKeys[0],
+		ParticipantIndex: localIndex,
+		Commitments:      "local-commitment",
+	}
+	remoteRound1 := FrostDKGRound1Payload{
+		SenderPubKey:     testPubKeys[1],
+		ParticipantIndex: remoteIndex,
+		Commitments:      "remote-commitment",
+	}
+	localRound1Hash, err := FrostTranscriptDKGRound1Hash("msg-id", localRound1)
+	if err != nil {
+		t.Fatalf("local round1 hash: %v", err)
+	}
+	remoteRound1Hash, err := FrostTranscriptDKGRound1Hash("msg-id", remoteRound1)
+	if err != nil {
+		t.Fatalf("remote round1 hash: %v", err)
+	}
+
+	localRound2 := FrostDKGRound2Payload{
+		SenderPubKey:     testPubKeys[0],
+		ParticipantIndex: localIndex,
+		EncryptedShares: map[string]string{
+			remoteIndexKey: "local-to-remote",
+		},
+	}
+	remoteRound2 := FrostDKGRound2Payload{
+		SenderPubKey:     testPubKeys[1],
+		ParticipantIndex: remoteIndex,
+		EncryptedShares: map[string]string{
+			localIndexKey: "remote-to-local",
+		},
+	}
+	localRound2Hash, err := FrostTranscriptDKGRound2Hash("msg-id", localRound2)
+	if err != nil {
+		t.Fatalf("local round2 hash: %v", err)
+	}
+	remoteRound2Hash, err := FrostTranscriptDKGRound2Hash("msg-id", remoteRound2)
+	if err != nil {
+		t.Fatalf("remote round2 hash: %v", err)
+	}
+
+	// Rounds 1 and 2: the remote peer is fully present and verifiable.
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGRound1Msg, "msg-id", testPubKeys[1], remoteRound1)
+	enqueueVerifyMessage(t, msgChan, "msg-id", testPubKeys[1], FrostVerifyPayload{
+		SenderPubKey:           testPubKeys[1],
+		Round:                  frostDKGRound1,
+		TargetSenderPubKey:     testPubKeys[1],
+		TargetParticipantIndex: remoteIndex,
+		PayloadHash:            remoteRound1Hash,
+	})
+	enqueueVerifyMessage(t, msgChan, "msg-id", testPubKeys[1], FrostVerifyPayload{
+		SenderPubKey:           testPubKeys[1],
+		Round:                  frostDKGRound1,
+		TargetSenderPubKey:     testPubKeys[0],
+		TargetParticipantIndex: localIndex,
+		PayloadHash:            localRound1Hash,
+	})
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGRound2Msg, "msg-id", testPubKeys[1], remoteRound2)
+	enqueueVerifyMessage(t, msgChan, "msg-id", testPubKeys[1], FrostVerifyPayload{
+		SenderPubKey:           testPubKeys[1],
+		Round:                  frostDKGRound2,
+		TargetSenderPubKey:     testPubKeys[1],
+		TargetParticipantIndex: remoteIndex,
+		PayloadHash:            remoteRound2Hash,
+	})
+	enqueueVerifyMessage(t, msgChan, "msg-id", testPubKeys[1], FrostVerifyPayload{
+		SenderPubKey:           testPubKeys[1],
+		Round:                  frostDKGRound2,
+		TargetSenderPubKey:     testPubKeys[0],
+		TargetParticipantIndex: localIndex,
+		PayloadHash:            localRound2Hash,
+	})
+	// Round 3: nothing from the remote peer — its final message is a moment
+	// too late for the local per-round timer.
+
+	sidecar := &mockFrostSidecarKeygen{
+		round1Resp: FrostSidecarDKGRound1Resp{Commitments: "local-commitment"},
+		round2Resp: FrostSidecarDKGRound2Resp{EncryptedShares: localRound2.EncryptedShares},
+		round3Resp: FrostSidecarDKGRound3Resp{
+			Address:  groupAddress,
+			GroupKey: groupKey,
+		},
+		finalizeResp: FrostSidecarDKGFinalizeResp{Success: true, KeyBytesHex: "abcd"},
+		chainHeight:  456,
+	}
+
+	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id", msgChan, 150*time.Millisecond)
+	coord.sidecar = sidecar
+	resp := coord.Execute(FrostKeygenRequest{
+		VaultPubKey:   "thorpub-vault",
+		SignerPubKeys: members,
+		ExpectedAddr:  groupAddress,
+	}, activeSet, activePeerIDs)
+
+	// Current behavior: timeout failure blaming the almost-complete peer.
+	if resp.Status != tcommon.Fail {
+		t.Fatalf("expected fail status, got %d (resp %+v)", resp.Status, resp)
+	}
+	if resp.Blame.Round != frostDKGRound3 {
+		t.Fatalf("expected blame round %s, got %s", frostDKGRound3, resp.Blame.Round)
+	}
+	if len(resp.Blame.BlameNodes) != 1 || resp.Blame.BlameNodes[0].Pubkey != testPubKeys[1] {
+		t.Fatalf("expected round3 timeout blame for %s, got %+v", testPubKeys[1], resp.Blame.BlameNodes)
+	}
+
+	// The local sidecar had already derived the group key: the DKG state was
+	// one peer message away from done when the node gave up.
+	if len(sidecar.round3Reqs) != 1 {
+		t.Fatalf("expected local round3 sidecar call to have happened, got %d", len(sidecar.round3Reqs))
+	}
+	if len(sidecar.finalizeReqs) != 0 {
+		t.Fatalf("expected no finalize call after timeout, got %d", len(sidecar.finalizeReqs))
+	}
+
+	// The fix: once the finishers' result broadcasts reach quorum, the node
+	// adopts their success — the sidecar finalize proves the local session
+	// derived exactly the adopted group key and hands back the keyshare, so
+	// the node reports the same-ID success instead of the failure above.
+	quorumResp := FrostKeygenResponse{
+		Address:              groupAddress,
+		GroupKey:             groupKey,
+		ObservedMoneroHeight: 456,
+		Status:               tcommon.Success,
+	}
+	adopted, ok := coord.AdoptQuorumSuccess(FrostKeygenRequest{
+		VaultPubKey:   "thorpub-vault",
+		SignerPubKeys: members,
+		ExpectedAddr:  groupAddress,
+	}, quorumResp)
+	if !ok {
+		t.Fatalf("expected quorum success adoption after completed local DKG")
+	}
+	if adopted.Status != tcommon.Success {
+		t.Fatalf("expected adopted success status, got %d", adopted.Status)
+	}
+	if adopted.Address != groupAddress || adopted.GroupKey != groupKey {
+		t.Fatalf("adopted result must carry the quorum vault: %+v", adopted)
+	}
+	if adopted.ObservedMoneroHeight != 456 {
+		t.Fatalf("adopted result must carry the quorum monero height, got %d", adopted.ObservedMoneroHeight)
+	}
+	if adopted.KeyBytesHex != "abcd" {
+		t.Fatalf("adopted result must carry the locally finalized keyshare, got %q", adopted.KeyBytesHex)
+	}
+	if len(sidecar.finalizeReqs) != 1 {
+		t.Fatalf("expected exactly one finalize call for the adoption proof, got %d", len(sidecar.finalizeReqs))
+	}
+	if sidecar.finalizeReqs[0].GroupKey != groupKey || sidecar.finalizeReqs[0].Address != groupAddress {
+		t.Fatalf("adoption must finalize against the adopted vault: %+v", sidecar.finalizeReqs[0])
+	}
+}
+
+// TestFrostKeygenAdoptQuorumSuccessRequiresKeyshareProof pins the safety of
+// the adoption path: a node may only convert a quorum success into its own
+// result when the sidecar finalize proves its DKG session derived exactly
+// the adopted vault. Every failure of that proof keeps the local failure.
+func TestFrostKeygenAdoptQuorumSuccessRequiresKeyshareProof(t *testing.T) {
+	ensureBech32Prefix()
+
+	groupAddress := "48xmrvaultaddress"
+	groupKey := strings.Repeat("ab", 32)
+	req := FrostKeygenRequest{VaultPubKey: "thorpub-vault", ExpectedAddr: groupAddress}
+	quorumResp := FrostKeygenResponse{
+		Address:              groupAddress,
+		GroupKey:             groupKey,
+		ObservedMoneroHeight: 456,
+		Status:               tcommon.Success,
+	}
+
+	// No completed local DKG session: the sidecar rejects the finalize and the
+	// adoption must be refused.
+	sidecar := &mockFrostSidecarKeygen{finalizeErr: errors.New("DKG session keys not found")}
+	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id", make(chan *p2p.Message, 1), time.Second)
+	coord.sidecar = sidecar
+	if _, ok := coord.AdoptQuorumSuccess(req, quorumResp); ok {
+		t.Fatalf("expected adoption refusal without a finalizable local session")
+	}
+
+	// Address not matching the expected vault address: refuse before ever
+	// touching the sidecar.
+	sidecar = &mockFrostSidecarKeygen{finalizeResp: FrostSidecarDKGFinalizeResp{Success: true, KeyBytesHex: "abcd"}}
+	coord.sidecar = sidecar
+	mismatched := quorumResp
+	mismatched.Address = "48otheraddress"
+	if _, ok := coord.AdoptQuorumSuccess(req, mismatched); ok {
+		t.Fatalf("expected adoption refusal on expected-address mismatch")
+	}
+	if len(sidecar.finalizeReqs) != 0 {
+		t.Fatalf("expected no finalize call on address mismatch, got %d", len(sidecar.finalizeReqs))
+	}
+
+	// Finalize succeeding without key bytes cannot prove keyshare possession.
+	sidecar = &mockFrostSidecarKeygen{finalizeResp: FrostSidecarDKGFinalizeResp{Success: true}}
+	coord.sidecar = sidecar
+	if _, ok := coord.AdoptQuorumSuccess(req, quorumResp); ok {
+		t.Fatalf("expected adoption refusal on empty keyshare bytes")
+	}
+
+	// A quorum response without a positive monero height cannot build a valid
+	// XMR keygen success message.
+	sidecar = &mockFrostSidecarKeygen{finalizeResp: FrostSidecarDKGFinalizeResp{Success: true, KeyBytesHex: "abcd"}}
+	coord.sidecar = sidecar
+	noHeight := quorumResp
+	noHeight.ObservedMoneroHeight = 0
+	if _, ok := coord.AdoptQuorumSuccess(req, noHeight); ok {
+		t.Fatalf("expected adoption refusal without observed monero height")
+	}
+}
+
+// TestFrostKeygenAdoptionQuorumMatchesOnChainSupermajority keeps the bifrost
+// adoption threshold aligned with x/thorchain/types.HasSuperMajority: adopt
+// exactly when THORChain will finalize the vault. It asserts against the
+// on-chain rule itself rather than hardcoded literals, so a change to
+// SuperMajorityFactor is caught here instead of silently diverging from the
+// bifrost copy.
+func TestFrostKeygenAdoptionQuorumMatchesOnChainSupermajority(t *testing.T) {
+	if got := frostKeygenAdoptionQuorum(0); got != 0 {
+		t.Fatalf("adoption quorum for 0 participants: expected 0, got %d", got)
+	}
+	for total := 1; total <= 128; total++ {
+		q := frostKeygenAdoptionQuorum(total)
+		// q must be the exact on-chain supermajority threshold for `total`
+		// members: q reaches it, q-1 does not.
+		if !thorchaintypes.HasSuperMajority(q, total) {
+			t.Fatalf("adoption quorum %d for %d participants is below the on-chain supermajority", q, total)
+		}
+		if thorchaintypes.HasSuperMajority(q-1, total) {
+			t.Fatalf("adoption quorum %d for %d participants exceeds the on-chain supermajority (q-1 already reaches it)", q, total)
+		}
+	}
+}
+
+// TestFrostKeygenWaitForResultSurvivesInvalidResultMessages pins the result
+// waiter's noise tolerance: the keygen msg ID is derivable by any connected
+// peer, so a single malformed or unauthorized DKG result message arriving
+// before the genuine quorum must be skipped, not end the wait — otherwise one
+// peer could veto the quorum-success adoption and every non-active waiter.
+// (This mirrors the keysign result waiter's behavior.)
+func TestFrostKeygenWaitForResultSurvivesInvalidResultMessages(t *testing.T) {
+	ensureBech32Prefix()
+
+	members := []string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}
+	groupAddress := "48xmrvaultaddress"
+	groupKey := strings.Repeat("ab", 32)
+	success := FrostDKGResult{
+		Address:              groupAddress,
+		GroupKey:             groupKey,
+		ObservedMoneroHeight: 456,
+		Status:               uint8(tcommon.Success),
+	}
+
+	msgChan := make(chan *p2p.Message, 16)
+
+	// 1. Unparseable result payload.
+	enqueueWrappedPayload(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[1], []byte("{not-json"))
+	// 2. Empty sender pubkey.
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[1], FrostDKGResultPayload{
+		SenderPubKey: "",
+		Response:     success,
+	})
+	// 3. Sender outside the active participant set.
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[3], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[3],
+		Response:     success,
+	})
+	// 4. Sender/peer binding mismatch: claims to be member 1 but arrives from
+	// member 2's peer.
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[2], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[1],
+		Response:     success,
+	})
+	// 5. Structurally invalid result (success without an address).
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[1], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[1],
+		Response: FrostDKGResult{
+			GroupKey:             groupKey,
+			ObservedMoneroHeight: 456,
+			Status:               uint8(tcommon.Success),
+		},
+	})
+	// The genuine quorum arrives after all the noise.
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[1], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[1],
+		Response:     success,
+	})
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[2], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[2],
+		Response:     success,
+	})
+
+	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id", msgChan, time.Second)
+	resp, err := coord.WaitForResult(members, 2, 2*time.Second)
+	if err != nil {
+		t.Fatalf("expected quorum success despite invalid result noise, got error: %v", err)
+	}
+	if resp.Status != tcommon.Success {
+		t.Fatalf("expected success status, got %d (blame %+v)", resp.Status, resp.Blame)
+	}
+	if resp.Address != groupAddress || resp.GroupKey != groupKey {
+		t.Fatalf("unexpected adopted result: %+v", resp)
+	}
+}
+
+// TestFrostKeygenWaitForResultLastVoteWinsPerSender pins the per-sender vote
+// accounting: a sender re-voting with a different result moves between vote
+// buckets, so one member cannot hold votes in two buckets at once (or count
+// toward a quorum with a result it has since replaced).
+func TestFrostKeygenWaitForResultLastVoteWinsPerSender(t *testing.T) {
+	ensureBech32Prefix()
+
+	members := []string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}
+	groupKey := strings.Repeat("ab", 32)
+	resultX := FrostDKGResult{
+		Address:              "48addressX",
+		GroupKey:             groupKey,
+		ObservedMoneroHeight: 456,
+		Status:               uint8(tcommon.Success),
+	}
+	resultY := FrostDKGResult{
+		Address:              "48addressY",
+		GroupKey:             strings.Repeat("cd", 32),
+		ObservedMoneroHeight: 456,
+		Status:               uint8(tcommon.Success),
+	}
+
+	msgChan := make(chan *p2p.Message, 8)
+	// Member 1 votes X, then replaces it with Y; member 2 votes X. No result
+	// may reach quorum 2: X holds only member 2 after the replacement.
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[1], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[1],
+		Response:     resultX,
+	})
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[1], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[1],
+		Response:     resultY,
+	})
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGResultMsg, "msg-id", testPubKeys[2], FrostDKGResultPayload{
+		SenderPubKey: testPubKeys[2],
+		Response:     resultX,
+	})
+
+	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id", msgChan, time.Second)
+	if _, err := coord.WaitForResult(members, 2, 500*time.Millisecond); err == nil {
+		t.Fatalf("expected timeout: the replaced vote must not count toward quorum")
 	}
 }
 

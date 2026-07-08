@@ -549,6 +549,9 @@ services:
       BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-pig:50051
       BIFROST_CHAINS_XMR_SIGNER_ENDPOINT: "http://xmr-frost-signer-pig:8283"
       SIGNER_SEED_PHRASE: "pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig quick"
+      # Test-only FROST DKG fault injection for `make test-simulation-keygen-jail`;
+      # empty (the default) is a no-op.
+      XMR_FROST_KEYGEN_TEST_ROUND3_TIMEOUT_MS: ${XMR_KEYGEN_JAIL_ROUND3_TIMEOUT_MS:-}
     ports:
       - 5040
       - 6043:6040 # host-side simulation readiness probe
