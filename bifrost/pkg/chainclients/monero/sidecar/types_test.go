@@ -24,3 +24,26 @@ func TestBroadcastReqJSONIncludesRequiredFields(t *testing.T) {
 		t.Fatalf("expected msg_id field in broadcast request JSON: %s", string(raw))
 	}
 }
+
+func TestBalanceIsReconciled(t *testing.T) {
+	reconciled := true
+	unreconciled := false
+
+	tests := []struct {
+		name       string
+		reconciled *bool
+		want       bool
+	}{
+		{name: "nil", want: true},
+		{name: "true", reconciled: &reconciled, want: true},
+		{name: "false", reconciled: &unreconciled, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := (Balance{Reconciled: tt.reconciled}).IsReconciled(); got != tt.want {
+				t.Fatalf("IsReconciled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

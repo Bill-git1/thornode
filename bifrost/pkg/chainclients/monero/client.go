@@ -77,9 +77,18 @@ const (
 	defaultXMRConsolidationMinReserveAtomic    = uint64(50_000_000) // 0.00005 XMR (piconero)
 	defaultXMRSpentRefsRetryMaxAttempts        = 60                 // bounded peer-import retry window after the first failed attempt
 	defaultXMRRecoveryRetryMaxAttempts         = 10                 // startup window for the sidecar to come up before keyshare restore gives up
+
+	// xmrSolvencyDeferralEscalationRounds is the number of consecutive deferred
+	// solvency rounds (one per SolvencyBlocks interval) after which the deferral
+	// log escalates from Warn to Error. The sidecar's verified expiry should
+	// resolve a dead spend well within this window.
+	xmrSolvencyDeferralEscalationRounds = 6
 )
 
-var ErrSidecarNotConfigured = errors.New("xmr sidecar requires signer_endpoint or api_host configuration")
+var (
+	ErrSidecarNotConfigured   = errors.New("xmr sidecar requires signer_endpoint or api_host configuration")
+	errXMRBalanceUnreconciled = errors.New("xmr sidecar balance is not reconciled")
+)
 
 type signedTxPayload struct {
 	TxHash          string                `json:"tx_hash"`
@@ -164,6 +173,9 @@ type Client struct {
 	lastSolvencyCheckHeight *atomic.Int64
 	wg                      *sync.WaitGroup
 	stopchan                chan struct{}
+
+	solvencyDeferralMu     sync.Mutex
+	solvencyDeferralRounds map[string]int
 
 	spentRefsRetryInterval    time.Duration
 	spentRefsRetryMaxAttempts int
@@ -2172,7 +2184,15 @@ func (c *Client) GetAccount(poolPubKey common.PubKey, height *big.Int) (common.A
 	return c.GetAccountByAddress(addr.String(), height)
 }
 
-func (c *Client) GetAccountByAddress(address string, _ *big.Int) (common.Account, error) {
+func (c *Client) GetAccountByAddress(address string, height *big.Int) (common.Account, error) {
+	return c.getAccountByAddress(address, height, false)
+}
+
+func (c *Client) getSolvencyAccountByAddress(address string) (common.Account, error) {
+	return c.getAccountByAddress(address, nil, true)
+}
+
+func (c *Client) getAccountByAddress(address string, _ *big.Int, requireReconciled bool) (common.Account, error) {
 	if c.sidecar == nil {
 		return common.Account{}, fmt.Errorf("xmr account query requires sidecar")
 	}
@@ -2193,6 +2213,14 @@ func (c *Client) GetAccountByAddress(address string, _ *big.Int) (common.Account
 	balance, err := c.sidecar.Balance(pubKey.String())
 	if err != nil {
 		return common.Account{}, fmt.Errorf("fail to get monero wallet balance for %s: %w", address, err)
+	}
+	if requireReconciled && !balance.IsReconciled() {
+		return common.Account{}, fmt.Errorf(
+			"%w for %s: pending_outgoing_count=%d",
+			errXMRBalanceUnreconciled,
+			address,
+			balance.PendingOutgoingCount,
+		)
 	}
 	// Account reporting (used by solvency comparison vs thornode's vault.coins)
 	// must use the TOTAL on-chain balance — locked + unlocked. Locked outputs
@@ -2561,6 +2589,24 @@ func (c *Client) ShouldReportSolvency(height int64) bool {
 	return height%solvencyBlocks == 0 && c.scanner.lastFee.Load() > 0
 }
 
+// noteSolvencyDeferral counts consecutive deferred solvency rounds for a vault
+// address and returns the updated count.
+func (c *Client) noteSolvencyDeferral(address string) int {
+	c.solvencyDeferralMu.Lock()
+	defer c.solvencyDeferralMu.Unlock()
+	if c.solvencyDeferralRounds == nil {
+		c.solvencyDeferralRounds = make(map[string]int)
+	}
+	c.solvencyDeferralRounds[address]++
+	return c.solvencyDeferralRounds[address]
+}
+
+func (c *Client) clearSolvencyDeferral(address string) {
+	c.solvencyDeferralMu.Lock()
+	defer c.solvencyDeferralMu.Unlock()
+	delete(c.solvencyDeferralRounds, address)
+}
+
 func (c *Client) ReportSolvency(height int64) error {
 	if !c.ShouldReportSolvency(height) {
 		return nil
@@ -2581,17 +2627,34 @@ func (c *Client) ReportSolvency(height int64) error {
 	msgs := make([]stypes.Solvency, 0, len(asgardVaults))
 	solventMsgs := make([]stypes.Solvency, 0, len(asgardVaults))
 	checkedVaults := 0
+	deferredForReconciliation := false
 	for i := range asgardVaults {
 		address := c.resolveVaultAddress(asgardVaults[i])
 		if address.IsEmpty() {
 			continue
 		}
 
-		acct, acctErr := c.GetAccountByAddress(address.String(), nil)
+		acct, acctErr := c.getSolvencyAccountByAddress(address.String())
 		if acctErr != nil {
+			if errors.Is(acctErr, errXMRBalanceUnreconciled) {
+				deferredForReconciliation = true
+				rounds := c.noteSolvencyDeferral(address.String())
+				logEvent := c.logger.Warn()
+				if rounds >= xmrSolvencyDeferralEscalationRounds {
+					// The sidecar's verified expiry resolves dead spends on its
+					// own, so a deferral running this long means the pending
+					// spend is neither landing nor expiring - operator attention
+					// needed (stuck outbound, daemon issues, or an expiry knob
+					// set too conservatively).
+					logEvent = c.logger.Error()
+				}
+				logEvent.Err(acctErr).Str("address", address.String()).Int64("height", height).Int("consecutive_rounds", rounds).Msg("defer monero solvency while sidecar balance reconciles")
+				continue
+			}
 			c.logger.Err(acctErr).Str("address", address.String()).Msg("fail to get monero account balance for solvency")
 			continue
 		}
+		c.clearSolvencyDeferral(address.String())
 		checkedVaults++
 
 		msg := stypes.Solvency{
@@ -2608,7 +2671,11 @@ func (c *Client) ReportSolvency(height int64) error {
 		msgs = append(msgs, msg)
 	}
 
-	if !c.IsBlockScannerHealthy() && checkedVaults > 0 && len(solventMsgs) == checkedVaults {
+	if deferredForReconciliation && checkedVaults == 0 {
+		return nil
+	}
+
+	if !c.IsBlockScannerHealthy() && !deferredForReconciliation && checkedVaults > 0 && len(solventMsgs) == checkedVaults {
 		msgs = solventMsgs
 	}
 

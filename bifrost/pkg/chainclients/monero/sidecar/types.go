@@ -153,9 +153,15 @@ type BroadcastResp struct {
 // --- Scanner / balance / reads ---
 
 type Balance struct {
-	Balance          uint64  `json:"balance"`
-	UnlockedBalance  uint64  `json:"unlocked_balance"`
-	SpendableBalance *uint64 `json:"spendable_balance,omitempty"`
+	Balance              uint64  `json:"balance"`
+	UnlockedBalance      uint64  `json:"unlocked_balance"`
+	SpendableBalance     *uint64 `json:"spendable_balance,omitempty"`
+	Reconciled           *bool   `json:"reconciled,omitempty"`
+	PendingOutgoingCount int     `json:"pending_outgoing_count,omitempty"`
+}
+
+func (b Balance) IsReconciled() bool {
+	return b.Reconciled == nil || *b.Reconciled
 }
 
 type RegisterVaultReq struct {
