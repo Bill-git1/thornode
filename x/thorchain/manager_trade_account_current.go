@@ -107,6 +107,15 @@ func (s *TradeMgr) Withdrawal(ctx cosmos.Context, asset common.Asset, amount cos
 	// capped at the account's assetAvailable.
 	tokensToClaim := common.GetSafeShare(unitsToClaim, tr.Units, assetAvailable)
 
+	// GetSafeShare (GetUncappedShare) rounds half-up, so when an account holds few
+	// units relative to its token depth the intermediate unitsToClaim can round up,
+	// making tokensToClaim exceed the requested amount. Cap tokensToClaim at the
+	// requested amount to enforce the user's requested maximum withdrawal and never
+	// return more tokens than were asked for.
+	if tokensToClaim.GT(amount) {
+		tokensToClaim = amount
+	}
+
 	if tokensToClaim.IsZero() {
 		return cosmos.ZeroUint(), fmt.Errorf("insufficient trade asset balance for %s: requested %s, available %s", asset, amount, assetAvailable)
 	}

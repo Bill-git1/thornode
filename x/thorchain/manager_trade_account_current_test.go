@@ -54,6 +54,42 @@ func (s *TradeManagerSuite) TestDepositAndWithdrawal(c *C) {
 	c.Check(bal.String(), Equals, cosmos.NewUint(0).String())
 }
 
+func (s *TradeManagerSuite) TestWithdrawalCappedAtRequestedAmount(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	eventMgr, err := GetEventManager(GetCurrentVersion())
+	c.Assert(err, IsNil)
+	mgr := newTradeMgr(k, eventMgr)
+
+	asset := common.BTCAsset.GetTradeAsset()
+	addr1 := GetRandomBech32Addr()
+
+	// Deposit a tiny number of units, then manually inflate the depth so each unit
+	// is worth many tokens. This recreates the coarse unit-granularity condition in
+	// which the round-trip through GetSafeShare rounds unitsToClaim up.
+	_, err = mgr.Deposit(ctx, asset, cosmos.NewUint(2), addr1, common.NoAddress, common.BlankTxID)
+	c.Assert(err, IsNil)
+
+	tu, err := k.GetTradeUnit(ctx, asset)
+	c.Assert(err, IsNil)
+	c.Check(tu.Units.String(), Equals, cosmos.NewUint(2).String())
+	tu.Depth = cosmos.NewUint(200)
+	k.SetTradeUnit(ctx, tu)
+
+	// assetAvailable is now 200 tokens for 2 units.
+	c.Check(mgr.BalanceOf(ctx, asset, addr1).String(), Equals, cosmos.NewUint(200).String())
+
+	// Requesting 51 must never return more than 51, even though the intermediate
+	// unit conversion rounds up to 1 unit (worth 100 tokens) without the cap.
+	amt, err := mgr.Withdrawal(ctx, asset, cosmos.NewUint(51), addr1, common.NoAddress, common.BlankTxID)
+	c.Assert(err, IsNil)
+	c.Check(amt.String(), Equals, cosmos.NewUint(51).String())
+
+	// The depth must only be reduced by the capped amount.
+	tu, err = k.GetTradeUnit(ctx, asset)
+	c.Assert(err, IsNil)
+	c.Check(tu.Depth.String(), Equals, cosmos.NewUint(149).String())
+}
+
 func (s *TradeManagerSuite) TestReducedDepth(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	eventMgr, err := GetEventManager(GetCurrentVersion())

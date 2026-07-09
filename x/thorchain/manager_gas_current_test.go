@@ -73,6 +73,53 @@ func (GasManagerTestSuite) TestGasManager(c *C) {
 	gasMgr.EndBlock(ctx, k, eventMgr)
 }
 
+func (GasManagerTestSuite) TestProcessGasReserveExactMatch(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+	gasMgr := newGasMgr(constAccessor, k)
+	gasMgr.BeginBlock()
+
+	// Ensure the Reserve holds a known, non-zero RUNE balance.
+	FundModule(c, ctx, k, ReserveName, 50*common.One)
+	reserveRune := k.GetRuneBalanceOfModule(ctx, ReserveName)
+	c.Assert(reserveRune.IsZero(), Equals, false)
+
+	// A pool with equal RUNE and asset balances converts gas 1:1, so a gas coin of
+	// exactly reserveRune asset units yields runeGas == reserveRune (an exact match
+	// between the running reserve total and the gas cost of this coin).
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = reserveRune
+	pool.BalanceAsset = reserveRune
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	asgardRuneBefore := k.GetRuneBalanceOfModule(ctx, AsgardName)
+
+	gasMgr.AddGasAsset(common.BTCAsset, common.Gas{
+		common.NewCoin(common.BTCAsset, reserveRune),
+	}, true)
+
+	gasMgr.ProcessGas(ctx, k)
+
+	// The exact-match gas coin must still be reimbursed, not skipped: the reserve
+	// had exactly enough RUNE to cover it.
+	c.Assert(gasMgr.gasEvent.Pools, HasLen, 1)
+	c.Check(gasMgr.gasEvent.Pools[0].RuneAmt.String(), Equals, reserveRune.String())
+
+	// The full reserve was transferred to Asgard for the reimbursement.
+	c.Check(k.GetRuneBalanceOfModule(ctx, ReserveName).String(), Equals, "0")
+	asgardRuneAfter := k.GetRuneBalanceOfModule(ctx, AsgardName)
+	c.Check(asgardRuneAfter.Sub(asgardRuneBefore).String(), Equals, reserveRune.String())
+
+	// The reimbursed pool gained the RUNE and lost the gas asset.
+	finalPool, err := k.GetPool(ctx, common.BTCAsset)
+	c.Assert(err, IsNil)
+	c.Check(finalPool.BalanceRune.String(), Equals, reserveRune.MulUint64(2).String())
+	c.Check(finalPool.BalanceAsset.String(), Equals, "0")
+}
+
 func (GasManagerTestSuite) TestGetAssetOutboundFee(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()

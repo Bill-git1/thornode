@@ -320,11 +320,16 @@ func (gm *GasMgr) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
 				continue
 			}
 			// Keep track of whether the Reserve RUNE will be enough for all reimbursements.
-			reserveRune = common.SafeSub(reserveRune, runeGas)
-			if reserveRune.IsZero() {
+			// Only skip the reimbursement when the reserve has strictly less than runeGas;
+			// an exact match (runeGas == reserveRune) still has enough to cover this gas, so
+			// it should be reimbursed and leave the reserve at zero for subsequent coins.
+			if runeGas.GT(reserveRune) {
 				// since we don't have enough in the reserve to cover the gas used,
 				// no further rune is added to gas pools, sorry LPs!
 				runeGas = cosmos.ZeroUint()
+				reserveRune = cosmos.ZeroUint()
+			} else {
+				reserveRune = reserveRune.Sub(runeGas)
 			}
 
 			gasPool := GasPool{
