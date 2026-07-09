@@ -45,6 +45,42 @@ func NewTransferTransaction(from, to PublicKey, amount uint64, memo, recentBlock
 	return NewTransaction(message)
 }
 
+// NewSelfTransferTransaction builds a transfer where the vault sends to its own
+// address. The account list must contain the vault key exactly once — repeating
+// it (as NewTransferTransaction would for from == to) makes the transaction
+// invalid on Solana (AccountLoadedTwice) — so the transfer instruction
+// references account index 0 for both source and destination. The runtime
+// processes such a transfer with scoped borrows (debit then credit on the same
+// account), netting to zero minus the transaction fee. Used by the vault
+// keep-alive self-sign to land a fresh signature at a recent slot.
+func NewSelfTransferTransaction(vault PublicKey, amount uint64, memo, recentBlockHash string) Transaction {
+	accountKeys := []PublicKey{vault, SystemProgramID}
+	instructions := make([]CompiledInstruction, 0, 2)
+
+	// 1e8 --> 1e9
+	solValue := amount * 10
+
+	if memo != "" {
+		accountKeys = append(accountKeys, MemoProgramID)
+		// Preserve the legacy memo-first ordering for memo-bearing transfers.
+		instructions = append(instructions, NewCompiledInstruction(2, []int{0}, []byte(memo)))
+	}
+
+	// Transfer instruction: program index 1 (system program), account index 0
+	// (the vault) as both source and destination.
+	instructions = append(instructions, NewCompiledTransferInstruction(1, 0, 0, solValue))
+
+	header := MessageHeader{
+		NumRequireSignatures:      1,
+		NumReadonlySignedAccounts: 0,
+		// Every account except the writable vault signer is a readonly program.
+		NumReadonlyUnsignedAccounts: uint8(len(accountKeys) - 1),
+	}
+
+	message := NewMessage(header, accountKeys, recentBlockHash, instructions)
+	return NewTransaction(message)
+}
+
 func NewTransaction(message Message) Transaction {
 	signatures := make([]Signature, 0, message.Header.NumRequireSignatures)
 	for i := uint8(0); i < message.Header.NumRequireSignatures; i++ {

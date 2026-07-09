@@ -199,3 +199,44 @@ func TestNewTransferTransactionIncludesMemoInstructionWhenPresent(t *testing.T) 
 	require.Equal(t, []byte("r:00001"), tx.Message.Instructions[0].Data)
 	require.Equal(t, 2, tx.Message.Instructions[1].ProgramIDIndex)
 }
+
+func TestNewSelfTransferTransactionListsVaultOnce(t *testing.T) {
+	vault := MustPublicKeyFromString("E6wak7XKQtXVS8DqRRFnhToht7Grdz7BHWMQaCdJdaqc")
+
+	tx := NewSelfTransferTransaction(vault, 200_123, "consolidate", "9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo")
+
+	// vault, system program, memo program — the vault key appears exactly once,
+	// or Solana rejects the transaction with AccountLoadedTwice
+	require.Len(t, tx.Message.Accounts, 3)
+	require.Equal(t, vault, tx.Message.Accounts[0])
+	require.Equal(t, SystemProgramID, tx.Message.Accounts[1])
+	require.Equal(t, MemoProgramID, tx.Message.Accounts[2])
+
+	// only the vault signs and is writable; both programs are readonly
+	require.Equal(t, uint8(1), tx.Message.Header.NumRequireSignatures)
+	require.Equal(t, uint8(2), tx.Message.Header.NumReadonlyUnsignedAccounts)
+
+	// memo first, then a transfer whose source and destination are both the vault
+	require.Len(t, tx.Message.Instructions, 2)
+	require.Equal(t, 2, tx.Message.Instructions[0].ProgramIDIndex)
+	require.Equal(t, []byte("consolidate"), tx.Message.Instructions[0].Data)
+	require.Equal(t, 1, tx.Message.Instructions[1].ProgramIDIndex)
+	require.Equal(t, []int{0, 0}, tx.Message.Instructions[1].Accounts)
+	require.Equal(t, uint64(2_001_230), binary.LittleEndian.Uint64(tx.Message.Instructions[1].Data[4:12]))
+
+	// the message must serialize cleanly for TSS signing
+	_, err := tx.Message.Serialize()
+	require.NoError(t, err)
+}
+
+func TestNewSelfTransferTransactionWithoutMemo(t *testing.T) {
+	vault := MustPublicKeyFromString("E6wak7XKQtXVS8DqRRFnhToht7Grdz7BHWMQaCdJdaqc")
+
+	tx := NewSelfTransferTransaction(vault, 200_123, "", "ignored-for-test")
+
+	require.Len(t, tx.Message.Accounts, 2)
+	require.Equal(t, uint8(1), tx.Message.Header.NumReadonlyUnsignedAccounts)
+	require.Len(t, tx.Message.Instructions, 1)
+	require.Equal(t, 1, tx.Message.Instructions[0].ProgramIDIndex)
+	require.Equal(t, []int{0, 0}, tx.Message.Instructions[0].Accounts)
+}

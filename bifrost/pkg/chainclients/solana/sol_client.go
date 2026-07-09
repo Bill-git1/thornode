@@ -61,11 +61,21 @@ type SOLClient struct {
 	bridge              thorclient.ThorchainBridge
 	poolMgr             thorclient.PoolManager
 	tssKeyManager       tss.ThorchainKeyManager
+	pubkeyMgr           pubkeymanager.PubKeyValidator
 	wg                  *sync.WaitGroup
 	stopchan            chan struct{}
 	globalSolvencyQueue chan stypes.Solvency
 	signerCacheManager  *signercache.CacheManager
 	rpcClient           *rpc.SolRPC
+
+	// keepAliveThorMultiple is the last keep-alive cadence boundary this node acted
+	// on. The trigger + keysign anchor are driven off the shared THORChain block
+	// height (not a per-node wall clock or Solana slot) so every member crosses the
+	// same boundary and hands the keysign an identical, valid THORChain height —
+	// converging the party the way scheduled outbounds do via their consensus
+	// txOut.Height. Guarded by the mutex since the loop reads and writes it.
+	keepAliveThorMultipleMu sync.Mutex
+	keepAliveThorMultiple   int64
 
 	// solvencySlotMultiple is the last reported solvency cadence boundary. It is
 	// read and written from two goroutines — the block scanner's solvency reporter
@@ -133,6 +143,7 @@ func NewSOLClient(
 		bridge:        bridge,
 		poolMgr:       poolMgr,
 		tssKeyManager: tssKm,
+		pubkeyMgr:     pubkeyMgr,
 		wg:            &sync.WaitGroup{},
 		stopchan:      make(chan struct{}),
 		rpcClient:     rpcClient,
@@ -186,6 +197,8 @@ func (c *SOLClient) Start(
 	go c.solScanner.Start()
 	c.wg.Add(1)
 	go runners.SolvencyCheckRunner(c.GetChain(), c, c.bridge, c.stopchan, c.wg, constants.ThorchainBlockTime)
+	c.wg.Add(1)
+	go c.keepAliveLoop()
 }
 
 // Stop stops the chain client.
@@ -635,6 +648,12 @@ func (c *SOLClient) CreateTx(tx stypes.TxOutItem, memoForParsing string) (types.
 	solValue := convertToLamports(tx.Coins[0].Amount)
 	if solValue.Int64() == 0 {
 		return solTx, errors.New("sol value is zero")
+	}
+
+	// A vault sending to its own address (the keep-alive self-sign) must list the
+	// vault account exactly once, or Solana rejects the tx with AccountLoadedTwice.
+	if toPubkey == vaultPubKey {
+		return types.NewSelfTransferTransaction(vaultPubKey, tx.Coins[0].Amount.Uint64(), tx.Memo, recentBlockhash), nil
 	}
 
 	return types.NewTransferTransaction(vaultPubKey, toPubkey, tx.Coins[0].Amount.Uint64(), tx.Memo, recentBlockhash), nil

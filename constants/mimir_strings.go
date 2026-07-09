@@ -11,6 +11,10 @@ const (
 	MimirKeyWasmMinGasPrice           = "WasmMinGasPrice"
 	MimirKeyScheduledMigration        = "ScheduledMigration"
 	MimirKeyDisableTSSSignerFiltering = "DisableTSSSignerFiltering"
+	// MimirKeySignatureRefreshBlocks tunes the bifrost vault keep-alive self-sign
+	// staleness threshold in THORChain blocks (read by bifrost only, never by
+	// consensus code). Unset defaults to ~1 day of blocks; 0 disables the keep-alive.
+	MimirKeySignatureRefreshBlocks = "SignatureRefreshBlocks"
 
 	MimirTemplateEVMAllowanceCheck         = "EVMAllowanceCheck-%s"         // Use with Chain
 	MimirTemplateEVMDirectERC20Inbound     = "EVMDirectERC20Inbound-%s"     // Use with Chain
