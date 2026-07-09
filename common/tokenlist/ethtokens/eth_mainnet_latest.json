@@ -8134,6 +8134,13 @@
       "symbol": "LENDS",
       "decimals": 18,
       "logoURI": "https://app.lends.so/tokens/eth.lends-0x2c06ba9e7f0daccbc1f6a33ea67e85bb68fbee3a.svg"
+    },
+    {
+      "address": "0xcbb8f1bda10b9696c57e13bc128fe674769dcec0",
+      "chainId": 1,
+      "name": "MorpheusAI",
+      "symbol": "MOR",
+      "decimals": 18
     }
   ],
   "logoURI": "https://1inch.exchange/assets/images/logo.png"

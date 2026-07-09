@@ -267,6 +267,7 @@ bifrost:
           - 0xcbd06e5a2b0c65597161de254aa074e489deb510 # cbDOGE
           - 0xcb17c9db87b595717c857a08468793f5bab6445f # cbLTC
           - 0xcb585250f852c6c6bf90434ab21a00f02833a4af # cbXRP
+          - 0x7431ada8a591c955a994a21710752ef9b882b8e3 # MOR
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

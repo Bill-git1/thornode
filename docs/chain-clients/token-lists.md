@@ -10,7 +10,7 @@ THORChain (and MAYA Protocol) restrict support for tokens on EVM and Solana chai
 
 ## Whitelist Enforcement
 
-- Applies to EVM chains (ETH, AVAX, BSC, ARB, BASE) and Solana (coming soon)
+- Applies to EVM chains (ETH, AVAX, BSC, BASE) and Solana (coming soon)
 - If a token is not on the list, it will be rejected at the Router contract level
 - Tokens must be listed to be eligible for THORChain pools, swaps, and LP adds
 
@@ -23,7 +23,6 @@ Each chain has its own maintained JSON whitelist:
 | Ethereum (ETH)            | [`eth_mainnet_latest.json`](https://gitlab.com/thorchain/thornode/-/raw/develop/common/tokenlist/ethtokens/eth_mainnet_latest.json)    |
 | Avalanche (AVAX)          | [`avax_mainnet_latest.json`](https://gitlab.com/thorchain/thornode/-/raw/develop/common/tokenlist/avaxtokens/avax_mainnet_latest.json) |
 | Binance Smart Chain (BSC) | [`bsc_mainnet_latest.json`](https://gitlab.com/thorchain/thornode/-/raw/develop/common/tokenlist/bsctokens/bsc_mainnet_latest.json)    |
-| Arbitrum (ARB)            | [`arb_mainnet_latest.json`](https://gitlab.com/mayachain/mayanode/-/raw/mainnet/common/tokenlist/arbtokens/arb_mainnet_latest.json)    |
 | Base (BASE)               | [`base_mainnet_latest.json`](https://gitlab.com/thorchain/thornode/-/raw/develop/common/tokenlist/basetokens/base_mainnet_latest.json) |
 | Solana (SOL)              | _Pending integration_                                                                                                                  |
 

@@ -87,3 +87,17 @@ func TestXMRPostChurnReadyRequiresSpendableRotatedVault(t *testing.T) {
 		t.Fatal("expected zero-spendable XMR active vault to be unready")
 	}
 }
+
+func TestXMRPostChurnIntervalSchedulesNearFutureChurn(t *testing.T) {
+	interval := xmrPostChurnScheduledInterval(522, 1)
+	if interval != 531 {
+		t.Fatalf("expected interval 531 to schedule churn at height 532, got %d", interval)
+	}
+}
+
+func TestXMRPostChurnIntervalHandlesFreshVault(t *testing.T) {
+	interval := xmrPostChurnScheduledInterval(10, 12)
+	if interval != 10 {
+		t.Fatalf("expected minimum near-future interval, got %d", interval)
+	}
+}
