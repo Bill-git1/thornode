@@ -144,6 +144,22 @@ func (m Vault) HasFunds() bool {
 	return false
 }
 
+// HasFundsAboveDust check whether the vault has any funds above the dust
+// threshold of the coin's chain. Amounts at or below dust cannot be migrated
+// (they are burned after the final migration round), so they should not be
+// treated as remaining funds for vault-lifecycle decisions such as the churn
+// retiring-vault gate.
+func (m Vault) HasFundsAboveDust() bool {
+	for _, coin := range m.Coins {
+		if !coin.IsRune() { // non-native rune is omitted from the calculation
+			if coin.Amount.GT(coin.Asset.GetChain().DustThreshold()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // HasFundsForChain check whether the vault pool has funds for a specific chain
 func (m Vault) HasFundsForChain(chain common.Chain) bool {
 	for _, coin := range m.Coins {

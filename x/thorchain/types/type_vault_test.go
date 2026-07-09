@@ -72,6 +72,36 @@ func (s *VaultSuite) TestVault(c *C) {
 	c.Check(vault1.HasAsset(common.ETHAsset), Equals, false)
 }
 
+func (s *VaultSuite) TestHasFundsAboveDust(c *C) {
+	pk := GetRandomPubKey()
+	vault := NewVault(12, VaultStatus_RetiringVault, VaultType_AsgardVault, pk, common.Chains{common.XMRChain}.Strings(), []ChainContract{})
+	c.Check(vault.HasFundsAboveDust(), Equals, false)
+
+	dust := common.XMRChain.DustThreshold()
+
+	// a sub-dust remainder (e.g. the XMR final-round migration buffer) counts
+	// for HasFunds but not for HasFundsAboveDust
+	vault.AddFunds(common.Coins{common.NewCoin(common.XMRAsset, dust)})
+	c.Check(vault.HasFunds(), Equals, true)
+	c.Check(vault.HasFundsAboveDust(), Equals, false)
+
+	// anything above the chain dust threshold counts
+	vault.AddFunds(common.Coins{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))})
+	c.Check(vault.HasFundsAboveDust(), Equals, true)
+
+	// RUNE is omitted from the calculation, matching HasFunds
+	vault1 := NewVault(12, VaultStatus_RetiringVault, VaultType_AsgardVault, pk, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault1.AddFunds(common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))})
+	c.Check(vault1.HasFunds(), Equals, false)
+	c.Check(vault1.HasFundsAboveDust(), Equals, false)
+
+	// chains without a dust threshold treat any non-zero amount as funds
+	fakeAsset := common.Asset{Chain: common.THORChain, Symbol: "FOO", Ticker: "FOO"}
+	vault2 := NewVault(12, VaultStatus_RetiringVault, VaultType_AsgardVault, pk, common.Chains{common.THORChain}.Strings(), []ChainContract{})
+	vault2.AddFunds(common.Coins{common.NewCoin(fakeAsset, cosmos.NewUint(1))})
+	c.Check(vault2.HasFundsAboveDust(), Equals, true)
+}
+
 func (s *VaultSuite) TestGetTssSigners(c *C) {
 	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	nodeAccounts := NodeAccounts{}

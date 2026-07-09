@@ -62,6 +62,51 @@ func (vts *ValidatorMgrTestSuite) TestChurnWithChainHalt(c *C) {
 	c.Assert(len(ready), Equals, 1) // standby node should be ready if churn started
 }
 
+func (vts *ValidatorMgrTestSuite) TestChurnWithRetiringVaultDust(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgr()
+	mgr.K = k
+	networkMgr := newValidatorMgr(k, mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(networkMgr, NotNil)
+	minBond := constants.GetConstantValues(GetCurrentVersion()).GetInt64Value(constants.MinimumBondInRune)
+
+	// 1 standby node
+	standbyNode := GetRandomValidatorNode(NodeStandby)
+	standbyNode.Bond = cosmos.NewUint(uint64(minBond))
+	c.Assert(k.SetNodeAccount(ctx, standbyNode), IsNil)
+
+	// 1 active vault with btc, created at block 1 (so lastChurnHeight=1)
+	vault := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	vault.Membership = append(vault.Membership, standbyNode.PubKeySet.Secp256k1.String())
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	// 1 retiring vault still holding XMR above the dust threshold
+	dust := common.XMRChain.DustThreshold()
+	retiringVault := NewVault(1, RetiringVault, AsgardVault, GetRandomPubKey(), common.Chains{common.XMRChain}.Strings(), []ChainContract{})
+	retiringVault.Coins = common.Coins{common.NewCoin(common.XMRAsset, dust.Add(cosmos.NewUint(1)))}
+	c.Assert(k.SetVault(ctx, retiringVault), IsNil)
+
+	// Set block height to churn interval after vault creation (1 + 60 = 61)
+	mgr.Keeper().SetMimir(ctx, constants.ChurnInterval.String(), 60)
+	ctx = ctx.WithBlockHeight(61)
+
+	// should not start churn while a retiring vault has funds above dust
+	c.Assert(networkMgr.BeginBlock(ctx, mgr, nil), IsNil)
+	ready, err := k.ListValidatorsByStatus(ctx, NodeReady)
+	c.Assert(err, IsNil)
+	c.Assert(len(ready), Equals, 0)
+
+	// only a sub-dust remainder left (e.g. the XMR migration buffer awaiting
+	// its post-final-round burn); rotation should no longer be blocked
+	retiringVault.Coins = common.Coins{common.NewCoin(common.XMRAsset, dust)}
+	c.Assert(k.SetVault(ctx, retiringVault), IsNil)
+
+	c.Assert(networkMgr.BeginBlock(ctx, mgr, nil), IsNil)
+	ready, err = k.ListValidatorsByStatus(ctx, NodeReady)
+	c.Assert(err, IsNil)
+	c.Assert(len(ready), Equals, 1)
+}
+
 func (vts *ValidatorMgrTestSuite) TestSetupValidatorNodes(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(1)

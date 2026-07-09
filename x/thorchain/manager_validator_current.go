@@ -123,9 +123,15 @@ func (vm *ValidatorMgr) BeginBlock(ctx cosmos.Context, mgr Manager, existingVali
 	if err != nil {
 		return err
 	}
-	if len(retiringVaults) > 0 {
-		ctx.Logger().Info("Skipping rotation due to retiring vaults still have funds.")
-		return nil
+	for _, vault := range retiringVaults {
+		// Sub-dust remainders (e.g. the XMR final-round migration buffer) cannot
+		// be migrated and are only burned once nth exceeds ChurnMigrateRounds,
+		// which can be long after the last real migration; they must not block
+		// rotation until then.
+		if vault.HasFundsAboveDust() {
+			ctx.Logger().Info("Skipping rotation due to retiring vaults still have funds.")
+			return nil
+		}
 	}
 
 	if retryChurn {
