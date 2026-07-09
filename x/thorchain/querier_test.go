@@ -1313,6 +1313,72 @@ func (s *QuerierSuite) TestQueryInboundAddressesExcludesCompromisedVault(c *C) {
 	c.Assert(btcPubKey, Equals, compromisedPubKey.String(), Commentf("WASM path must expose the compromised vault unchanged"))
 }
 
+func (s *QuerierSuite) TestQueryInboundAddressesExcludesInsolventVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// The insolvent vault serves BTC and ETH but is flagged insolvent on BTC
+	// only. A compromised key that drains BTC leaves ETH exposed, so the whole
+	// vault must disappear from inbound election - both BTC and ETH.
+	insolventPubKey := GetRandomPubKey()
+	mgr.Keeper().SetMimir(ctx, solvencyHaltVaultKey(insolventPubKey, common.BTCChain), ctx.BlockHeight())
+	insolvent := NewVault(ctx.BlockHeight()-1, ActiveVault, AsgardVault, insolventPubKey, common.Chains{common.BTCChain, common.ETHChain}.Strings(), nil)
+	c.Assert(mgr.Keeper().SetVault(ctx, insolvent), IsNil)
+
+	// A safe vault serves LTC so it remains the sole candidate for its chain.
+	safePubKey := GetRandomPubKey()
+	safeVault := NewVault(ctx.BlockHeight()-1, ActiveVault, AsgardVault, safePubKey, common.Chains{common.LTCChain}.Strings(), nil)
+	c.Assert(mgr.Keeper().SetVault(ctx, safeVault), IsNil)
+
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
+
+	// Non-WASM path: neither BTC nor ETH (the insolvent vault's chains) may
+	// appear; LTC must show the safe vault.
+	resp, err := queryServer.InboundAddresses(ctx, &types.QueryInboundAddressesRequest{})
+	c.Assert(err, IsNil)
+	var ltcPubKey string
+	for _, inbound := range resp.InboundAddresses {
+		c.Assert(inbound.Chain, Not(Equals), common.BTCChain.String(), Commentf("insolvent vault's halted chain must be absent"))
+		c.Assert(inbound.Chain, Not(Equals), common.ETHChain.String(), Commentf("insolvent vault's other chains must also be absent"))
+		if inbound.Chain == common.LTCChain.String() {
+			ltcPubKey = inbound.PubKey
+		}
+	}
+	c.Assert(ltcPubKey, Equals, safePubKey.String())
+
+	// WASM path: the filter must be skipped so the insolvent vault's chains
+	// still appear, preserving deterministic contract responses.
+	wasmCtx := ctx.WithValue(constants.CtxWASMQuery, true)
+	wasmResp, err := queryServer.InboundAddresses(wasmCtx, &types.QueryInboundAddressesRequest{})
+	c.Assert(err, IsNil)
+	var btcPubKey string
+	for _, inbound := range wasmResp.InboundAddresses {
+		if inbound.Chain == common.BTCChain.String() {
+			btcPubKey = inbound.PubKey
+			break
+		}
+	}
+	c.Assert(btcPubKey, Equals, insolventPubKey.String(), Commentf("WASM path must expose the insolvent vault unchanged"))
+
+	// Once the vault is observed solvent again on BTC, the flag clears and the
+	// vault is re-elected for its chains.
+	clearVaultInsolvent(ctx, mgr.Keeper(), insolventPubKey, common.BTCChain)
+	respAfter, err := queryServer.InboundAddresses(ctx, &types.QueryInboundAddressesRequest{})
+	c.Assert(err, IsNil)
+	var btcAfter, ethAfter string
+	for _, inbound := range respAfter.InboundAddresses {
+		switch inbound.Chain {
+		case common.BTCChain.String():
+			btcAfter = inbound.PubKey
+		case common.ETHChain.String():
+			ethAfter = inbound.PubKey
+		}
+	}
+	c.Assert(btcAfter, Equals, insolventPubKey.String())
+	c.Assert(ethAfter, Equals, insolventPubKey.String())
+}
+
 func (s *QuerierSuite) TestQueryAsgardVault(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	_, mgr := setupManagerForTest(c)

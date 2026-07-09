@@ -849,6 +849,30 @@ func filterCompromisedVaults(ctx cosmos.Context, k keeper.Keeper, active Vaults)
 	return safe
 }
 
+// filterInsolventVaults removes any vault flagged insolvent by the solvency
+// checker (SolvencyHaltVault-<pubkey>-<chain>). Insolvency on one chain is
+// usually the symptom of a compromised key, so the whole vault is dropped from
+// inbound-address election - including its still-solvent, unhalted chains -
+// rather than only the halted chain. On KV error the vault is excluded
+// (fail-closed). Like filterCompromisedVaults, only used for non-WASM paths so
+// WASM contracts keep seeing a deterministic, unfiltered response.
+func filterInsolventVaults(ctx cosmos.Context, k keeper.Keeper, active Vaults) Vaults {
+	safe := make(Vaults, 0, len(active))
+	for _, v := range active {
+		insolvent, err := isVaultInsolvent(ctx, k, v)
+		if err != nil {
+			ctx.Logger().Error("failed to read solvency-halt vault mimir, excluding vault", "pub_key", v.PubKey.String(), "error", err)
+			continue
+		}
+		if insolvent {
+			ctx.Logger().Info("excluding insolvent vault from inbound election", "pub_key", v.PubKey.String())
+			continue
+		}
+		safe = append(safe, v)
+	}
+	return safe
+}
+
 func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryInboundAddressesRequest) (*types.QueryInboundAddressesResponse, error) {
 	active, err := qs.mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
 	if err != nil {
@@ -859,6 +883,7 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 	isWasm, _ := ctx.Value(constants.CtxWASMQuery).(bool)
 	if !isWasm {
 		active = filterCompromisedVaults(ctx, qs.mgr.Keeper(), active)
+		active = filterInsolventVaults(ctx, qs.mgr.Keeper(), active)
 	}
 
 	resp := make([]*types.QueryInboundAddressResponse, 0)

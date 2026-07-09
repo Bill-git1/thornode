@@ -99,13 +99,6 @@ func processSolvencyAttestation(
 	if err != nil {
 		ctx.Logger().Error("fail to get mimir", "error", err)
 	}
-	// If the chain was halted this block, leave it halted without overriding.
-	// (For instance if halted because of a different vault which is insolvent.)
-	// Also don't unhalt if the chain was manually halted for a future height
-	// or indefinitely ('1').
-	if haltChain >= ctx.BlockHeight() || haltChain == 1 {
-		return nil
-	}
 	// If the solvency message is from a height which does not reflect inbounds
 	// reflected in the supermajority-observation vault balances,
 	// do not act on it.
@@ -120,6 +113,29 @@ func processSolvencyAttestation(
 	}
 
 	isInsolvent := insolvencyCheck(ctx, mgr, vault, voter.Coins, voter.Chain)
+
+	if isInsolvent {
+		// Flag this specific vault as insolvent so it is excluded from
+		// inbound-address election on every chain it serves, not just the
+		// halted one. The insolvency is usually caused by a compromised key,
+		// which leaves the vault's other (still-solvent, unhalted) chains
+		// exposed to fresh deposits until the vault stops being advertised.
+		flagVaultInsolvent(ctx, k, voter.PubKey, voter.Chain)
+	} else {
+		// Vault is solvent again on this chain; clear its per-chain exclusion
+		// flag so it can be re-elected for inbound addresses once solvent on
+		// every chain it serves.
+		clearVaultInsolvent(ctx, k, voter.PubKey, voter.Chain)
+	}
+
+	// If the chain was halted this block, leave it halted without overriding.
+	// (For instance if halted because of a different vault which is insolvent.)
+	// Also don't unhalt if the chain was manually halted for a future height
+	// or indefinitely ('1'). The per-vault flag was already updated above so
+	// vault recovery is not blocked on chain-wide halt state.
+	if haltChain >= ctx.BlockHeight() || haltChain == 1 {
+		return nil
+	}
 
 	// If insolvent: halt the chain if unhalted, or refresh the halt height if already halted
 	// from an earlier block. Refreshing the halt height prevents a different solvent vault
@@ -152,6 +168,66 @@ func processSolvencyAttestation(
 	}
 
 	return nil
+}
+
+// solvencyHaltVaultKeyPrefix flags a specific vault as insolvent on a specific
+// chain. It is keyed by both vault pubkey and chain because a vault can be
+// insolvent on one chain while remaining solvent on others; the per-chain
+// granularity lets a recovered chain clear its own flag without prematurely
+// re-electing a vault that is still insolvent elsewhere.
+const solvencyHaltVaultKeyPrefix = "SolvencyHaltVault-"
+
+// solvencyHaltVaultKey returns the Mimir key flagging a vault insolvent on a chain.
+func solvencyHaltVaultKey(pubKey common.PubKey, chain common.Chain) string {
+	return fmt.Sprintf("%s%s-%s", solvencyHaltVaultKeyPrefix, pubKey.String(), chain.String())
+}
+
+// flagVaultInsolvent records that the given vault is insolvent on the given
+// chain so it can be excluded from inbound-address election. A compromised key
+// that drains one chain leaves the same vault's other chains exposed, so the
+// whole vault must stop being advertised for deposits, not just the halted chain.
+// It only writes on the transition into insolvency, so the stored height records
+// when the vault was first flagged and a still-insolvent vault does not incur a
+// state write every solvency cycle.
+func flagVaultInsolvent(ctx cosmos.Context, k keeper.Keeper, pubKey common.PubKey, chain common.Chain) {
+	key := solvencyHaltVaultKey(pubKey, chain)
+	if flagged, err := k.GetMimir(ctx, key); err == nil && flagged > 0 {
+		return
+	}
+	k.SetMimir(ctx, key, ctx.BlockHeight())
+}
+
+// clearVaultInsolvent clears the per-chain insolvency flag once the vault is
+// observed solvent again on that chain, allowing it to be re-elected for deposits.
+// It only writes when the flag is actually set, so the common case - a solvent
+// vault reporting solvency every cycle - does not create a zeroed entry for every
+// vault+chain and bloat the Mimir store.
+func clearVaultInsolvent(ctx cosmos.Context, k keeper.Keeper, pubKey common.PubKey, chain common.Chain) {
+	key := solvencyHaltVaultKey(pubKey, chain)
+	flagged, err := k.GetMimir(ctx, key)
+	if err != nil {
+		ctx.Logger().Error("fail to read solvency-halt vault mimir", "pub_key", pubKey.String(), "chain", chain.String(), "error", err)
+		return
+	}
+	if flagged > 0 {
+		k.SetMimir(ctx, key, 0)
+	}
+}
+
+// isVaultInsolvent reports whether the vault is flagged insolvent on any of the
+// chains it serves. On KV read failure it returns true so callers fail closed:
+// an unverifiable vault must not be advertised for deposits.
+func isVaultInsolvent(ctx cosmos.Context, k keeper.Keeper, vault Vault) (bool, error) {
+	for _, chain := range vault.GetChains() {
+		flagged, err := k.GetMimir(ctx, solvencyHaltVaultKey(vault.PubKey, chain))
+		if err != nil {
+			return true, err
+		}
+		if flagged > 0 {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // insolvencyCheck compare the coins in vault against the coins report by solvency message

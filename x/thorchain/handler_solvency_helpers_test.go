@@ -266,6 +266,155 @@ func (s *HandlerSolvencyHelpersSuite) TestProcessSolvencyAttestation_AutoUnhalt(
 	c.Assert(halt, Equals, int64(0))
 }
 
+func (s *HandlerSolvencyHelpersSuite) TestProcessSolvencyAttestation_FlagsVaultInsolvent(c *C) {
+	ctx, mgr, nas, vault := setupSolvencyHelpersTest(c)
+
+	// Vault holds 1000 ETH but wallet only reports 100 ETH → insolvent.
+	voter := NewSolvencyVoter(
+		GetRandomTxHash(), common.ETHChain, vault.PubKey,
+		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))),
+		1024,
+	)
+	sol := &common.Solvency{
+		Id: voter.Id, Chain: voter.Chain, PubKey: voter.PubKey, Coins: voter.Coins, Height: voter.Height,
+	}
+
+	bringVoterToConsensus(&voter, nas)
+	voter.ConsensusBlockHeight = 0
+
+	err := processSolvencyAttestation(ctx, mgr, &voter, nas[2].NodeAddress, nas, sol, false)
+	c.Assert(err, IsNil)
+
+	// Chain halted and the specific vault flagged insolvent for its chain.
+	halt, err := mgr.Keeper().GetMimir(ctx, "SolvencyHaltETHChain")
+	c.Assert(err, IsNil)
+	c.Assert(halt, Equals, ctx.BlockHeight())
+
+	flag, err := mgr.Keeper().GetMimir(ctx, solvencyHaltVaultKey(vault.PubKey, common.ETHChain))
+	c.Assert(err, IsNil)
+	c.Assert(flag, Equals, ctx.BlockHeight())
+
+	insolvent, err := isVaultInsolvent(ctx, mgr.Keeper(), vault)
+	c.Assert(err, IsNil)
+	c.Assert(insolvent, Equals, true)
+}
+
+func (s *HandlerSolvencyHelpersSuite) TestProcessSolvencyAttestation_ClearsVaultInsolventFlag(c *C) {
+	ctx, mgr, nas, vault := setupSolvencyHelpersTest(c)
+
+	// Chain previously halted and vault previously flagged insolvent.
+	mgr.Keeper().SetMimir(ctx, "SolvencyHaltETHChain", 500)
+	flagVaultInsolvent(ctx.WithBlockHeight(500), mgr.Keeper(), vault.PubKey, common.ETHChain)
+
+	// Vault has 1000 ETH and wallet also reports 1000 ETH → solvent again.
+	voter := NewSolvencyVoter(
+		GetRandomTxHash(), common.ETHChain, vault.PubKey,
+		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One))),
+		1024,
+	)
+	sol := &common.Solvency{
+		Id: voter.Id, Chain: voter.Chain, PubKey: voter.PubKey, Coins: voter.Coins, Height: voter.Height,
+	}
+
+	bringVoterToConsensus(&voter, nas)
+	voter.ConsensusBlockHeight = 0
+
+	err := processSolvencyAttestation(ctx, mgr, &voter, nas[2].NodeAddress, nas, sol, false)
+	c.Assert(err, IsNil)
+
+	// Both the chain halt and the vault flag are cleared.
+	halt, err := mgr.Keeper().GetMimir(ctx, "SolvencyHaltETHChain")
+	c.Assert(err, IsNil)
+	c.Assert(halt, Equals, int64(0))
+
+	insolvent, err := isVaultInsolvent(ctx, mgr.Keeper(), vault)
+	c.Assert(err, IsNil)
+	c.Assert(insolvent, Equals, false)
+}
+
+func (s *HandlerSolvencyHelpersSuite) TestProcessSolvencyAttestation_ClearsVaultInsolventFlagWithoutUnhaltingChain(c *C) {
+	testCases := []struct {
+		name             string
+		halt             int64
+		haltCurrentBlock bool
+	}{
+		{name: "halted this block", haltCurrentBlock: true},
+		{name: "manual halt", halt: 1},
+	}
+
+	for _, tc := range testCases {
+		ctx, mgr, nas, vault := setupSolvencyHelpersTest(c)
+
+		expectedHalt := tc.halt
+		if tc.haltCurrentBlock {
+			expectedHalt = ctx.BlockHeight()
+		}
+		mgr.Keeper().SetMimir(ctx, "SolvencyHaltETHChain", expectedHalt)
+		flagVaultInsolvent(ctx.WithBlockHeight(500), mgr.Keeper(), vault.PubKey, common.ETHChain)
+
+		// Vault has 1000 ETH and wallet also reports 1000 ETH -> solvent again.
+		voter := NewSolvencyVoter(
+			GetRandomTxHash(), common.ETHChain, vault.PubKey,
+			common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One))),
+			1024,
+		)
+		sol := &common.Solvency{
+			Id: voter.Id, Chain: voter.Chain, PubKey: voter.PubKey, Coins: voter.Coins, Height: voter.Height,
+		}
+
+		bringVoterToConsensus(&voter, nas)
+		voter.ConsensusBlockHeight = 0
+
+		err := processSolvencyAttestation(ctx, mgr, &voter, nas[2].NodeAddress, nas, sol, false)
+		c.Assert(err, IsNil, Commentf(tc.name))
+
+		// Chain-wide halt state is preserved, but the recovered vault's exclusion
+		// flag is cleared so unrelated healthy chains can elect it again.
+		halt, err := mgr.Keeper().GetMimir(ctx, "SolvencyHaltETHChain")
+		c.Assert(err, IsNil, Commentf(tc.name))
+		c.Assert(halt, Equals, expectedHalt, Commentf(tc.name))
+
+		flag, err := mgr.Keeper().GetMimir(ctx, solvencyHaltVaultKey(vault.PubKey, common.ETHChain))
+		c.Assert(err, IsNil, Commentf(tc.name))
+		c.Assert(flag, Equals, int64(0), Commentf(tc.name))
+
+		insolvent, err := isVaultInsolvent(ctx, mgr.Keeper(), vault)
+		c.Assert(err, IsNil, Commentf(tc.name))
+		c.Assert(insolvent, Equals, false, Commentf(tc.name))
+	}
+}
+
+func (s *HandlerSolvencyHelpersSuite) TestProcessSolvencyAttestation_DoesNotClearVaultInsolventFlagForStaleHeight(c *C) {
+	ctx, mgr, nas, vault := setupSolvencyHelpersTest(c)
+
+	mgr.Keeper().SetMimir(ctx, "SolvencyHaltETHChain", ctx.BlockHeight())
+	flagVaultInsolvent(ctx.WithBlockHeight(500), mgr.Keeper(), vault.PubKey, common.ETHChain)
+	c.Assert(mgr.Keeper().SetLastChainHeight(ctx, common.ETHChain, 2000), IsNil)
+
+	voter := NewSolvencyVoter(
+		GetRandomTxHash(), common.ETHChain, vault.PubKey,
+		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One))),
+		1024,
+	)
+	sol := &common.Solvency{
+		Id: voter.Id, Chain: voter.Chain, PubKey: voter.PubKey, Coins: voter.Coins, Height: voter.Height,
+	}
+
+	bringVoterToConsensus(&voter, nas)
+	voter.ConsensusBlockHeight = 0
+
+	err := processSolvencyAttestation(ctx, mgr, &voter, nas[2].NodeAddress, nas, sol, false)
+	c.Assert(err, IsNil)
+
+	flag, err := mgr.Keeper().GetMimir(ctx, solvencyHaltVaultKey(vault.PubKey, common.ETHChain))
+	c.Assert(err, IsNil)
+	c.Assert(flag, Equals, int64(500))
+
+	insolvent, err := isVaultInsolvent(ctx, mgr.Keeper(), vault)
+	c.Assert(err, IsNil)
+	c.Assert(insolvent, Equals, true)
+}
+
 func (s *HandlerSolvencyHelpersSuite) TestInsolvencyCheck_EmptyCoin(c *C) {
 	ctx, mgr, _, vault := setupSolvencyHelpersTest(c)
 

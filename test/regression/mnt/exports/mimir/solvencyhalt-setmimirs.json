@@ -231,6 +231,10 @@
         {
           "key": "SOLVENCYHALTBTCCHAIN",
           "value": "2"
+        },
+        {
+          "key": "SOLVENCYHALTVAULT-TTHORPUB1ADDWNPEPQV8LVVQMCZR893YF7ZYF7XTFFCCF032APRL8Z09Y3E3NFRUEDEW85N306K5-BTC",
+          "value": "2"
         }
       ],
       "network": {

@@ -379,6 +379,7 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 		isWasm, _ := ctx.Value(constants.CtxWASMQuery).(bool)
 		if !isWasm {
 			active = filterCompromisedVaults(ctx, mgr.Keeper(), active)
+			active = filterInsolventVaults(ctx, mgr.Keeper(), active)
 		}
 		constAccessor := mgr.GetConstants()
 		signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
