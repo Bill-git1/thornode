@@ -1034,9 +1034,9 @@ func (s *SlashingSuite) TestNeedsNewVault(c *C) {
 	ctx = ctx.WithBlockHeight(900)
 	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 
-	// test that more than 2/3rd will always return false
-	ctx = ctx.WithBlockHeight(999999999)
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
+	// A non-finalised observation cannot pin reassignment forever.
+	ctx = ctx.WithBlockHeight(902)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, true)
 }
 
 func (s *SlashingSuite) TestNeedsNewVaultEdDSA(c *C) {
@@ -1085,14 +1085,16 @@ func (s *SlashingSuite) TestNeedsNewVaultEdDSA(c *C) {
 	// even though it doesn't match toi.VaultPubKey (ECDSA). Should NOT need new vault.
 	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 
-	// Confirm it still returns false at later block heights.
-	ctx = ctx.WithBlockHeight(999999999)
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
+	// The EdDSA observation pins while fresh, then expires like other non-final observations.
+	ctx = ctx.WithBlockHeight(902)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, true)
 }
 
 func (s *SlashingSuite) TestNeedsNewVaultFrost(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
+	signingTransPeriod := int64(300)
+	startHeight := int64(1)
 	inhash := GetRandomTxHash()
 	outhash := GetRandomTxHash()
 	pk1 := GetRandomPubKey()
@@ -1107,6 +1109,8 @@ func (s *SlashingSuite) TestNeedsNewVaultFrost(c *C) {
 
 	tx := GetRandomTx()
 	tx.ID = outhash
+	tx.Chain = common.XMRChain
+	tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(common.One)))
 	obs := NewObservedTx(tx, 0, frostPK, 0)
 	obs.ObservedPubKey = frostPK
 	obs.Signers = []string{sig1.String(), sig2.String(), sig3.String()}
@@ -1118,21 +1122,73 @@ func (s *SlashingSuite) TestNeedsNewVaultFrost(c *C) {
 
 	c.Assert(len(tx.Coins), Equals, 1)
 	toi := TxOutItem{
+		Chain:            common.XMRChain,
 		InHash:           inhash,
 		Coin:             tx.Coins[0],
 		VaultPubKey:      secpPK,
 		VaultPubKeyFrost: frostPK,
 	}
 
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, true)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, signingTransPeriod, startHeight, toi), Equals, true)
 
 	voter := NewObservedTxVoter(outhash, []common.ObservedTx{obs})
 	mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
 	mgr.Keeper().SetObservedLink(ctx, inhash, outhash)
 
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
-	ctx = ctx.WithBlockHeight(999999999)
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, signingTransPeriod, startHeight, toi), Equals, false)
+	ctx = ctx.WithBlockHeight(startHeight + staleOutboundObservationSigningPeriods*signingTransPeriod + 1)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, signingTransPeriod, startHeight, toi), Equals, false)
+	ctx = ctx.WithBlockHeight(startHeight + staleOutboundObservationSigningPeriods*staleOutboundObservationSigningPeriod(signingTransPeriod, common.XMRChain) + 1)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, signingTransPeriod, startHeight, toi), Equals, true)
+}
+
+func (s *SlashingSuite) TestActiveOutboundObservationExpiresStaleNonFinalized(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	slasher := newSlasher(mgr.Keeper(), mgr.EventMgr())
+
+	signingTransPeriod := int64(300)
+	startHeight := int64(100)
+	inhash := GetRandomTxHash()
+	outhash := GetRandomTxHash()
+	tx := GetRandomTx()
+	tx.ID = outhash
+	obs := NewObservedTx(tx, 0, GetRandomPubKey(), 0)
+	voter := NewObservedTxVoter(outhash, []common.ObservedTx{obs})
+	mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
+	mgr.Keeper().SetObservedLink(ctx, inhash, outhash)
+
+	expiryHeight := startHeight + staleOutboundObservationSigningPeriods*signingTransPeriod
+	firstStaleHeight := expiryHeight + 1
+
+	ctx = ctx.WithBlockHeight(expiryHeight)
+	status := slasher.staleNonFinalOutboundObservation(ctx, voter, signingTransPeriod, startHeight)
+	c.Check(status.stale, Equals, false)
+	c.Check(status.firstStaleWindow, Equals, false)
+	c.Check(status.observationHeight, Equals, startHeight)
+	c.Check(status.staleSinceHeight, Equals, firstStaleHeight)
+	c.Check(slasher.hasActiveOutboundObservation(ctx, mgr, signingTransPeriod, startHeight, inhash), Equals, true)
+
+	ctx = ctx.WithBlockHeight(firstStaleHeight)
+	status = slasher.staleNonFinalOutboundObservation(ctx, voter, signingTransPeriod, startHeight)
+	c.Check(status.stale, Equals, true)
+	c.Check(status.firstStaleWindow, Equals, true)
+	c.Check(status.staleSinceHeight, Equals, firstStaleHeight)
+	c.Check(slasher.hasActiveOutboundObservation(ctx, mgr, signingTransPeriod, startHeight, inhash), Equals, false)
+
+	ctx = ctx.WithBlockHeight(firstStaleHeight + signingTransPeriod)
+	status = slasher.staleNonFinalOutboundObservation(ctx, voter, signingTransPeriod, startHeight)
+	c.Check(status.stale, Equals, true)
+	c.Check(status.firstStaleWindow, Equals, false)
+	c.Check(slasher.hasActiveOutboundObservation(ctx, mgr, signingTransPeriod, startHeight, inhash), Equals, false)
+
+	voter.UnfinalizedHeight = ctx.BlockHeight()
+	mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
+	c.Check(slasher.hasActiveOutboundObservation(ctx, mgr, signingTransPeriod, startHeight, inhash), Equals, true)
+
+	voter.UnfinalizedHeight = 0
+	voter.FinalisedHeight = startHeight
+	mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
+	c.Check(slasher.hasActiveOutboundObservation(ctx, mgr, signingTransPeriod, startHeight, inhash), Equals, true)
 }
 
 func (s *SlashingSuite) TestTreasuryRecoveryForMaxAttempts(c *C) {

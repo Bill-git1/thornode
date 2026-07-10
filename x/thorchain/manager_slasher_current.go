@@ -231,6 +231,17 @@ func (s *SlasherImpl) HandleMissingSign(ctx cosmos.Context, addr crypto.Address,
 // confirmation enough headroom.
 const xmrSigningPeriodMultiplier = 3
 
+// staleOutboundObservationSigningPeriods bounds how long a non-finalised
+// observed outbound can pin reassignment or treasury recovery.
+const staleOutboundObservationSigningPeriods = 3
+
+func staleOutboundObservationSigningPeriod(signingTransPeriod int64, chain common.Chain) int64 {
+	if chain.Equals(common.XMRChain) {
+		return signingTransPeriod * xmrSigningPeriodMultiplier
+	}
+	return signingTransPeriod
+}
+
 // LackSigning slash account that fail to sign tx
 func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	var resultErr error
@@ -401,10 +412,10 @@ func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 					attempts := age / signingTransPeriod
 					if attempts >= maxOutboundAttempts {
 						// Skip treasury recovery if there's already an outbound associated or
-						// at least one observation of the outbound (outbound is in progress)
+						// a non-stale observation of the outbound (outbound is in progress).
 						hasOutboundAssociated := len(voter.OutTxs) > 0
-						outboundObservations := mgr.Keeper().GetObservedLink(ctx, toi.InHash)
-						hasOutboundObservation := len(outboundObservations) > 0
+						staleSigningTransPeriod := staleOutboundObservationSigningPeriod(signingTransPeriod, toi.Chain)
+						hasOutboundObservation := s.hasActiveOutboundObservation(ctx, mgr, staleSigningTransPeriod, voter.FinalisedHeight, toi.InHash)
 						if hasOutboundAssociated || hasOutboundObservation {
 							ctx.Logger().Info("skipping treasury recovery, outbound in progress",
 								"hash", toi.InHash,
@@ -1049,6 +1060,96 @@ func (s *SlasherImpl) updatePoolFromSlash(ctx cosmos.Context, pool types.Pool, s
 	}
 }
 
+// hasActiveOutboundObservation reports whether an observed link should still
+// block MaxOutboundAttempts recovery. Fresh or finalised observations remain a
+// double-send guard; only stale non-finalised observations are ignored.
+func (s *SlasherImpl) hasActiveOutboundObservation(ctx cosmos.Context, mgr Manager, staleSigningTransPeriod, startHeight int64, inHash common.TxID) bool {
+	outhashes := mgr.Keeper().GetObservedLink(ctx, inHash)
+	for _, hash := range outhashes {
+		voter, err := mgr.Keeper().GetObservedTxOutVoter(ctx, hash)
+		if err != nil {
+			ctx.Logger().Error("fail to get txout voter", "hash", hash, "error", err)
+			return true
+		}
+		staleStatus := s.staleNonFinalOutboundObservation(ctx, voter, staleSigningTransPeriod, startHeight)
+		if staleStatus.stale {
+			// The observed link proves only that signers reported a broadcast.
+			// If it never finalises, continuing to treat it as in progress blocks
+			// both reassignment and MaxOutboundAttempts recovery indefinitely.
+			logStaleOutboundObservation(ctx, staleStatus, "ignoring stale non-finalised outbound observation",
+				"inhash", inHash,
+				"outhash", hash,
+				"start_height", startHeight,
+				"observation_height", staleStatus.observationHeight,
+				"voter_height", voter.Height,
+				"unfinalized_height", voter.UnfinalizedHeight,
+				"stale_since_height", staleStatus.staleSinceHeight,
+				"reason", "non-finalised observation exceeded stale window and no longer proves outbound is in progress")
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+// staleOutboundObservationStatus carries the height metadata used to decide
+// whether a stale observation should still get the one high-signal Info log.
+type staleOutboundObservationStatus struct {
+	stale             bool
+	firstStaleWindow  bool
+	observationHeight int64
+	staleSinceHeight  int64
+}
+
+// staleNonFinalOutboundObservation bounds the "vault says it sent it" heuristic.
+// A non-finalised outbound observation that never reaches finality should not
+// pin reassignment or recovery forever.
+func (s *SlasherImpl) staleNonFinalOutboundObservation(ctx cosmos.Context, voter ObservedTxVoter, signingTransPeriod, startHeight int64) staleOutboundObservationStatus {
+	status := staleOutboundObservationStatus{}
+	if signingTransPeriod <= 0 || voter.FinalisedHeight > 0 {
+		return status
+	}
+
+	// Prefer the consensus height for voters that reached non-final consensus.
+	// Fall back to the inbound/retry clock for sub-consensus signer observations.
+	observationHeight := voter.UnfinalizedHeight
+	if observationHeight == 0 {
+		observationHeight = voter.Height
+	}
+	if observationHeight == 0 {
+		observationHeight = startHeight
+	}
+	if observationHeight <= 0 {
+		return status
+	}
+
+	expiryHeight := observationHeight + (staleOutboundObservationSigningPeriods * signingTransPeriod)
+	status.observationHeight = observationHeight
+	status.staleSinceHeight = expiryHeight + 1
+	if ctx.BlockHeight() <= expiryHeight {
+		return status
+	}
+
+	status.stale = true
+	// LackSigning re-evaluates rescheduled items on signing-period boundaries,
+	// so an exact expiryHeight+1 check could miss the first actionable check.
+	status.firstStaleWindow = ctx.BlockHeight() <= expiryHeight+signingTransPeriod
+	return status
+}
+
+// logStaleOutboundObservation emits Info only while the stale condition first
+// becomes actionable; repeated stale checks after that window are Debug noise.
+func logStaleOutboundObservation(ctx cosmos.Context, status staleOutboundObservationStatus, msg string, keyvals ...interface{}) {
+	keyvals = append(keyvals,
+		"first_stale_window", status.firstStaleWindow,
+		"stale_observation_signing_periods", staleOutboundObservationSigningPeriods)
+	if status.firstStaleWindow {
+		ctx.Logger().Info(msg, keyvals...)
+		return
+	}
+	ctx.Logger().Debug(msg, keyvals...)
+}
+
 func (s *SlasherImpl) needsNewVault(ctx cosmos.Context, mgr Manager, vault Vault, signingTransPeriod, startHeight int64, toi TxOutItem) bool {
 	outhashes := mgr.Keeper().GetObservedLink(ctx, toi.InHash)
 	if len(outhashes) == 0 {
@@ -1082,6 +1183,20 @@ func (s *SlasherImpl) needsNewVault(ctx cosmos.Context, mgr Manager, vault Vault
 			}
 		}
 		if len(signers) > 0 {
+			staleSigningTransPeriod := staleOutboundObservationSigningPeriod(signingTransPeriod, toi.Chain)
+			staleStatus := s.staleNonFinalOutboundObservation(ctx, voter, staleSigningTransPeriod, startHeight)
+			if staleStatus.stale {
+				logStaleOutboundObservation(ctx, staleStatus, "allowing vault reassignment for stale non-finalised outbound observation",
+					"inhash", toi.InHash,
+					"outhash", hash,
+					"start_height", startHeight,
+					"observation_height", staleStatus.observationHeight,
+					"voter_height", voter.Height,
+					"unfinalized_height", voter.UnfinalizedHeight,
+					"stale_since_height", staleStatus.staleSinceHeight)
+				continue
+			}
+
 			var count int // count the number of signers from the assigned vault
 			for _, member := range vault.Membership {
 				pk, err := common.NewPubKey(member)
