@@ -4025,6 +4025,32 @@
     "begin_block_events": [],
     "end_block_events": [
       {
+        "chain": "THOR",
+        "code": "108",
+        "coin": "5000000 BTC~BTC",
+        "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+        "id": "AA99E8A5244060449DAE2A09ACACFCCE2CDEC8AA26C3704B2E0B715E31CBFA5E",
+        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
+        "mode": "EndBlock",
+        "reason": "swaps from trade asset to L1 incur slip, use trade-",
+        "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "type": "refund"
+      },
+      {
+        "count": "10",
+        "deposit": "5000000 BTC~BTC",
+        "failed_swap_reasons": "swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-",
+        "failed_swaps": "0, 1, 2, 3, 4, 5, 6, 7, 8, 9",
+        "in": "0 BTC~BTC",
+        "interval": "0",
+        "last_height": "15",
+        "mode": "EndBlock",
+        "out": "0 ETH.ETH",
+        "quantity": "10",
+        "tx_id": "AA99E8A5244060449DAE2A09ACACFCCE2CDEC8AA26C3704B2E0B715E31CBFA5E",
+        "type": "streaming_swap"
+      },
+      {
         "amount": "500000",
         "asset": "BTC~BTC",
         "asset_address": "",
@@ -4118,32 +4144,6 @@
         "swap_target": "0",
         "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "swap"
-      },
-      {
-        "chain": "THOR",
-        "code": "108",
-        "coin": "5000000 BTC~BTC",
-        "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-        "id": "AA99E8A5244060449DAE2A09ACACFCCE2CDEC8AA26C3704B2E0B715E31CBFA5E",
-        "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
-        "mode": "EndBlock",
-        "reason": "swaps from trade asset to L1 incur slip, use trade-",
-        "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "refund"
-      },
-      {
-        "count": "10",
-        "deposit": "5000000 BTC~BTC",
-        "failed_swap_reasons": "swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-\n swaps from trade asset to L1 incur slip, use trade-",
-        "failed_swaps": "0, 1, 2, 3, 4, 5, 6, 7, 8, 9",
-        "in": "0 BTC~BTC",
-        "interval": "0",
-        "last_height": "15",
-        "mode": "EndBlock",
-        "out": "0 ETH.ETH",
-        "quantity": "10",
-        "tx_id": "AA99E8A5244060449DAE2A09ACACFCCE2CDEC8AA26C3704B2E0B715E31CBFA5E",
-        "type": "streaming_swap"
       },
       {
         "amount": "3322087rune",

@@ -152,16 +152,16 @@ count: 9
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf }}
 asserts:
-  - .asset_redeem_value == "9500000000"
-  - .rune_redeem_value == "3859511695020"
-  - .luvi_growth_pct == "0.211038754669499225"
+  - .asset_redeem_value == "5281350856"
+  - .rune_redeem_value == "4991693504664"
+  - .luvi_growth_pct == "0.026896125797961406"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_goat }}
 asserts:
-  - .asset_redeem_value == "85500000000"
-  - .rune_redeem_value == "34735605255186"
-  - .luvi_growth_pct == "0.211038754669499225"
+  - .asset_redeem_value == "47532157708"
+  - .rune_redeem_value == "44925241541977"
+  - .luvi_growth_pct == "0.026896125797961406"
 ---
 ########################################################################################
 # wolf withdraws right before the scheduled end of the streaming swap
@@ -182,7 +182,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type?=="withdraw")] | length == 1
-  - ..|select(.type?=="withdraw").emit_rune == "7020548261035"
+  - ..|select(.type?=="withdraw").emit_rune == "9470052478762"
   # Under 2x the initial rune_redeem_value (noting the asymmetric withdrawal's swap fee),
   # of which the position's initial total value was 2x.
 ---
@@ -192,7 +192,7 @@ asserts:
 type: tx-deposit
 signer: {{ addr_thor_wolf }}
 coins:
-  - amount: "94_781_86625233"
+  - amount: "94_700_52478762"
     # Same as the withdraw-emitted RUNE,
     # though wolf could have chosen to deposit less.
     asset: "rune"
@@ -205,10 +205,10 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf }}
 asserts:
-  - .units == "6068080829483"
+  - .units == "4493725748398"
   # Contrast with the initial units of "50_000_00000000" .
-  - .asset_redeem_value == "11882335758"
-  - .rune_redeem_value == "4739093312616"
+  - .asset_redeem_value == "4772949514"
+  - .rune_redeem_value == "4531115404777"
   # Contrast with the initial redeem values of "50_00000000" and "50_000_00000000".
   # <0.96x now, due to asymmetrical liquidity action swap fees
   # (not checking luvi_growth_pct which has been reset by the withdraw and deposit).
@@ -217,7 +217,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_goat }}
 asserts:
   - .units == ("450_000_00000000" | gsub("_";"")) # Unchanged.
-  - .asset_redeem_value == "88117664241"
-  - .rune_redeem_value == "35144422933782"
+  - .asset_redeem_value == "47796136254"
+  - .rune_redeem_value == "45374418607473"
   # Contrast with the initial redeem values of "450_00000000" and "450_000_00000000".
-  - .luvi_growth_pct == "0.236651311697235884"
+  - .luvi_growth_pct == "0.034878664961987833"

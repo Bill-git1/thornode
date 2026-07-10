@@ -1914,7 +1914,7 @@
         "id": "2A17814A4E5AAFA68B6D109F3C8A2F381D083113CC274D68063C6EC53F302219",
         "liquidity_fee": "28229",
         "liquidity_fee_in_rune": "28229",
-        "memo": "=:THOR.RUNE:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:0:b:0",
+        "memo": "=:THOR.RUNE:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej:0:a:0",
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "5",
@@ -1934,13 +1934,13 @@
       {
         "amount": "57883425rune",
         "mode": "EndBlock",
-        "receiver": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "receiver": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "type": "coin_received"
       },
       {
         "amount": "57883425rune",
         "mode": "EndBlock",
-        "recipient": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "recipient": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "transfer"
       },
@@ -1957,7 +1957,7 @@
         "in_tx_id": "2A17814A4E5AAFA68B6D109F3C8A2F381D083113CC274D68063C6EC53F302219",
         "memo": "OUT:2A17814A4E5AAFA68B6D109F3C8A2F381D083113CC274D68063C6EC53F302219",
         "mode": "EndBlock",
-        "to": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+        "to": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "type": "outbound"
       },
       {
@@ -1992,7 +1992,7 @@
         "id": "2A17814A4E5AAFA68B6D109F3C8A2F381D083113CC274D68063C6EC53F302219",
         "liquidity_fee": "28188",
         "liquidity_fee_in_rune": "28188",
-        "memo": "=:THOR.RUNE:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej:0:a:0",
+        "memo": "=:THOR.RUNE:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:0:b:0",
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "5",
@@ -2012,13 +2012,13 @@
       {
         "amount": "57827034rune",
         "mode": "EndBlock",
-        "receiver": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+        "receiver": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "type": "coin_received"
       },
       {
         "amount": "57827034rune",
         "mode": "EndBlock",
-        "recipient": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+        "recipient": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "transfer"
       },
@@ -2035,7 +2035,7 @@
         "in_tx_id": "2A17814A4E5AAFA68B6D109F3C8A2F381D083113CC274D68063C6EC53F302219",
         "memo": "OUT:2A17814A4E5AAFA68B6D109F3C8A2F381D083113CC274D68063C6EC53F302219",
         "mode": "EndBlock",
-        "to": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+        "to": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "type": "outbound"
       },
       {

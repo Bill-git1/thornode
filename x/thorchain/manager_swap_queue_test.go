@@ -24,6 +24,40 @@ func (s *ManagerSwapQueueSuite) TestGenTradePair(c *C) {
 	c.Assert(pair.target.Equals(target), Equals, true)
 }
 
+func (s *ManagerSwapQueueSuite) TestSwapItemsSortEqualFeeTieBreakers(c *C) {
+	txA := common.TxID("AA00000000000000000000000000000000000000000000000000000000000000")
+	txB := common.TxID("BB00000000000000000000000000000000000000000000000000000000000000")
+	txC := common.TxID("CC00000000000000000000000000000000000000000000000000000000000000")
+	fee := cosmos.NewUint(100)
+
+	items := swapItems{
+		{index: 2, msg: MsgSwap{Tx: common.Tx{ID: txB}}, fee: fee},
+		{index: 3, msg: MsgSwap{Tx: common.Tx{ID: txA}}, fee: fee},
+		{index: 1, msg: MsgSwap{Tx: common.Tx{ID: txA}}, fee: fee},
+		{index: 0, msg: MsgSwap{Tx: common.Tx{ID: txC}}, fee: fee},
+		{index: 0, msg: MsgSwap{Tx: common.Tx{ID: txA}}, fee: fee},
+	}
+
+	sorted := items.Sort()
+
+	expected := []struct {
+		txID  common.TxID
+		index int
+	}{
+		{txID: txA, index: 0},
+		{txID: txA, index: 1},
+		{txID: txA, index: 3},
+		{txID: txB, index: 2},
+		{txID: txC, index: 0},
+	}
+	c.Assert(sorted, HasLen, len(expected))
+	for i, exp := range expected {
+		c.Check(sorted[i].msg.Tx.ID.Equals(exp.txID), Equals, true, Commentf("index %d", i))
+		c.Check(sorted[i].index, Equals, exp.index, Commentf("index %d", i))
+	}
+	c.Check(items[0].msg.Tx.ID.Equals(txB), Equals, true, Commentf("Sort should return a copy"))
+}
+
 // TestTradePairString tests the String method of tradePair
 func (s *ManagerSwapQueueSuite) TestTradePairString(c *C) {
 	// Test various trade pair string representations
@@ -321,7 +355,6 @@ func (s *ManagerSwapQueueSuite) TestSwapItemGetHash(c *C) {
 		msg:   *msg,
 		index: 0,
 		fee:   cosmos.ZeroUint(),
-		slip:  cosmos.ZeroUint(),
 	}
 
 	// Test GetHash returns the transaction ID

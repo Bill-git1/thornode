@@ -13,8 +13,9 @@ const PreferredAssetSwapMemoPrefix = "THOR-PREFERRED-ASSET"
 type swapItem struct {
 	index int
 	msg   MsgSwap
-	fee   cosmos.Uint
-	slip  cosmos.Uint
+	// fee is the liquidity fee in RUNE, computed by scoreMsgs.
+	// Sort() orders items on this field alone.
+	fee cosmos.Uint
 }
 type swapItems []swapItem
 
@@ -31,84 +32,25 @@ func (items swapItems) HasItem(hash common.TxID) bool {
 	return false
 }
 
+// Sort returns a copy of items ordered by liquidity fee (descending), with
+// ties broken by TxID (ascending) and then sub-swap index (ascending). The
+// explicit tiebreakers matter: arbitrage bots routinely submit swaps that
+// land in the same pool on the same block with identical fees, and sub-swaps
+// of a single streaming swap share a TxID but differ by index. Relying on
+// input order alone would let the keeper's iteration order decide priority.
 func (items swapItems) Sort() swapItems {
-	// Create independent copies so each sort operates on its own slice.
-	byFee := make(swapItems, len(items))
-	copy(byFee, items)
-
-	bySlip := make(swapItems, len(items))
-	copy(bySlip, items)
-
-	// sort by liquidity fee, descending
-	sort.SliceStable(byFee, func(i, j int) bool {
-		return byFee[i].fee.GT(byFee[j].fee)
-	})
-
-	// sort by slip fee, descending
-	sort.SliceStable(bySlip, func(i, j int) bool {
-		return bySlip[i].slip.GT(bySlip[j].slip)
-	})
-
-	type score struct {
-		msg   MsgSwap
-		score int
-		index int
-	}
-
-	// Build a map from (TxID, index) -> scores index for O(1) lookups.
-	type itemKey struct {
-		txID  common.TxID
-		index int
-	}
-	scoreIdx := make(map[itemKey]int, len(items))
-
-	// add liquidity fee score
-	scores := make([]score, len(byFee))
-	for i, item := range byFee {
-		key := itemKey{txID: item.msg.Tx.ID, index: item.index}
-		scores[i] = score{
-			msg:   item.msg,
-			score: i,
-			index: item.index,
-		}
-		scoreIdx[key] = i
-	}
-
-	// add slip score
-	for i, item := range bySlip {
-		key := itemKey{txID: item.msg.Tx.ID, index: item.index}
-		if j, ok := scoreIdx[key]; ok {
-			scores[j].score += i
-		}
-	}
-
-	// This sorted appears to sort twice, but actually the first sort informs
-	// the second. If we have multiple swaps with the same score, it will use
-	// the ID sort to deterministically sort within the same score
-
-	// sort by ID, first
-	sort.SliceStable(scores, func(i, j int) bool {
-		return scores[i].msg.Tx.ID.String() < scores[j].msg.Tx.ID.String()
-	})
-
-	// sort by score, second
-	sort.SliceStable(scores, func(i, j int) bool {
-		return scores[i].score < scores[j].score
-	})
-
-	// Build a map from (TxID, index) -> item for O(1) lookups.
-	itemMap := make(map[itemKey]swapItem, len(items))
-	for _, item := range items {
-		key := itemKey{txID: item.msg.Tx.ID, index: item.index}
-		itemMap[key] = item
-	}
-
-	// sort our items by score
 	sorted := make(swapItems, len(items))
-	for i, score := range scores {
-		key := itemKey{txID: score.msg.Tx.ID, index: score.index}
-		sorted[i] = itemMap[key]
-	}
+	copy(sorted, items)
+
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if !sorted[i].fee.Equal(sorted[j].fee) {
+			return sorted[i].fee.GT(sorted[j].fee)
+		}
+		if sorted[i].msg.Tx.ID != sorted[j].msg.Tx.ID {
+			return sorted[i].msg.Tx.ID < sorted[j].msg.Tx.ID
+		}
+		return sorted[i].index < sorted[j].index
+	})
 
 	return sorted
 }

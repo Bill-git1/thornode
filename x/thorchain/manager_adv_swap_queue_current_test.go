@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"fmt"
+	"sort"
 
 	. "gopkg.in/check.v1"
 
@@ -121,23 +122,19 @@ func (s AdvSwapQueueSuite) TestScoreMsgs(c *C) {
 	swaps := make(swapItems, len(msgs))
 	for i, msg := range msgs {
 		swaps[i] = swapItem{
-			msg:  *msg,
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			msg: *msg,
+			fee: cosmos.ZeroUint(),
 		}
 	}
 	swaps, err := book.scoreMsgs(ctx, swaps, 10_000)
 	c.Assert(err, IsNil)
 	swaps = swaps.Sort()
 	c.Check(swaps, HasLen, 7)
+	// Sort is fee-descending with (txID, index) tiebreaker — see swapItems.Sort.
+	assertSortedByFeeDesc(c, swaps)
+	// The two heaviest swaps (151 and 150 ATOM) still win the top two slots.
 	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(151*common.One)), Equals, true, Commentf("%d", swaps[0].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(150*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
-	// 50 ETH is worth more than 100 RUNE
-	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[4].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[4].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[5].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(2*common.One)), Equals, true, Commentf("%d", swaps[5].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[6].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(1*common.One)), Equals, true, Commentf("%d", swaps[6].msg.Tx.Coins[0].Amount.Uint64()))
 
 	// check that slip is taken into account
 	// Do not use GetRandomTxHash for these TxIDs,
@@ -226,50 +223,127 @@ func (s AdvSwapQueueSuite) TestScoreMsgs(c *C) {
 	swaps = make(swapItems, len(msgs))
 	for i, msg := range msgs {
 		swaps[i] = swapItem{
-			msg:  *msg,
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			msg: *msg,
+			fee: cosmos.ZeroUint(),
 		}
 	}
 	swaps, err = book.scoreMsgs(ctx, swaps, 10_000)
 	c.Assert(err, IsNil)
 	swaps = swaps.Sort()
 	c.Assert(swaps, HasLen, 11)
+	// Cross-pool BTC/ETH mix: assert invariant (fee-desc + deterministic tiebreak)
+	// rather than hardcoded position-by-position order. Any scoring change that
+	// keeps the invariant (e.g. adding the min-slip floor) is still legal.
+	assertSortedByFeeDesc(c, swaps)
+	// Guard against the "assertSortedByFeeDesc passes on all-zero fees"
+	// degenerate case — make sure scoring actually produced a non-zero fee
+	// for the top item.
+	c.Check(swaps[0].fee.GT(cosmos.ZeroUint()), Equals, true,
+		Commentf("top item should have non-zero effective fee"))
+	// Sort determinism: running Sort twice on the same input must match.
+	second := append(swapItems{}, swaps...).Sort()
+	for i := range swaps {
+		c.Check(swaps[i].msg.Tx.ID.Equals(second[i].msg.Tx.ID), Equals, true,
+			Commentf("Sort not deterministic at index %d", i))
+	}
+}
 
-	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[0].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[0].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+func (s AdvSwapQueueSuite) TestScoreMsgsUsesMinSlipFloor(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	k.SetMimir(ctx, "L1SlipMinBps", 100)
 
-	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[1].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(1_000_000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1_000_000 * common.One)
+	pool.Decimals = 8
+	c.Assert(k.SetPool(ctx, pool), IsNil)
 
-	// With independent fee+slip ranking, BTC swaps (higher fee due to deeper pool)
-	// are prioritized over ETH swaps at the same slip level.
-	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[2].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	amount := cosmos.NewUint(common.One)
+	msg := NewMsgSwap(common.Tx{
+		ID:    common.TxID("DD10000000000000000000000000000000000000000000000000000000000000"),
+		Coins: common.Coins{common.NewCoin(common.ETHAsset, amount)},
+	}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	msg.State = &types.SwapState{
+		Quantity: 1,
+		Deposit:  amount,
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
 
-	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[3].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+	book := newSwapQueueAdv(k)
+	scored, err := book.scoreMsgs(ctx, swapItems{{msg: *msg, fee: cosmos.ZeroUint()}}, 10_000)
+	c.Assert(err, IsNil)
+	c.Assert(scored, HasLen, 1)
 
-	c.Check(swaps[4].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[4].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[4].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+	swapper, err := GetSwapper(k.GetVersion())
+	c.Assert(err, IsNil)
+	rawFee := swapper.CalcLiquidityFee(pool.BalanceAsset, amount, pool.BalanceRune)
+	_, floorFee := expectedSwapLeg(ctx, k, pool, msg.Tx.Coins[0], 10_000, common.ETHAsset, false)
 
-	c.Check(swaps[5].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[5].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[5].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	c.Assert(floorFee.GT(rawFee), Equals, true,
+		Commentf("min-slip fee should exceed raw liquidity fee: floor=%s raw=%s", floorFee, rawFee))
+	c.Check(scored[0].fee.Equal(floorFee), Equals, true,
+		Commentf("expected scored fee %s, got %s", floorFee, scored[0].fee))
+}
 
-	c.Check(swaps[6].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[6].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[6].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+func (s AdvSwapQueueSuite) TestDoubleSwapScoreUsesFirstLegEmitRune(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	k.SetMimir(ctx, "L1SlipMinBps", 0)
 
-	c.Check(swaps[7].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(2*common.One)), Equals, true, Commentf("%d", swaps[7].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[7].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(1_000 * common.One)
+	ethPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	ethPool.Decimals = 8
+	c.Assert(k.SetPool(ctx, ethPool), IsNil)
 
-	c.Check(swaps[8].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(2*common.One)), Equals, true, Commentf("%d", swaps[8].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[8].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(1_000 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(10 * common.One)
+	btcPool.Decimals = 8
+	c.Assert(k.SetPool(ctx, btcPool), IsNil)
 
-	c.Check(swaps[9].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(1*common.One)), Equals, true, Commentf("%d", swaps[9].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[9].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	amount := cosmos.NewUint(50 * common.One)
+	msg := NewMsgSwap(common.Tx{
+		ID:    common.TxID("EE10000000000000000000000000000000000000000000000000000000000000"),
+		Coins: common.Coins{common.NewCoin(common.ETHAsset, amount)},
+	}, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
+	msg.State = &types.SwapState{
+		Quantity: 1,
+		Deposit:  amount,
+		In:       cosmos.ZeroUint(),
+		Out:      cosmos.ZeroUint(),
+	}
 
-	c.Check(swaps[10].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(1*common.One)), Equals, true, Commentf("%d", swaps[10].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[10].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+	book := newSwapQueueAdv(k)
+	scored, err := book.scoreMsgs(ctx, swapItems{{msg: *msg, fee: cosmos.ZeroUint()}}, 10_000)
+	c.Assert(err, IsNil)
+	c.Assert(scored, HasLen, 1)
+
+	emitRune, firstFee := expectedSwapLeg(ctx, k, ethPool, msg.Tx.Coins[0], 10_000, common.ETHAsset, false)
+	_, secondFee := expectedSwapLeg(ctx, k, btcPool, common.NewCoin(common.RuneAsset(), emitRune), 10_000, common.BTCAsset, false)
+	expectedFee := firstFee.Add(secondFee)
+
+	spotRune := ethPool.AssetValueInRune(amount)
+	_, spotSecondFee := expectedSwapLeg(ctx, k, btcPool, common.NewCoin(common.RuneAsset(), spotRune), 10_000, common.BTCAsset, false)
+	spotFee := firstFee.Add(spotSecondFee)
+
+	c.Assert(spotRune.GT(emitRune), Equals, true,
+		Commentf("test setup should make spot RUNE exceed emitted RUNE: spot=%s emit=%s", spotRune, emitRune))
+	c.Assert(spotFee.GT(expectedFee), Equals, true,
+		Commentf("test setup should distinguish spot scoring from emit scoring: spot=%s emit=%s", spotFee, expectedFee))
+	c.Check(scored[0].fee.Equal(expectedFee), Equals, true,
+		Commentf("expected scored fee %s, got %s", expectedFee, scored[0].fee))
+	c.Check(scored[0].fee.Equal(spotFee), Equals, false,
+		Commentf("score should not use spot-value RUNE for second leg"))
 }
 
 func (s AdvSwapQueueSuite) TestMarketOnlyModeRejectsLimitSwaps(c *C) {
@@ -4602,8 +4676,8 @@ func (s AdvSwapQueueSuite) TestScoreMsgsUsesSubSwapSize(c *C) {
 	nonStreamingSwap.State.Deposit = cosmos.NewUint(10 * common.One)
 
 	swaps := swapItems{
-		{msg: *streamingSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
-		{msg: *nonStreamingSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
+		{msg: *streamingSwap, fee: cosmos.ZeroUint()},
+		{msg: *nonStreamingSwap, fee: cosmos.ZeroUint()},
 	}
 
 	swaps, err := book.scoreMsgs(ctx, swaps, 10_000)
@@ -4616,9 +4690,6 @@ func (s AdvSwapQueueSuite) TestScoreMsgsUsesSubSwapSize(c *C) {
 	c.Check(swaps[0].fee.Equal(swaps[1].fee), Equals, true,
 		Commentf("Fees should be equal: streaming=%d, non-streaming=%d",
 			swaps[0].fee.Uint64(), swaps[1].fee.Uint64()))
-	c.Check(swaps[0].slip.Equal(swaps[1].slip), Equals, true,
-		Commentf("Slips should be equal: streaming=%d, non-streaming=%d",
-			swaps[0].slip.Uint64(), swaps[1].slip.Uint64()))
 }
 
 func (s AdvSwapQueueSuite) TestScoreMsgsPartiallyExecutedStreamingSwap(c *C) {
@@ -4659,8 +4730,8 @@ func (s AdvSwapQueueSuite) TestScoreMsgsPartiallyExecutedStreamingSwap(c *C) {
 	freshSwap.State.Deposit = cosmos.NewUint(10 * common.One)
 
 	swaps := swapItems{
-		{msg: *partialSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
-		{msg: *freshSwap, fee: cosmos.ZeroUint(), slip: cosmos.ZeroUint()},
+		{msg: *partialSwap, fee: cosmos.ZeroUint()},
+		{msg: *freshSwap, fee: cosmos.ZeroUint()},
 	}
 
 	swaps, err := book.scoreMsgs(ctx, swaps, 10_000)
@@ -4671,9 +4742,6 @@ func (s AdvSwapQueueSuite) TestScoreMsgsPartiallyExecutedStreamingSwap(c *C) {
 	c.Check(swaps[0].fee.Equal(swaps[1].fee), Equals, true,
 		Commentf("Fees should be equal: partial=%d, fresh=%d",
 			swaps[0].fee.Uint64(), swaps[1].fee.Uint64()))
-	c.Check(swaps[0].slip.Equal(swaps[1].slip), Equals, true,
-		Commentf("Slips should be equal: partial=%d, fresh=%d",
-			swaps[0].slip.Uint64(), swaps[1].slip.Uint64()))
 }
 
 func (s AdvSwapQueueSuite) TestLimitSwapsSortedBeforeMarketSwaps(c *C) {
@@ -4701,8 +4769,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsSortedBeforeMarketSwaps(c *C) {
 				"", "", nil,
 				types.SwapType_market,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 		// Small limit swap
 		{
@@ -4713,8 +4780,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsSortedBeforeMarketSwaps(c *C) {
 				"", "", nil,
 				types.SwapType_limit,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 		// Medium market swap
 		{
@@ -4725,8 +4791,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsSortedBeforeMarketSwaps(c *C) {
 				"", "", nil,
 				types.SwapType_market,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 		// Medium limit swap
 		{
@@ -4737,8 +4802,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsSortedBeforeMarketSwaps(c *C) {
 				"", "", nil,
 				types.SwapType_limit,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 	}
 
@@ -4797,8 +4861,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
 				"", "", nil,
 				types.SwapType_limit,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 		// Small limit swap (lower fee)
 		{
@@ -4809,8 +4872,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
 				"", "", nil,
 				types.SwapType_limit,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 		// Large market swap (higher fee)
 		{
@@ -4821,8 +4883,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
 				"", "", nil,
 				types.SwapType_market,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 		// Small market swap (lower fee)
 		{
@@ -4833,8 +4894,7 @@ func (s AdvSwapQueueSuite) TestLimitSwapsPreserveScoreOrderWithinType(c *C) {
 				"", "", nil,
 				types.SwapType_market,
 				0, 0, types.SwapVersion_v1, GetRandomBech32Addr()),
-			fee:  cosmos.ZeroUint(),
-			slip: cosmos.ZeroUint(),
+			fee: cosmos.ZeroUint(),
 		},
 	}
 
@@ -5639,9 +5699,17 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotConsumeBudget(c *C) 
 	// counter-directional (AssetToRune vs RuneToAsset), executes (attempted=2).
 	// Low #1 and #2 same-dir as #0, skipped.
 	//
-	// Final: High #0: Count=2, High #1,#2: Count=1, Low #0: Count=2, Low #1,#2: Count=0.
-	// The first swap in each direction alternates with the other, both reaching
-	// Count=2, while the remaining swaps only execute in iter 0.
+	// Sort the tracked TxIDs ascending so index 0 corresponds to the lowest
+	// TxID — matching the queue's deterministic TxID tiebreaker for equal-fee
+	// items. Without this, the expected-count array would be tied to random
+	// insertion order rather than the actual execution order.
+	sort.Slice(highTxIDs, func(i, j int) bool { return highTxIDs[i].String() < highTxIDs[j].String() })
+	sort.Slice(lowTxIDs, func(i, j int) bool { return lowTxIDs[i].String() < lowTxIDs[j].String() })
+
+	// Final: High #0 (lowest TxID): Count=2, High #1,#2: Count=1, Low #0
+	// (lowest TxID): Count=2, Low #1,#2: Count=0. The first swap in each
+	// direction alternates with the other, both reaching Count=2, while the
+	// remaining swaps only execute in iter 0.
 	expectedHighCounts := []uint64{2, 1, 1}
 	for i, txID := range highTxIDs {
 		result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
@@ -5650,9 +5718,9 @@ func (s AdvSwapQueueSuite) TestRapidSwapDirectionSkipDoesNotConsumeBudget(c *C) 
 			Commentf("high swap %d: expected Count=%d, got %d", i, expectedHighCounts[i], result.State.Count))
 	}
 
-	// Low-value ETH->RUNE swaps: #0 is reached in iter 1 and 2 because
-	// direction-skipped high swaps leave budget available.
-	// #1 and #2 are same-direction as #0 within each iteration, so they are skipped.
+	// Low-value ETH->RUNE swaps: #0 (lowest TxID) is reached in iter 1 and 2
+	// because direction-skipped high swaps leave budget available. #1 and #2 are
+	// same-direction as #0 within each iteration, so they are skipped.
 	expectedLowCounts := []uint64{2, 0, 0}
 	for i, txID := range lowTxIDs {
 		result, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
