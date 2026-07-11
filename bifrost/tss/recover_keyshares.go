@@ -41,13 +41,11 @@ func RecoverKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBridge)
 		return nil
 	}
 
-	// the current vault is the last pub key in the signer membership list
 	membership := na.GetSignerMembership()
 	if len(membership) == 0 {
 		log.Info().Msgf("no signer membership for %s, skipping key shares recovery", na.NodeAddress)
 		return fmt.Errorf("fail to get signer membership")
 	}
-	vault := membership[len(membership)-1]
 
 	// get all vaults
 	vaults, err := thorchain.GetAsgards()
@@ -55,15 +53,56 @@ func RecoverKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBridge)
 		return fmt.Errorf("fail to get asgards: %w", err)
 	}
 
-	target, ok := findKeyshareRecoveryTarget(vault, vaults)
-	if !ok {
+	// A node can simultaneously be a member of a legacy asgard vault (ECDSA +
+	// optional EdDSA key shares) and an XMR monovault (FROST key shares); these
+	// live on separate vault records and both appear in the signer membership.
+	// Recover the most recent target of each kind independently so that existing
+	// key shares for one vault do not short-circuit recovery of the other.
+	targets := latestRecoveryTargets(membership, vaults)
+	if len(targets) == 0 {
+		vault := membership[len(membership)-1]
 		return fmt.Errorf("fail to get creation height of %s", vault)
 	}
-	if target.kind == recoveryTargetFrost {
-		return recoverFrostKeyShares(conf, thorchain, na.NodeAddress, target)
+
+	var resultErr error
+	for _, target := range targets {
+		var recoverErr error
+		if target.kind == recoveryTargetFrost {
+			recoverErr = recoverFrostKeyShares(conf, thorchain, na.NodeAddress, target)
+		} else {
+			recoverErr = recoverLegacyKeyShares(conf, thorchain, na.NodeAddress, target, vaults)
+		}
+		resultErr = errors.Join(resultErr, recoverErr)
 	}
 
-	return recoverLegacyKeyShares(conf, thorchain, na.NodeAddress, target, vaults)
+	return resultErr
+}
+
+// latestRecoveryTargets returns the most recent recovery target of each kind
+// (legacy and frost) present in the node's signer membership. Legacy asgard key
+// shares and FROST monovault key shares are stored on separate vault records, so
+// each kind is resolved independently. Targets are returned in a deterministic
+// order (legacy before frost).
+func latestRecoveryTargets(membership common.PubKeys, vaults types.Vaults) []keyshareRecoveryTarget {
+	byKind := make(map[recoveryTargetKind]keyshareRecoveryTarget)
+	for _, pubKey := range membership {
+		target, ok := findKeyshareRecoveryTarget(pubKey, vaults)
+		if !ok {
+			continue
+		}
+		if existing, seen := byKind[target.kind]; !seen || target.blockHeight > existing.blockHeight {
+			byKind[target.kind] = target
+		}
+	}
+
+	targets := make([]keyshareRecoveryTarget, 0, len(byKind))
+	if target, ok := byKind[recoveryTargetLegacy]; ok {
+		targets = append(targets, target)
+	}
+	if target, ok := byKind[recoveryTargetFrost]; ok {
+		targets = append(targets, target)
+	}
+	return targets
 }
 
 type recoveryTargetKind int

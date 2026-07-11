@@ -50,6 +50,58 @@ func (s *RecoverKeysharesSuite) TestFindKeyshareRecoveryTargetPrefersFrostPubKey
 	c.Check(ok, Equals, false)
 }
 
+func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsResolvesLegacyAndFrostIndependently(c *C) {
+	legacyPubKey := types.GetRandomPubKey()
+	eddsaPubKey := types.GetRandomEd25519PubKey()
+	frostPubKey := types.GetRandomEd25519PubKey()
+
+	// A node that churned through Monero support is a member of both a legacy
+	// asgard vault and a separate XMR monovault (PubKey == PubKeyFrost).
+	vaults := types.Vaults{
+		{PubKey: legacyPubKey, PubKeyEddsa: eddsaPubKey, BlockHeight: 100},
+		{PubKey: frostPubKey, PubKeyFrost: frostPubKey, BlockHeight: 200},
+	}
+	membership := common.PubKeys{legacyPubKey, frostPubKey}
+
+	targets := latestRecoveryTargets(membership, vaults)
+	c.Assert(targets, HasLen, 2)
+	c.Check(targets[0].kind, Equals, recoveryTargetLegacy)
+	c.Check(targets[0].pubKey.Equals(legacyPubKey), Equals, true)
+	c.Check(targets[0].poolPubKeyEddsa.Equals(eddsaPubKey), Equals, true)
+	c.Check(targets[1].kind, Equals, recoveryTargetFrost)
+	c.Check(targets[1].pubKey.Equals(frostPubKey), Equals, true)
+}
+
+func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsPrefersHighestBlockHeight(c *C) {
+	oldPubKey := types.GetRandomPubKey()
+	newPubKey := types.GetRandomPubKey()
+	vaults := types.Vaults{
+		{PubKey: oldPubKey, BlockHeight: 100},
+		{PubKey: newPubKey, BlockHeight: 300},
+	}
+	// Membership order should not matter; the most recent legacy vault wins.
+	membership := common.PubKeys{newPubKey, oldPubKey}
+
+	targets := latestRecoveryTargets(membership, vaults)
+	c.Assert(targets, HasLen, 1)
+	c.Check(targets[0].kind, Equals, recoveryTargetLegacy)
+	c.Check(targets[0].pubKey.Equals(newPubKey), Equals, true)
+	c.Check(targets[0].blockHeight, Equals, int64(300))
+}
+
+func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsIgnoresUnknownMembership(c *C) {
+	legacyPubKey := types.GetRandomPubKey()
+	vaults := types.Vaults{{PubKey: legacyPubKey, BlockHeight: 100}}
+	membership := common.PubKeys{types.GetRandomPubKey(), legacyPubKey}
+
+	targets := latestRecoveryTargets(membership, vaults)
+	c.Assert(targets, HasLen, 1)
+	c.Check(targets[0].pubKey.Equals(legacyPubKey), Equals, true)
+
+	// No membership entry matches a known vault.
+	c.Assert(latestRecoveryTargets(common.PubKeys{types.GetRandomPubKey()}, vaults), HasLen, 0)
+}
+
 func (s *RecoverKeysharesSuite) TestMsgMatchesRecoveryTargetRequiresExactKeyType(c *C) {
 	signer, err := types.GetRandomPubKey().GetThorAddress()
 	c.Assert(err, IsNil)
