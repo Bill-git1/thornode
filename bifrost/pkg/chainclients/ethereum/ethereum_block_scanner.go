@@ -55,14 +55,19 @@ const (
 
 // ETHScanner is a scanner that understand how to interact with ETH chain ,and scan block , parse smart contract etc
 type ETHScanner struct {
-	cfg                   config.BifrostBlockScannerConfiguration
-	logger                zerolog.Logger
-	db                    blockscanner.ScannerStorage
-	m                     *metrics.Metrics
-	errCounter            *prometheus.CounterVec
-	gasPriceChanged       bool
-	gasPrice              *big.Int
-	lastReportedGasPrice  uint64
+	cfg             config.BifrostBlockScannerConfiguration
+	logger          zerolog.Logger
+	db              blockscanner.ScannerStorage
+	m               *metrics.Metrics
+	errCounter      *prometheus.CounterVec
+	gasPriceChanged bool
+	// Guards gasCache while FetchTxs prefetch goroutines append samples and refresh the atomic gasPrice snapshot.
+	gasCacheMu sync.Mutex
+	// Atomic gasPrice snapshot read by signer/unstuck/network-fee goroutines.
+	gasPrice stdatomic.Pointer[big.Int]
+	// Serializes FetchTxs/prefetch network-fee compare and lastReportedGasPrice update.
+	networkFeeMu          sync.Mutex
+	lastReportedGasPrice  stdatomic.Uint64
 	client                *ethclient.Client
 	blockMetaAccessor     evm.BlockMetaAccessor
 	globalErrataQueue     chan<- stypes.ErrataBlock
@@ -120,28 +125,28 @@ func NewETHScanner(cfg config.BifrostBlockScannerConfiguration,
 		return nil, fmt.Errorf("fail to create contract abi: %w", err)
 	}
 
-	return &ETHScanner{
-		cfg:                  cfg,
-		logger:               log.Logger.With().Str("module", "block_scanner").Str("chain", common.ETHChain.String()).Logger(),
-		errCounter:           m.GetCounterVec(metrics.BlockScanError(common.ETHChain)),
-		client:               client,
-		db:                   storage,
-		m:                    m,
-		gasPrice:             big.NewInt(initialGasPrice),
-		lastReportedGasPrice: 0,
-		gasPriceChanged:      false,
-		blockMetaAccessor:    blockMetaAccessor,
-		tokens:               tokens,
-		bridge:               bridge,
-		vaultABI:             vaultABI,
-		erc20ABI:             erc20ABI,
-		eipSigner:            etypes.NewPragueSigner(chainID),
-		pubkeyMgr:            pubkeyMgr,
-		gasCache:             make([]*big.Int, 0),
-		solvencyReporter:     solvencyReporter,
-		whitelistTokens:      tokenlist.GetETHTokenList().Tokens,
-		signerCacheManager:   signerCacheManager,
-	}, nil
+	scanner := &ETHScanner{
+		cfg:                cfg,
+		logger:             log.Logger.With().Str("module", "block_scanner").Str("chain", common.ETHChain.String()).Logger(),
+		errCounter:         m.GetCounterVec(metrics.BlockScanError(common.ETHChain)),
+		client:             client,
+		db:                 storage,
+		m:                  m,
+		gasPriceChanged:    false,
+		blockMetaAccessor:  blockMetaAccessor,
+		tokens:             tokens,
+		bridge:             bridge,
+		vaultABI:           vaultABI,
+		erc20ABI:           erc20ABI,
+		eipSigner:          etypes.NewPragueSigner(chainID),
+		pubkeyMgr:          pubkeyMgr,
+		gasCache:           make([]*big.Int, 0),
+		solvencyReporter:   solvencyReporter,
+		whitelistTokens:    tokenlist.GetETHTokenList().Tokens,
+		signerCacheManager: signerCacheManager,
+	}
+	scanner.gasPrice.Store(big.NewInt(initialGasPrice))
+	return scanner, nil
 }
 
 // GetGasPrice returns current gas price
@@ -149,7 +154,12 @@ func (e *ETHScanner) GetGasPrice() *big.Int {
 	if e.cfg.FixedGasRate > 0 {
 		return big.NewInt(e.cfg.FixedGasRate)
 	}
-	return e.gasPrice
+	// Return a copy because callers mutate gas prices while this atomic snapshot is shared.
+	gasPrice := e.gasPrice.Load()
+	if gasPrice == nil {
+		return big.NewInt(0)
+	}
+	return new(big.Int).Set(gasPrice)
 }
 
 func (e *ETHScanner) getContext() (context.Context, context.CancelFunc) {
@@ -169,7 +179,7 @@ func (e *ETHScanner) GetHeight() (int64, error) {
 
 // GetNetworkFee returns current chain network fee according to Bifrost.
 func (e *ETHScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
-	return e.cfg.MaxGasLimit, e.lastReportedGasPrice
+	return e.cfg.MaxGasLimit, e.lastReportedGasPrice.Load()
 }
 
 // FetchMemPool get tx from mempool
@@ -193,6 +203,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 		e.logger.Error().Err(err).Int64("height", height).Msg("fail to search tx in block")
 		return stypes.TxIn{}, fmt.Errorf("fail to process block: %d, err:%w", height, err)
 	}
+
 	// blockMeta need to be saved , even there is no transactions found on this block at the time of scan
 	// because at the time of scan , so the block hash will be stored, and it can be used to detect re-org
 	blockMeta := types.NewBlockMeta(block.Header(), txIn)
@@ -223,19 +234,30 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 		gasRate = 1
 	}
 
-	// post to thorchain if there is a fee and it has changed
-	if gasPrice.Cmp(big.NewInt(0)) != 0 && gasRate != e.lastReportedGasPrice {
-		e.globalNetworkFeeQueue <- common.NetworkFee{
+	// FetchTxs can run in prefetch goroutines. Serialize fee comparison and lastReportedGasPrice.
+	networkFee, postNetworkFee := func() (common.NetworkFee, bool) {
+		e.networkFeeMu.Lock()
+		defer e.networkFeeMu.Unlock()
+
+		// post to thorchain if there is a fee and it has changed
+		if gasPrice.Sign() == 0 || gasRate == e.lastReportedGasPrice.Load() {
+			return common.NetworkFee{}, false
+		}
+		e.lastReportedGasPrice.Store(gasRate)
+
+		return common.NetworkFee{
 			Chain:           common.ETHChain,
 			Height:          height,
 			TransactionSize: e.cfg.MaxGasLimit,
 			TransactionRate: gasRate,
-		}
-		e.lastReportedGasPrice = gasRate
+		}, true
+	}()
+	if postNetworkFee {
+		e.globalNetworkFeeQueue <- networkFee
 	}
 
 	if e.solvencyReporter != nil {
-		if err = e.solvencyReporter(height); err != nil {
+		if err := e.solvencyReporter(height); err != nil {
 			e.logger.Err(err).Msg("fail to report Solvency info to THORNode")
 		}
 	}
@@ -277,9 +299,14 @@ func (e *ETHScanner) updateGasPrice(baseFee *big.Int, priorityFees []*big.Int) {
 	// round the price up to nearest configured resolution, converting gas rate units to wei
 	_, gasRateUnitsPerOne := e.cfg.ChainID.GetGasUnits()
 	resolution := cosmos.NewUint(uint64(e.cfg.GasPriceResolution)).MulUint64(common.WeiPerOne).Quo(gasRateUnitsPerOne).BigInt()
-	gasPriceWei.Add(gasPriceWei, new(big.Int).Sub(resolution, big.NewInt(1)))
+	gasPriceWei.Add(gasPriceWei, resolution)
+	gasPriceWei.Sub(gasPriceWei, big.NewInt(1))
 	gasPriceWei = gasPriceWei.Div(gasPriceWei, resolution)
 	gasPriceWei = gasPriceWei.Mul(gasPriceWei, resolution)
+
+	// FetchTxs can run in prefetch goroutines, so serialize gasCache updates before publishing gasPrice.
+	e.gasCacheMu.Lock()
+	defer e.gasCacheMu.Unlock()
 
 	// add to the cache
 	e.gasCache = append(e.gasCache, gasPriceWei)
@@ -287,10 +314,10 @@ func (e *ETHScanner) updateGasPrice(baseFee *big.Int, priorityFees []*big.Int) {
 		e.gasCache = e.gasCache[(len(e.gasCache) - e.cfg.GasCacheBlocks):]
 	}
 
-	e.updateGasPriceFromCache()
+	e.updateGasPriceFromCacheLocked()
 }
 
-func (e *ETHScanner) updateGasPriceFromCache() {
+func (e *ETHScanner) updateGasPriceFromCacheLocked() {
 	// skip update unless cache is full
 	if len(e.gasCache) < e.cfg.GasCacheBlocks {
 		return
@@ -314,10 +341,11 @@ func (e *ETHScanner) updateGasPriceFromCache() {
 	std.Sqrt(std)
 
 	// mean + 3x standard deviation over cache blocks
-	e.gasPrice = mean.Add(mean, std.Mul(std, big.NewInt(3)))
+	gasPrice := mean.Add(mean, std.Mul(std, big.NewInt(3)))
+	e.gasPrice.Store(gasPrice)
 
 	// record metrics
-	gasPriceFloat, _ := new(big.Float).SetInt64(e.gasPrice.Int64()).Float64()
+	gasPriceFloat, _ := new(big.Float).SetInt(gasPrice).Float64()
 	e.m.GetGauge(metrics.GasPrice(common.ETHChain)).Set(gasPriceFloat)
 	e.m.GetCounter(metrics.GasPriceChange(common.ETHChain)).Inc()
 }

@@ -70,8 +70,10 @@ type TronClient struct {
 	whitelist           map[string]tokenlist.ERC20Token
 	bridge              thorclient.ThorchainBridge
 	globalSolvencyQueue chan types.Solvency
-	wg                  *sync.WaitGroup
-	stopchan            chan struct{}
+	// Serializes ReportSolvency when FetchTxs prefetch callbacks and SolvencyCheckRunner can both enter.
+	solvencyLock sync.Mutex
+	wg           *sync.WaitGroup
+	stopchan     chan struct{}
 }
 
 // NewTronClient creates a new instance of a Tron chain client
@@ -414,7 +416,8 @@ func (c *TronClient) SignTx(
 		}
 	}
 
-	if len(c.tronScanner.refBlocks) == 0 {
+	refBlocks := c.tronScanner.refBlockSnapshot()
+	if len(refBlocks) == 0 {
 		err := fmt.Errorf("no ref blocks found")
 		c.logger.Err(err).Msg("")
 		return nil, nil, nil, err
@@ -515,16 +518,16 @@ func (c *TronClient) SignTx(
 
 	// Find the reference block closest to (but before) the THORChain timestamp
 	// This ensures the ref block is deterministic while still being valid for TRON
-	index := len(c.tronScanner.refBlocks) - 1
+	index := len(refBlocks) - 1
 	for i := index; i >= 0; i-- {
-		refBlock := c.tronScanner.refBlocks[i]
+		refBlock := refBlocks[i]
 		if refBlock.Timestamp <= refTimestampMs {
 			index = i
 			break
 		}
 	}
 
-	refBlock := c.tronScanner.refBlocks[index]
+	refBlock := refBlocks[index]
 
 	refBlockHash := refBlock.Id[16:32]
 	refBlockBytes := fmt.Sprintf("%016x", refBlock.Height)[12:16]
@@ -649,11 +652,21 @@ func isTronNotFoundErr(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "response status: 404")
 }
 
+// GetGasEstimateForSolvency returns the current gas fee estimate used by solvency checks.
+func (c *TronClient) GetGasEstimateForSolvency() cosmos.Uint {
+	fee := math.NewUint(c.tronScanner.currentFee.Load())
+	return c.config.ChainID.NativeGasToThorchain(fee)
+}
+
 func (c *TronClient) ShouldReportSolvency(height int64) bool {
 	return height%10 == 0
 }
 
 func (c *TronClient) ReportSolvency(height int64) error {
+	// FetchTxs may call this from prefetch goroutines; SolvencyCheckRunner also calls it while halted.
+	c.solvencyLock.Lock()
+	defer c.solvencyLock.Unlock()
+
 	if !c.ShouldReportSolvency(height) {
 		return nil
 	}
@@ -670,7 +683,7 @@ func (c *TronClient) ReportSolvency(height int64) error {
 		return err
 	}
 
-	fee := math.NewUint(c.tronScanner.currentFee)
+	currentGasFee := c.GetGasEstimateForSolvency()
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent
@@ -703,7 +716,6 @@ func (c *TronClient) ReportSolvency(height int64) error {
 		}
 		processedVaults++
 
-		currentGasFee := c.config.ChainID.NativeGasToThorchain(fee)
 		if runners.IsVaultSolvent(c.config.ChainID, acc, chainVaults[i], currentGasFee) {
 			solventMsgs = append(solventMsgs, msg)
 			continue

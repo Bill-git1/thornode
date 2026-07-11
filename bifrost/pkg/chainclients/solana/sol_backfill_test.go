@@ -197,9 +197,7 @@ func (s *BackfillSuite) TestScannerScanHeightFromMemory(c *C) {
 	defer server.Close()
 	scanner, _ := s.newScannerWithServer(c, "http://"+server.Listener.Addr().String())
 
-	scanner.lastHeightMu.Lock()
-	scanner.lastHeight = 999
-	scanner.lastHeightMu.Unlock()
+	scanner.setLastHeight(999)
 
 	h, err := scanner.ScanHeight()
 	c.Assert(err, IsNil)
@@ -242,7 +240,7 @@ func (s *BackfillSuite) TestScannerGetNetworkFee(c *C) {
 	defer server.Close()
 	scanner, _ := s.newScannerWithServer(c, "http://"+server.Listener.Addr().String())
 
-	scanner.lastFeeRate = 5000
+	scanner.lastFeeRate.Store(5000)
 	size, rate := scanner.GetNetworkFee()
 	c.Assert(size, Equals, uint64(1))
 	c.Assert(rate, Equals, uint64(5000))
@@ -444,7 +442,7 @@ func (s *BackfillSuite) TestSendNetworkFeeIfNecessarySkipsSameRate(c *C) {
 	scanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
 
 	scanner.netFeeInit = true
-	scanner.lastFeeRate = 5000
+	scanner.lastFeeRate.Store(5000)
 	scanner.cfg.GasPriceResolution = 1
 	// enough txs to pass the check
 	scanner.feeRateCache = make([]uint64, 101)
@@ -718,9 +716,7 @@ func (s *ClientBackfillSuite) TestGetBlockScannerHeight(c *C) {
 	})
 	defer server.Close()
 	client := s.makeClient(c, server)
-	client.solScanner.lastHeightMu.Lock()
-	client.solScanner.lastHeight = 777
-	client.solScanner.lastHeightMu.Unlock()
+	client.solScanner.setLastHeight(777)
 	h, err := client.GetBlockScannerHeight()
 	c.Assert(err, IsNil)
 	c.Assert(h, Equals, int64(777))
@@ -1163,7 +1159,7 @@ func (s *ClientBackfillSuite) TestReportSolvencyUnhealthyScannerRunnerHeight(c *
 	client := s.makeClient(c, server)
 	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
 	client.solScanner.healthy.Store(false)
-	client.solScanner.lastFeeRate = 1
+	client.solScanner.lastFeeRate.Store(1)
 
 	// Scan loop is frozen at slot 10 (chain halted => scanner paused); the runner
 	// calls with the live tip (11) != currentScanSlot, so the unhealthy guard must
@@ -1199,7 +1195,7 @@ func (s *ClientBackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults
 	client.cfg.SolvencyBlocks = 50
 	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
 	client.solScanner.healthy.Store(false)
-	client.solScanner.lastFeeRate = 1
+	client.solScanner.lastFeeRate.Store(1)
 
 	solVault := types2.Vault{
 		PubKey:      types2.GetRandomPubKey(),
@@ -1243,7 +1239,7 @@ func (s *ClientBackfillSuite) TestReportSolvencyConvertsLamportFeeToThorchainUni
 	client := s.makeClient(c, server)
 	client.cfg.SolvencyBlocks = 50
 	client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
-	client.solScanner.lastFeeRate = 1
+	client.solScanner.lastFeeRate.Store(1)
 
 	solVault := types2.Vault{
 		PubKey:      types2.GetRandomPubKey(),
@@ -1286,7 +1282,7 @@ func (s *ClientBackfillSuite) TestReportSolvencyConcurrentNoRace(c *C) {
 	// Healthy => the unhealthy dedup guard does not fire, so both goroutines run
 	// the full path and contend on solvencySlotMultiple — the production race.
 	client.solScanner.healthy.Store(true)
-	client.solScanner.lastFeeRate = 1
+	client.solScanner.lastFeeRate.Store(1)
 
 	solVault := types2.Vault{
 		PubKey:      types2.GetRandomPubKey(),

@@ -73,8 +73,10 @@ type CosmosClient struct {
 	signerCacheManager  *signercache.CacheManager
 	cosmosScanner       *CosmosBlockScanner
 	globalSolvencyQueue chan stypes.Solvency
-	wg                  *sync.WaitGroup
-	stopchan            chan struct{}
+	// Serializes ReportSolvency when FetchTxs prefetch callbacks and SolvencyCheckRunner can both enter.
+	solvencyLock sync.Mutex
+	wg           *sync.WaitGroup
+	stopchan     chan struct{}
 }
 
 // NewCosmosClient creates a new instance of a Cosmos-based chain client
@@ -258,7 +260,7 @@ func (c *CosmosClient) GetAccount(pkey common.PubKey, height *big.Int) (common.A
 func (c *CosmosClient) GetAccountByAddress(address string, height *big.Int) (common.Account, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	if height != nil && height.Cmp(big.NewInt(0)) > 0 {
+	if height != nil && height.Sign() > 0 {
 		// Set the height (to be parsed in Cosmos SDK's Invoke) to query for the specific block height
 		ctx = metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, height.String())
 	}
@@ -604,7 +606,16 @@ func (c *CosmosClient) GetConfirmationCount(txIn stypes.TxIn) int64 {
 	return 0
 }
 
+// GetGasEstimateForSolvency returns the current gas fee estimate used by solvency checks.
+func (c *CosmosClient) GetGasEstimateForSolvency() cosmos.Uint {
+	return c.cfg.ChainID.NativeGasToThorchain(c.cosmosScanner.getLastFee())
+}
+
 func (c *CosmosClient) ReportSolvency(blockHeight int64) error {
+	// FetchTxs may call this from prefetch goroutines; SolvencyCheckRunner also calls it while halted.
+	c.solvencyLock.Lock()
+	defer c.solvencyLock.Unlock()
+
 	if !c.ShouldReportSolvency(blockHeight) {
 		return nil
 	}
@@ -622,7 +633,7 @@ func (c *CosmosClient) ReportSolvency(blockHeight int64) error {
 	}
 
 	// 1x estimated gas cost breathing room (transaction size 1), from gas rate units gas price to THORChain (1e8) format
-	currentGasFee := c.cfg.ChainID.NativeGasToThorchain(c.cosmosScanner.lastFee)
+	currentGasFee := c.GetGasEstimateForSolvency()
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent
@@ -694,7 +705,7 @@ func (c *CosmosClient) ShouldReportSolvency(height int64) bool {
 	// blocks/min). Since the last fee is used as a buffer we also want to ensure that is
 	// non-zero (enough blocks have been seen) before checking insolvency to avoid false
 	// positives.
-	return height%10 == 0 && !c.cosmosScanner.lastFee.IsZero()
+	return height%10 == 0 && !c.cosmosScanner.getLastFee().IsZero()
 }
 
 // OnObservedTxIn update the signer cache (in case we haven't already)

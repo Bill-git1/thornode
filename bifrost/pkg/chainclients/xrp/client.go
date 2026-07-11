@@ -59,10 +59,12 @@ type Client struct {
 	signerCacheManager  *signercache.CacheManager
 	xrpScanner          *XrpBlockScanner
 	globalSolvencyQueue chan stypes.Solvency
-	wg                  *sync.WaitGroup
-	stopchan            chan struct{}
-	rpcClient           *rpc.Client
-	networkID           uint32
+	// Serializes ReportSolvency when FetchTxs prefetch callbacks and SolvencyCheckRunner can both enter.
+	solvencyLock sync.Mutex
+	wg           *sync.WaitGroup
+	stopchan     chan struct{}
+	rpcClient    *rpc.Client
+	networkID    uint32
 }
 
 // NewClient creates a new instance of an XRP-based chain client
@@ -233,7 +235,7 @@ func (c *Client) GetAccountByAddress(address string, height *big.Int) (common.Ac
 		Account:     txtypes.Address(address),
 		LedgerIndex: qcommon.Current, // Query current/non-closed/non-validated ledger
 	}
-	if height != nil && height.Cmp(big.NewInt(0)) > 0 {
+	if height != nil && height.Sign() > 0 {
 		aiReq.LedgerIndex = qcommon.LedgerIndex(height.Int64())
 	}
 	aiResp, err := c.rpcClient.GetAccountInfo(&aiReq)
@@ -618,7 +620,16 @@ func (c *Client) GetConfirmationCount(txIn stypes.TxIn) int64 {
 	return 0
 }
 
+// GetGasEstimateForSolvency returns the current gas fee estimate used by solvency checks.
+func (c *Client) GetGasEstimateForSolvency() cosmos.Uint {
+	return c.cfg.ChainID.NativeGasToThorchain(c.xrpScanner.getLastFee())
+}
+
 func (c *Client) ReportSolvency(blockHeight int64) error {
+	// FetchTxs may call this from prefetch goroutines; SolvencyCheckRunner also calls it while halted.
+	c.solvencyLock.Lock()
+	defer c.solvencyLock.Unlock()
+
 	if !c.ShouldReportSolvency(blockHeight) {
 		return nil
 	}
@@ -636,7 +647,7 @@ func (c *Client) ReportSolvency(blockHeight int64) error {
 	}
 
 	// 1x estimated gas cost breathing room (transaction size 1), from gas rate units gas price to THORChain (1e8) format
-	currentGasFee := c.cfg.ChainID.NativeGasToThorchain(c.xrpScanner.lastFee)
+	currentGasFee := c.GetGasEstimateForSolvency()
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent
@@ -708,7 +719,7 @@ func (c *Client) ShouldReportSolvency(height int64) bool {
 	// blocks/min). Since the last fee is used as a buffer we also want to ensure that is
 	// non-zero (enough blocks have been seen) before checking insolvency to avoid false
 	// positives.
-	return height%c.cfg.SolvencyBlocks == 0 && !c.xrpScanner.lastFee.IsZero()
+	return height%c.cfg.SolvencyBlocks == 0 && !c.xrpScanner.getLastFee().IsZero()
 }
 
 // OnObservedTxIn update the signer cache (in case we haven't already)

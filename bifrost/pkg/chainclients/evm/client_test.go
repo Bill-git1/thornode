@@ -306,6 +306,25 @@ func (s *EVMSuite) TestSolvencyRunnerBackoff(c *C) {
 	c.Assert(client.solvencyRunnerBackoff(), Equals, constants.ThorchainBlockTime)
 }
 
+// TestGetGasEstimateForSolvency verifies the generic EVM solvency buffer formula:
+// 3 * MaxGasLimit * lastReportedGasPrice, converted from the chain gas-rate unit
+// (BASE uses mwei here) into THORChain 1e8 units.
+func (s *EVMSuite) TestGetGasEstimateForSolvency(c *C) {
+	client := &EVMClient{
+		cfg: config.BifrostChainConfiguration{
+			ChainID: common.BASEChain,
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				MaxGasLimit: 200_000,
+			},
+		},
+		evmScanner: &EVMScanner{},
+	}
+	client.evmScanner.lastReportedGasPrice.Store(500_000)
+
+	got := client.GetGasEstimateForSolvency()
+	c.Assert(got.Equal(cosmos.NewUint(30_000_000)), Equals, true)
+}
+
 func (s *EVMSuite) TestNewClient(c *C) {
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)

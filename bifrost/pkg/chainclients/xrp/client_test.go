@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -41,6 +43,11 @@ type XrpTestSuite struct {
 }
 
 var _ = Suite(&XrpTestSuite{})
+
+func testXrpScannerWithLastFee(scanner *XrpBlockScanner, fee sdkmath.Uint) *XrpBlockScanner {
+	scanner.setLastFee(fee)
+	return scanner
+}
 
 var m *metrics.Metrics
 
@@ -275,6 +282,22 @@ func (s *XrpTestSuite) TestXAddresses(c *C) {
 	c.Check(msg.Amount, Equals, txtypes.XRPCurrencyAmount(paymentAmount/100))
 	c.Check(msg.BaseTx.Account, Equals, txtypes.Address("rQwpQ54X5gJyLGg4QGp3HSkjdf3u37NqiZ"))
 	c.Check(msg.Destination, Not(Equals), txtypes.Address(classicAddr))
+}
+
+func (s *XrpTestSuite) TestGetGasEstimateForSolvency(c *C) {
+	client := &Client{
+		cfg: config.BifrostChainConfiguration{
+			ChainID: common.XRPChain,
+		},
+		xrpScanner: &XrpBlockScanner{},
+	}
+	client.xrpScanner.setLastFee(sdkmath.NewUint(12)) // drops
+	got := client.GetGasEstimateForSolvency()
+	c.Assert(got.Equal(cosmos.NewUint(1200)), Equals, true) // 12 drops => 1200 (1e8 units)
+
+	client.xrpScanner.setLastFee(sdkmath.ZeroUint())
+	got = client.GetGasEstimateForSolvency()
+	c.Assert(got.IsZero(), Equals, true)
 }
 
 func (s *XrpTestSuite) TestSign(c *C) {

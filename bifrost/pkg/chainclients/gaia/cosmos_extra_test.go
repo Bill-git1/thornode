@@ -96,8 +96,7 @@ func (s *ExtraTestSuite) TestGetConfirmationCount(c *C) {
 func (s *ExtraTestSuite) TestShouldReportSolvency(c *C) {
 	scannerCfg := config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain}
 	scanner := &CosmosBlockScanner{
-		cfg:     scannerCfg,
-		lastFee: sdkmath.NewUint(0),
+		cfg: scannerCfg,
 	}
 	cc := CosmosClient{cosmosScanner: scanner}
 
@@ -108,7 +107,7 @@ func (s *ExtraTestSuite) TestShouldReportSolvency(c *C) {
 	c.Check(cc.ShouldReportSolvency(10), Equals, false)
 
 	// height divisible by 10 and lastFee non-zero
-	scanner.lastFee = sdkmath.NewUint(100)
+	scanner.setLastFee(sdkmath.NewUint(100))
 	c.Check(cc.ShouldReportSolvency(10), Equals, true)
 	c.Check(cc.ShouldReportSolvency(20), Equals, true)
 	c.Check(cc.ShouldReportSolvency(21), Equals, false)
@@ -119,9 +118,7 @@ func (s *ExtraTestSuite) TestShouldReportSolvency(c *C) {
 // -------------------------------------------------------------------------------------
 
 func (s *ExtraTestSuite) TestGetNetworkFee(c *C) {
-	scanner := &CosmosBlockScanner{
-		lastFee: sdkmath.NewUint(42),
-	}
+	scanner := testCosmosScannerWithLastFee(&CosmosBlockScanner{}, sdkmath.NewUint(42))
 	size, rate := scanner.GetNetworkFee()
 	c.Check(size, Equals, uint64(1))
 	c.Check(rate, Equals, uint64(42))
@@ -353,7 +350,6 @@ func (s *ExtraTestSuite) TestUpdateGasFees(c *C) {
 	scanner := &CosmosBlockScanner{
 		cfg:                   cfg,
 		feeCache:              make([]sdkmath.Uint, 0),
-		lastFee:               sdkmath.NewUint(0),
 		globalNetworkFeeQueue: feeQueue,
 	}
 
@@ -532,7 +528,6 @@ func (s *ExtraTestSuite) TestFetchTxs(c *C) {
 		rpc:      &mockTendermintRPC{},
 		cdc:      cdc,
 		feeCache: make([]sdkmath.Uint, 0),
-		lastFee:  sdkmath.NewUint(0),
 		solvencyReporter: func(height int64) error {
 			solvencyReported = true
 			return nil
@@ -1026,7 +1021,7 @@ func (s *ExtraTestSuite) TestSignTxFullPath(c *C) {
 	client := CosmosClient{
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		txConfig:           txConfig,
-		cosmosScanner:      &CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}, lastFee: sdkmath.NewUint(100)},
+		cosmosScanner:      testCosmosScannerWithLastFee(&CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}}, sdkmath.NewUint(100)),
 		bankClient:         NewMockBankServiceClient(),
 		accountClient:      NewMockAccountServiceClient(),
 		chainID:            "cosmoshub-4",
@@ -1100,7 +1095,7 @@ func (s *ExtraTestSuite) TestSignTxWithCheckpoint(c *C) {
 	client := CosmosClient{
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		txConfig:           txConfig,
-		cosmosScanner:      &CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}, lastFee: sdkmath.NewUint(100)},
+		cosmosScanner:      testCosmosScannerWithLastFee(&CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}}, sdkmath.NewUint(100)),
 		bankClient:         NewMockBankServiceClient(),
 		accountClient:      NewMockAccountServiceClient(),
 		chainID:            "cosmoshub-4",
@@ -1168,7 +1163,7 @@ func (s *ExtraTestSuite) TestSignTxNoGas(c *C) {
 	client := CosmosClient{
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		txConfig:           txConfig,
-		cosmosScanner:      &CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}, lastFee: sdkmath.NewUint(100)},
+		cosmosScanner:      testCosmosScannerWithLastFee(&CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}}, sdkmath.NewUint(100)),
 		bankClient:         NewMockBankServiceClient(),
 		accountClient:      NewMockAccountServiceClient(),
 		chainID:            "cosmoshub-4",
@@ -1234,7 +1229,7 @@ func (s *ExtraTestSuite) TestSignTxWrongGasAsset(c *C) {
 	client := CosmosClient{
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		txConfig:           txConfig,
-		cosmosScanner:      &CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}, lastFee: sdkmath.NewUint(100)},
+		cosmosScanner:      testCosmosScannerWithLastFee(&CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}}, sdkmath.NewUint(100)),
 		bankClient:         NewMockBankServiceClient(),
 		accountClient:      NewMockAccountServiceClient(),
 		chainID:            "cosmoshub-4",
@@ -1302,7 +1297,7 @@ func (s *ExtraTestSuite) TestSignTxBadCheckpoint(c *C) {
 	client := CosmosClient{
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		txConfig:           txConfig,
-		cosmosScanner:      &CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}, lastFee: sdkmath.NewUint(100)},
+		cosmosScanner:      testCosmosScannerWithLastFee(&CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}}, sdkmath.NewUint(100)),
 		bankClient:         NewMockBankServiceClient(),
 		accountClient:      NewMockAccountServiceClient(),
 		chainID:            "cosmoshub-4",
@@ -1340,8 +1335,7 @@ func (s *ExtraTestSuite) TestSignTxBadCheckpoint(c *C) {
 
 func (s *ExtraTestSuite) TestReportSolvencyNotReporting(c *C) {
 	scanner := &CosmosBlockScanner{
-		cfg:     config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain},
-		lastFee: sdkmath.NewUint(0),
+		cfg: config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain},
 	}
 	cc := CosmosClient{
 		cfg:           config.BifrostChainConfiguration{ChainID: common.GAIAChain},
@@ -1376,7 +1370,6 @@ func (s *ExtraTestSuite) TestFetchTxsSolvencyError(c *C) {
 		rpc:      &mockTendermintRPC{},
 		cdc:      cdc,
 		feeCache: make([]sdkmath.Uint, 0),
-		lastFee:  sdkmath.NewUint(0),
 		solvencyReporter: func(height int64) error {
 			return fmt.Errorf("solvency error")
 		},
@@ -1430,7 +1423,6 @@ func (s *ExtraTestSuite) TestUpdateGasFeesPostsFee(c *C) {
 	scanner := &CosmosBlockScanner{
 		cfg:                   cfg,
 		feeCache:              feeCache,
-		lastFee:               sdkmath.NewUint(0), // zero lastFee so delta is large
 		globalNetworkFeeQueue: feeQueue,
 	}
 
@@ -1532,10 +1524,9 @@ func (s *ExtraTestSuite) TestSignMsgBadPubkey(c *C) {
 // -------------------------------------------------------------------------------------
 
 func (s *ExtraTestSuite) TestReportSolvencyBlockScannerNotHealthy(c *C) {
-	scanner := &CosmosBlockScanner{
-		cfg:     config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain},
-		lastFee: sdkmath.NewUint(100),
-	}
+	scanner := testCosmosScannerWithLastFee(&CosmosBlockScanner{
+		cfg: config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain},
+	}, sdkmath.NewUint(100))
 
 	// When block scanner is not healthy and height = previous + 1, skip
 	cc := CosmosClient{
@@ -1851,7 +1842,7 @@ func (s *ExtraTestSuite) TestSignTxInsufficientBalance(c *C) {
 	client := CosmosClient{
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		txConfig:           txConfig,
-		cosmosScanner:      &CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}, lastFee: sdkmath.NewUint(100)},
+		cosmosScanner:      testCosmosScannerWithLastFee(&CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}}, sdkmath.NewUint(100)),
 		bankClient:         NewMockBankServiceClient(),
 		accountClient:      NewMockAccountServiceClient(),
 		chainID:            "cosmoshub-4",
@@ -1922,7 +1913,7 @@ func (s *ExtraTestSuite) TestSignTxNonWhitelistedGas(c *C) {
 	client := CosmosClient{
 		cfg:                config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		txConfig:           txConfig,
-		cosmosScanner:      &CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}, lastFee: sdkmath.NewUint(100)},
+		cosmosScanner:      testCosmosScannerWithLastFee(&CosmosBlockScanner{cfg: scannerCfg, rpc: &mockTendermintRPC{}}, sdkmath.NewUint(100)),
 		bankClient:         NewMockBankServiceClient(),
 		accountClient:      NewMockAccountServiceClient(),
 		chainID:            "cosmoshub-4",
@@ -2011,7 +2002,6 @@ func (s *ExtraTestSuite) TestFetchTxsProcessTxsError(c *C) {
 		rpc:      &mockTendermintRPCBlockResultsError{},
 		cdc:      cdc,
 		feeCache: make([]sdkmath.Uint, 0),
-		lastFee:  sdkmath.NewUint(0),
 		solvencyReporter: func(height int64) error {
 			return nil
 		},
@@ -2052,7 +2042,6 @@ func (s *ExtraTestSuite) TestFetchTxsUpdateGasFeesError(c *C) {
 		rpc:      &mockTendermintRPC{},
 		cdc:      cdc,
 		feeCache: feeCache,
-		lastFee:  sdkmath.NewUint(0),
 		solvencyReporter: func(height int64) error {
 			return nil
 		},

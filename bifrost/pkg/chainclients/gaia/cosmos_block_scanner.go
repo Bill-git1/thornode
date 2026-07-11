@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/btcsuite/btcutil/bech32"
@@ -101,8 +102,10 @@ type CosmosBlockScanner struct {
 	// gas price paid in each observed transaction multiplied by the default GasLimit.
 	// Fees are stored at 100x the values on the observed chain due to compensate for the
 	// difference in base chain decimals (thorchain:1e8, gaia:1e6).
-	feeCache []sdkmath.Uint
-	lastFee  sdkmath.Uint
+	// Guards feeCache/lastFee between FetchTxs prefetch updates and solvency/network-fee readers.
+	networkFeeMu sync.Mutex
+	feeCache     []sdkmath.Uint
+	lastFee      sdkmath.Uint
 }
 
 // NewCosmosBlockScanner create a new instance of BlockScan
@@ -188,7 +191,24 @@ func (c *CosmosBlockScanner) GetHeight() (int64, error) {
 
 // GetNetworkFee returns current chain network fee according to Bifrost.
 func (c *CosmosBlockScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
-	return 1, c.lastFee.Uint64()
+	return 1, c.getLastFee().Uint64()
+}
+
+func (c *CosmosBlockScanner) getLastFee() sdkmath.Uint {
+	// Solvency/network-fee readers can run while FetchTxs prefetch goroutines update lastFee.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+	if c.lastFee.IsNil() {
+		return sdkmath.ZeroUint()
+	}
+	return c.lastFee
+}
+
+func (c *CosmosBlockScanner) setLastFee(fee sdkmath.Uint) {
+	// Tests set lastFee directly; use the same lock as FetchTxs updates and solvency reads.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+	c.lastFee = fee
 }
 
 // FetchMemPool returns nothing since we are only concerned about finalized transactions in Cosmos
@@ -256,6 +276,10 @@ func (c *CosmosBlockScanner) updateGasCache(tx ctypes.FeeTx) {
 		fee = cosmos.OneUint()
 	}
 
+	// FetchTxs can run in prefetch goroutines, so serialize feeCache appends.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+
 	c.feeCache = append(c.feeCache, fee)
 
 	// truncate gas prices older than our max cached transactions
@@ -265,6 +289,13 @@ func (c *CosmosBlockScanner) updateGasCache(tx ctypes.FeeTx) {
 }
 
 func (c *CosmosBlockScanner) averageFee() sdkmath.Uint {
+	// Tests call averageFee directly; use the same lock as FetchTxs prefetch cache writers.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+	return c.averageFeeLocked()
+}
+
+func (c *CosmosBlockScanner) averageFeeLocked() sdkmath.Uint {
 	// avoid divide by zero
 	if len(c.feeCache) == 0 {
 		return sdkmath.NewUint(0)
@@ -291,33 +322,56 @@ func (c *CosmosBlockScanner) averageFee() sdkmath.Uint {
 }
 
 func (c *CosmosBlockScanner) updateGasFees(height int64) error {
-	// post the gas fee over every cache period when we have a full gas cache
-	if height%GasUpdatePeriodBlocks == 0 && len(c.feeCache) == GasCacheTransactions {
-		gasFee := c.averageFee()
+	var gasFee sdkmath.Uint
+	var networkFee common.NetworkFee
+	postNetworkFee, err := func() (bool, error) {
+		// Keep averaging and lastFee update atomic.
+		c.networkFeeMu.Lock()
+		defer c.networkFeeMu.Unlock()
+
+		// post the gas fee over every cache period when we have a full gas cache
+		if height%GasUpdatePeriodBlocks != 0 || len(c.feeCache) != GasCacheTransactions {
+			return false, nil
+		}
+
+		gasFee = c.averageFeeLocked()
 
 		// sanity check the fee is not zero
 		if gasFee.IsZero() {
-			return errors.New("suggested gas fee was zero")
+			return false, errors.New("suggested gas fee was zero")
 		}
 
 		// skip fee if less than 1 resolution away from the last
-		feeDelta := sdkmath.MaxUint(c.lastFee, gasFee).Sub(sdkmath.MinUint(c.lastFee, gasFee))
+		lastFee := c.lastFee
+		if lastFee.IsNil() {
+			lastFee = sdkmath.ZeroUint()
+		}
+		feeDelta := sdkmath.MaxUint(lastFee, gasFee).Sub(sdkmath.MinUint(lastFee, gasFee))
 		if feeDelta.LTE(sdkmath.NewUint(uint64(c.cfg.GasPriceResolution))) {
-			return nil
+			return false, nil
 		}
 
+		c.lastFee = gasFee
 		// NOTE: We post the fee to the network as the transaction rate (in gas rate units),
 		// and set the transaction size 1 to ensure the MaxGas in the generated TxOut
 		// contains the correct fee. We previously could not pass the proper size and rate
 		// without a deeper change to Thornode, as the rate on Cosmos chains can be less
 		// than 1.
-		c.globalNetworkFeeQueue <- common.NetworkFee{
+		networkFee = common.NetworkFee{
 			Chain:           c.cfg.ChainID,
 			Height:          height,
 			TransactionSize: 1,
 			TransactionRate: gasFee.Uint64(),
 		}
-		c.lastFee = gasFee
+		return true, nil
+	}()
+	if err != nil {
+		return err
+	}
+	if postNetworkFee {
+		// The fee decision is made while holding networkFeeMu above, but the channel send
+		// happens after releasing the lock so blocked consumers cannot stall fee-state updates.
+		c.globalNetworkFeeQueue <- networkFee
 		c.logger.Info().
 			Uint64("fee", gasFee.Uint64()).
 			Int64("height", height).
@@ -727,8 +781,10 @@ func (c *CosmosBlockScanner) FetchTxs(height, chainHeight int64) (types.TxIn, er
 		c.logger.Err(err).Int64("height", height).Msg("unable to update network fee")
 	}
 
-	if err = c.solvencyReporter(height); err != nil {
-		c.logger.Err(err).Msg("fail to send solvency to THORChain")
+	if c.solvencyReporter != nil {
+		if err = c.solvencyReporter(height); err != nil {
+			c.logger.Err(err).Msg("fail to send solvency to THORChain")
+		}
 	}
 
 	return txIn, nil

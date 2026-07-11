@@ -303,6 +303,14 @@ func (c *SOLClient) GetAccountByAddress(addr string, height *big.Int) (common.Ac
 
 // --------------------------------- solvency ---------------------------------
 
+// GetGasEstimateForSolvency returns the current gas fee estimate used by solvency checks.
+func (c *SOLClient) GetGasEstimateForSolvency() cosmos.Uint {
+	nativeCurrentFee := cosmos.NewUint(3).
+		MulUint64(c.cfg.BlockScanner.MaxGasLimit).
+		MulUint64(c.solScanner.lastFeeRate.Load())
+	return c.cfg.ChainID.NativeGasToThorchain(nativeCurrentFee)
+}
+
 // ReportSolvency reports solvency once per configured solvency blocks.
 func (c *SOLClient) ReportSolvency(height int64) error {
 	reportSlotMultiple := c.nextSolvencyReportSlotMultiple(height)
@@ -330,8 +338,7 @@ func (c *SOLClient) ReportSolvency(height int64) error {
 		return fmt.Errorf("fail to get asgards, err: %w", err)
 	}
 
-	nativeCurrentFee := cosmos.NewUint(3).MulUint64(c.cfg.BlockScanner.MaxGasLimit).MulUint64(c.solScanner.lastFeeRate)
-	currentFeeRate := c.cfg.ChainID.NativeGasToThorchain(nativeCurrentFee)
+	currentFeeRate := c.GetGasEstimateForSolvency()
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent

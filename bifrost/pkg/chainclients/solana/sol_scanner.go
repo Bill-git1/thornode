@@ -61,8 +61,10 @@ type SOLScanner struct {
 	globalTxsQueue        chan stypes.TxIn
 
 	// fee rate
+	// Guards feeRateCache/netFeeInit across startup and scan fee-refresh helpers.
+	networkFeeMu sync.Mutex
 	feeRateCache []uint64
-	lastFeeRate  uint64
+	lastFeeRate  atomic.Uint64
 
 	healthy *atomic.Bool
 
@@ -90,8 +92,9 @@ type SOLScanner struct {
 	stopChan chan struct{}
 
 	// state for if we've successfully processed the initial height
-	initialHeight     map[string]struct{}
-	lastHeight        uint64
+	initialHeight map[string]struct{}
+	lastHeight    uint64
+	// Guards lastHeight between scan progress writes and height/solvency runner reads.
 	lastHeightMu      sync.RWMutex
 	vaultScanStatuses map[string]vaultScanStatus
 
@@ -139,7 +142,6 @@ func NewSOLScanner(
 		solvencyReporter:   solvencyReporter,
 		signerCacheManager: signerCacheManager,
 		recentBlockHash:    "",
-		lastFeeRate:        0,
 		feeRateCache:       make([]uint64, 0),
 		stopChan:           stopChan,
 		healthy:            &atomic.Bool{},
@@ -176,9 +178,7 @@ func (s *SOLScanner) Start() {
 			s.logger.Error().Err(err).Msg("failed to persist floor block height")
 		}
 	}
-	s.lastHeightMu.Lock()
-	s.lastHeight = lastHeight
-	s.lastHeightMu.Unlock()
+	s.setLastHeight(lastHeight)
 
 	// initialize the network fee slot multiple to the closest multiple of NetFeeUpdateInterval beneath the initial slot
 	s.netFeeSlotMultiple = initialSlot / s.cfg.Solana.FeeUpdateInterval
@@ -237,7 +237,7 @@ func (s *SOLScanner) scan() {
 		if err != nil {
 			s.logger.Error().Err(err).Msg("failed to get network fee")
 		} else {
-			s.lastFeeRate = thorRate
+			s.lastFeeRate.Store(thorRate)
 		}
 
 		// we crossed the threshold for updating the network fee, so check the last N blocks
@@ -248,9 +248,7 @@ func (s *SOLScanner) scan() {
 		}
 	}
 
-	s.lastHeightMu.RLock()
-	lastSlot := s.lastHeight
-	s.lastHeightMu.RUnlock()
+	lastSlot := s.getLastHeight()
 
 	// skip if rpc slot is behind last scanned slot
 	if currentSlot <= lastSlot {
@@ -374,14 +372,18 @@ func (s *SOLScanner) scan() {
 
 			// update the db in a goroutine, we don't need to block here
 			go func() {
-				if err = s.db.SetScanStatus(vaultAddr, lastSig, currentSlot); err != nil {
-					s.logger.Error().Err(err).Str("vault", vaultAddr).Msg("failed to set vault scan status")
+				if scanStatusErr := s.db.SetScanStatus(vaultAddr, lastSig, currentSlot); scanStatusErr != nil {
+					s.logger.Error().Err(scanStatusErr).Str("vault", vaultAddr).Msg("failed to set vault scan status")
 				}
 			}()
 		}
 	}
 
-	if !s.netFeeInit && numTxs > 0 {
+	// The SOL scan goroutine reads netFeeInit here, sendNetworkFeeIfNecessary writes it during fee refresh.
+	s.networkFeeMu.Lock()
+	shouldInitNetworkFee := !s.netFeeInit && numTxs > 0
+	s.networkFeeMu.Unlock()
+	if shouldInitNetworkFee {
 		// this should really only happen (and is only necessary) in test environments to initialize the network fee,
 		// because we expect to have enough observed txs in the checkRecentBlocksAndUpdateNetworkFee above.
 		s.sendNetworkFeeIfNecessary(currentSlot)
@@ -411,9 +413,7 @@ func (s *SOLScanner) scan() {
 		s.m.GetCounter(metrics.TotalBlockScanned).Add(float64(currentSlot - lastSlot))
 	}
 
-	s.lastHeightMu.Lock()
-	s.lastHeight = currentSlot
-	s.lastHeightMu.Unlock()
+	s.setLastHeight(currentSlot)
 
 	// update the db in a goroutine, we don't need to block here
 	go func() {
@@ -596,11 +596,21 @@ func (s *SOLScanner) CurrentScanSlot() int64 {
 	return s.currentScanSlot.Load()
 }
 
+func (s *SOLScanner) getLastHeight() uint64 {
+	s.lastHeightMu.RLock()
+	defer s.lastHeightMu.RUnlock()
+	return s.lastHeight
+}
+
+func (s *SOLScanner) setLastHeight(height uint64) {
+	s.lastHeightMu.Lock()
+	defer s.lastHeightMu.Unlock()
+	s.lastHeight = height
+}
+
 // ScanHeight returns the current scanned height
 func (s *SOLScanner) ScanHeight() (int64, error) {
-	s.lastHeightMu.RLock()
-	lastHeight := s.lastHeight
-	s.lastHeightMu.RUnlock()
+	lastHeight := s.getLastHeight()
 
 	if lastHeight > 0 {
 		return int64(lastHeight), nil
@@ -637,55 +647,65 @@ func (s *SOLScanner) setRecentBlockHash(hash string) {
 
 // GetNetworkFee returns current chain network fee according to Bifrost.
 func (s *SOLScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
-	return 1, s.lastFeeRate
+	return 1, s.lastFeeRate.Load()
 }
 
 func (s *SOLScanner) sendNetworkFeeIfNecessary(height uint64) {
-	if len(s.feeRateCache) == 0 {
-		// Not enough txs yet
+	networkFee, roundedFeeRate, postNetworkFee := func() (common.NetworkFee, uint64, bool) {
+		// Startup and scan fee-refresh paths publish from feeRateCache and mark netFeeInit here.
+		s.networkFeeMu.Lock()
+		defer s.networkFeeMu.Unlock()
+
+		if len(s.feeRateCache) == 0 {
+			// Not enough txs yet
+			return common.NetworkFee{}, 0, false
+		}
+
+		if len(s.feeRateCache) < s.cfg.GasCacheBlocks && s.netFeeInit {
+			// We are beyond the initial fee post, but not enough txs yet
+			return common.NetworkFee{}, 0, false
+		}
+
+		// Calculate the median fee rate from the gas cache
+		medianFeeRate := calculateMedian(s.feeRateCache)
+
+		// round medianFeeRate to the nearest resolution
+		resolution := uint64(s.cfg.GasPriceResolution)
+		roundedFeeRate := ((medianFeeRate + (resolution / 2)) / resolution) * resolution
+
+		// truncate gas prices older than our max cached transactions
+		if len(s.feeRateCache) > s.cfg.GasCacheBlocks {
+			s.feeRateCache = s.feeRateCache[(len(s.feeRateCache) - s.cfg.GasCacheBlocks):]
+		}
+
+		if roundedFeeRate == 0 {
+			s.logger.Debug().Msg("network fee is 0")
+			return common.NetworkFee{}, 0, false
+		}
+
+		s.netFeeInit = true
+
+		// Update the fee rate if it has changed
+		if roundedFeeRate == s.lastFeeRate.Load() {
+			s.logger.Info().Uint64("fee", roundedFeeRate).Msg("network fee is already up to date")
+			return common.NetworkFee{}, 0, false
+		}
+
+		s.lastFeeRate.Store(roundedFeeRate)
+		return common.NetworkFee{
+			Chain:           common.SOLChain,
+			Height:          int64(height),
+			TransactionSize: 1,
+			TransactionRate: roundedFeeRate,
+		}, roundedFeeRate, true
+	}()
+	if !postNetworkFee {
 		return
 	}
 
-	if len(s.feeRateCache) < s.cfg.GasCacheBlocks && s.netFeeInit {
-		// We are beyond the initial fee post, but not enough txs yet
-		return
-	}
-
-	// Calculate the median fee rate from the gas cache
-
-	medianFeeRate := calculateMedian(s.feeRateCache)
-
-	// round medianFeeRate to the nearest resolution
-	resolution := uint64(s.cfg.GasPriceResolution)
-	roundedFeeRate := ((medianFeeRate + (resolution / 2)) / resolution) * resolution
-
-	// truncate gas prices older than our max cached transactions
-	if len(s.feeRateCache) > s.cfg.GasCacheBlocks {
-		s.feeRateCache = s.feeRateCache[(len(s.feeRateCache) - s.cfg.GasCacheBlocks):]
-	}
-
-	if roundedFeeRate == 0 {
-		s.logger.Debug().Msg("network fee is 0")
-		return
-	}
-
-	s.netFeeInit = true
-
-	// Update the fee rate if it has changed
-	if roundedFeeRate == s.lastFeeRate {
-		s.logger.Info().Uint64("fee", roundedFeeRate).Msg("network fee is already up to date")
-		return
-	}
-
-	s.lastFeeRate = roundedFeeRate
-
-	s.globalNetworkFeeQueue <- common.NetworkFee{
-		Chain:           common.SOLChain,
-		Height:          int64(height),
-		TransactionSize: 1,
-		TransactionRate: roundedFeeRate,
-	}
-
+	// The fee decision is made while holding networkFeeMu above, but the channel send
+	// happens after releasing the lock so blocked consumers cannot stall fee-state updates.
+	s.globalNetworkFeeQueue <- networkFee
 	s.logger.Info().
 		Uint64("fee", roundedFeeRate).
 		Uint64("height", height).
@@ -762,6 +782,10 @@ func (s *SOLScanner) calculateFeeRatesFromTransactions(transactions []*rpc.Trans
 
 		txFeeRates = append(txFeeRates, feeRate)
 	}
+
+	// Startup and scan fee-refresh paths append block fee samples before publishing network fee.
+	s.networkFeeMu.Lock()
+	defer s.networkFeeMu.Unlock()
 
 	// update the fee rate cache
 	switch {

@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -62,6 +63,22 @@ var (
 	//go:embed test/block_by_number.json
 	blockByNumberResp []byte
 )
+
+type blockingNetworkFeeBridge struct {
+	thorclient.ThorchainBridge
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (b *blockingNetworkFeeBridge) HasNetworkFee(thorcommon.Chain) (bool, error) {
+	close(b.entered)
+	<-b.release
+	return false, nil
+}
+
+func gasPriceFromRate(gasRate uint64) *big.Int {
+	return new(big.Int).Mul(new(big.Int).SetUint64(gasRate), big.NewInt(weiPerNanoAvax))
+}
 
 func CreateBlock(height int) (*etypes.Header, error) {
 	strHeight := fmt.Sprintf("%x", height)
@@ -1195,7 +1212,7 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 	// empty blocks should not count
 	bs.updateGasPrice([]*big.Int{})
 	c.Assert(len(bs.gasCache), Equals, 99)
-	c.Assert(bs.gasPrice.Cmp(big.NewInt(0)), Equals, 0)
+	c.Assert(bs.GetGasPrice().Cmp(big.NewInt(0)), Equals, 0)
 
 	// now we should get the median of medians
 	bs.updateGasPrice([]*big.Int{
@@ -1206,7 +1223,7 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 		big.NewInt(5 * TestGasPriceResolution * weiPerNanoAvax),
 	})
 	c.Assert(len(bs.gasCache), Equals, 100)
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(3*TestGasPriceResolution*weiPerNanoAvax).String())
+	c.Assert(bs.GetGasPrice().String(), Equals, big.NewInt(3*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// add 49 more blocks with 2x the median and we should get the same
 	for i := 0; i < 49; i++ {
@@ -1219,7 +1236,7 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 		})
 	}
 	c.Assert(len(bs.gasCache), Equals, 100)
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(3*TestGasPriceResolution*weiPerNanoAvax).String())
+	c.Assert(bs.GetGasPrice().String(), Equals, big.NewInt(3*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// after one more block with 2x the median we should get 2x
 	bs.updateGasPrice([]*big.Int{
@@ -1229,7 +1246,7 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 		big.NewInt(8 * TestGasPriceResolution * weiPerNanoAvax),
 		big.NewInt(10 * TestGasPriceResolution * weiPerNanoAvax),
 	})
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(6*TestGasPriceResolution*weiPerNanoAvax).String())
+	c.Assert(bs.GetGasPrice().String(), Equals, big.NewInt(6*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// add 50 more blocks with half the median and we should get the same
 	for i := 0; i < 50; i++ {
@@ -1238,11 +1255,149 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 		})
 	}
 	c.Assert(len(bs.gasCache), Equals, 100)
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(6*TestGasPriceResolution*weiPerNanoAvax).String())
+	c.Assert(bs.GetGasPrice().String(), Equals, big.NewInt(6*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// after one more block with half the median we should get half
 	bs.updateGasPrice([]*big.Int{
 		big.NewInt(TestGasPriceResolution),
 	})
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(TestGasPriceResolution*weiPerNanoAvax).String())
+	c.Assert(bs.GetGasPrice().String(), Equals, big.NewInt(TestGasPriceResolution*weiPerNanoAvax).String())
+}
+
+func (s *BlockScannerTestSuite) TestUpdateGasPriceConcurrentAccess(c *C) {
+	cfg := getConfigForTest()
+	cfg.GasCacheBlocks = 5
+	bs := &EVMScanner{
+		cfg: cfg,
+		m:   s.m,
+	}
+	bs.gasPrice.Store(big.NewInt(0))
+
+	const workers = 20
+	start := make(chan struct{})
+	done := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			bs.updateGasPrice([]*big.Int{
+				gasPriceFromRate(uint64(100 + i)),
+				gasPriceFromRate(uint64(200 + i)),
+				gasPriceFromRate(uint64(300 + i)),
+			})
+		}(i)
+	}
+
+	close(start)
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		c.Fatal("timed out waiting for concurrent gas price updates")
+	}
+
+	c.Assert(len(bs.gasCache), Equals, cfg.GasCacheBlocks)
+	c.Assert(bs.GetGasPrice().Sign(), Equals, 1)
+	for _, gasPrice := range bs.gasCache {
+		c.Assert(gasPrice, NotNil)
+	}
+}
+
+func (s *BlockScannerTestSuite) TestReportNetworkFeeConcurrentSameRatePostsOnce(c *C) {
+	cfg := getConfigForTest()
+	cfg.MaxGasLimit = 21_000
+	feeQueue := make(chan thorcommon.NetworkFee, 32)
+	bs := &EVMScanner{
+		cfg:                   cfg,
+		globalNetworkFeeQueue: feeQueue,
+	}
+
+	const gasRate = uint64(100)
+	bs.gasPrice.Store(gasPriceFromRate(gasRate))
+
+	const workers = 20
+	start := make(chan struct{})
+	done := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			bs.reportNetworkFee(1)
+		}()
+	}
+
+	close(start)
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		c.Fatal("timed out waiting for concurrent network fee reports")
+	}
+
+	c.Assert(feeQueue, HasLen, 1)
+	fee := <-feeQueue
+	c.Assert(fee.Chain, Equals, cfg.ChainID)
+	c.Assert(fee.Height, Equals, int64(1))
+	c.Assert(fee.TransactionSize, Equals, cfg.MaxGasLimit)
+	c.Assert(fee.TransactionRate, Equals, gasRate)
+}
+
+func (s *BlockScannerTestSuite) TestReportNetworkFeeDoesNotHoldLockDuringThorchainLookup(c *C) {
+	cfg := getConfigForTest()
+	cfg.MaxGasLimit = 21_000
+	feeQueue := make(chan thorcommon.NetworkFee, 1)
+	bridge := &blockingNetworkFeeBridge{
+		entered: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	bs := &EVMScanner{
+		cfg:                   cfg,
+		bridge:                bridge,
+		globalNetworkFeeQueue: feeQueue,
+	}
+
+	const gasRate = uint64(100)
+	bs.gasPrice.Store(gasPriceFromRate(gasRate))
+	bs.lastReportedGasPrice.Store(gasRate)
+
+	reportDone := make(chan struct{})
+	go func() {
+		bs.reportNetworkFee(100)
+		close(reportDone)
+	}()
+
+	select {
+	case <-bridge.entered:
+	case <-time.After(time.Second):
+		c.Fatal("timed out waiting for HasNetworkFee call")
+	}
+
+	if !bs.networkFeeMu.TryLock() {
+		c.Fatal("networkFeeMu was held during HasNetworkFee")
+	}
+	bs.networkFeeMu.Unlock()
+
+	close(bridge.release)
+	select {
+	case <-reportDone:
+	case <-time.After(time.Second):
+		c.Fatal("timed out waiting for network fee report")
+	}
+
+	c.Assert(feeQueue, HasLen, 1)
+	fee := <-feeQueue
+	c.Assert(fee.Height, Equals, int64(100))
+	c.Assert(fee.TransactionRate, Equals, gasRate)
 }

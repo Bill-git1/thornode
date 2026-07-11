@@ -505,16 +505,21 @@ func (s *BackfillSuite) TestReportSolvencyAllSolventIgnoresUnrelatedVaults(c *C)
 	storage, err := blockscanner.NewBlockScannerStorage(filepath.Join(s.tmpdir, "tron-solvency"), config.LevelDBOptions{})
 	c.Assert(err, IsNil)
 
-	client := *s.client
-	clientConfig := client.config
+	clientConfig := s.client.config
 	clientConfig.BlockScanner.ChainID = common.TRONChain
 	clientConfig.BlockScanner.StartBlockHeight = 100
 
+	client := &TronClient{
+		logger:      s.client.logger,
+		config:      clientConfig,
+		chainId:     s.client.chainId,
+		tronScanner: s.client.tronScanner,
+		bridge:      bridge,
+		api:         api.NewTronApi(accountSrv.URL, time.Second),
+	}
+
 	client.blockScanner, err = blockscanner.NewBlockScanner(clientConfig.BlockScanner, storage, GetMetricForTest(c), bridge, s.scanner)
 	c.Assert(err, IsNil)
-	client.config = clientConfig
-	client.bridge = bridge
-	client.api = api.NewTronApi(accountSrv.URL, time.Second)
 	client.whitelist = nil
 	client.globalSolvencyQueue = make(chan types.Solvency, 10)
 
@@ -671,7 +676,7 @@ func (s *ScannerBackfillSuite) TestFetchMemPool(c *C) {
 // ---- GetNetworkFee ----
 
 func (s *ScannerBackfillSuite) TestGetNetworkFee(c *C) {
-	s.scanner.currentFee = 12345
+	s.scanner.currentFee.Store(12345)
 	size, rate := s.scanner.GetNetworkFee()
 	c.Assert(size, Equals, uint64(1))
 	c.Assert(rate, Equals, uint64(12345))
@@ -1110,24 +1115,24 @@ func (s *ScannerBackfillSuite) TestDecodeTRC20InputBadMethodId(c *C) {
 
 func (s *ScannerBackfillSuite) TestUpdateFeesNotInterval(c *C) {
 	// height not divisible by updateGasInterval should be skipped
-	s.scanner.currentFee = 0
+	s.scanner.currentFee.Store(0)
 	s.scanner.updateFees(1) // not divisible by 30
-	c.Assert(s.scanner.currentFee, Equals, uint64(0))
+	c.Assert(s.scanner.currentFee.Load(), Equals, uint64(0))
 }
 
 func (s *ScannerBackfillSuite) TestUpdateFeesAtInterval(c *C) {
 	// Set up the network fee queue
 	feeChan := make(chan common.NetworkFee, 1)
 	s.scanner.globalNetworkFeeQueue = feeChan
-	s.scanner.currentFee = 0
+	s.scanner.currentFee.Store(0)
 
 	s.scanner.updateFees(updateGasInterval) // height = 30
 
 	// Should have updated currentFee and sent to the queue
-	if s.scanner.currentFee > 0 {
+	if currentFee := s.scanner.currentFee.Load(); currentFee > 0 {
 		select {
 		case fee := <-feeChan:
-			c.Assert(fee.TransactionRate, Equals, s.scanner.currentFee)
+			c.Assert(fee.TransactionRate, Equals, currentFee)
 		default:
 			c.Log("No fee sent to queue - fee might have been zero or same as before")
 		}
@@ -1140,9 +1145,9 @@ func (s *ScannerBackfillSuite) TestUpdateFeesSameFee(c *C) {
 	s.scanner.globalNetworkFeeQueue = feeChan
 
 	// First call to set the fee
-	s.scanner.currentFee = 0
+	s.scanner.currentFee.Store(0)
 	s.scanner.updateFees(updateGasInterval)
-	firstFee := s.scanner.currentFee
+	firstFee := s.scanner.currentFee.Load()
 
 	// Drain the channel
 	select {
@@ -1153,7 +1158,7 @@ func (s *ScannerBackfillSuite) TestUpdateFeesSameFee(c *C) {
 	// Second call with same parameters should skip sending
 	s.scanner.updateFees(updateGasInterval * 2)
 
-	if s.scanner.currentFee == firstFee && firstFee > 0 {
+	if s.scanner.currentFee.Load() == firstFee && firstFee > 0 {
 		// Fee did not change, no message should have been sent
 		select {
 		case <-feeChan:
@@ -1391,26 +1396,38 @@ func (s *ScannerBackfillSuite) TestRefBlockMaxTrimming(c *C) {
 
 	// Fill up to max
 	for i := 0; i < refBlocksMax; i++ {
-		s.scanner.refBlocks = append(s.scanner.refBlocks, RefBlock{
+		s.scanner.addRefBlock(RefBlock{
 			Timestamp: int64(i * 1000),
 			Height:    int64(i * 100),
 			Id:        fmt.Sprintf("block%d%s", i, "0000000000000000abcdef1234567890abcdef1234567890abcdef1234567890"),
 		})
 	}
 
-	c.Assert(len(s.scanner.refBlocks), Equals, refBlocksMax)
+	refBlocks := s.scanner.refBlockSnapshot()
+	c.Assert(len(refBlocks), Equals, refBlocksMax)
 
-	// Simulate adding one more (which FetchTxs does)
-	if len(s.scanner.refBlocks) >= refBlocksMax {
-		s.scanner.refBlocks = s.scanner.refBlocks[len(s.scanner.refBlocks)-(refBlocksMax-1):]
-	}
-	s.scanner.refBlocks = append(s.scanner.refBlocks, RefBlock{
+	s.scanner.addRefBlock(RefBlock{
 		Timestamp: 99999,
 		Height:    99999,
 		Id:        "new_block_id_000000000000000000000000000000000000000000000000000",
 	})
 
-	c.Assert(len(s.scanner.refBlocks), Equals, refBlocksMax)
+	refBlocks = s.scanner.refBlockSnapshot()
+	c.Assert(len(refBlocks), Equals, refBlocksMax)
+	c.Assert(refBlocks[0].Height, Equals, int64(100))
+	c.Assert(refBlocks[len(refBlocks)-1].Height, Equals, int64(99999))
+
+	// A late, older prefetch result must not displace newer retained ref blocks.
+	s.scanner.addRefBlock(RefBlock{
+		Timestamp: 500,
+		Height:    50,
+		Id:        "old_block_id_000000000000000000000000000000000000000000000000000",
+	})
+
+	refBlocks = s.scanner.refBlockSnapshot()
+	c.Assert(len(refBlocks), Equals, refBlocksMax)
+	c.Assert(refBlocks[0].Height, Equals, int64(100))
+	c.Assert(refBlocks[len(refBlocks)-1].Height, Equals, int64(99999))
 }
 
 // ---- Constants ----
@@ -1568,15 +1585,15 @@ func (s *ScannerBackfillSuite) TestUpdateFeesNoWhitelist(c *C) {
 	// Save and clear whitelist
 	savedWhitelist := s.scanner.whitelist
 	s.scanner.whitelist = map[string]tokenlist.ERC20Token{}
-	s.scanner.currentFee = 0
+	s.scanner.currentFee.Store(0)
 
 	s.scanner.updateFees(updateGasInterval)
 
 	// Should compute bandwidth-only fee (no energy) and send to queue
-	if s.scanner.currentFee > 0 {
+	if currentFee := s.scanner.currentFee.Load(); currentFee > 0 {
 		select {
 		case fee := <-feeChan:
-			c.Assert(fee.TransactionRate, Equals, s.scanner.currentFee)
+			c.Assert(fee.TransactionRate, Equals, currentFee)
 		default:
 		}
 	}
@@ -1873,12 +1890,12 @@ func (s *ScannerBackfillSuite) TestUpdateFeesWithEnergyError(c *C) {
 	// Clear refAddress so getMaxEnergy fails
 	savedRefAddr := s.scanner.refAddress
 	s.scanner.refAddress = ""
-	s.scanner.currentFee = 0
+	s.scanner.currentFee.Store(0)
 
 	s.scanner.updateFees(updateGasInterval)
 
 	// Should have failed to get max energy and returned early
-	c.Assert(s.scanner.currentFee, Equals, uint64(0))
+	c.Assert(s.scanner.currentFee.Load(), Equals, uint64(0))
 
 	s.scanner.refAddress = savedRefAddr
 }

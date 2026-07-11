@@ -213,9 +213,7 @@ func TestFetchMemPool(t *testing.T) {
 }
 
 func TestGetNetworkFee(t *testing.T) {
-	scanner := &XrpBlockScanner{
-		lastFee: sdkmath.NewUint(12),
-	}
+	scanner := testXrpScannerWithLastFee(&XrpBlockScanner{}, sdkmath.NewUint(12))
 	size, rate := scanner.GetNetworkFee()
 	assert.Equal(t, uint64(1), size)
 	assert.Equal(t, uint64(12), rate)
@@ -256,7 +254,6 @@ func TestUpdateFees(t *testing.T) {
 		scanner := &XrpBlockScanner{
 			cfg:      config.BifrostBlockScannerConfiguration{ChainID: common.XRPChain, GasPriceResolution: 1000000},
 			feeCache: fees,
-			lastFee:  sdkmath.NewUint(0),
 		}
 		err := scanner.updateFees(FeeUpdatePeriodBlocks)
 		assert.Error(t, err)
@@ -269,12 +266,11 @@ func TestUpdateFees(t *testing.T) {
 			fees[i] = sdkmath.NewUint(100)
 		}
 		feeQueue := make(chan common.NetworkFee, 1)
-		scanner := &XrpBlockScanner{
+		scanner := testXrpScannerWithLastFee(&XrpBlockScanner{
 			cfg:                   config.BifrostBlockScannerConfiguration{ChainID: common.XRPChain, GasPriceResolution: 1},
 			feeCache:              fees,
-			lastFee:               sdkmath.NewUint(100),
 			globalNetworkFeeQueue: feeQueue,
-		}
+		}, sdkmath.NewUint(100))
 		err := scanner.updateFees(FeeUpdatePeriodBlocks)
 		assert.NoError(t, err)
 		// should not have sent anything
@@ -287,12 +283,11 @@ func TestUpdateFees(t *testing.T) {
 			fees[i] = sdkmath.NewUint(100)
 		}
 		feeQueue := make(chan common.NetworkFee, 1)
-		scanner := &XrpBlockScanner{
+		scanner := testXrpScannerWithLastFee(&XrpBlockScanner{
 			cfg:                   config.BifrostBlockScannerConfiguration{ChainID: common.XRPChain, GasPriceResolution: 1},
 			feeCache:              fees,
-			lastFee:               sdkmath.NewUint(50), // different from 100
 			globalNetworkFeeQueue: feeQueue,
-		}
+		}, sdkmath.NewUint(50)) // different from 100
 		err := scanner.updateFees(FeeUpdatePeriodBlocks)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(feeQueue))
@@ -335,7 +330,7 @@ func (s *ClientMethodsTestSuite) TestGetConfirmationCount(c *C) {
 func (s *ClientMethodsTestSuite) TestShouldReportSolvency(c *C) {
 	client := &Client{
 		cfg:        config.BifrostChainConfiguration{SolvencyBlocks: 10},
-		xrpScanner: &XrpBlockScanner{lastFee: sdkmath.NewUint(100)},
+		xrpScanner: testXrpScannerWithLastFee(&XrpBlockScanner{}, sdkmath.NewUint(100)),
 	}
 
 	// height divisible by SolvencyBlocks and non-zero lastFee
@@ -346,7 +341,7 @@ func (s *ClientMethodsTestSuite) TestShouldReportSolvency(c *C) {
 	c.Check(client.ShouldReportSolvency(11), Equals, false)
 
 	// zero lastFee
-	client.xrpScanner.lastFee = sdkmath.NewUint(0)
+	client.xrpScanner.setLastFee(sdkmath.NewUint(0))
 	c.Check(client.ShouldReportSolvency(10), Equals, false)
 }
 
@@ -805,7 +800,6 @@ func (s *XrpTestSuite) TestFetchTxsValidated(c *C) {
 		},
 		rpcClient:             rpc.NewClient(rpcCfg),
 		feeCache:              make([]sdkmath.Uint, 0),
-		lastFee:               sdkmath.NewUint(0),
 		globalNetworkFeeQueue: feeQueue,
 		solvencyReporter:      func(int64) error { return nil },
 	}
@@ -831,7 +825,6 @@ func (s *XrpTestSuite) TestFetchTxsNotValidated(c *C) {
 		cfg:       config.BifrostBlockScannerConfiguration{ChainID: common.XRPChain},
 		rpcClient: rpc.NewClient(rpcCfg),
 		feeCache:  make([]sdkmath.Uint, 0),
-		lastFee:   sdkmath.NewUint(0),
 	}
 
 	_, err = scanner.FetchTxs(100, 100)
@@ -864,7 +857,6 @@ func (s *XrpTestSuite) TestFetchTxsSkipFeeUpdateWhenFarFromTip(c *C) {
 		},
 		rpcClient:             rpc.NewClient(rpcCfg),
 		feeCache:              make([]sdkmath.Uint, 0),
-		lastFee:               sdkmath.NewUint(0),
 		globalNetworkFeeQueue: feeQueue,
 		solvencyReporter: func(int64) error {
 			solvencyReported = true
@@ -1129,7 +1121,7 @@ func (s *XrpTestSuite) TestGetAccountByAddressWithHeight(c *C) {
 func (s *ClientMethodsTestSuite) TestReportSolvencySkippedBySolvencyBlocks(c *C) {
 	client := &Client{
 		cfg:        config.BifrostChainConfiguration{ChainID: common.XRPChain, SolvencyBlocks: 10},
-		xrpScanner: &XrpBlockScanner{lastFee: sdkmath.NewUint(0)}, // zero lastFee
+		xrpScanner: &XrpBlockScanner{}, // zero lastFee
 	}
 
 	// ShouldReportSolvency returns false (lastFee is zero), so ReportSolvency should return nil
@@ -2051,7 +2043,7 @@ func (s *XrpTestSuite) TestReportSolvencyFullPath(c *C) {
 	client := &Client{
 		cfg:                 config.BifrostChainConfiguration{ChainID: common.XRPChain, SolvencyBlocks: 10},
 		rpcClient:           rpc.NewClient(rpcCfg),
-		xrpScanner:          &XrpBlockScanner{lastFee: sdkmath.NewUint(12)},
+		xrpScanner:          testXrpScannerWithLastFee(&XrpBlockScanner{}, sdkmath.NewUint(12)),
 		thorchainBridge:     mockBridge,
 		globalSolvencyQueue: solvencyQueue,
 		logger:              log.Logger,
@@ -2066,7 +2058,7 @@ func (s *XrpTestSuite) TestReportSolvencyFullPath(c *C) {
 	xrpScanner, err := NewXrpBlockScanner("http://testnode/", scannerCfg, storage, s.bridge, s.m, client.ReportSolvency)
 	c.Assert(err, IsNil)
 	client.xrpScanner = xrpScanner
-	client.xrpScanner.lastFee = sdkmath.NewUint(12) // non-zero
+	client.xrpScanner.setLastFee(sdkmath.NewUint(12)) // non-zero
 
 	bs, err := blockscanner.NewBlockScanner(scannerCfg, storage, s.m, s.bridge, xrpScanner)
 	c.Assert(err, IsNil)
@@ -2096,7 +2088,7 @@ func (s *XrpTestSuite) TestReportSolvencyGetAsgardsError(c *C) {
 	}
 	xrpScanner, err := NewXrpBlockScanner("http://testnode/", scannerCfg, storage, s.bridge, s.m, nil)
 	c.Assert(err, IsNil)
-	xrpScanner.lastFee = sdkmath.NewUint(12)
+	xrpScanner.setLastFee(sdkmath.NewUint(12))
 
 	bs, err := blockscanner.NewBlockScanner(scannerCfg, storage, s.m, s.bridge, xrpScanner)
 	c.Assert(err, IsNil)
@@ -2166,7 +2158,7 @@ func (s *XrpTestSuite) TestReportSolvencyUnhealthyScannerSolvent(c *C) {
 	}
 	xrpScanner, err := NewXrpBlockScanner("http://testnode/", scannerCfg, storage, s.bridge, s.m, nil)
 	c.Assert(err, IsNil)
-	xrpScanner.lastFee = sdkmath.NewUint(12)
+	xrpScanner.setLastFee(sdkmath.NewUint(12))
 
 	bs, err := blockscanner.NewBlockScanner(scannerCfg, storage, s.m, s.bridge, xrpScanner)
 	c.Assert(err, IsNil)
@@ -2412,15 +2404,14 @@ func TestFetchTxsWithMockServer(t *testing.T) {
 	rpcCfg, err := rpc.NewClientConfig(server.URL + "/")
 	require.NoError(t, err)
 
-	scanner := &XrpBlockScanner{
+	scanner := testXrpScannerWithLastFee(&XrpBlockScanner{
 		rpcClient: rpc.NewClient(rpcCfg),
 		cfg: config.BifrostBlockScannerConfiguration{
 			ChainID: common.XRPChain,
 		},
 		solvencyReporter:      func(height int64) error { return nil },
-		lastFee:               sdkmath.NewUint(12),
 		globalNetworkFeeQueue: make(chan common.NetworkFee, 10),
-	}
+	}, sdkmath.NewUint(12))
 
 	txIn, err := scanner.FetchTxs(100, 100)
 	require.NoError(t, err)
@@ -2484,7 +2475,7 @@ func (s *XrpTestSuite) TestReportSolvencyUnhealthyAtPrevHeight(c *C) {
 	}
 	xrpScanner, err := NewXrpBlockScanner("http://testnode/", scannerCfg, storage, s.bridge, s.m, nil)
 	c.Assert(err, IsNil)
-	xrpScanner.lastFee = sdkmath.NewUint(12)
+	xrpScanner.setLastFee(sdkmath.NewUint(12))
 
 	bs, err := blockscanner.NewBlockScanner(scannerCfg, storage, s.m, s.bridge, xrpScanner)
 	c.Assert(err, IsNil)
@@ -3024,12 +3015,11 @@ func TestNewClientBlockScannerDBPath(t *testing.T) {
 // -------------------------------------------------------------------------------------
 
 func TestGetNetworkFeeWithCache(t *testing.T) {
-	scanner := &XrpBlockScanner{
-		lastFee: sdkmath.NewUint(12),
+	scanner := testXrpScannerWithLastFee(&XrpBlockScanner{
 		cfg: config.BifrostBlockScannerConfiguration{
 			ChainID: common.XRPChain,
 		},
-	}
+	}, sdkmath.NewUint(12))
 
 	size, rate := scanner.GetNetworkFee()
 	assert.True(t, size > 0 || rate > 0 || (size == 0 && rate == 0))

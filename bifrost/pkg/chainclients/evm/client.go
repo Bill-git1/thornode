@@ -51,23 +51,25 @@ import (
 
 // EVMClient is a generic client for interacting with EVM chains.
 type EVMClient struct {
-	logger                  zerolog.Logger
-	cfg                     config.BifrostChainConfiguration
-	localPubKey             common.PubKey
-	kw                      *evm.KeySignWrapper
-	ethClient               *ethclient.Client
-	evmScanner              *EVMScanner
-	bridge                  thorclient.ThorchainBridge
-	blockScanner            *blockscanner.BlockScanner
-	vaultABI                *abi.ABI
-	pubkeyMgr               pubkeymanager.PubKeyValidator
-	poolMgr                 thorclient.PoolManager
-	tssKeySigner            *tss.KeySign
-	wg                      *sync.WaitGroup
-	stopchan                chan struct{}
-	globalSolvencyQueue     chan stypes.Solvency
-	signerCacheManager      *signercache.CacheManager
-	lastSolvencyCheckHeight int64
+	logger              zerolog.Logger
+	cfg                 config.BifrostChainConfiguration
+	localPubKey         common.PubKey
+	kw                  *evm.KeySignWrapper
+	ethClient           *ethclient.Client
+	evmScanner          *EVMScanner
+	bridge              thorclient.ThorchainBridge
+	blockScanner        *blockscanner.BlockScanner
+	vaultABI            *abi.ABI
+	pubkeyMgr           pubkeymanager.PubKeyValidator
+	poolMgr             thorclient.PoolManager
+	tssKeySigner        *tss.KeySign
+	wg                  *sync.WaitGroup
+	stopchan            chan struct{}
+	globalSolvencyQueue chan stypes.Solvency
+	signerCacheManager  *signercache.CacheManager
+	// Serializes ReportSolvency when FetchTxs prefetch callbacks and SolvencyCheckRunner can both enter.
+	solvencyLock            sync.Mutex
+	lastSolvencyCheckHeight atomic.Int64
 
 	// pendingLiabilities tracks signed but unconfirmed transaction amounts (value + maxGas)
 	// keyed by vault address -> nonce -> amount in Wei.
@@ -851,7 +853,7 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 	toiGasRateWei := cosmos.NewUint(uint64(txOutItem.GasRate)).MulUint64(common.WeiPerOne).Quo(gasRateUnitsPerOne).BigInt()
 
 	gasRate := c.GetGasPrice()
-	if c.cfg.BlockScanner.FixedGasRate > 0 || gasRate.Cmp(big.NewInt(0)) == 0 {
+	if c.cfg.BlockScanner.FixedGasRate > 0 || gasRate.Sign() == 0 {
 		// if chain gas is zero we are still filling our gas price buffer, use outbound rate
 		c.logger.Info().
 			Stringer("toiGasRateWei", toiGasRateWei).
@@ -1332,7 +1334,7 @@ func (c *EVMClient) checkAndApproveAllowance(tx stypes.TxOutItem, nonce uint64) 
 	toiGasRateWei := cosmos.NewUint(uint64(tx.GasRate)).MulUint64(common.WeiPerOne).Quo(gasRateUnitsPerOne).BigInt()
 
 	gasPrice := c.GetGasPrice()
-	if c.cfg.BlockScanner.FixedGasRate > 0 || gasPrice.Cmp(big.NewInt(0)) == 0 {
+	if c.cfg.BlockScanner.FixedGasRate > 0 || gasPrice.Sign() == 0 {
 		gasPrice = toiGasRateWei
 	} else {
 		// Apply same gas price logic as main transaction
@@ -1341,7 +1343,7 @@ func (c *EVMClient) checkAndApproveAllowance(tx stypes.TxOutItem, nonce uint64) 
 		lowerBound.Div(lowerBound, big.NewInt(3))
 
 		gasPrice.Div(gasPrice, big.NewInt(common.One*100))
-		if gasPrice.Cmp(big.NewInt(0)) == 0 {
+		if gasPrice.Sign() == 0 {
 			gasPrice = big.NewInt(1)
 		}
 		gasPrice.Mul(gasPrice, big.NewInt(common.One*100))
@@ -1505,8 +1507,18 @@ func (c *EVMClient) ConfirmationCountReady(txIn stypes.TxIn) bool {
 
 // --------------------------------- solvency ---------------------------------
 
+// GetGasEstimateForSolvency returns the current gas fee estimate used by solvency checks.
+func (c *EVMClient) GetGasEstimateForSolvency() cosmos.Uint {
+	_, gasRateUnitsPerOne := c.cfg.ChainID.GetGasUnits()
+	return cosmos.NewUint(c.cfg.BlockScanner.MaxGasLimit).MulUint64(3).MulUint64(c.evmScanner.lastReportedGasPrice.Load()).MulUint64(common.One).Quo(gasRateUnitsPerOne)
+}
+
 // ReportSolvency reports solvency once per configured solvency blocks.
 func (c *EVMClient) ReportSolvency(height int64) error {
+	// FetchTxs may call this from prefetch goroutines; SolvencyCheckRunner also calls it while halted.
+	c.solvencyLock.Lock()
+	defer c.solvencyLock.Unlock()
+
 	if !c.ShouldReportSolvency(height) {
 		return nil
 	}
@@ -1524,8 +1536,7 @@ func (c *EVMClient) ReportSolvency(height int64) error {
 	}
 
 	// 3x MaxGas breathing room, from gas rate units gas price to THORChain (1e8) format
-	_, gasRateUnitsPerOne := c.cfg.ChainID.GetGasUnits()
-	currentGasFee := cosmos.NewUint(c.cfg.BlockScanner.MaxGasLimit).MulUint64(3).MulUint64(c.evmScanner.lastReportedGasPrice).MulUint64(common.One).Quo(gasRateUnitsPerOne)
+	currentGasFee := c.GetGasEstimateForSolvency()
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent
@@ -1589,7 +1600,7 @@ func (c *EVMClient) ReportSolvency(height int64) error {
 			c.logger.Info().Msg("fail to send solvency info to thorchain, timeout")
 		}
 	}
-	c.lastSolvencyCheckHeight = height
+	c.lastSolvencyCheckHeight.Store(height)
 	return nil
 }
 

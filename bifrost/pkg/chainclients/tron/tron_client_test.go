@@ -194,6 +194,21 @@ func (s *TronTestSuite) TearDownSuite(c *C) {
 	}
 }
 
+// TestGetGasEstimateForSolvency verifies the TRON scanner fee is converted
+// from sun into THORChain 1e8 units.
+func (s *TronTestSuite) TestGetGasEstimateForSolvency(c *C) {
+	client := &TronClient{
+		config: config.BifrostChainConfiguration{
+			ChainID: common.TRONChain,
+		},
+		tronScanner: &TronBlockScanner{},
+	}
+	client.tronScanner.currentFee.Store(42_000)
+
+	got := client.GetGasEstimateForSolvency()
+	c.Assert(got.Equal(cosmos.NewUint(4_200_000)), Equals, true)
+}
+
 func (s *TronTestSuite) TestGetAddress(c *C) {
 	pubKey := common.PubKey("sthorpub1addwnpepqf72ur2e8zk8r5augtrly40cuy94f7e663zh798tyms6pu2k8qdswf4es66")
 	address := s.client.GetAddress(pubKey)

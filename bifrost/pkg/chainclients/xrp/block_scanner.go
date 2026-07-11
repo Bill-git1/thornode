@@ -62,8 +62,10 @@ type XrpBlockScanner struct {
 	// feeCache contains a rolling window of suggested fees.
 	// Fees are stored at 100x the values on the observed chain due to compensate for the
 	// difference in base chain decimals (thorchain:1e8, xrp:1e6).
-	feeCache []sdkmath.Uint
-	lastFee  sdkmath.Uint
+	// Guards feeCache/lastFee between FetchTxs prefetch updates and solvency/network-fee readers.
+	networkFeeMu sync.Mutex
+	feeCache     []sdkmath.Uint
+	lastFee      sdkmath.Uint
 }
 
 // NewXrpBlockScanner create a new instance of BlockScan
@@ -117,7 +119,24 @@ func (c *XrpBlockScanner) FetchMemPool(height int64) (types.TxIn, error) {
 
 // GetNetworkFee returns current chain network fee according to Bifrost.
 func (c *XrpBlockScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
-	return 1, c.lastFee.Uint64()
+	return 1, c.getLastFee().Uint64()
+}
+
+func (c *XrpBlockScanner) getLastFee() sdkmath.Uint {
+	// Solvency/network-fee readers can run while FetchTxs prefetch goroutines update lastFee.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+	if c.lastFee.IsNil() {
+		return sdkmath.ZeroUint()
+	}
+	return c.lastFee
+}
+
+func (c *XrpBlockScanner) setLastFee(fee sdkmath.Uint) {
+	// Tests set lastFee directly; use the same lock as FetchTxs updates and solvency reads.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+	c.lastFee = fee
 }
 
 func (c *XrpBlockScanner) updateFeeCache(fee common.Coin) {
@@ -135,6 +154,10 @@ func (c *XrpBlockScanner) updateFeeCache(fee common.Coin) {
 	}
 
 	// add the fee to our cache
+	// FetchTxs can run in prefetch goroutines, so serialize feeCache appends.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+
 	c.feeCache = append(c.feeCache, gasRate)
 
 	// truncate fee prices older than our max cached transactions
@@ -144,6 +167,13 @@ func (c *XrpBlockScanner) updateFeeCache(fee common.Coin) {
 }
 
 func (c *XrpBlockScanner) averageFee() sdkmath.Uint {
+	// Tests call averageFee directly; use the same lock as FetchTxs prefetch cache writers.
+	c.networkFeeMu.Lock()
+	defer c.networkFeeMu.Unlock()
+	return c.averageFeeLocked()
+}
+
+func (c *XrpBlockScanner) averageFeeLocked() sdkmath.Uint {
 	// avoid divide by zero
 	if len(c.feeCache) == 0 {
 		return sdkmath.NewUint(0)
@@ -160,9 +190,19 @@ func (c *XrpBlockScanner) averageFee() sdkmath.Uint {
 }
 
 func (c *XrpBlockScanner) updateFees(height int64) error {
-	// post the gas fee over every cache period when we have a full gas cache
-	if height%FeeUpdatePeriodBlocks == 0 && len(c.feeCache) == FeeCacheTransactions {
-		avgFee := c.averageFee()
+	var avgFee sdkmath.Uint
+	var networkFee common.NetworkFee
+	postNetworkFee, err := func() (bool, error) {
+		// FetchTxs can run in prefetch goroutines; keep averaging and lastFee update atomic.
+		c.networkFeeMu.Lock()
+		defer c.networkFeeMu.Unlock()
+
+		// post the gas fee over every cache period when we have a full gas cache
+		if height%FeeUpdatePeriodBlocks != 0 || len(c.feeCache) != FeeCacheTransactions {
+			return false, nil
+		}
+
+		avgFee = c.averageFeeLocked()
 
 		resolution := sdkmath.NewUint(uint64(c.cfg.GasPriceResolution))
 		avgFee = avgFee.Add(resolution.SubUint64(1))
@@ -171,26 +211,36 @@ func (c *XrpBlockScanner) updateFees(height int64) error {
 
 		// sanity check the fee is not zero
 		if avgFee.IsZero() {
-			return errors.New("suggested gas fee was zero")
+			return false, errors.New("suggested gas fee was zero")
 		}
 
 		// skip fee update if it has not changed
-		if c.lastFee.Equal(avgFee) {
-			return nil
+		lastFee := c.lastFee
+		if lastFee.IsNil() {
+			lastFee = sdkmath.ZeroUint()
+		}
+		if lastFee.Equal(avgFee) {
+			return false, nil
 		}
 
+		c.lastFee = avgFee
 		// NOTE: We post the fee to the network as the transaction rate (in gas rate units),
 		// and set the transaction size 1 to ensure the MaxGas in the generated TxOut
 		// contains the correct fee. We previously could not pass the proper size and rate
 		// without a deeper change to Thornode, as the rate on XRP chain can be less than 1.
-		c.globalNetworkFeeQueue <- common.NetworkFee{
+		networkFee = common.NetworkFee{
 			Chain:           c.cfg.ChainID,
 			Height:          height,
 			TransactionSize: 1,
 			TransactionRate: avgFee.Uint64(),
 		}
-
-		c.lastFee = avgFee
+		return true, nil
+	}()
+	if err != nil {
+		return err
+	}
+	if postNetworkFee {
+		c.globalNetworkFeeQueue <- networkFee
 		c.logger.Info().
 			Uint64("fee", avgFee.Uint64()).
 			Int64("height", height).
@@ -376,8 +426,10 @@ func (c *XrpBlockScanner) FetchTxs(height, chainHeight int64) (types.TxIn, error
 		c.logger.Err(err).Int64("height", height).Msg("unable to update network fee")
 	}
 
-	if err = c.solvencyReporter(height); err != nil {
-		c.logger.Err(err).Msg("fail to send solvency to THORChain")
+	if c.solvencyReporter != nil {
+		if err = c.solvencyReporter(height); err != nil {
+			c.logger.Err(err).Msg("fail to send solvency to THORChain")
+		}
 	}
 
 	return txIn, nil

@@ -191,6 +191,26 @@ func (s *CosmosTestSuite) TearDownSuite(c *C) {
 	}
 }
 
+func testCosmosScannerWithLastFee(scanner *CosmosBlockScanner, fee sdkmath.Uint) *CosmosBlockScanner {
+	scanner.setLastFee(fee)
+	return scanner
+}
+
+// TestGetGasEstimateForSolvency verifies the observed Cosmos fee is converted
+// from native gas units into THORChain 1e8 units without extra multipliers.
+func (s *CosmosTestSuite) TestGetGasEstimateForSolvency(c *C) {
+	client := &CosmosClient{
+		cfg: config.BifrostChainConfiguration{
+			ChainID: common.GAIAChain,
+		},
+		cosmosScanner: &CosmosBlockScanner{},
+	}
+	client.cosmosScanner.setLastFee(sdkmath.NewUint(25_000))
+
+	got := client.GetGasEstimateForSolvency()
+	c.Assert(got.Equal(cosmos.NewUint(2_500_000)), Equals, true)
+}
+
 func (s *CosmosTestSuite) TestGetAddress(c *C) {
 	mockBankServiceClient := NewMockBankServiceClient()
 	mockAccountServiceClient := NewMockAccountServiceClient()

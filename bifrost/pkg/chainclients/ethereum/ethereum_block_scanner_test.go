@@ -1184,31 +1184,31 @@ func (s *BlockScannerTestSuite) TestGasPrice(c *C) {
 	// empty blocks should not count
 	bs.updateGasPrice(baseFee, []*big.Int{})
 	c.Assert(len(bs.gasCache), Equals, 39)
-	c.Assert(bs.gasPrice.Cmp(big.NewInt(initialGasPrice)), Equals, 0)
+	c.Assert(bs.GetGasPrice().Cmp(big.NewInt(initialGasPrice)), Equals, 0)
 
 	// now we should get the average of the 25th percentile gas (2)
 	bs.updateGasPrice(baseFee, []*big.Int{big.NewInt(1 * resolution), big.NewInt(2 * resolution), big.NewInt(3 * resolution), big.NewInt(4 * resolution)})
 	c.Assert(len(bs.gasCache), Equals, 40)
-	c.Assert(bs.gasPrice.Uint64(), Equals, big.NewInt(2*resolution).Uint64())
+	c.Assert(bs.GetGasPrice().Uint64(), Equals, big.NewInt(2*resolution).Uint64())
 
 	// add 20 more blocks with 2x the 25th percentile and we should get 6 (3 + 3x stddev)
 	for i := 0; i < 20; i++ {
 		bs.updateGasPrice(baseFee, []*big.Int{big.NewInt(2 * resolution), big.NewInt(4 * resolution), big.NewInt(6 * resolution), big.NewInt(8 * resolution)})
 	}
 	c.Assert(len(bs.gasCache), Equals, 40)
-	c.Assert(bs.gasPrice.Uint64(), Equals, big.NewInt(6*resolution).Uint64())
+	c.Assert(bs.GetGasPrice().Uint64(), Equals, big.NewInt(6*resolution).Uint64())
 
 	// add 20 more blocks with 2x the 25th percentile and we should get 4
 	for i := 0; i < 20; i++ {
 		bs.updateGasPrice(baseFee, []*big.Int{big.NewInt(2 * resolution), big.NewInt(4 * resolution), big.NewInt(6 * resolution), big.NewInt(8 * resolution)})
 	}
 	c.Assert(len(bs.gasCache), Equals, 40)
-	c.Assert(bs.gasPrice.Uint64(), Equals, big.NewInt(4*resolution).Uint64())
+	c.Assert(bs.GetGasPrice().Uint64(), Equals, big.NewInt(4*resolution).Uint64())
 
 	// add 20 more blocks with 2x the 25th percentile and we should get 12 (6 + 3x stddev)
 	for i := 0; i < 20; i++ {
 		bs.updateGasPrice(baseFee, []*big.Int{big.NewInt(4 * resolution), big.NewInt(8 * resolution), big.NewInt(12 * resolution), big.NewInt(16 * resolution)})
 	}
 	c.Assert(len(bs.gasCache), Equals, 40)
-	c.Assert(bs.gasPrice.Uint64(), Equals, big.NewInt(12*resolution).Uint64())
+	c.Assert(bs.GetGasPrice().Uint64(), Equals, big.NewInt(12*resolution).Uint64())
 }

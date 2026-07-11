@@ -301,6 +301,24 @@ func (s *EthereumSuite) TearDownTest(c *C) {
 	}
 }
 
+// TestGetGasEstimateForSolvency verifies the ETH solvency buffer formula:
+// 3 * MaxGasLimit * lastReportedGasPrice, converted from gwei to THORChain 1e8 units.
+func (s *EthereumSuite) TestGetGasEstimateForSolvency(c *C) {
+	client := &Client{
+		cfg: config.BifrostChainConfiguration{
+			ChainID: common.ETHChain,
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				MaxGasLimit: 21_000,
+			},
+		},
+		ethScanner: &ETHScanner{},
+	}
+	client.ethScanner.lastReportedGasPrice.Store(40)
+
+	got := client.GetGasEstimateForSolvency()
+	c.Assert(got.Equal(cosmos.NewUint(252_000)), Equals, true)
+}
+
 func (s *EthereumSuite) TestNewClient(c *C) {
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)

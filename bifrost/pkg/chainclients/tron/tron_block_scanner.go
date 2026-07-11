@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"sort"
 	"strings"
+	"sync"
+	stdatomic "sync/atomic"
 
 	"cosmossdk.io/math"
 
@@ -35,16 +37,19 @@ type RefBlock struct {
 }
 
 type TronBlockScanner struct {
-	config                config.BifrostBlockScannerConfiguration
-	logger                zerolog.Logger
-	bridge                thorclient.ThorchainBridge
-	pubkeyMgr             pubkeymanager.PubKeyValidator
-	api                   *api.TronApi
-	whitelist             map[string]tokenlist.ERC20Token
-	abi                   abi.ABI
-	refBlocks             []RefBlock
-	refAddress            string // needed for energy estimation via api
-	currentFee            uint64
+	config      config.BifrostBlockScannerConfiguration
+	logger      zerolog.Logger
+	bridge      thorclient.ThorchainBridge
+	pubkeyMgr   pubkeymanager.PubKeyValidator
+	api         *api.TronApi
+	whitelist   map[string]tokenlist.ERC20Token
+	abi         abi.ABI
+	refBlocksMu sync.RWMutex
+	refBlocks   []RefBlock
+	refAddress  string // needed for energy estimation via api
+	// Serializes FetchTxs/prefetch network-fee compare and currentFee update.
+	networkFeeMu          sync.Mutex
+	currentFee            stdatomic.Uint64
 	reportSolvency        ReportSolvency
 	globalNetworkFeeQueue chan common.NetworkFee
 }
@@ -147,33 +152,64 @@ func (s *TronBlockScanner) FetchTxs(
 
 	s.updateFees(fetchHeight)
 
-	err = s.reportSolvency(chainHeight)
-	if err != nil {
-		s.logger.Err(err).Msg("fail to send solvency to THORChain")
+	if s.reportSolvency != nil {
+		if err := s.reportSolvency(chainHeight); err != nil {
+			s.logger.Err(err).Msg("fail to send solvency to THORChain")
+		}
 	}
 
 	if fetchHeight%refBlockInterval != 0 {
 		return txIn, nil
 	}
 
-	// update block history
-	if len(s.refBlocks) >= refBlocksMax {
-		s.refBlocks = s.refBlocks[len(s.refBlocks)-(refBlocksMax-1):]
-	}
-	s.refBlocks = append(s.refBlocks, RefBlock{
+	s.addRefBlock(RefBlock{
 		Timestamp: block.Header.RawData.Timestamp,
 		Height:    block.Header.RawData.Number,
 		Id:        block.BlockId,
-	})
-	sort.Slice(s.refBlocks, func(i, j int) bool {
-		return s.refBlocks[i].Height < s.refBlocks[j].Height
 	})
 
 	return txIn, nil
 }
 
+func (s *TronBlockScanner) addRefBlock(refBlock RefBlock) {
+	s.refBlocksMu.Lock()
+	defer s.refBlocksMu.Unlock()
+
+	for i := range s.refBlocks {
+		if s.refBlocks[i].Height == refBlock.Height {
+			s.refBlocks[i] = refBlock
+			return
+		}
+	}
+
+	s.refBlocks = append(s.refBlocks, refBlock)
+	s.sortAndTrimRefBlocks()
+}
+
+func (s *TronBlockScanner) sortAndTrimRefBlocks() {
+	sort.Slice(s.refBlocks, func(i, j int) bool {
+		if s.refBlocks[i].Height == s.refBlocks[j].Height {
+			return s.refBlocks[i].Id < s.refBlocks[j].Id
+		}
+		return s.refBlocks[i].Height < s.refBlocks[j].Height
+	})
+
+	if len(s.refBlocks) > refBlocksMax {
+		s.refBlocks = s.refBlocks[len(s.refBlocks)-refBlocksMax:]
+	}
+}
+
+func (s *TronBlockScanner) refBlockSnapshot() []RefBlock {
+	s.refBlocksMu.RLock()
+	defer s.refBlocksMu.RUnlock()
+
+	refBlocks := make([]RefBlock, len(s.refBlocks))
+	copy(refBlocks, s.refBlocks)
+	return refBlocks
+}
+
 func (s *TronBlockScanner) GetNetworkFee() (uint64, uint64) {
-	return 1, s.currentFee
+	return 1, s.currentFee.Load()
 }
 
 // private
@@ -499,20 +535,33 @@ func (s *TronBlockScanner) updateFees(height int64) {
 		return
 	}
 
-	// skip sending the network fee if it did not change
-	if uint64(fee) == s.currentFee {
+	feeRate := uint64(fee)
+
+	// FetchTxs can run in prefetch goroutines; serialize fee comparison and currentFee.
+	networkFee, postNetworkFee := func() (common.NetworkFee, bool) {
+		s.networkFeeMu.Lock()
+		defer s.networkFeeMu.Unlock()
+
+		// skip sending the network fee if it did not change
+		if feeRate == s.currentFee.Load() {
+			return common.NetworkFee{}, false
+		}
+
+		s.currentFee.Store(feeRate)
+		return common.NetworkFee{
+			Chain:           s.config.ChainID,
+			Height:          height,
+			TransactionSize: 1,
+			TransactionRate: feeRate,
+		}, true
+	}()
+	if !postNetworkFee {
 		return
 	}
 
-	s.currentFee = uint64(fee)
-
-	s.globalNetworkFeeQueue <- common.NetworkFee{
-		Chain:           s.config.ChainID,
-		Height:          height,
-		TransactionSize: 1,
-		TransactionRate: s.currentFee,
-	}
-
+	// The fee decision is made while holding networkFeeMu above, but the channel send
+	// happens after releasing the lock so blocked consumers cannot stall fee-state updates.
+	s.globalNetworkFeeQueue <- networkFee
 	s.logger.Info().
 		Int64("height", height).
 		Int64("bandwidth", bandwidth).
