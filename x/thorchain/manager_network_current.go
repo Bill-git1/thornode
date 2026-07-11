@@ -2161,7 +2161,9 @@ func (vm *NetworkMgr) processRevShare(ctx cosmos.Context, mgr Manager) cosmos.Ui
 		if canPay {
 			owner = tn.Owner
 		}
-		bps, _ := vm.k.GetMimirWithRef(ctx, constants.MimirTemplateRevShareThorName, entry.Thorname)
+		// Map any aliased thorname (e.g. "-_" -> SWAPKIT) to the Mimir-safe token
+		// nodes actually voted REVSHARE-<token> on; unaliased names pass through.
+		bps, _ := vm.k.GetMimirWithRef(ctx, constants.MimirTemplateRevShareThorName, revShareThornameToAlias(entry.Thorname))
 		payout := cosmos.ZeroUint()
 		var col AffiliateFeeCollector
 		if canPay && bps > 0 {

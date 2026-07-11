@@ -170,6 +170,29 @@ func (HandlerMimirSuite) TestRevShareValidation(c *C) {
 	// 6. REVSHARE key with invalid thorname characters -> targeted error
 	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foo_bar", 100)), NotNil)
 	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foo+bar", 100)), NotNil)
+
+	// 7. Hyphen-containing thorname is Mimir-safe and must be accepted (proves
+	// the REVSHARE- prefix is stripped whole, not tokenised on '-').
+	hyphenName := types.NewTHORName("foo-bar", 1000, []types.THORNameAlias{{Chain: common.THORChain, Address: GetRandomTHORAddress()}})
+	k.SetTHORName(ctx, hyphenName)
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-foo-bar", 100)), IsNil)
+
+	// 8. Aliased affiliate: SwapKit's thorname "-_" has Mimir-illegal chars, so
+	// nodes vote REVSHARE-SWAPKIT. The alias must resolve to the real thorname.
+	swapkit := types.NewTHORName("-_", 1000, []types.THORNameAlias{{Chain: common.THORChain, Address: GetRandomTHORAddress()}})
+	k.SetTHORName(ctx, swapkit)
+	c.Assert(h.validate(ctx, mkMsg("REVSHARE-SWAPKIT", 100)), IsNil)
+	c.Assert(h.validate(ctx, mkMsg("revshare-swapkit", 100)), IsNil) // case-insensitive
+}
+
+func (HandlerMimirSuite) TestRevShareAliasRoundTrip(c *C) {
+	// The alias token the payout side builds must match what validation resolves,
+	// otherwise a voted REVSHARE-SWAPKIT bps would never reach the "-_" thorname.
+	c.Assert(revShareThornameToAlias("-_"), Equals, "SWAPKIT")
+	c.Assert(revShareThornameToAlias("foobar"), Equals, "foobar") // unaliased passthrough
+	c.Assert(revShareAliasToThorname("SWAPKIT"), Equals, "-_")
+	c.Assert(revShareAliasToThorname("swapkit"), Equals, "-_") // case-insensitive
+	c.Assert(revShareAliasToThorname("FOOBAR"), Equals, "FOOBAR")
 }
 
 func (HandlerMimirSuite) TestRevShareIsOperational(c *C) {

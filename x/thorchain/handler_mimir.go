@@ -73,7 +73,10 @@ func (h MimirHandler) validate(ctx cosmos.Context, msg MsgMimir) error {
 
 	// REVSHARE-<thorname> operational mimir validation.
 	if isRevShare {
-		thornameName := upperKey[len("REVSHARE-"):]
+		// Resolve any Mimir-safe alias (e.g. SWAPKIT -> "-_") back to the real
+		// thorname before the existence check, so affiliates whose thorname
+		// can't appear in a Mimir key can still be voted on.
+		thornameName := revShareAliasToThorname(upperKey[len("REVSHARE-"):])
 		if !h.mgr.Keeper().THORNameExists(ctx, thornameName) {
 			return cosmos.ErrUnknownRequest("REVSHARE mimir requires existing thorname")
 		}
