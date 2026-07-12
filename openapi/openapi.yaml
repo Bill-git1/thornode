@@ -2510,6 +2510,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Coin"
+        deficit:
+          type: array
+          items:
+            $ref: "#/components/schemas/Coin"
         type:
           type: string
           enum: ["AsgardVault", "YggdrasilVault"]

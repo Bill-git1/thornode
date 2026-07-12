@@ -103,7 +103,7 @@ func processErrataTxAttestation(
 			if err != nil {
 				return fmt.Errorf("fail to get active asgard vaults: %w", err)
 			}
-			vault.SubFunds(tx.Coins)
+			debitVault(ctx, mgr, &vault, observedVoter.Tx, tx.Coins, vaultDeficitReasonInboundErrataReversal)
 			if err = k.SetVault(ctx, vault); err != nil {
 				return fmt.Errorf("fail to save vault, err: %w", err)
 			}

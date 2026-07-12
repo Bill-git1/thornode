@@ -461,8 +461,10 @@ func (s *SlasherImpl) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						// have THORChain-unobserved gas costs (causing churn-migration-jamming vault insolvency).
 						// As such, re-add the (now free) funds of the outbound being replaced.
 						if active[i].PubKey.Equals(toi.VaultPubKey) {
-							active[i].Coins = active[i].Coins.Add(toi.Coin)
-							active[i].Coins = active[i].Coins.Add(toi.MaxGas...)
+							// This is a local availability simulation, not a real credit:
+							// bypass AddFunds so deficits do not consume the paper restore.
+							paperRestored := common.NewCoins(toi.Coin).Add(toi.MaxGas...)
+							active[i].Coins = active[i].Coins.Add(paperRestored...)
 						}
 					}
 

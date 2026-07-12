@@ -188,6 +188,71 @@ func (s *SlashingSuite) TestNotSigningSlash(c *C) {
 	c.Assert(keeper.txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
 }
 
+func (s *SlashingSuite) TestLackSigningPaperRestoreDoesNotSettleDeficit(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	txOutStore := NewTxStoreDummy()
+	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+	signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
+	ctx = ctx.WithBlockHeight(3 + signingTransactionPeriod)
+
+	na := GetRandomValidatorNode(NodeActive)
+	inHash := GetRandomTxHash()
+	maxGas := common.NewCoin(common.ETHAsset, cosmos.NewUint(37_500))
+	outbound := common.NewCoin(common.ETHAsset, cosmos.NewUint(100_000))
+	required := outbound.Amount.Add(maxGas.Amount)
+	deficit := cosmos.NewUint(10_000)
+
+	assignedVault := GetRandomVault()
+	assignedVault.Type = AsgardVault
+	assignedVault.Status = ActiveVault
+	assignedVault.PubKey = na.PubKeySet.Secp256k1
+	assignedVault.Chains = common.Chains{common.THORChain, common.ETHChain}.Strings()
+	assignedVault.Coins = common.Coins{}
+	assignedVault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, deficit))
+
+	otherVault := GetRandomVault()
+	otherVault.Type = AsgardVault
+	otherVault.Status = ActiveVault
+	otherVault.Chains = common.Chains{common.THORChain, common.ETHChain}.Strings()
+	otherVault.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, required.Sub(cosmos.OneUint())))
+	otherVault.Deficit = common.Coins{}
+
+	txOutItem := TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      inHash,
+		VaultPubKey: assignedVault.PubKey,
+		ToAddress:   GetRandomETHAddress(),
+		Coin:        outbound,
+		MaxGas:      common.Gas{maxGas},
+		Memo:        fmt.Sprintf("OUT:%s", inHash),
+	}
+	txOut := NewTxOut(3)
+	txOut.TxArray = append(txOut.TxArray, txOutItem)
+
+	keeper := &TestSlashingLackKeeper{
+		txOut:  txOut,
+		na:     na,
+		vaults: Vaults{assignedVault, otherVault},
+		voter: ObservedTxVoter{
+			Actions: []TxOutItem{txOutItem},
+		},
+		slashPts: make(map[string]int64),
+	}
+
+	mgr := NewDummyMgr()
+	mgr.txOutStore = txOutStore
+	slasher := newSlasher(keeper, NewDummyEventMgr())
+	c.Assert(slasher.LackSigning(ctx, mgr), IsNil)
+
+	outItems, err := txOutStore.GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(outItems, HasLen, 1)
+	c.Assert(outItems[0].VaultPubKey.Equals(assignedVault.PubKey), Equals, true)
+	c.Assert(keeper.voter.Actions[0].VaultPubKey.Equals(assignedVault.PubKey), Equals, true)
+	c.Assert(keeper.vaults[0].GetCoin(common.ETHAsset).Amount.IsZero(), Equals, true)
+	c.Assert(keeper.vaults[0].GetDeficit(common.ETHAsset).Amount.Equal(deficit), Equals, true)
+}
+
 func (s *SlashingSuite) TestInactiveVaultDrainedReroute(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(201)

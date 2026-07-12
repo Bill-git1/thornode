@@ -530,7 +530,7 @@ func (m Migrator) Migrate13to14(ctx sdk.Context) error {
 //     trigger a NodeOperatorFee skim on the next bp.Adjust() since providers
 //     have already absorbed the slash.
 //  4. Reconcile phantom credit on two retiring asgard ETH vaults caused by
-//     SafeSub clamping in vault.SubFunds during outbound observation when the
+//     SafeSub clamping in vault.SubFundsWithClamping during outbound observation when the
 //     vault was already drained. See fixVaultClamps_v3_18_0 and
 //     mainnetVaultClampFixes14to15 for details. Pre-flight check skips any
 //     entry that would clamp again (loud error logged) — better to leave the
@@ -622,7 +622,7 @@ func (m Migrator) Migrate14to15(ctx sdk.Context) error {
 	}
 
 	// Step 4: reconcile phantom credit on retiring asgard ETH vaults from
-	// SafeSub clamping in vault.SubFunds during outbound observation.
+	// SafeSub clamping in vault.SubFundsWithClamping during outbound observation.
 	// Failures inside this routine are logged and skipped per-row; we do
 	// not return an error from this step so the migration as a whole still
 	// completes the prior 3 steps.

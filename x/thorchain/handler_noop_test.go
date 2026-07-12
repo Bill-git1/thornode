@@ -97,6 +97,41 @@ func (HandlerNoOpSuite) TestNoOpInsufficientFunds(c *C) {
 	c.Assert(err.Error(), Matches, ".*vault has insufficient funds.*")
 }
 
+// TestNoOpInsufficientFundsAggregatesDuplicateCoins verifies duplicate assets are checked by total amount.
+func (HandlerNoOpSuite) TestNoOpInsufficientFundsAggregatesDuplicateCoins(c *C) {
+	w := getHandlerTestWrapper(c, 1, true, true)
+	h := NewNoOpHandler(w.mgr)
+
+	pk := GetRandomPubKey()
+	vault := NewVault(w.ctx.BlockHeight(), ActiveVault, AsgardVault, pk, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))})
+	c.Assert(w.mgr.Keeper().SetVault(w.ctx, vault), IsNil)
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
+		common.Coins{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(30*common.One)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(30*common.One)),
+		},
+		common.Gas{{Asset: common.ETHAsset, Amount: cosmos.NewUint(37500)}},
+		"",
+	)
+	obsTx := common.NewObservedTx(tx, 33, pk, 33)
+
+	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
+	result, err := h.Run(w.ctx, m)
+	c.Assert(err, NotNil)
+	c.Assert(result, IsNil)
+	c.Assert(err.Error(), Matches, ".*vault has insufficient funds.*")
+
+	updatedVault, err := w.mgr.Keeper().GetVault(w.ctx, pk)
+	c.Assert(err, IsNil)
+	c.Assert(updatedVault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true)
+	c.Assert(updatedVault.GetDeficit(common.ETHAsset).IsEmpty(), Equals, true)
+}
+
 func (HandlerNoOpSuite) TestNoOpSuccessfulSubtraction(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, true)
 	h := NewNoOpHandler(w.mgr)

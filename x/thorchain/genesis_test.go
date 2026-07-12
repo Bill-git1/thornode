@@ -102,6 +102,72 @@ func (GenesisTestSuite) TestGenesisPOLReserveDepositRoundTrip(c *C) {
 	c.Check(gotUSDC.RuneDeposited.String(), Equals, usdcDeposit.RuneDeposited.String())
 }
 
+func (GenesisTestSuite) TestGenesisInactiveAsgardDeficitRoundTrip(c *C) {
+	SetupConfigForTest()
+
+	srcCtx, srcMgr := setupManagerForTest(c)
+	deficitVault := GetRandomVault()
+	deficitVault.Status = InactiveVault
+	deficitVault.StatusSince = srcCtx.BlockHeight()
+	deficitVault.Coins = common.Coins{}
+	deficitVault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(12345)))
+	c.Assert(srcMgr.Keeper().SetVault(srcCtx, deficitVault), IsNil)
+	c.Assert(srcMgr.Keeper().RemoveFromAsgardIndex(srcCtx, deficitVault.PubKey), IsNil)
+	initDeficitVault := GetRandomVault()
+	initDeficitVault.Status = InitVault
+	initDeficitVault.StatusSince = srcCtx.BlockHeight()
+	initDeficitVault.Coins = common.Coins{}
+	initDeficitVault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(67890)))
+	c.Assert(srcMgr.Keeper().SetVault(srcCtx, initDeficitVault), IsNil)
+	c.Assert(srcMgr.Keeper().RemoveFromAsgardIndex(srcCtx, initDeficitVault.PubKey), IsNil)
+
+	abandonedVault := GetRandomVault()
+	abandonedVault.Status = InactiveVault
+	abandonedVault.Coins = common.Coins{}
+	abandonedVault.Deficit = common.Coins{}
+	c.Assert(srcMgr.Keeper().SetVault(srcCtx, abandonedVault), IsNil)
+	c.Assert(srcMgr.Keeper().RemoveFromAsgardIndex(srcCtx, abandonedVault.PubKey), IsNil)
+
+	exported := ExportGenesis(srcCtx, srcMgr.Keeper())
+	findVault := func(vaults Vaults, pubKey common.PubKey) (Vault, bool) {
+		for _, vault := range vaults {
+			if vault.PubKey.Equals(pubKey) {
+				return vault, true
+			}
+		}
+		return Vault{}, false
+	}
+
+	exportedDeficitVault, found := findVault(exported.Vaults, deficitVault.PubKey)
+	c.Assert(found, Equals, true)
+	c.Check(exportedDeficitVault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(12345)), Equals, true)
+	exportedInitDeficitVault, found := findVault(exported.Vaults, initDeficitVault.PubKey)
+	c.Assert(found, Equals, true)
+	c.Check(exportedInitDeficitVault.GetDeficit(common.BTCAsset).Amount.Equal(cosmos.NewUint(67890)), Equals, true)
+	_, found = findVault(exported.Vaults, abandonedVault.PubKey)
+	c.Check(found, Equals, false)
+
+	dstCtx, dstMgr := setupManagerForTest(c)
+	InitGenesis(dstCtx, dstMgr.Keeper(), exported)
+
+	restored, err := dstMgr.Keeper().GetVault(dstCtx, deficitVault.PubKey)
+	c.Assert(err, IsNil)
+	c.Check(restored.Status, Equals, InactiveVault)
+	c.Check(restored.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(12345)), Equals, true)
+	restoredInit, err := dstMgr.Keeper().GetVault(dstCtx, initDeficitVault.PubKey)
+	c.Assert(err, IsNil)
+	c.Check(restoredInit.Status, Equals, InitVault)
+	c.Check(restoredInit.GetDeficit(common.BTCAsset).Amount.Equal(cosmos.NewUint(67890)), Equals, true)
+
+	reExported := ExportGenesis(dstCtx, dstMgr.Keeper())
+	reExportedDeficitVault, found := findVault(reExported.Vaults, deficitVault.PubKey)
+	c.Assert(found, Equals, true)
+	c.Check(reExportedDeficitVault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(12345)), Equals, true)
+	reExportedInitDeficitVault, found := findVault(reExported.Vaults, initDeficitVault.PubKey)
+	c.Assert(found, Equals, true)
+	c.Check(reExportedInitDeficitVault.GetDeficit(common.BTCAsset).Amount.Equal(cosmos.NewUint(67890)), Equals, true)
+}
+
 // TestGenesisDynamicFeeRoundtrip seeds a DynamicFeeRecord, accumulator, and
 // last-observed-epoch-blocks value into one keeper, exports the state,
 // imports into a fresh keeper, and re-exports. It then asserts the two

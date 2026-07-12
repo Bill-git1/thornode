@@ -9,6 +9,7 @@ Name | Type | Description | Notes
 **PubKeyEddsa** | Pointer to **string** |  | [optional] 
 **PubKeyFrost** | Pointer to **string** |  | [optional] 
 **Coins** | [**[]Coin**](Coin.md) |  | 
+**Deficit** | Pointer to [**[]Coin**](Coin.md) |  | [optional] 
 **Type** | Pointer to **string** |  | [optional] 
 **Status** | **string** |  | 
 **StatusSince** | Pointer to **int64** |  | [optional] 
@@ -159,6 +160,31 @@ and a boolean to check if the value has been set.
 
 SetCoins sets Coins field to given value.
 
+
+### GetDeficit
+
+`func (o *Vault) GetDeficit() []Coin`
+
+GetDeficit returns the Deficit field if non-nil, zero value otherwise.
+
+### GetDeficitOk
+
+`func (o *Vault) GetDeficitOk() (*[]Coin, bool)`
+
+GetDeficitOk returns a tuple with the Deficit field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetDeficit
+
+`func (o *Vault) SetDeficit(v []Coin)`
+
+SetDeficit sets Deficit field to given value.
+
+### HasDeficit
+
+`func (o *Vault) HasDeficit() bool`
+
+HasDeficit returns a boolean if a field has been set.
 
 ### GetType
 

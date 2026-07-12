@@ -168,6 +168,7 @@ func (qs queryServer) queryVault(ctx cosmos.Context, req *types.QueryVaultReques
 		PubKeyEddsa:            v.PubKeyEddsa.String(),
 		PubKeyFrost:            v.PubKeyFrost.String(),
 		Coins:                  v.Coins,
+		Deficit:                v.Deficit,
 		Type:                   v.Type.String(),
 		Status:                 v.Status.String(),
 		StatusSince:            v.StatusSince,
@@ -413,22 +414,48 @@ func (qs queryServer) queryAsgardVaults(ctx cosmos.Context, _ *types.QueryAsgard
 		return nil, fmt.Errorf("fail to get asgard vaults: %w", err)
 	}
 
+	// Inactive Asgard vaults are removed from the Asgard index, but every vault
+	// carrying an unsettled deficit must remain observable until the deficit is
+	// resolved. Preserve the existing indexed order and append only missing
+	// deficit-bearing Asgard vaults from the canonical vault store.
+	indexed := make(map[string]struct{}, len(vaults))
+	for _, vault := range vaults {
+		indexed[vault.PubKey.String()] = struct{}{}
+	}
+	iter := qs.mgr.Keeper().GetVaultIterator(ctx)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var vault Vault
+		if err := qs.mgr.Keeper().Cdc().Unmarshal(iter.Value(), &vault); err != nil {
+			return nil, fmt.Errorf("fail to unmarshal vault: %w", err)
+		}
+		if !vault.IsAsgard() || !vault.HasDeficit() {
+			continue
+		}
+		if _, ok := indexed[vault.PubKey.String()]; ok {
+			continue
+		}
+		vaults = append(vaults, vault)
+		indexed[vault.PubKey.String()] = struct{}{}
+	}
+
 	var vaultsWithFunds []*types.QueryVaultResponse
 	for _, vault := range vaults {
-		if vault.Status == InactiveVault {
+		if vault.Status == InactiveVault && !vault.HasDeficit() {
 			continue
 		}
 		if !vault.IsAsgard() {
 			continue
 		}
 		// Being in a RetiringVault blocks a node from unbonding, so display them even if having no funds.
-		if vault.HasFunds() || vault.Status == ActiveVault || vault.Status == RetiringVault {
+		if vault.HasFunds() || vault.HasDeficit() || vault.Status == ActiveVault || vault.Status == RetiringVault {
 			vaultsWithFunds = append(vaultsWithFunds, &types.QueryVaultResponse{
 				BlockHeight:            vault.BlockHeight,
 				PubKey:                 vault.PubKey.String(),
 				PubKeyEddsa:            vault.PubKeyEddsa.String(),
 				PubKeyFrost:            vault.PubKeyFrost.String(),
 				Coins:                  vault.Coins,
+				Deficit:                vault.Deficit,
 				Type:                   vault.Type.String(),
 				Status:                 vault.Status.String(),
 				StatusSince:            vault.StatusSince,

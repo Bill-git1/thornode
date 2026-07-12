@@ -361,16 +361,16 @@ type vaultClampFix struct {
 }
 
 // fixVaultClamps_v3_18_0 reconciles phantom credit accumulated on retiring
-// asgard ETH vaults due to SafeSub clamping in vault.SubFunds during outbound
+// asgard ETH vaults due to SafeSub clamping in vault.SubFundsWithClamping during outbound
 // observation when the vault was already drained.
 //
 // For each (vault, amount) pair the routine loads the vault, performs a
 // pre-flight balance check (skipping with a loud error log if the vault would
 // clamp again — that would indicate another bug already fired and is safer to
 // investigate manually than to halt the upgrade), then deducts the exact
-// amount via vault.SubFunds and persists.
+// amount via vault.SubFundsWithClamping and persists.
 //
-// Using SubFunds is intentional: if it clamps here the pre-flight check
+// Using SubFundsWithClamping is intentional: if it clamps here the pre-flight check
 // already caught it, so this is the same shape as the production debit path
 // and any future re-clamp manifests as the loud-error-skip rather than a
 // silent debit drop.
@@ -404,7 +404,7 @@ func fixVaultClamps_v3_18_0(ctx cosmos.Context, mgr *Mgrs, fixes []vaultClampFix
 			)
 			continue
 		}
-		v.SubFunds(common.NewCoins(common.NewCoin(common.ETHAsset, amount)))
+		v.SubFundsWithClamping(common.NewCoins(common.NewCoin(common.ETHAsset, amount)))
 		if err := mgr.Keeper().SetVault(ctx, v); err != nil {
 			ctx.Logger().Error("vault clamp fix: fail to set vault, skipping",
 				"vault", fix.pubKey, "error", err)

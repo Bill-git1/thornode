@@ -1412,6 +1412,51 @@ func (s *QuerierSuite) TestQueryAsgardVault(c *C) {
 	c.Assert(openapiVaults[0].Status, Equals, queryAsgardVaultResp.AsgardVaults[0].Status)
 	c.Assert(*openapiVaults[0].StatusSince, Equals, queryAsgardVaultResp.AsgardVaults[0].StatusSince)
 	c.Assert(len(openapiVaults[0].Chains), Equals, len(queryAsgardVaultResp.AsgardVaults[0].Chains))
+	c.Assert(len(openapiVaults[0].Deficit), Equals, len(queryAsgardVaultResp.AsgardVaults[0].Deficit))
+}
+
+func (s *QuerierSuite) TestQueryAsgardVaultIncludesInactiveDeficit(c *C) {
+	deficitVault := GetRandomVault()
+	deficitVault.Status = InactiveVault
+	deficitVault.Coins = common.Coins{}
+	deficitVault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(12345)))
+	c.Assert(s.k.SetVault(s.ctx, deficitVault), IsNil)
+	c.Assert(s.k.RemoveFromAsgardIndex(s.ctx, deficitVault.PubKey), IsNil)
+	initDeficitVault := GetRandomVault()
+	initDeficitVault.Status = InitVault
+	initDeficitVault.Coins = common.Coins{}
+	initDeficitVault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(67890)))
+	c.Assert(s.k.SetVault(s.ctx, initDeficitVault), IsNil)
+	c.Assert(s.k.RemoveFromAsgardIndex(s.ctx, initDeficitVault.PubKey), IsNil)
+
+	abandonedVault := GetRandomVault()
+	abandonedVault.Status = InactiveVault
+	abandonedVault.Coins = common.Coins{}
+	abandonedVault.Deficit = common.Coins{}
+	c.Assert(s.k.SetVault(s.ctx, abandonedVault), IsNil)
+	c.Assert(s.k.RemoveFromAsgardIndex(s.ctx, abandonedVault.PubKey), IsNil)
+
+	resp, err := s.queryServer.AsgardVaults(s.ctx, &types.QueryAsgardVaultsRequest{})
+	c.Assert(err, IsNil)
+
+	var foundDeficit, foundInitDeficit, foundAbandoned bool
+	for _, vault := range resp.AsgardVaults {
+		switch vault.PubKey {
+		case deficitVault.PubKey.String():
+			foundDeficit = true
+			c.Check(vault.Status, Equals, InactiveVault.String())
+			c.Check(vault.Deficit.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(12345)), Equals, true)
+		case initDeficitVault.PubKey.String():
+			foundInitDeficit = true
+			c.Check(vault.Status, Equals, InitVault.String())
+			c.Check(vault.Deficit.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(67890)), Equals, true)
+		case abandonedVault.PubKey.String():
+			foundAbandoned = true
+		}
+	}
+	c.Check(foundDeficit, Equals, true)
+	c.Check(foundInitDeficit, Equals, true)
+	c.Check(foundAbandoned, Equals, false)
 }
 
 func (s *QuerierSuite) TestQueryVaultPubKeys(c *C) {

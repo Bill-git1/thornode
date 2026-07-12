@@ -1589,7 +1589,7 @@ var mainnetSlashRefunds14to15 = []struct {
 }
 
 // mainnetVaultClampFixes14to15 — phantom credit reconciliation on retiring
-// asgard ETH vaults caused by SafeSub clamping in vault.SubFunds during
+// asgard ETH vaults caused by SafeSub clamping in vault.SubFundsWithClamping during
 // outbound observation when the vault was already drained. Three confirmed
 // clamping events; deduct exact amounts from each vault's vault.Coins[ETH.ETH].
 //

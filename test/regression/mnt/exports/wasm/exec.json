@@ -412,6 +412,7 @@
               "decimals": "8"
             }
           ],
+          "deficit": null,
           "inbound_tx_count": "5",
           "membership": [
             "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"

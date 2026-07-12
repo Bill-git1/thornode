@@ -1424,7 +1424,7 @@
               "from": "0xd58610f89265a2fb637ac40edf59141ff873b266",
               "id": "0000000000000000000000000000000000000000000000000000000000000002",
               "memo": "OUT:3166B385F1182E2AF55E42B963924CC216E1FD750D7519AFFED0D63E96E6C90F",
-              "msg": "vault sub_funds clamp: vault=tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4 asset=AVAX.AVAX requested=10000000000 available=950000001 missed=9049999999 tx=0000000000000000000000000000000000000000000000000000000000000002",
+              "msg": "vault deficit created: vault=tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4 tx=0000000000000000000000000000000000000000000000000000000000000002 reason=vault_slash_gas asset=AVAX.AVAX requested=10000000000 accounted_from_coins=950000001 deficit_delta=9049999999 deficit_total=9049999999",
               "msg_index": "0",
               "to": "0x1b03d088612a00df0049634e9cc8684d622cada2",
               "type": "security"

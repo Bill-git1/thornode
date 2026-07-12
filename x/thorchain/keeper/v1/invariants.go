@@ -18,6 +18,24 @@ func (k KVStore) InvariantRoutes() []common.InvariantRoute {
 		common.NewInvariantRoute("streaming_swaps", StreamingSwapsInvariant(k)),
 		common.NewInvariantRoute("runepool", RUNEPoolInvariant(k)),
 		common.NewInvariantRoute("tcy_claim", TCYClaimInvariant(k)),
+		common.NewInvariantRoute("vault_deficit", VaultDeficitInvariant(k)),
+	}
+}
+
+// VaultDeficitInvariant reports vaults with positive coins and deficit for the same asset.
+func VaultDeficitInvariant(k KVStore) common.Invariant {
+	return func(ctx cosmos.Context) (msg []string, broken bool) {
+		iterator := k.GetVaultIterator(ctx)
+		defer iterator.Close()
+		for ; iterator.Valid(); iterator.Next() {
+			var vault Vault
+			k.Cdc().MustUnmarshal(iterator.Value(), &vault)
+			if err := vault.ValidateDeficitInvariant(); err != nil {
+				broken = true
+				msg = append(msg, fmt.Sprintf("vault_deficit: %s", err))
+			}
+		}
+		return msg, broken
 	}
 }
 

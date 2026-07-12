@@ -118,7 +118,9 @@ func (vm *ValidatorMgr) BeginBlock(ctx cosmos.Context, mgr Manager, existingVali
 		}
 	}
 
-	// don't churn if we have retiring asgard vaults that still have funds
+	// Do not churn while a RetiringVault still has real funds to migrate.
+	// Deficit-only retiring vaults are accounting records, not migration work,
+	// so they must not block validator rotation.
 	retiringVaults, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
 	if err != nil {
 		return err

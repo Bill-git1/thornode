@@ -3755,6 +3755,13 @@ components:
         - 5
         - 5
         outbound_tx_count: 5
+        deficit:
+        - amount: "100000"
+          decimals: 6
+          asset: BTC.BTC
+        - amount: "100000"
+          decimals: 6
+          asset: BTC.BTC
         routers:
         - chain: ETH
           router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
@@ -3773,6 +3780,10 @@ components:
         pub_key_frost:
           type: string
         coins:
+          items:
+            $ref: '#/components/schemas/Coin'
+          type: array
+        deficit:
           items:
             $ref: '#/components/schemas/Coin'
           type: array

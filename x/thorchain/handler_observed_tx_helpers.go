@@ -612,7 +612,7 @@ func correctOutboundGas(ctx cosmos.Context, mgr Manager, consensusTx common.Obse
 		if newGasCoin.Amount.GT(oldAmount) {
 			// More gas was actually spent - deduct additional from vault.
 			delta := common.NewCoin(newGasCoin.Asset, newGasCoin.Amount.Sub(oldAmount))
-			vault.SubFunds(common.NewCoins(delta))
+			debitVault(ctx, mgr, &vault, consensusTx, common.NewCoins(delta), vaultDeficitReasonOutboundGasCorrection)
 			additionalGas = additionalGas.Add(delta)
 		} else if oldAmount.GT(newGasCoin.Amount) {
 			// Less gas was actually spent - credit back to vault.
@@ -738,12 +738,11 @@ func handleObservedTxOutQuorum(
 		if err := mgr.Slasher().SlashVault(slashCtx, tx.ObservedPubKey, toSlash, mgr); err != nil {
 			ctx.Logger().Error("fail to slash account for sending extra fund", "error", err)
 		}
-		// Detect SafeSub clamping on the inbound-memo slash debit. The same
-		// silent-drop pattern applies: bifrost reports the vault sent toSlash,
-		// but if TC's tracked balance is below that, SafeSub clamps to zero and
-		// the divergence becomes phantom credit on the vault.
-		detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, toSlash)
-		vault.SubFunds(toSlash)
+		// The inbound-memo slash debit has the same silent-drop risk as a normal
+		// outbound debit: bifrost reports the vault sent toSlash, but THORChain's
+		// tracked balance may be below that. Record any underflow as deficit and
+		// surface it instead of losing the accounting gap.
+		debitVault(ctx, mgr, &vault, tx, toSlash, vaultDeficitReasonVaultSlash)
 		if err := k.SetVault(ctx, vault); err != nil {
 			ctx.Logger().Error("fail to save vault", "error", err)
 		}
@@ -845,10 +844,9 @@ func handleObservedTxOutQuorum(
 	} else {
 		// if the vault was slashed we skipped the gas manager above and deduct gas directly
 		if vaultSlash {
-			// Detect SafeSub clamping on the gas debit: the same silent-drop bug
-			// applies here when a slashed vault has insufficient gas reserve.
-			detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Gas.ToCoins())
-			vault.SubFunds(tx.Tx.Gas.ToCoins())
+			// The slashed-vault gas debit can underflow the same way as the main
+			// coin debit when the vault has insufficient gas reserve.
+			debitVault(ctx, mgr, &vault, tx, tx.Tx.Gas.ToCoins(), vaultDeficitReasonVaultSlashGas)
 		}
 
 		// Don't add to or subtract from vault balances when the sender and recipient are the same
@@ -856,14 +854,11 @@ func handleObservedTxOutQuorum(
 		if !tx.Tx.FromAddress.Equals(tx.Tx.ToAddress) {
 			// skip deducting funds for outbound fake gas
 			if !isOutboundFakeGasTx(tx) {
-				// Detect SafeSub clamping: an outbound observation should never debit
-				// more than the vault's tracked balance. When this happens, an earlier
-				// debit has been silently dropped (the L1 sent the funds, but TC could
-				// not fully account for it) and the vault now carries phantom credit.
-				// This indicates a real solvency divergence — halt the chain and emit
-				// a security event so operators can investigate before further damage.
-				detectVaultSubFundsClamp(ctx, mgr, k, vault, tx, tx.Tx.Coins)
-				vault.SubFunds(tx.Tx.Coins)
+				// An outbound observation should normally be covered by the vault's
+				// tracked balance. If it is not, the L1 already sent the funds, so
+				// THORChain must record the deficit and halt/signal rather than keep
+				// phantom credit on the vault.
+				debitVault(ctx, mgr, &vault, tx, tx.Tx.Coins, vaultDeficitReasonOutbound)
 			}
 			vault.OutboundTxCount++
 		}
@@ -873,9 +868,18 @@ func handleObservedTxOutQuorum(
 			vault.RemovePendingTxBlockHeights(memo.GetBlockHeight())
 		}
 
+		// RetiringVault status should clear once all real coins are drained,
+		// even if deficit accounting still remains on the vault.
 		if !vault.HasFunds() && vault.Status == RetiringVault {
-			// we have successfully removed all funds from a retiring vault,
-			// mark it as inactive
+			// We have successfully removed all funds from a retiring vault;
+			// mark it inactive so it no longer blocks churn or unbonding.
+			if vault.HasDeficit() {
+				ctx.Logger().Info(
+					"Retiring vault has no funds but still has deficit; marking inactive",
+					"vault_pubkey", vault.PubKey,
+					"deficit", vault.Deficit.String(),
+				)
+			}
 			vault.UpdateStatus(InactiveVault, ctx.BlockHeight())
 		}
 		// if the vault is frozen, then unfreeze it. Since we saw that a
@@ -908,66 +912,95 @@ func handleObservedTxOutQuorum(
 	return nil
 }
 
-// detectVaultSubFundsClamp inspects coins about to be debited from a vault and
-// surfaces the case where vault.SubFunds would silently clamp at zero because
-// the recorded balance is below the requested debit.
-//
-// When this happens, an earlier debit on the same vault was silently dropped:
-// the L1 actually sent the full amount, but TC's ledger now carries phantom
-// credit equal to (debit_amount − available_balance). Apply the clamp (the
-// next vault.SubFunds call) to keep state consistent across nodes, but emit a
-// security event and halt signing + trading on the affected chain so the
-// drift surfaces immediately instead of accumulating undetected.
-//
-// The halt targets HaltSigning<Chain> and Halt<Chain>Trading rather than the
-// chain-scanner halt SolvencyHalt<Chain>Chain. Bifrost continues observing the
-// chain (avoiding scanner backlog on high-volume chains) while TC stops
-// processing new outbounds and trades against the affected asset until an
-// operator investigates and unhalts.
-//
-// The caller passes the coins about to be debited explicitly (rather than
-// always reading tx.Tx.Coins) so that both the gas-debit path (when the vault
-// is slashed) and the main coin-debit path are covered.
-//
-// `coins` is expected to be L1-native to the chain that produced the
-// observation — bifrost-side validation rejects observations whose coins
-// reference an off-chain asset before quorum, so coin.Asset.GetChain() is
-// trusted to map to the correct halt mimir keys here.
-func detectVaultSubFundsClamp(ctx cosmos.Context, mgr Manager, k keeper.Keeper, vault Vault, tx common.ObservedTx, coins common.Coins) {
-	// Aggregate by asset before comparing against vault balance. tx.Tx.Coins
-	// should only ever have one entry per asset in practice, but if duplicates
-	// ever appear (or the gas-coin path passes a list with the same asset
-	// twice), comparing each entry independently would miss the case where
-	// the SUM exceeds the vault balance even though no single entry does.
-	aggregated := common.Coins{}.Add(coins...)
+type vaultDeficitReason string
 
-	for _, coin := range aggregated {
-		available := vault.GetCoin(coin.Asset).Amount
-		if !coin.Amount.GT(available) {
-			continue
-		}
-		missed := coin.Amount.Sub(available)
+const (
+	vaultDeficitReasonOutbound              vaultDeficitReason = "outbound"
+	vaultDeficitReasonOutboundGas           vaultDeficitReason = "outbound_gas"
+	vaultDeficitReasonOutboundGasCorrection vaultDeficitReason = "outbound_gas_correction"
+	vaultDeficitReasonVaultSlash            vaultDeficitReason = "vault_slash"
+	vaultDeficitReasonVaultSlashGas         vaultDeficitReason = "vault_slash_gas"
+	vaultDeficitReasonInboundErrataReversal vaultDeficitReason = "inbound_errata_reversal"
+	vaultDeficitReasonNoVault               vaultDeficitReason = "novault"
+)
 
+// debitVault subtracts funds and handles any newly-created deficit.
+// It mutates the vault in memory; callers are still responsible for SetVault.
+// The requested coins are explicit so gas and main coin debits share the same path.
+func debitVault(ctx cosmos.Context, mgr Manager, vault *Vault, tx common.ObservedTx, requested common.Coins, reason vaultDeficitReason) {
+	if missed := vault.SubFundsWithDeficit(requested); !missed.IsEmpty() {
+		handleVaultDeficitCreated(ctx, mgr, mgr.Keeper(), *vault, tx, requested, missed, reason)
+	}
+}
+
+// handleVaultDeficitCreated emits security signals for newly-created vault deficit.
+func handleVaultDeficitCreated(ctx cosmos.Context, mgr Manager, k keeper.Keeper, vault Vault, tx common.ObservedTx, requested common.Coins, missed common.Coins, reason vaultDeficitReason) {
+	requestedByAsset := common.Coins{}.Add(requested...).NoneEmpty()
+	missedByAsset := common.Coins{}.Add(missed...).NoneEmpty()
+	for _, coin := range missedByAsset {
+		requestedAmount := requestedByAsset.GetCoin(coin.Asset).Amount
+		accountedFromCoins := common.SafeSub(requestedAmount, coin.Amount)
+		deficitTotal := vault.GetDeficit(coin.Asset).Amount
 		msg := fmt.Sprintf(
-			"vault sub_funds clamp: vault=%s asset=%s requested=%s available=%s missed=%s tx=%s",
-			vault.PubKey, coin.Asset, coin.Amount, available, missed, tx.Tx.ID,
+			"vault deficit created: vault=%s tx=%s reason=%s asset=%s requested=%s accounted_from_coins=%s deficit_delta=%s deficit_total=%s",
+			vault.PubKey, tx.Tx.ID, reason, coin.Asset, requestedAmount, accountedFromCoins, coin.Amount, deficitTotal,
 		)
 		ctx.Logger().Error(msg)
 
 		if err := mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
-			ctx.Logger().Error("fail to emit vault clamp security event", "error", err)
+			ctx.Logger().Error("fail to emit vault deficit security event", "error", err)
 		}
 
-		chain := coin.Asset.GetChain()
-		setHaltMimirIfNotPreserved(ctx, k, mgr, fmt.Sprintf(constants.MimirTemplateHaltSigning, chain))
-		setHaltMimirIfNotPreserved(ctx, k, mgr, fmt.Sprintf(constants.MimirTemplateHaltTrading, chain))
+		if shouldHaltForVaultDeficit(ctx, mgr, k, reason, common.NewCoin(coin.Asset, deficitTotal)) {
+			// Halt signing and trading, not the chain-scanner solvency halt. Bifrost
+			// should keep observing while THORChain stops new outbounds and trades
+			// against the affected chain until operators investigate and unhalt.
+			chain := coin.Asset.GetChain()
+			setHaltMimirIfNotPreserved(ctx, k, mgr, fmt.Sprintf(constants.MimirTemplateHaltSigning, chain))
+			setHaltMimirIfNotPreserved(ctx, k, mgr, fmt.Sprintf(constants.MimirTemplateHaltTrading, chain))
+		}
 	}
+}
+
+// shouldHaltForVaultDeficit applies reason-specific halt policy for new deficits.
+func shouldHaltForVaultDeficit(ctx cosmos.Context, mgr Manager, k keeper.Keeper, reason vaultDeficitReason, deficit common.Coin) bool {
+	switch reason {
+	case vaultDeficitReasonOutbound, vaultDeficitReasonVaultSlash, vaultDeficitReasonVaultSlashGas, vaultDeficitReasonNoVault:
+		return true
+	case vaultDeficitReasonOutboundGas, vaultDeficitReasonOutboundGasCorrection:
+		return gasDeficitCrossesHaltThreshold(ctx, mgr, k, deficit)
+	case vaultDeficitReasonInboundErrataReversal:
+		return false
+	default:
+		return true
+	}
+}
+
+// gasDeficitCrossesHaltThreshold checks the total per-asset deficit against current max gas.
+// It is only called for gas-related deficit reasons.
+func gasDeficitCrossesHaltThreshold(ctx cosmos.Context, mgr Manager, k keeper.Keeper, deficit common.Coin) bool {
+	multiplier := k.GetConfigInt64(ctx, constants.VaultDeficitGasHaltMaxGasMultiplier)
+	if multiplier <= 0 {
+		return false
+	}
+	chain := deficit.Asset.GetChain()
+	maxGasCoin, err := mgr.GasMgr().GetMaxGas(ctx, chain)
+	if err != nil {
+		ctx.Logger().Error("fail to get max gas for vault deficit halt threshold", "chain", chain, "error", err)
+		return true
+	}
+	if maxGasCoin.Amount.IsZero() {
+		ctx.Logger().Error("max gas is zero for vault deficit halt threshold", "chain", chain)
+		return false
+	}
+	threshold := maxGasCoin.Amount.MulUint64(uint64(multiplier))
+	return deficit.Amount.GTE(threshold)
 }
 
 // setHaltMimirIfNotPreserved writes ctx.BlockHeight() to a halt mimir unless
 // the operator has set the indefinite-manual sentinel (1), in which case the
 // halt is preserved. A halt scheduled for a future block is overwritten:
-// the clamp detection signals a present-time divergence that warrants halting
+// the vault deficit signals a present-time divergence that warrants halting
 // now rather than waiting for the scheduled height.
 //
 // Differs from processSolvencyAttestation's guard, which preserves future
@@ -986,7 +1019,7 @@ func setHaltMimirIfNotPreserved(ctx cosmos.Context, k keeper.Keeper, mgr Manager
 	k.SetMimir(ctx, key, ctx.BlockHeight())
 	ev := NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(ctx.BlockHeight(), 10))
 	if err := mgr.EventMgr().EmitEvent(ctx, ev); err != nil {
-		ctx.Logger().Error("fail to emit set_mimir event for vault clamp", "key", key, "error", err)
+		ctx.Logger().Error("fail to emit set_mimir event for vault deficit", "key", key, "error", err)
 	}
 }
 

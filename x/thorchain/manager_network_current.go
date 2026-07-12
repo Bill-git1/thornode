@@ -720,7 +720,17 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	for _, vault := range retiring {
+		// RetiringVault status gates churn, so only real funds should keep a
+		// vault retiring. A remaining deficit is accounting state and is kept
+		// on the vault after it moves inactive.
 		if !vault.HasFunds() {
+			if vault.HasDeficit() {
+				ctx.Logger().Info(
+					"Retiring vault has no funds but still has deficit; marking inactive",
+					"vault_pubkey", vault.PubKey,
+					"deficit", vault.Deficit.String(),
+				)
+			}
 			vault.UpdateStatus(InactiveVault, ctx.BlockHeight())
 			if err = vm.k.SetVault(ctx, vault); err != nil {
 				ctx.Logger().Error("fail to set vault to inactive", "error", err)
@@ -895,7 +905,7 @@ func (vm *NetworkMgr) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 						} else {
 							ctx.Logger().Info("left coin is not enough to pay for gas, thus burn it", "coin", coin, "gas", gasAmount)
 						}
-						vault.SubFunds(common.Coins{
+						vault.SubFundsWithClamping(common.Coins{
 							coin,
 						})
 						// use reserve to subsidise the pool for the lost
@@ -2736,25 +2746,11 @@ func (vm *NetworkMgr) claimingSwapRuneToTCY(ctx cosmos.Context, mgr Manager) err
 	return nil
 }
 
-// calculateNetworkSolvency calculates the aggregate solvency across all active vaults
+// calculateNetworkSolvency calculates the aggregate solvency across all active vaults.
+// Persisted Asgard deficits are subtracted regardless of vault status because they
+// represent custody gaps that remain part of the network's accounting position.
 // Returns a list of assets with their solvency amounts (positive = over-solvent, negative = under-solvent)
 func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) ([]assetAmount, error) {
-	// Get all active vaults (error if any retiring vaults exist)
-	all, err := vm.k.GetAsgardVaults(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get vaults: %w", err)
-	}
-
-	var allActiveVaults Vaults
-	for _, vault := range all {
-		if vault.Status == ActiveVault {
-			allActiveVaults = append(allActiveVaults, vault)
-		} else if vault.Status == RetiringVault {
-			// Churn is in progress, cannot calculate solvency accurately
-			return nil, fmt.Errorf("churn in progress, cannot calculate solvency")
-		}
-	}
-
 	// Use a map to track signed amounts per asset
 	assetAmounts := make(map[common.Asset]math.Int)
 
@@ -2775,13 +2771,38 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 		assetAmounts[pool.Asset] = math.ZeroInt()
 	}
 
-	// Step 1: Sum all coins in active vaults (only those with pools)
-	for _, vault := range allActiveVaults {
-		for _, coin := range vault.Coins {
-			// Only include coins that have pools
-			if _, ok := assetAmounts[coin.Asset]; ok {
-				coinAmount := math.NewIntFromBigInt(coin.Amount.BigInt())
-				assetAmounts[coin.Asset] = assetAmounts[coin.Asset].Add(coinAmount)
+	// Step 1: Sum coins from active Asgard vaults and subtract every persisted
+	// Asgard deficit. Inactive vaults are removed from the Asgard index after
+	// churn, so use the vault iterator to retain their outstanding deficits.
+	vaultIterator := vm.k.GetVaultIterator(ctx)
+	defer vaultIterator.Close()
+	for ; vaultIterator.Valid(); vaultIterator.Next() {
+		var vault Vault
+		if err := vm.k.Cdc().Unmarshal(vaultIterator.Value(), &vault); err != nil {
+			return nil, fmt.Errorf("fail to unmarshal vault: %w", err)
+		}
+		if !vault.IsAsgard() {
+			continue
+		}
+		if vault.Status == RetiringVault {
+			// Churn is in progress, cannot calculate solvency accurately.
+			return nil, fmt.Errorf("churn in progress, cannot calculate solvency")
+		}
+
+		if vault.Status == ActiveVault {
+			for _, coin := range vault.Coins {
+				// Only include coins that have pools.
+				if _, ok := assetAmounts[coin.Asset]; ok {
+					coinAmount := math.NewIntFromBigInt(coin.Amount.BigInt())
+					assetAmounts[coin.Asset] = assetAmounts[coin.Asset].Add(coinAmount)
+				}
+			}
+		}
+
+		for _, deficit := range vault.Deficit {
+			if _, ok := assetAmounts[deficit.Asset]; ok {
+				deficitAmount := math.NewIntFromBigInt(deficit.Amount.BigInt())
+				assetAmounts[deficit.Asset] = assetAmounts[deficit.Asset].Sub(deficitAmount)
 			}
 		}
 	}
@@ -2978,7 +2999,7 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 		}
 		for _, item := range txOut.TxArray {
 			// Only deduct items that haven't been signed yet.
-			// When OutHash is set, vault.SubFunds has already been called in the same block.
+			// When OutHash is set, vault.SubFundsWithClamping has already been called in the same block.
 			if !item.OutHash.IsEmpty() {
 				continue
 			}

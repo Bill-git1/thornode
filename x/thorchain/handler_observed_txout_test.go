@@ -254,6 +254,8 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 262_500)
 	// Gas 37500 has been subtracted from the 300,000 pool depth.
 
+	vault, err = keeper.GetVault(ctx, pk)
+	c.Assert(err, IsNil)
 	// make sure the coin has been subtract from the vault
 	c.Check(vault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(19999962499)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
 	// Gas 37500 and Amount 1 have been subtracted from the 200*common.One vault balance.
@@ -356,6 +358,8 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	// Pool gets: -37,500, so 300,000 - 37,500 = 262,500
 	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 262_500)
 
+	vault, err = keeper.GetVault(ctx, pk)
+	c.Assert(err, IsNil)
 	// Vault deducted: only gas (37,500) for fake gas tx
 	c.Check(vault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(19999962500)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
 

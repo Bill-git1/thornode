@@ -600,8 +600,8 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		if !vault.IsAsgard() {
 			continue // filter non-asgard vault types
 		}
-		if vault.Status == types.VaultStatus_InactiveVault || vault.Status == types.VaultStatus_InitVault {
-			continue // filter abandoned vaults
+		if (vault.Status == types.VaultStatus_InitVault || vault.Status == types.VaultStatus_InactiveVault) && !vault.HasDeficit() {
+			continue // filter abandoned vaults while preserving unsettled accounting state
 		}
 		vaults = append(vaults, vault)
 	}

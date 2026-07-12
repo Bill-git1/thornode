@@ -49,4 +49,8 @@ message Vault {
     (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey",
     (gogoproto.nullable) = true
   ];
+  repeated common.Coin deficit = 28 [
+    (gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Coins",
+    (gogoproto.nullable) = false
+  ];
 }

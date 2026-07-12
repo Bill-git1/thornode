@@ -426,7 +426,7 @@ func (k KVStore) HasValidVaultPools(ctx cosmos.Context) (bool, error) {
 		if err := k.cdc.Unmarshal(iterator.Value(), &vault); err != nil {
 			return false, dbError(ctx, "fail to unmarshal vault", err)
 		}
-		if vault.HasFunds() {
+		if vault.HasFundsOrDeficit() {
 			return true, nil
 		}
 	}
@@ -558,8 +558,8 @@ func (k KVStore) DeleteVault(ctx cosmos.Context, pubkey common.PubKey) error {
 		return err
 	}
 
-	if vault.HasFunds() {
-		return errors.New("unable to delete vault: it still contains funds")
+	if vault.HasFundsOrDeficit() {
+		return errors.New("unable to delete vault: it still contains funds or deficit")
 	}
 
 	if vault.IsAsgard() {

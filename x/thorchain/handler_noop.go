@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -69,8 +70,12 @@ func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 		return fmt.Errorf("vault is not active or retiring: %s (status: %s)", msg.ObservedTx.ObservedPubKey, vault.Status)
 	}
 
-	// Verify the vault has sufficient funds for each coin being subtracted
-	for _, coin := range msg.ObservedTx.Tx.Coins {
+	// Aggregate duplicate assets before the sufficiency check so the later debit
+	// cannot create a deficit after each individual coin appeared covered.
+	coins := common.Coins{}.Add(msg.ObservedTx.Tx.Coins...).NoneEmpty()
+
+	// Verify the vault has sufficient funds for each asset being subtracted.
+	for _, coin := range coins {
 		vaultCoin := vault.GetCoin(coin.Asset)
 		if vaultCoin.Amount.LT(coin.Amount) {
 			return fmt.Errorf("vault has insufficient funds for %s: has %s, attempting to subtract %s",
@@ -78,8 +83,10 @@ func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 		}
 	}
 
-	// Subtract the coins from vault, as it has been added to
-	vault.SubFunds(msg.ObservedTx.Tx.Coins)
+	// Subtract the coins from vault, as it has been added to. The sufficiency
+	// check above makes deficit creation unreachable here; the halting reason is
+	// retained as a defensive signal if that precondition is ever broken.
+	debitVault(ctx, h.mgr, &vault, msg.ObservedTx, coins, vaultDeficitReasonNoVault)
 	if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
 		return fmt.Errorf("fail to save vault: %w", err)
 	}

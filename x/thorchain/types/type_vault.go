@@ -144,20 +144,50 @@ func (m Vault) HasFunds() bool {
 	return false
 }
 
-// HasFundsAboveDust check whether the vault has any funds above the dust
-// threshold of the coin's chain. Amounts at or below dust cannot be migrated
-// (they are burned after the final migration round), so they should not be
-// treated as remaining funds for vault-lifecycle decisions such as the churn
-// retiring-vault gate.
+// HasFundsAboveDust checks whether the vault has funds that still require
+// migration. Only gas-asset amounts at or below their chain's dust threshold
+// are terminal dust; any positive non-gas balance remains actionable.
 func (m Vault) HasFundsAboveDust() bool {
-	for _, coin := range m.Coins {
-		if !coin.IsRune() { // non-native rune is omitted from the calculation
-			if coin.Amount.GT(coin.Asset.GetChain().DustThreshold()) {
-				return true
-			}
+	for _, coin := range m.coinAmounts() {
+		if coin.IsRune() { // native RUNE is omitted from the calculation
+			continue
+		}
+		if !coin.Asset.IsGasAsset() || coin.Amount.GT(coin.Asset.GetChain().DustThreshold()) {
+			return true
 		}
 	}
 	return false
+}
+
+// GetDeficit returns the unsettled deficit for an asset.
+func (m Vault) GetDeficit(asset common.Asset) common.Coin {
+	amount := cosmos.ZeroUint()
+	for _, coin := range m.Deficit {
+		if coin.Asset.Equals(asset) {
+			amount = amount.Add(coin.Amount)
+		}
+	}
+	return common.NewCoin(asset, amount)
+}
+
+// HasDeficit check whether the vault has an unsettled deficit.
+func (m Vault) HasDeficit() bool {
+	for _, coin := range m.Deficit {
+		if !coin.IsEmpty() {
+			return true
+		}
+	}
+	return false
+}
+
+// HasDeficitForAsset check whether the vault has an unsettled deficit for an asset.
+func (m Vault) HasDeficitForAsset(asset common.Asset) bool {
+	return !m.GetDeficit(asset).Amount.IsZero()
+}
+
+// HasFundsOrDeficit check whether the vault still has an accounting position.
+func (m Vault) HasFundsOrDeficit() bool {
+	return m.HasFunds() || m.HasDeficit()
 }
 
 // HasFundsForChain check whether the vault pool has funds for a specific chain
@@ -250,10 +280,48 @@ func (v *Vault) UpdateContract(chainContract ChainContract) {
 // AddFunds add given coins into vault
 func (m *Vault) AddFunds(coins common.Coins) {
 	for _, coin := range coins {
-		m.addFund(coin)
+		if coin.Asset.IsEmpty() {
+			continue
+		}
+		// Preserve the existing side effect of AddFunds: observing a coin for a
+		// new chain also adds that chain to the vault.
+		if !m.GetChains().Has(coin.Asset.GetChain()) {
+			m.Chains = append(m.Chains, coin.Asset.GetChain().String())
+		}
+
+		if coin.Amount.IsZero() {
+			// Zero-amount coins are used as scheduling markers, not real
+			// credits, so they must not settle same-asset deficit.
+			m.addFund(coin)
+			continue
+		}
+
+		deficit := m.GetDeficit(coin.Asset).Amount
+		if deficit.IsZero() {
+			m.addFund(coin)
+			continue
+		}
+
+		// A same-asset credit first settles any recorded deficit. Only the
+		// remainder, if any, becomes settled vault balance.
+		if coin.Amount.GTE(deficit) {
+			m.Deficit = vaultDeficitWithAmount(m.Deficit, coin, cosmos.ZeroUint())
+			remainder := coin.Amount.Sub(deficit)
+			if !remainder.IsZero() {
+				remainderCoin := coin
+				remainderCoin.Amount = remainder
+				m.addFund(remainderCoin)
+			}
+			continue
+		}
+
+		// Partial settlement leaves the vault with less deficit and no new
+		// settled balance for this asset.
+		m.Deficit = vaultDeficitWithAmount(m.Deficit, coin, deficit.Sub(coin.Amount))
 	}
 }
 
+// addFund adds one coin to the vault without settling deficit.
 func (m *Vault) addFund(coin common.Coin) {
 	for i, ycoin := range m.Coins {
 		if ycoin.Asset.Equals(coin.Asset) {
@@ -269,13 +337,40 @@ func (m *Vault) addFund(coin common.Coin) {
 	m.Coins = append(m.Coins, coin)
 }
 
-// SubFunds subtract given coins from vault
-func (m *Vault) SubFunds(coins common.Coins) {
+// SubFundsWithClamping subtracts coins from the vault using legacy clamping semantics.
+// Callers that need underflow accounting should use SubFundsWithDeficit.
+func (m *Vault) SubFundsWithClamping(coins common.Coins) {
 	for _, coin := range coins {
 		m.subFund(coin)
 	}
 }
 
+// SubFundsWithDeficit subtracts coins and records any underflow as unsettled deficit.
+func (m *Vault) SubFundsWithDeficit(coins common.Coins) common.Coins {
+	missed := common.Coins{}
+	// Aggregate by asset before comparing against vault balance. tx.Tx.Coins
+	// should only ever have one entry per asset in practice, but if duplicates
+	// ever appear, the SUM must be compared against the vault balance.
+	aggregated := common.Coins{}.Add(coins...).NoneEmpty()
+	for _, coin := range aggregated {
+		available := m.coinAmount(coin.Asset)
+		if available.GTE(coin.Amount) {
+			m.Coins = vaultCoinsWithAmount(m.Coins, coin, available.Sub(coin.Amount))
+			continue
+		}
+
+		deficitDelta := coin.Amount.Sub(available)
+		m.Coins = vaultCoinsWithAmount(m.Coins, coin, cosmos.ZeroUint())
+		m.Deficit = vaultDeficitWithAmount(m.Deficit, coin, m.GetDeficit(coin.Asset).Amount.Add(deficitDelta))
+		missedCoin := coin
+		missedCoin.Amount = deficitDelta
+		missed = missed.Add(missedCoin)
+	}
+	return missed.NoneEmpty()
+}
+
+// subFund subtracts one coin from the vault without recording deficit.
+// Underflows clamp to zero to preserve SubFundsWithClamping's behavior.
 func (m *Vault) subFund(coin common.Coin) {
 	for i, ycoin := range m.Coins {
 		if coin.Asset.Equals(ycoin.Asset) {
@@ -283,6 +378,81 @@ func (m *Vault) subFund(coin common.Coin) {
 			return
 		}
 	}
+}
+
+// ValidateDeficitInvariant checks that no asset has both settled coins and deficit.
+func (m Vault) ValidateDeficitInvariant() error {
+	for _, coin := range m.coinAmounts() {
+		deficitAmount := m.GetDeficit(coin.Asset).Amount
+		if deficitAmount.IsZero() {
+			continue
+		}
+		return fmt.Errorf("vault %s has both coins and deficit for %s: coins=%s deficit=%s", m.PubKey, coin.Asset, coin.Amount, deficitAmount)
+	}
+	return nil
+}
+
+// coinAmounts returns non-empty vault coins aggregated by asset in first-seen order.
+func (m Vault) coinAmounts() common.Coins {
+	return common.Coins{}.Add(m.Coins...).NoneEmpty()
+}
+
+// coinAmount returns the aggregate vault coin amount for an asset.
+func (m Vault) coinAmount(asset common.Asset) cosmos.Uint {
+	amount := cosmos.ZeroUint()
+	for _, coin := range m.Coins {
+		if coin.Asset.Equals(asset) {
+			amount = amount.Add(coin.Amount)
+		}
+	}
+	return amount
+}
+
+// vaultCoinsWithAmount returns coins with one normalized amount for an asset,
+// preserving an existing zero coin entry to match vault balance semantics.
+func vaultCoinsWithAmount(coins common.Coins, coin common.Coin, amount cosmos.Uint) common.Coins {
+	return coinsWithAmount(coins, coin, amount, true)
+}
+
+// vaultDeficitWithAmount returns deficits with zero amounts removed once settled.
+// Unlike vaultCoinsWithAmount, it does not preserve zero amount entries.
+func vaultDeficitWithAmount(deficit common.Coins, coin common.Coin, amount cosmos.Uint) common.Coins {
+	return coinsWithAmount(deficit, coin, amount, false)
+}
+
+// coinsWithAmount returns a copy of coins with exactly one entry for coin.Asset set
+// to amount. Duplicate entries for the same asset are collapsed into the first
+// matching position, preserving the relative order of all other assets.
+// keepZeroAmount controls whether setting amount to zero keeps that first
+// matching entry or removes the asset entirely.
+func coinsWithAmount(coins common.Coins, target common.Coin, amount cosmos.Uint, keepZeroAmount bool) common.Coins {
+	found := false
+	result := make(common.Coins, 0, len(coins)+1)
+	for _, coin := range coins {
+		if !coin.Asset.Equals(target.Asset) {
+			result = append(result, coin)
+			continue
+		}
+		if found {
+			// Drop duplicate entries for the asset being normalized.
+			continue
+		}
+		found = true
+		if amount.IsZero() && !keepZeroAmount {
+			// Deficits use zero as removal, while vault coins may keep a zero
+			// balance entry to match existing vault accounting behavior.
+			continue
+		}
+		coin.Amount = amount
+		result = append(result, coin)
+	}
+	if !found && !amount.IsZero() {
+		// Only append a missing asset when there is a non-zero balance to store,
+		// preserving metadata such as the incoming coin's external decimals.
+		target.Amount = amount
+		result = append(result, target)
+	}
+	return result
 }
 
 func (m *Vault) DeductVaultPendingOutbounds(pendingOutbounds []TxOutItem) {

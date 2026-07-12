@@ -38,6 +38,11 @@ message QueryVaultResponse {
   reserved 17;
   reserved "spent_output_refs_xmr";
   string pub_key_frost = 18 [ (gogoproto.nullable) = true ];
+  repeated common.Coin deficit = 19 [
+    (gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Coins",
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "deficit"
+  ];
 }
 
 message QueryKeysignPartyRequest {

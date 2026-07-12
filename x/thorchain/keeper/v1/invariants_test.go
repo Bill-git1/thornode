@@ -88,6 +88,56 @@ func (s *InvariantsSuite) TestAsgardInvariant(c *C) {
 	c.Assert(msg[0], Equals, "oversolvent: 1rune")
 }
 
+// TestVaultDeficitInvariant verifies same-asset coins and deficit break the invariant.
+func (s *InvariantsSuite) TestVaultDeficitInvariant(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10)))
+	vault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1)))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	msg, broken := VaultDeficitInvariant(k)(ctx)
+	c.Assert(broken, Equals, true)
+	c.Assert(msg, HasLen, 1)
+	c.Assert(msg[0], Equals, fmt.Sprintf("vault_deficit: vault %s has both coins and deficit for ETH.ETH: coins=10 deficit=1", vault.PubKey))
+}
+
+// TestVaultDeficitInvariantAllowsDifferentAssets verifies different assets do not break the invariant.
+func (s *InvariantsSuite) TestVaultDeficitInvariantAllowsDifferentAssets(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain, common.BTCChain}.Strings(), []ChainContract{})
+	vault.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10)))
+	vault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1)))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	msg, broken := VaultDeficitInvariant(k)(ctx)
+	c.Assert(broken, Equals, false)
+	c.Assert(msg, IsNil)
+}
+
+// TestVaultDeficitInvariantAggregatesDuplicates verifies duplicate entries are summed by asset.
+func (s *InvariantsSuite) TestVaultDeficitInvariantAggregatesDuplicates(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(4)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(6)),
+	}
+	vault.Deficit = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
+	}
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	msg, broken := VaultDeficitInvariant(k)(ctx)
+	c.Assert(broken, Equals, true)
+	c.Assert(msg, HasLen, 1)
+	c.Assert(msg[0], Equals, fmt.Sprintf("vault_deficit: vault %s has both coins and deficit for ETH.ETH: coins=10 deficit=1", vault.PubKey))
+}
+
 func (s *InvariantsSuite) TestBondInvariant(c *C) {
 	ctx, k := setupKeeperForTest(c)
 

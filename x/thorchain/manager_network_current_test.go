@@ -772,6 +772,44 @@ func (*NetworkManagerTestSuite) TestMigrateFundsDoesNotStallXMRMonovaultFundingO
 	c.Assert(items[0].ToAddress.Equals(targetAddr), Equals, true)
 }
 
+// TestMigrateFundsInactivatesDeficitOnlyRetiringVault verifies migration cleanup
+// clears RetiringVault status once funds are gone, while preserving deficit state.
+func (*NetworkManagerTestSuite) TestMigrateFundsInactivatesDeficitOnlyRetiringVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+	networkMgr := newNetworkMgr(mgr.Keeper(), mgr.TxOutStore(), mgr.EventMgr())
+
+	mgr.Keeper().SetMimir(ctx, constants.FundMigrationInterval.String(), 1)
+
+	active := GetRandomVault()
+	active.Status = ActiveVault
+	active.Chains = common.Chains{common.ETHChain}.Strings()
+	c.Assert(mgr.Keeper().SetVault(ctx, active), IsNil)
+
+	// The retiring vault has no coins left to migrate, but it still carries a
+	// deficit that must remain recorded after status cleanup.
+	retiring := GetRandomVault()
+	retiring.Status = RetiringVault
+	retiring.StatusSince = 0
+	retiring.Chains = common.Chains{common.ETHChain}.Strings()
+	retiring.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10)))
+	c.Assert(mgr.Keeper().SetVault(ctx, retiring), IsNil)
+
+	c.Assert(networkMgr.migrateFunds(ctx, mgr), IsNil)
+
+	// Deficit alone should not keep the vault in RetiringVault, but it should
+	// continue to protect the vault from deletion.
+	updated, err := mgr.Keeper().GetVault(ctx, retiring.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(updated.Status, Equals, InactiveVault)
+	c.Assert(updated.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(10)), Equals, true)
+	c.Assert(mgr.Keeper().DeleteVault(ctx, retiring.PubKey), NotNil)
+
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 0)
+}
+
 func (*NetworkManagerTestSuite) TestMigrateFundsSkipsVaultWithPendingMigrateTx(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.txOutStore = NewTxStoreDummy()
@@ -2189,6 +2227,114 @@ func (s *NetworkManagerTestSuite) TestCalculateNetworkSolvency(c *C) {
 	}
 }
 
+func (s *NetworkManagerTestSuite) TestCalculateNetworkSolvencySubtractsActiveVaultDeficit(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	fundedVault := GetRandomVault()
+	fundedVault.Type = AsgardVault
+	fundedVault.Status = ActiveVault
+	fundedVault.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)))
+	c.Assert(mgr.Keeper().SetVault(ctx, fundedVault), IsNil)
+
+	deficitVault := GetRandomVault()
+	deficitVault.Type = AsgardVault
+	deficitVault.Status = ActiveVault
+	deficitVault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(20*common.One)))
+	c.Assert(mgr.Keeper().SetVault(ctx, deficitVault), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(solvency, HasLen, 1)
+	c.Assert(solvency[0].Asset.Equals(common.BTCAsset), Equals, true)
+	c.Assert(solvency[0].Amount.Equal(math.NewInt(30*common.One)), Equals, true)
+}
+
+func (s *NetworkManagerTestSuite) TestCalculateNetworkSolvencyIncludesInactiveDeficitAfterIndexCleanup(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	fundedVault := GetRandomVault()
+	fundedVault.Type = AsgardVault
+	fundedVault.Status = ActiveVault
+	fundedVault.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)))
+	c.Assert(mgr.Keeper().SetVault(ctx, fundedVault), IsNil)
+
+	inactiveVault := GetRandomVault()
+	inactiveVault.Type = AsgardVault
+	inactiveVault.Status = InactiveVault
+	inactiveVault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(20*common.One)))
+	c.Assert(mgr.Keeper().SetVault(ctx, inactiveVault), IsNil)
+	c.Assert(nmgr.cleanupAsgardIndex(ctx), IsNil)
+
+	indexedVaults, err := mgr.Keeper().GetAsgardVaults(ctx)
+	c.Assert(err, IsNil)
+	for _, vault := range indexedVaults {
+		c.Assert(vault.PubKey.Equals(inactiveVault.PubKey), Equals, false)
+	}
+
+	persistedVault, err := mgr.Keeper().GetVault(ctx, inactiveVault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(persistedVault.GetDeficit(common.BTCAsset).Amount.Equal(cosmos.NewUint(20*common.One)), Equals, true)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(solvency, HasLen, 1)
+	c.Assert(solvency[0].Asset.Equals(common.BTCAsset), Equals, true)
+	c.Assert(solvency[0].Amount.Equal(math.NewInt(30*common.One)), Equals, true)
+}
+
+func (s *NetworkManagerTestSuite) TestProcessOverSolvencyDoesNotSweepInactiveVaultDeficit(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	ctx = ctx.WithBlockHeight(432000)
+	mgr.Keeper().SetMimir(ctx, constants.EnableAdvSwapQueue.String(), 1)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyCheckInterval.String(), 432000)
+	mgr.Keeper().SetMimir(ctx, constants.OverSolvencyToTreasuryBps.String(), int64(constants.MaxBasisPts))
+	c.Assert(mgr.Keeper().AdvSwapQueueEnabled(ctx), Equals, true)
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	fundedVault := GetRandomVault()
+	fundedVault.Type = AsgardVault
+	fundedVault.Status = ActiveVault
+	fundedVault.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(110*common.One)))
+	c.Assert(mgr.Keeper().SetVault(ctx, fundedVault), IsNil)
+
+	deficitVault := GetRandomVault()
+	deficitVault.Type = AsgardVault
+	deficitVault.Status = InactiveVault
+	deficitVault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(20*common.One)))
+	c.Assert(mgr.Keeper().SetVault(ctx, deficitVault), IsNil)
+	c.Assert(nmgr.cleanupAsgardIndex(ctx), IsNil)
+
+	c.Assert(nmgr.processOverSolvency(ctx, mgr), IsNil)
+
+	iterator := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+	defer iterator.Close()
+	c.Assert(iterator.Valid(), Equals, false)
+}
+
 func (s *NetworkManagerTestSuite) TestCalculateNetworkSolvencyWithStreamingSwaps(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
@@ -3041,12 +3187,12 @@ func (s *NetworkManagerTestSuite) TestSolvencyWithPendingOutboundsAtPastHeight(c
 		Commentf("expected %s, got %s", expectedSolvency.String(), solvency[0].Amount.String()))
 
 	// Now simulate the outbound being signed (OutHash set).
-	// When OutHash is set, vault.SubFunds has already been called in the same block,
+	// When OutHash is set, vault.SubFundsWithClamping has already been called in the same block,
 	// so the item should NOT be deducted anymore.
 	txOut.TxArray[0].OutHash = GetRandomTxHash()
 	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
 
-	// Also decrement vault coins (as vault.SubFunds would do on observation)
+	// Also decrement vault coins (as vault.SubFundsWithClamping would do on observation)
 	vault.Coins = common.Coins{
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(130*common.One)),
 	}

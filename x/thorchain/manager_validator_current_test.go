@@ -96,15 +96,116 @@ func (vts *ValidatorMgrTestSuite) TestChurnWithRetiringVaultDust(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(len(ready), Equals, 0)
 
+	// A non-gas balance remains migration work even when its amount is below
+	// that chain's gas-asset dust threshold.
+	tokenAsset := common.Asset{Chain: common.ETHChain, Symbol: "TOKEN", Ticker: "TOKEN"}
+	retiringVault.Coins = common.Coins{common.NewCoin(tokenAsset, cosmos.OneUint())}
+	c.Assert(k.SetVault(ctx, retiringVault), IsNil)
+	c.Assert(networkMgr.BeginBlock(ctx, mgr, nil), IsNil)
+	ready, err = k.ListValidatorsByStatus(ctx, NodeReady)
+	c.Assert(err, IsNil)
+	c.Assert(len(ready), Equals, 0)
+
 	// only a sub-dust remainder left (e.g. the XMR migration buffer awaiting
-	// its post-final-round burn); rotation should no longer be blocked
+	// its post-final-round burn); rotation should no longer be blocked, even
+	// when the vault retains a separate accounting deficit
 	retiringVault.Coins = common.Coins{common.NewCoin(common.XMRAsset, dust)}
+	retiringVault.Deficit = common.Coins{common.NewCoin(common.ETHAsset, cosmos.OneUint())}
 	c.Assert(k.SetVault(ctx, retiringVault), IsNil)
 
 	c.Assert(networkMgr.BeginBlock(ctx, mgr, nil), IsNil)
 	ready, err = k.ListValidatorsByStatus(ctx, NodeReady)
 	c.Assert(err, IsNil)
 	c.Assert(len(ready), Equals, 1)
+}
+
+// TestChurnAfterDeficitOnlyRetiringVaultGoesInactive covers the normal block
+// flow where migration cleanup inactivates a deficit-only retiring vault before
+// the churn gate runs.
+func (vts *ValidatorMgrTestSuite) TestChurnAfterDeficitOnlyRetiringVaultGoesInactive(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	validatorMgr := newValidatorMgr(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	networkMgr := newNetworkMgr(mgr.Keeper(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(validatorMgr, NotNil)
+	c.Assert(networkMgr, NotNil)
+
+	minBond := constants.GetConstantValues(GetCurrentVersion()).GetInt64Value(constants.MinimumBondInRune)
+	standbyNode := GetRandomValidatorNode(NodeStandby)
+	standbyNode.Bond = cosmos.NewUint(uint64(minBond))
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, standbyNode), IsNil)
+
+	activeVault := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	activeVault.Membership = append(activeVault.Membership, standbyNode.PubKeySet.Secp256k1.String())
+	c.Assert(mgr.Keeper().SetVault(ctx, activeVault), IsNil)
+
+	// The deficit-bearing vault starts as RetiringVault to mirror the state
+	// created by vault debit underflow during churn settlement.
+	retiringVault := NewVault(1, RetiringVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	retiringVault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1)))
+	c.Assert(mgr.Keeper().SetVault(ctx, retiringVault), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, constants.FundMigrationInterval.String(), 1)
+	mgr.Keeper().SetMimir(ctx, constants.ChurnInterval.String(), 60)
+	ctx = ctx.WithBlockHeight(61)
+
+	c.Assert(networkMgr.migrateFunds(ctx, mgr), IsNil)
+	// Migration cleanup should move the vault out of the status set that blocks
+	// rotation, without writing off or deleting the deficit.
+	updatedVault, err := mgr.Keeper().GetVault(ctx, retiringVault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(updatedVault.Status, Equals, InactiveVault)
+	c.Assert(updatedVault.GetDeficit(common.BTCAsset).Amount.Equal(cosmos.NewUint(1)), Equals, true)
+
+	retiringVaults, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, RetiringVault)
+	c.Assert(err, IsNil)
+	c.Assert(retiringVaults, HasLen, 0)
+
+	c.Assert(validatorMgr.BeginBlock(ctx, mgr, nil), IsNil)
+	// A successful churn marks the standby validator as ready for the new vault.
+	ready, err := mgr.Keeper().ListValidatorsByStatus(ctx, NodeReady)
+	c.Assert(err, IsNil)
+	c.Assert(ready, HasLen, 1)
+}
+
+// TestChurnWithDeficitOnlyRetiringVault exercises the churn gate directly with
+// a deficit-bearing RetiringVault still present, proving that deficit alone does
+// not block rotation.
+func (vts *ValidatorMgrTestSuite) TestChurnWithDeficitOnlyRetiringVault(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	validatorMgr := newValidatorMgr(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(validatorMgr, NotNil)
+
+	minBond := constants.GetConstantValues(GetCurrentVersion()).GetInt64Value(constants.MinimumBondInRune)
+	standbyNode := GetRandomValidatorNode(NodeStandby)
+	standbyNode.Bond = cosmos.NewUint(uint64(minBond))
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, standbyNode), IsNil)
+
+	activeVault := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	activeVault.Membership = append(activeVault.Membership, standbyNode.PubKeySet.Secp256k1.String())
+	c.Assert(mgr.Keeper().SetVault(ctx, activeVault), IsNil)
+
+	// Leave the vault in RetiringVault for this test instead of running
+	// migrateFunds, so BeginBlock must make the funds-vs-deficit distinction.
+	retiringVault := NewVault(1, RetiringVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BTCChain}.Strings(), []ChainContract{})
+	retiringVault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1)))
+	c.Assert(mgr.Keeper().SetVault(ctx, retiringVault), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, constants.ChurnInterval.String(), 60)
+	ctx = ctx.WithBlockHeight(61)
+
+	c.Assert(validatorMgr.BeginBlock(ctx, mgr, nil), IsNil)
+	// If the churn gate treated any RetiringVault as blocking, this node would
+	// still be standby.
+	ready, err := mgr.Keeper().ListValidatorsByStatus(ctx, NodeReady)
+	c.Assert(err, IsNil)
+	c.Assert(ready, HasLen, 1)
+
+	// BeginBlock only proves the gate allows rotation; lifecycle cleanup is
+	// covered by TestChurnAfterDeficitOnlyRetiringVaultGoesInactive.
+	updatedVault, err := mgr.Keeper().GetVault(ctx, retiringVault.PubKey)
+	c.Assert(err, IsNil)
+	c.Assert(updatedVault.Status, Equals, RetiringVault)
+	c.Assert(updatedVault.GetDeficit(common.BTCAsset).Amount.Equal(cosmos.NewUint(1)), Equals, true)
 }
 
 func (vts *ValidatorMgrTestSuite) TestSetupValidatorNodes(c *C) {

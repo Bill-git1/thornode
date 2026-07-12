@@ -42,16 +42,16 @@ func (s *VaultSuite) TestVault(c *C) {
 	c.Check(vault.Coins, HasLen, 2)
 	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(1000*common.One)), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(800*common.One)), Equals, true, Commentf("%+v", vault.GetCoin(common.BTCAsset).Amount))
-	vault.SubFunds(coins)
+	vault.SubFundsWithClamping(coins)
 	c.Check(vault.Coins, HasLen, 2)
 	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(500*common.One)), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(400*common.One)), Equals, true)
-	vault.SubFunds(coins)
+	vault.SubFundsWithClamping(coins)
 	c.Check(vault.Coins, HasLen, 2)
 	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.HasFunds(), Equals, false)
-	vault.SubFunds(coins)
+	vault.SubFundsWithClamping(coins)
 	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.HasFunds(), Equals, false)
@@ -89,6 +89,25 @@ func (s *VaultSuite) TestHasFundsAboveDust(c *C) {
 	vault.AddFunds(common.Coins{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))})
 	c.Check(vault.HasFundsAboveDust(), Equals, true)
 
+	// Duplicate gas-asset entries are considered as one aggregate balance.
+	// Neither entry is above dust by itself, but their sum is.
+	halfDust := dust.QuoUint64(2)
+	vault.Coins = common.Coins{
+		common.NewCoin(common.XMRAsset, halfDust),
+		common.NewCoin(common.XMRAsset, dust.Sub(halfDust)),
+	}
+	c.Check(vault.HasFundsAboveDust(), Equals, false)
+	vault.Coins[1].Amount = vault.Coins[1].Amount.Add(cosmos.OneUint())
+	c.Check(vault.HasFundsAboveDust(), Equals, true)
+
+	// Non-gas assets remain actionable even when below the chain's gas-asset
+	// dust threshold.
+	tokenAsset := common.Asset{Chain: common.ETHChain, Symbol: "TOKEN", Ticker: "TOKEN"}
+	vault.Coins = common.NewCoins(common.NewCoin(tokenAsset, cosmos.OneUint()))
+	c.Assert(tokenAsset.IsGasAsset(), Equals, false)
+	c.Assert(cosmos.OneUint().LT(common.ETHChain.DustThreshold()), Equals, true)
+	c.Check(vault.HasFundsAboveDust(), Equals, true)
+
 	// RUNE is omitted from the calculation, matching HasFunds
 	vault1 := NewVault(12, VaultStatus_RetiringVault, VaultType_AsgardVault, pk, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	vault1.AddFunds(common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))})
@@ -100,6 +119,158 @@ func (s *VaultSuite) TestHasFundsAboveDust(c *C) {
 	vault2 := NewVault(12, VaultStatus_RetiringVault, VaultType_AsgardVault, pk, common.Chains{common.THORChain}.Strings(), []ChainContract{})
 	vault2.AddFunds(common.Coins{common.NewCoin(fakeAsset, cosmos.NewUint(1))})
 	c.Check(vault2.HasFundsAboveDust(), Equals, true)
+}
+
+func (s *VaultSuite) TestHasFundsAboveDustWithDeficit(c *C) {
+	vault := NewVault(12, VaultStatus_RetiringVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.XMRChain, common.ETHChain}.Strings(), []ChainContract{})
+	vault.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, common.XMRChain.DustThreshold()))
+	vault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.OneUint()))
+
+	// Deficit is retained as an accounting position, but does not turn terminal
+	// gas dust into funds that should block churn.
+	c.Assert(vault.HasFundsAboveDust(), Equals, false)
+	c.Assert(vault.HasDeficit(), Equals, true)
+	c.Assert(vault.HasFundsOrDeficit(), Equals, true)
+}
+
+func (s *VaultSuite) TestHasDeficitIncludesRune(c *C) {
+	vault := NewVault(12, VaultStatus_InactiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.THORChain}.Strings(), []ChainContract{})
+	c.Assert(vault.HasDeficit(), Equals, false)
+
+	vault.Deficit = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.OneUint()))
+	c.Assert(vault.HasDeficit(), Equals, true)
+	c.Assert(vault.HasDeficitForAsset(common.RuneAsset()), Equals, true)
+	c.Assert(vault.HasFundsOrDeficit(), Equals, true)
+}
+
+// TestVaultSubFundsWithDeficit verifies exact debits and underflow deficit accounting.
+func (s *VaultSuite) TestVaultSubFundsWithDeficit(c *C) {
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100))))
+
+	missed := vault.SubFundsWithDeficit(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100))))
+	c.Assert(missed.IsEmpty(), Equals, true)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10))))
+	missed = vault.SubFundsWithDeficit(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100))))
+	c.Assert(missed.EqualsEx(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(90)))), Equals, true)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(90)), Equals, true)
+	c.Assert(vault.HasDeficit(), Equals, true)
+	c.Assert(vault.HasDeficitForAsset(common.ETHAsset), Equals, true)
+	c.Assert(vault.HasFundsOrDeficit(), Equals, true)
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+}
+
+// TestVaultSubFundsWithDeficitAggregatesDuplicateDebits verifies duplicate debit entries are summed.
+func (s *VaultSuite) TestVaultSubFundsWithDeficitAggregatesDuplicateDebits(c *C) {
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(50))))
+
+	missed := vault.SubFundsWithDeficit(common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(30)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(30)),
+	})
+
+	c.Assert(missed.EqualsEx(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10)))), Equals, true)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(10)), Equals, true)
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+}
+
+// TestVaultFundTransitionsPreserveDecimals verifies that creating a deficit
+// and later creating a settled remainder retain external precision metadata.
+func (s *VaultSuite) TestVaultFundTransitionsPreserveDecimals(c *C) {
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	debit := common.NewCoin(common.ETHAsset, cosmos.NewUint(100)).WithDecimals(18)
+
+	missed := vault.SubFundsWithDeficit(common.NewCoins(debit))
+	c.Assert(missed.GetCoin(common.ETHAsset).Decimals, Equals, int64(18))
+	c.Assert(vault.Deficit.GetCoin(common.ETHAsset).Decimals, Equals, int64(18))
+
+	credit := common.NewCoin(common.ETHAsset, cosmos.NewUint(150)).WithDecimals(18)
+	vault.AddFunds(common.NewCoins(credit))
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.IsZero(), Equals, true)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(50)), Equals, true)
+	c.Assert(vault.GetCoin(common.ETHAsset).Decimals, Equals, int64(18))
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+}
+
+// TestVaultAddFundsSettlesDeficit verifies same-asset credits settle deficit first.
+func (s *VaultSuite) TestVaultAddFundsSettlesDeficit(c *C) {
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain, common.BTCChain}.Strings(), []ChainContract{})
+	vault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(152)))
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100))))
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(52)), Equals, true)
+
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(7))))
+	c.Assert(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(7)), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(52)), Equals, true)
+
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(300))))
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(248)), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(7)), Equals, true)
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+}
+
+// TestVaultAddFundsPreservesZeroMarkersWithDeficit verifies zero-amount coins
+// keep their scheduling marker behavior and do not settle same-asset deficit.
+func (s *VaultSuite) TestVaultAddFundsPreservesZeroMarkersWithDeficit(c *C) {
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10)))
+
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.ZeroUint())))
+	c.Assert(vault.Coins.Contains(common.NewCoin(common.ETHAsset, cosmos.ZeroUint())), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(10)), Equals, true)
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(15))))
+	c.Assert(vault.Coins, HasLen, 1)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(5)), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+}
+
+// TestVaultDeficitIncidentShape covers the observed underflow and later settlement shape.
+func (s *VaultSuite) TestVaultDeficitIncidentShape(c *C) {
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(166*common.One/10))))
+
+	missed := vault.SubFundsWithDeficit(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(169*common.One))))
+	c.Assert(missed.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(1524*common.One/10)), Equals, true)
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.NewUint(1524*common.One/10)), Equals, true)
+
+	vault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(300*common.One))))
+	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(1476*common.One/10)), Equals, true)
+	c.Assert(vault.GetDeficit(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+}
+
+// TestVaultDeficitInvariant verifies the per-asset coins and deficit invariant.
+func (s *VaultSuite) TestVaultDeficitInvariant(c *C) {
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(10)))
+	vault.Deficit = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1)))
+	c.Assert(vault.ValidateDeficitInvariant(), NotNil)
+
+	vault.Deficit = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1)))
+	c.Assert(vault.ValidateDeficitInvariant(), IsNil)
+
+	vault.Coins = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(4)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(6)),
+	}
+	vault.Deficit = common.Coins{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(0)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
+	}
+	c.Assert(vault.ValidateDeficitInvariant(), NotNil)
 }
 
 func (s *VaultSuite) TestGetTssSigners(c *C) {
