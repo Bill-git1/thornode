@@ -23,6 +23,8 @@ func (s *KeygenSuite) TestKengenType(c *C) {
 	c.Check(err, IsNil)
 	c.Check(json.Unmarshal(buf, &kt), IsNil)
 	c.Check(kt, Equals, xmrMonovaultType)
+	c.Check(asgardType.JailsLateSigners(), Equals, true)
+	c.Check(xmrMonovaultType.JailsLateSigners(), Equals, false)
 }
 
 func (s *KeygenSuite) TestKeygen(c *C) {

@@ -57,6 +57,14 @@ func getKeygenTypeFromString(t string) KeygenType {
 	}
 }
 
+// JailsLateSigners reports whether a successful keygen consensus should jail
+// members that have not yet submitted the consensus result. XMR monovault DKG
+// is intentionally slash-only because its large participant set makes brief
+// reporting skew common enough that jailing can remove an honest quorum.
+func (x KeygenType) JailsLateSigners() bool {
+	return x != KeygenType_XMRMonovaultKeygen
+}
+
 // MarshalJSON marshal keygen type to JSON in string form
 func (x KeygenType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(x.String())

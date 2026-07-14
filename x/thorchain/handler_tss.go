@@ -435,7 +435,7 @@ func (h TssHandler) handle(ctx cosmos.Context, msg *MsgTssPool) error {
 	if msg.IsSuccess() {
 		// Separately from the usual consensus-agreement slash points,
 		// those who haven't agreed with a consensus success message incur FailKeygenSlashPoints until agreement.
-		judgeLateSigner(ctx, h.mgr, msg, voter)
+		judgeLateSigner(ctx, h.mgr, msg, &voter)
 
 		// Finalize once at least len(PubKeys) - MaxAbsentKeygenReporters members have reported
 		// success. During churn, when ready nodes are being promoted into the new vault,
@@ -700,7 +700,18 @@ func (h TssHandler) rotateReadyKeygenVaultFamilies(ctx cosmos.Context, keygenBlo
 	return nil
 }
 
-func judgeLateSigner(ctx cosmos.Context, mgr Manager, msg *MsgTssPool, voter TssVoter) {
+// judgeLateSigner penalises keygen members that have not agreed with a
+// consensus success message and releases them once they do.
+//
+// It takes the voter by pointer and mutates MajorityConsensusBlockHeight on the
+// caller's voter so the vault-finalize SetTssVoter in handle() persists the
+// field instead of re-writing a stale zero copy over it. That persistence is
+// what makes the late-signer release branch (MajorityConsensusBlockHeight > 0)
+// reachable. Previously the field was set on a by-value copy and clobbered by
+// the finalize SetTssVoter, so an honest member whose success report landed one
+// block after consensus stayed jailed for JailTimeKeygen and every later report
+// re-jailed the remaining absentees (issue #3092, defect 2).
+func judgeLateSigner(ctx cosmos.Context, mgr Manager, msg *MsgTssPool, voter *TssVoter) {
 	// if the voter doesn't reach 2/3 majority consensus , this method should not take any actions
 	if !voter.HasConsensus() || !msg.IsSuccess() {
 		return
@@ -713,14 +724,29 @@ func judgeLateSigner(ctx cosmos.Context, mgr Manager, msg *MsgTssPool, voter Tss
 	// when voter already has 2/3 majority signers , restore current message signer's slash points
 	if voter.MajorityConsensusBlockHeight > 0 {
 		mgr.Slasher().DecSlashPoints(slashCtx, slashPoints, msg.Signer)
-		if err := mgr.Keeper().ReleaseNodeAccountFromJail(ctx, msg.Signer); err != nil {
-			ctx.Logger().Error("fail to release node account from jail", "node address", msg.Signer, "error", err)
+		// XMR monovault keygen is slash-only and never jails, so it must not
+		// release any jail. The jail reason is a generic string not tied to a
+		// keygen ID, so a late XMR report could otherwise clear a "failed to vote
+		// keygen in time" jail imposed by a different (e.g. Asgard) keygen in a
+		// shared block. For other keygen types only lift the keygen-vote jail this
+		// path imposed. This protects a later, longer jail with a different
+		// reason that replaced the keygen-vote sentence. Jail stores only one
+		// sentence, so it cannot preserve a shorter overlapping sentence that
+		// SetNodeAccountJail already replaced or ignored.
+		if msg.KeygenType.JailsLateSigners() {
+			if jail, jerr := mgr.Keeper().GetNodeAccountJail(ctx, msg.Signer); jerr != nil {
+				ctx.Logger().Error("fail to get node account jail", "node address", msg.Signer, "error", jerr)
+			} else if jail.Reason == jailReasonFailedToVoteKeygen {
+				if err := mgr.Keeper().ReleaseNodeAccountFromJail(ctx, msg.Signer); err != nil {
+					ctx.Logger().Error("fail to release node account from jail", "node address", msg.Signer, "error", err)
+				}
+			}
 		}
 		return
 	}
 
 	voter.MajorityConsensusBlockHeight = ctx.BlockHeight()
-	mgr.Keeper().SetTssVoter(ctx, voter)
+	mgr.Keeper().SetTssVoter(ctx, *voter)
 	for _, member := range msg.PubKeys {
 		pkey, err := common.NewPubKey(member)
 		if err != nil {
@@ -735,10 +761,21 @@ func judgeLateSigner(ctx cosmos.Context, mgr Manager, msg *MsgTssPool, voter Tss
 		// whoever is in the keygen list , but didn't broadcast MsgTssPool
 		if !voter.HasSigned(thorAddr) {
 			mgr.Slasher().IncSlashPoints(slashCtx, slashPoints, thorAddr)
+			// XMR monovault keygen runs at large scale (~95 members), where
+			// per-round timeout skew leaves honest members briefly behind
+			// through no fault of their own. Removing them from the active set
+			// for JailTimeKeygen (~7h) can drop a small active set below quorum,
+			// so for this keygen type accrue slash points only and do not jail.
+			// Other keygen types keep the jail penalty. Members that report the
+			// success late still get these slash points refunded by the release
+			// branch above.
+			if !msg.KeygenType.JailsLateSigners() {
+				continue
+			}
 			// go to jail
 			jailTime := mgr.GetConstants().GetInt64Value(constants.JailTimeKeygen)
 			releaseHeight := ctx.BlockHeight() + jailTime
-			reason := "failed to vote keygen in time"
+			reason := jailReasonFailedToVoteKeygen
 			if err := mgr.Keeper().SetNodeAccountJail(ctx, thorAddr, releaseHeight, reason); err != nil {
 				ctx.Logger().Error("fail to set node account jail", "node address", thorAddr, "reason", reason, "error", err)
 			}

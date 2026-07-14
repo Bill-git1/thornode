@@ -749,6 +749,76 @@ func (s *HandlerTssSuite) TestKeygenSuccessHandler(c *C) {
 	}
 }
 
+// TestAsgardLateKeygenDoesNotReleaseLaterFailedKeygenJail pins the reason
+// guard on the non-XMR late-signer path. A later failed-keygen sentence has the
+// same duration but a later release height, so SetNodeAccountJail replaces the
+// keygen-vote sentence. The late success report must not release that newer
+// sentence.
+func (s *HandlerTssSuite) TestAsgardLateKeygenDoesNotReleaseLaterFailedKeygenJail(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	mgr := NewDummyMgrWithKeeper(helper.keeper)
+	handler := NewTssHandler(mgr)
+	ctx := helper.ctx
+
+	poolPubKey := GetRandomPubKey()
+	poolEddsaPubKey := GetRandomPubKey()
+	keygenTime := int64(1024)
+	keygenHeight := ctx.BlockHeight()
+	superMajorityCount := 0
+	for superMajorityCount < len(helper.members) && !HasSuperMajority(superMajorityCount, len(helper.members)) {
+		superMajorityCount++
+	}
+	c.Assert(superMajorityCount < len(helper.members), Equals, true)
+
+	newMsg := func(member common.PubKey) *MsgTssPool {
+		addr, err := member.GetThorAddress()
+		c.Assert(err, IsNil)
+		msg, err := NewMsgTssPoolV2(
+			helper.members.Strings(),
+			poolPubKey,
+			nil,
+			nil,
+			AsgardKeygen,
+			keygenHeight,
+			nil,
+			common.Chains{common.RuneAsset().Chain}.Strings(),
+			addr,
+			keygenTime,
+			poolEddsaPubKey,
+			nil,
+			nil,
+			common.EmptyPubKey,
+		)
+		c.Assert(err, IsNil)
+		return msg
+	}
+
+	for _, member := range helper.members[:superMajorityCount] {
+		c.Assert(handler.handle(ctx, newMsg(member)), IsNil)
+	}
+
+	victim := helper.members[superMajorityCount]
+	victimAddr, err := victim.GetThorAddress()
+	c.Assert(err, IsNil)
+
+	jail, err := helper.keeper.GetNodeAccountJail(ctx, victimAddr)
+	c.Assert(err, IsNil)
+	c.Assert(jail.Reason, Equals, jailReasonFailedToVoteKeygen)
+
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+	jailTime := mgr.GetConstants().GetInt64Value(constants.JailTimeKeygen)
+	releaseHeight := ctx.BlockHeight() + jailTime
+	c.Assert(helper.keeper.SetNodeAccountJail(ctx, victimAddr, releaseHeight, jailReasonFailedToPerformKeygen), IsNil)
+
+	c.Assert(handler.handle(ctx, newMsg(victim)), IsNil)
+
+	jail, err = helper.keeper.GetNodeAccountJail(ctx, victimAddr)
+	c.Assert(err, IsNil)
+	c.Assert(jail.IsJailed(ctx), Equals, true)
+	c.Assert(jail.ReleaseHeight, Equals, releaseHeight)
+	c.Assert(jail.Reason, Equals, jailReasonFailedToPerformKeygen)
+}
+
 func (s *HandlerTssSuite) TestXMRMonovaultKeygenFinalizesOnSuperMajority(c *C) {
 	helper := newTssHandlerTestHelper(c)
 	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
@@ -813,15 +883,15 @@ func (s *HandlerTssSuite) TestXMRMonovaultKeygenFinalizesOnSuperMajority(c *C) {
 	c.Assert(vault.VaultCreationHeightXmr, Equals, observedMoneroHeight)
 }
 
-// TestXMRMonovaultKeygenFailureSubmitterStaysJailedAfterSuccessConsensus pins
-// the mass-jailing mechanism observed on chainnet. Two defects compound:
+// TestXMRMonovaultKeygenFailureSubmitterIsSlashedButNotJailedAfterSuccessConsensus
+// pins the on-chain half of the XMR keygen mass-jailing fix for a failure
+// submitter whose vote has a different ID from the eventual success vote:
 //
 // Defect 1 (different-ID trap): a member whose local FROST DKG timed out
 // submits a keygen *failure* with blame, which carries a different msg ID
 // than the success (getTssID hashes the blame). When the finishers reach 2/3
-// success consensus, judgeLateSigner jails every member that has not signed
-// the success ID — and a failure submitter can never sign it, so its jail
-// sticks for the full JailTimeKeygen.
+// success consensus, the failure submitter has still not signed the success
+// ID and may never be able to.
 //
 // Defect 2 (broken self-heal): judgeLateSigner receives the voter by value
 // and persists MajorityConsensusBlockHeight itself, but the vault-finalize
@@ -831,15 +901,10 @@ func (s *HandlerTssSuite) TestXMRMonovaultKeygenFinalizesOnSuperMajority(c *C) {
 // "first consensus" branch instead of the release branch: it is NOT released,
 // and every remaining absentee is RE-jailed with a fresh release height.
 //
-// The assertions encode the CURRENT (buggy) on-chain behavior. The bifrost
-// half of the fix has landed (AdoptQuorumSuccess: a timed-out member with a
-// completed DKG session adopts the quorum success and votes the same ID, so
-// the failure vote below mostly stops being produced). This test's
-// expectations flip with the on-chain half: MajorityConsensusBlockHeight
-// persisted correctly so late same-ID signers are released (defect 2), and
-// optionally a grace window / no-jail for XMRMonovaultKeygen (defect 1 for
-// members that genuinely cannot adopt).
-func (s *HandlerTssSuite) TestXMRMonovaultKeygenFailureSubmitterStaysJailedAfterSuccessConsensus(c *C) {
+// The fix keeps the penalty as slash points only for XMR monovault keygen: a
+// same-ID late success reporter is refunded once it reports, while the
+// different-ID failure submitter remains slash-pointed but must not be jailed.
+func (s *HandlerTssSuite) TestXMRMonovaultKeygenFailureSubmitterIsSlashedButNotJailedAfterSuccessConsensus(c *C) {
 	helper := newTssHandlerTestHelper(c)
 	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
 	dummySlasher, ok := handler.mgr.Slasher().(*DummySlasher)
@@ -933,45 +998,243 @@ func (s *HandlerTssSuite) TestXMRMonovaultKeygenFailureSubmitterStaysJailedAfter
 	c.Assert(voter.HasConsensus(), Equals, true)
 	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, true)
 
-	// judgeLateSigner jailed both non-signers of the success ID.
+	// XMR monovault keygen is slash-only: both non-signers of the success
+	// ID are penalized, but neither is jailed.
 	failKeygenSlashPoints := helper.constAccessor.GetInt64Value(constants.FailKeygenSlashPoints)
 	for _, addr := range []cosmos.AccAddress{victimAddr, slowAddr} {
 		jail, jailErr := helper.keeper.GetNodeAccountJail(helper.ctx, addr)
 		c.Assert(jailErr, IsNil)
-		c.Assert(jail.ReleaseHeight > helper.ctx.BlockHeight(), Equals, true)
+		c.Assert(jail.IsJailed(helper.ctx), Equals, false)
 		points, pointsOk := dummySlasher.pts[addr.String()]
 		c.Assert(pointsOk, Equals, true)
 		c.Assert(points >= failKeygenSlashPoints, Equals, true)
 	}
 
-	victimJailAtConsensus, err := helper.keeper.GetNodeAccountJail(helper.ctx, victimAddr)
-	c.Assert(err, IsNil)
-
-	// Defect 2: the slow member signs the same success ID late. By
-	// judgeLateSigner's design this must release it, but the finalize path
-	// zeroed MajorityConsensusBlockHeight (SetTssVoter with a stale voter
-	// copy), so the release branch never runs: the slow member stays jailed,
-	// and the victim is RE-jailed with a fresh release height.
+	// Defect 2 fixed: the slow member signs the same success ID late and the
+	// persisted MajorityConsensusBlockHeight makes the slash-point refund
+	// branch reachable.
 	helper.ctx = helper.ctx.WithBlockHeight(helper.ctx.BlockHeight() + 10)
 	c.Assert(handler.handle(helper.ctx, successMsgFor(slowMember)), IsNil)
 	slowJail, err := helper.keeper.GetNodeAccountJail(helper.ctx, slowAddr)
 	c.Assert(err, IsNil)
-	c.Assert(slowJail.ReleaseHeight > helper.ctx.BlockHeight(), Equals, true)
+	c.Assert(slowJail.IsJailed(helper.ctx), Equals, false)
+	c.Assert(dummySlasher.pts[slowAddr.String()], Equals, int64(0))
 	victimJailAfterLateSign, err := helper.keeper.GetNodeAccountJail(helper.ctx, victimAddr)
 	c.Assert(err, IsNil)
-	c.Assert(victimJailAfterLateSign.ReleaseHeight > victimJailAtConsensus.ReleaseHeight, Equals, true)
+	c.Assert(victimJailAfterLateSign.IsJailed(helper.ctx), Equals, false)
 
-	// Defect 1: the victim's failure carries a different ID, so no success-ID
-	// signature can ever come from it. Re-submitting the failure is silently
-	// ignored as a duplicate vote (handle returns nil without any state
-	// change). This is the jail that stuck on chainnet.
+	// Defect 1 fixed by slash-only treatment: the victim's failure carries a
+	// different ID, so it still cannot satisfy the success ID, but the stuck
+	// penalty is slash points rather than jail.
 	c.Assert(handler.handle(helper.ctx, failureMsg), IsNil)
 	victimJail, err := helper.keeper.GetNodeAccountJail(helper.ctx, victimAddr)
 	c.Assert(err, IsNil)
-	c.Assert(victimJail.ReleaseHeight > helper.ctx.BlockHeight(), Equals, true)
+	c.Assert(victimJail.IsJailed(helper.ctx), Equals, false)
 	victimPoints, ok := dummySlasher.pts[victimAddr.String()]
 	c.Assert(ok, Equals, true)
 	c.Assert(victimPoints >= failKeygenSlashPoints, Equals, true)
+}
+
+// TestXMRMonovaultKeygenReleasesLateSigner pins the fix for defect 2 of the XMR
+// keygen mass-jailing (issue #3092). Every member eventually reports the same
+// keygen success; members report in slice order, so 2/3 consensus crosses at
+// reporter index smCount-1 and the member at index smCount is the first success
+// report to land strictly after consensus - the one judgeLateSigner jails at the
+// crossing. judgeLateSigner mutates the caller's voter so the vault-finalize
+// SetTssVoter persists MajorityConsensusBlockHeight, which makes the release
+// path reachable: once all members have reported, none may remain in keygen
+// jail. Without the fix the first post-consensus reporter stayed stuck. Under
+// slash-only (C2) no member is jailed for XMR keygen, so the surviving mechanism
+// this pins is the slash-point refund on the release branch: absentees are
+// slash-pointed at the consensus crossing and must be refunded to zero once they
+// report late, which only happens if MajorityConsensusBlockHeight persists.
+func (s *HandlerTssSuite) TestXMRMonovaultKeygenReleasesLateSigner(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	dummyMgr := NewDummyMgrWithKeeper(helper.keeper)
+	handler := NewTssHandler(dummyMgr)
+	dummySlasher, ok := dummyMgr.Slasher().(*DummySlasher)
+	c.Assert(ok, Equals, true)
+	ctx := helper.ctx
+
+	keygenBlock := NewKeygenBlock(ctx.BlockHeight())
+	keygenBlock.Keygens = []Keygen{{Type: XMRMonovaultKeygen, Members: helper.members.Strings()}}
+	helper.keeper.SetKeygenBlock(ctx, keygenBlock)
+
+	poolPubKey := GetRandomPubKey()
+	frostPubKey := GetRandomEd25519PubKey()
+	observedMoneroHeight := int64(777)
+
+	for _, member := range helper.members {
+		addr, aerr := member.GetThorAddress()
+		c.Assert(aerr, IsNil)
+		msg, merr := NewMsgTssPoolV3(
+			helper.members.Strings(),
+			poolPubKey,
+			nil,
+			nil,
+			XMRMonovaultKeygen,
+			ctx.BlockHeight(),
+			nil,
+			xmrMonovaultChains().Strings(),
+			addr,
+			int64(1024),
+			common.EmptyPubKey,
+			nil,
+			validTssKeyshareBackup(),
+			frostPubKey,
+			observedMoneroHeight,
+		)
+		c.Assert(merr, IsNil)
+		msg.ObservedMoneroHeight = observedMoneroHeight
+		c.Assert(handler.handle(ctx, msg), IsNil)
+	}
+
+	// No member may remain in keygen jail once all have reported success - in
+	// particular the first reporter after consensus, which defect 2 left stuck.
+	for _, member := range helper.members {
+		addr, err := member.GetThorAddress()
+		c.Assert(err, IsNil)
+		jail, err := helper.keeper.GetNodeAccountJail(ctx, addr)
+		c.Assert(err, IsNil)
+		c.Assert(jail.IsJailed(ctx), Equals, false)
+		// Late reporters are slash-pointed at the consensus crossing and refunded
+		// by the release branch once they report. If C1 regresses and
+		// MajorityConsensusBlockHeight fails to persist, the release branch is
+		// never reached and post-consensus reporters keep positive slash points.
+		c.Assert(dummySlasher.pts[addr.String()], Equals, int64(0))
+	}
+}
+
+// TestXMRMonovaultKeygenSlashesButDoesNotJailAbsentees pins C2 (slash-only) for
+// the XMR keygen mass-jailing (issue #3092). Only enough members to cross 2/3
+// consensus report; the rest never do. For XMR monovault keygen those absentees
+// accrue slash points but must NOT be jailed - jailing honest-but-skewed members
+// at scale is what threatened quorum. Asgard keygen keeps the jail penalty
+// (asserted by TestKeygenSuccessHandler).
+func (s *HandlerTssSuite) TestXMRMonovaultKeygenSlashesButDoesNotJailAbsentees(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	dummyMgr := NewDummyMgrWithKeeper(helper.keeper)
+	handler := NewTssHandler(dummyMgr)
+	dummySlasher, ok := dummyMgr.Slasher().(*DummySlasher)
+	c.Assert(ok, Equals, true)
+	ctx := helper.ctx
+
+	keygenBlock := NewKeygenBlock(ctx.BlockHeight())
+	keygenBlock.Keygens = []Keygen{{Type: XMRMonovaultKeygen, Members: helper.members.Strings()}}
+	helper.keeper.SetKeygenBlock(ctx, keygenBlock)
+
+	poolPubKey := GetRandomPubKey()
+	frostPubKey := GetRandomEd25519PubKey()
+	observedMoneroHeight := int64(777)
+
+	n := len(helper.members)
+	smCount := 0
+	for k := 1; k <= n; k++ {
+		if HasSuperMajority(k, n) {
+			smCount = k
+			break
+		}
+	}
+	c.Assert(smCount > 0 && smCount < n, Equals, true)
+
+	// Only the first smCount members report - enough to cross 2/3 consensus and
+	// finalize the vault. The remaining members never report.
+	for _, member := range helper.members[:smCount] {
+		addr, aerr := member.GetThorAddress()
+		c.Assert(aerr, IsNil)
+		msg, merr := NewMsgTssPoolV3(
+			helper.members.Strings(),
+			poolPubKey,
+			nil,
+			nil,
+			XMRMonovaultKeygen,
+			ctx.BlockHeight(),
+			nil,
+			xmrMonovaultChains().Strings(),
+			addr,
+			int64(1024),
+			common.EmptyPubKey,
+			nil,
+			validTssKeyshareBackup(),
+			frostPubKey,
+			observedMoneroHeight,
+		)
+		c.Assert(merr, IsNil)
+		msg.ObservedMoneroHeight = observedMoneroHeight
+		c.Assert(handler.handle(ctx, msg), IsNil)
+	}
+
+	// Absentees are slash-pointed for the missed keygen but not jailed.
+	for _, member := range helper.members[smCount:] {
+		addr, err := member.GetThorAddress()
+		c.Assert(err, IsNil)
+		jail, err := helper.keeper.GetNodeAccountJail(ctx, addr)
+		c.Assert(err, IsNil)
+		c.Assert(jail.IsJailed(ctx), Equals, false)
+		pts, ptsOk := dummySlasher.pts[addr.String()]
+		c.Assert(ptsOk, Equals, true)
+		c.Assert(pts > 0, Equals, true)
+	}
+}
+
+// TestXMRMonovaultKeygenDoesNotReleaseForeignKeygenJail pins that a slash-only
+// XMR monovault keygen never lifts a jail it did not impose. The keygen-vote jail
+// reason is a generic string shared across keygen types, and Asgard + XMR keygens
+// can live in the same block over the same members, so a late XMR success report
+// must not clear a "failed to vote keygen in time" jail set by an Asgard keygen.
+func (s *HandlerTssSuite) TestXMRMonovaultKeygenDoesNotReleaseForeignKeygenJail(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	ctx := helper.ctx
+
+	keygenBlock := NewKeygenBlock(ctx.BlockHeight())
+	keygenBlock.Keygens = []Keygen{{Type: XMRMonovaultKeygen, Members: helper.members.Strings()}}
+	helper.keeper.SetKeygenBlock(ctx, keygenBlock)
+
+	// Pre-jail the last member as if a different (Asgard) keygen had jailed it for
+	// missing its vote. It reports the XMR success last, so it exercises the
+	// release branch as a late signer.
+	victim := helper.members[len(helper.members)-1]
+	victimAddr, aerr := victim.GetThorAddress()
+	c.Assert(aerr, IsNil)
+	releaseHeight := ctx.BlockHeight() + 4320
+	c.Assert(helper.keeper.SetNodeAccountJail(ctx, victimAddr, releaseHeight, jailReasonFailedToVoteKeygen), IsNil)
+
+	poolPubKey := GetRandomPubKey()
+	frostPubKey := GetRandomEd25519PubKey()
+	observedMoneroHeight := int64(777)
+
+	for _, member := range helper.members {
+		addr, merr := member.GetThorAddress()
+		c.Assert(merr, IsNil)
+		msg, mErr := NewMsgTssPoolV3(
+			helper.members.Strings(),
+			poolPubKey,
+			nil,
+			nil,
+			XMRMonovaultKeygen,
+			ctx.BlockHeight(),
+			nil,
+			xmrMonovaultChains().Strings(),
+			addr,
+			int64(1024),
+			common.EmptyPubKey,
+			nil,
+			validTssKeyshareBackup(),
+			frostPubKey,
+			observedMoneroHeight,
+		)
+		c.Assert(mErr, IsNil)
+		msg.ObservedMoneroHeight = observedMoneroHeight
+		c.Assert(handler.handle(ctx, msg), IsNil)
+	}
+
+	// The foreign Asgard keygen jail must remain: XMR keygen is slash-only and
+	// releases nothing.
+	jail, err := helper.keeper.GetNodeAccountJail(ctx, victimAddr)
+	c.Assert(err, IsNil)
+	c.Assert(jail.IsJailed(ctx), Equals, true)
+	c.Assert(jail.Reason, Equals, jailReasonFailedToVoteKeygen)
 }
 
 func (s *HandlerTssSuite) TestXMRMonovaultKeygenRejectsMismatchedLatchedFields(c *C) {
