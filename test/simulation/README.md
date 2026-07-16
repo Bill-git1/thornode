@@ -16,6 +16,22 @@ make test-simulation
 
 This will internally build the simulation framework image, start mocknet, and run the tests from a Docker container with host mode networking to reach the local mocknet.
 
+### Faster reruns
+
+`make test-simulation` rebuilds the mocknet images and resets chain state on every invocation, so the first run is expensive. When iterating, reuse the running mocknet instead of rebuilding it:
+
+```bash
+make reset-mocknet           # reset chain state without rebuilding images
+make test-simulation-no-reset # rebuild only the framework image, then run
+```
+
+For background or non-interactive runs, set `CI=1` so Docker is not started with an interactive TTY. This also makes it easy to follow the output in another terminal:
+
+```bash
+CI=1 make test-simulation-no-reset > sim.log 2>&1 &
+tail -f sim.log
+```
+
 ## Design
 
 The simulation test framework will accept a test suite defined as a DAG of actors. Each actor defines operations that are executed sequentially, but may be randomly delayed and interleaved with operations from other concurrently running actors. Unlike regression tests where operations are structs, in the dynamic world of simulation tests every operation is a function which receives config and a mutable state, and returns an error, a bool whether to continue to the next operation in the test, and a bool to mark the test as finished.

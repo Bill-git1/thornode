@@ -14,7 +14,7 @@ This document explains how the XMR integration works in THORNode, with emphasis 
 
 ## Provenance
 
-The Rust sidecar is consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:49752e667970026bba9c8efe4119530668e5f1f53c6a87284e7106a6f89d41a5` by default on this branch, overridable via `XMR_FROST_SIGNER_IMAGE`.
+The Rust sidecar is consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer`. The pinned version is set in `build/docker/docker-compose.yml` and overridable via `XMR_FROST_SIGNER_IMAGE`.
 
 - The THORNode-specific HTTP service, scanner wiring, and deployment glue live in-tree in this repository.
 - The Serai-derived Rust cryptography/request crates are attributed and pinned in `Cargo.toml` to `https://github.com/serai-dex/serai` at rev `737dbcbaa78ab817cc1c435cb2b6c5d24d1c4391`.
@@ -182,108 +182,6 @@ Design choices:
 - In mainnet mode, `XMR_FROST_STORE_SECRET` must be strong (32-byte hex/base64 equivalent).
 - `XMR_FROST_MAX_SIGN_SCAN_LAG_BLOCKS` controls fail-closed signing when scan state is stale (default `3`).
 
-## Current `x/thorchain` Follow-Up Findings
-
-These are working notes from the current XMR integration review and should be revisited before trimming the branch or upstreaming follow-up cleanup.
-
-### Runtime-critical for current XMR behavior
-
-- `x/thorchain/handler_ragnarok.go`: required so ragnarok matching derives the vault source address using the chain signing algorithm. XMR needs the Ed25519 path here.
-- `x/thorchain/helpers.go`: required for the current Monero unknown-sender model. Refunds must not attempt an outbound to the synthetic XMR unknown-sender marker when no explicit refund address exists.
-- `x/thorchain/helpers.go`: the unrefundable external-coin cleanup path now donates back into pool accounting instead of silently leaving balance stranded in the vault.
-- `x/thorchain/manager_slasher_current.go`: required so failed-outbound recovery swaps use `vault.GetAddress(...)`, which picks the Ed25519 vault address for XMR.
-- `x/thorchain/manager_slasher_current.go`: the XMR unknown-sender guard is important on failed swap recovery, otherwise reverse-swap recovery can target an undeliverable marker address before eventually falling back.
-
-### Useful but not core to existing-chain XMR operation
-
-- `x/thorchain/manager_network_current.go`: adding `common.XMRChain` to single-validator genesis setup matters for fresh bootstrap flows, not for an already-running chain upgrade.
-- `x/thorchain/manager_network_current.go`: using `vault.GetAddress(...)` in over-solvency swap creation matters if that path is exercised for XMR-held assets.
-- `x/thorchain/querier.go`: the Ed25519-chain skip condition is a query/API correctness fix for vault address display, not consensus-critical runtime logic.
-- `x/thorchain/types/type_vault.go`: `Vaults.HasAddress(...)` now respects chain signing algorithm, but no current non-test caller was found during this review.
-
-### Not required for XMR function
-
-- `x/thorchain/alias.go`: test helper exposure only.
-- `x/thorchain/handler_add_liquidity.go`: logging cleanup only.
-- `x/thorchain/handler_deposit.go`: logging cleanup and small local logging refactor only.
-- `x/thorchain/handler_observed_tx_helpers.go`: logging cleanup only.
-- `x/thorchain/keeper/keeper_dummy.go`: test/logger string cleanup only.
-- New `*_test.go` files in `x/thorchain`: coverage only, not runtime behavior.
-
-### Outstanding cleanup note
-
-- `x/thorchain/manager_network_current_test.go` currently references `nmgr.createSwapToReserve(...)`, but no such method exists on `NetworkMgr`. The production package builds, but the `x/thorchain` test package is not clean until that test is fixed or removed.
-
-## Simulation Cache and Rerun Notes
-
-These notes are here so future sessions do not relearn the same mocknet build/cache behavior.
-
-### macOS prerequisite
-
-- THORNode simulation targets expect GNU `make`, `awk`, `find`, `sed`, `grep`, and coreutils on macOS.
-- A working PATH prefix for local runs is:
-
-```sh
-PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
-```
-
-### Single-node simulation
-
-- For background/non-interactive runs, set `CI=1` so `docker run` does not inject `-it`.
-- The first successful `make test-simulation` run is expensive because it rebuilds mocknet images and may need to pull large Rust/Golang base images.
-- To warm the cache once:
-
-```sh
-PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH" \
-CI=1 make build-mocknet build-test-simulation
-```
-
-- After that, the cheaper rerun path is:
-
-```sh
-PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH" \
-CI=1 make reset-mocknet
-
-PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH" \
-CI=1 make test-simulation-no-reset > /tmp/test-simulation.log 2>&1 &
-```
-
-- Watch command:
-
-```sh
-tail -f /tmp/test-simulation.log
-```
-
-### Cluster simulation
-
-- `make test-simulation-cluster` currently rebuilds and resets the cluster every time.
-- There is no parallel `test-simulation-cluster-no-reset` target yet, so repeated cluster reruns are still heavier than single-node reruns.
-- To warm the cluster cache once:
-
-```sh
-PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH" \
-CI=1 make build-mocknet-cluster build-test-simulation
-```
-
-- Standard cluster run:
-
-```sh
-PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH" \
-CI=1 make test-simulation-cluster > /tmp/test-simulation-cluster.log 2>&1 &
-```
-
-- Watch command:
-
-```sh
-tail -f /tmp/test-simulation-cluster.log
-```
-
-- Status check for either run:
-
-```sh
-ps -p <make-pid> -o pid,ppid,stat,etime,command
-```
-
 ## Primary Code Anchors
 
 - Bifrost Monero client: `bifrost/pkg/chainclients/monero/client.go`
@@ -291,7 +189,7 @@ ps -p <make-pid> -o pid,ppid,stat,etime,command
 - go-tss DKG/sign coordinators:
   - `bifrost/tss/go-tss/tss/frost_keygen.go`
   - `bifrost/tss/go-tss/tss/frost_keysign.go`
-- Sidecar: consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:49752e667970026bba9c8efe4119530668e5f1f53c6a87284e7106a6f89d41a5` by default on this branch, overridable via `XMR_FROST_SIGNER_IMAGE`
+- Sidecar: consumed as a pre-built Docker image from `registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer`, pinned in `build/docker/docker-compose.yml` and overridable via `XMR_FROST_SIGNER_IMAGE`
 
 ## Monero User Flows — Privacy Chain Considerations
 

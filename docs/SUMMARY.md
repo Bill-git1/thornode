@@ -44,7 +44,8 @@
   - [UTXO](chain-clients/utxo.md)
   - [EVM Chains](chain-clients/evm.md)
   - [BFT Chains](chain-clients/bft.md)
-  - [Monero (XMR)](xmr-addition-design.md)
+  - [Standalone Chains](chain-clients/standalone.md)
+  - [Monero Design](chain-clients/monero-design.md)
   - [ERC20 Tokens](chain-clients/token-lists.md)
 
 - [Adding New Chains](new-chains/readme.md)

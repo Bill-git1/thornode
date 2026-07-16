@@ -63,7 +63,7 @@ Cosmos RPC provides generic Cosmos SDK data (e.g., account balances, transaction
 
 ### Cosmos Documentation
 
-- Cosmos SDK v0.50 RPC - [Cosmos gRPC Guide](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
+- Cosmos SDK CLI, gRPC, and REST API - [Cosmos Docs](https://docs.cosmos.network/sdk/latest/learn/concepts/cli-grpc-rest)
 
 ### Cosmos Endpoints
 
@@ -104,7 +104,7 @@ Chainnet (`rpc.thorchain.network`) intentionally restricts some Tendermint RPC e
 gRPC provides the full Cosmos SDK interface via protocol buffers, useful for programmatic access from languages with gRPC support.
 
 - **Mainnet:** `grpc.thorchain.network`
-- **Documentation:** [Cosmos gRPC Guide](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
+- **Documentation:** [Cosmos CLI, gRPC, and REST API](https://docs.cosmos.network/sdk/latest/learn/concepts/cli-grpc-rest)
 - **Stagenet:** TBD
 
 ```admonish info
@@ -120,7 +120,7 @@ P2P is the peer-to-peer network layer for node communication, useful for debuggi
 
 ## P2P Guide
 
-- [https://docs.tendermint.com/master/spec/rpc/](https://docs.tendermint.com/master/spec/rpc/)
+- [https://docs.cometbft.com/v0.38/rpc/](https://docs.cometbft.com/v0.38/rpc/)
 
 ### Example: Check Peer Connections
 
