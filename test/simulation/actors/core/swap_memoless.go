@@ -440,6 +440,9 @@ func (a *SwapMemolessActor) signSwap(config *OpConfig) OpResult {
 	// sign transaction
 	a.signedSwap, err = client.SignTx(tx)
 	if err != nil {
+		if result, ok := a.finishAfterMemolessFundingError(err); ok {
+			return result
+		}
 		a.Log().Error().Err(err).Msg("failed to sign tx")
 		return OpResult{
 			Continue: false,
@@ -490,6 +493,9 @@ func (a *SwapMemolessActor) signDirectTokenTransfer() OpResult {
 
 	a.signedSwap, err = client.SignContractTx(directTx)
 	if err != nil {
+		if result, ok := a.finishAfterMemolessFundingError(err); ok {
+			return result
+		}
 		a.Log().Error().Err(err).Msg("failed to sign direct token memoless swap tx")
 		return OpResult{
 			Continue: false,
@@ -548,6 +554,9 @@ func (a *SwapMemolessActor) signTokenSwap() OpResult {
 
 	signedApprove, err := client.SignContractTx(approveTx)
 	if err != nil {
+		if result, ok := a.finishAfterMemolessFundingError(err); ok {
+			return result
+		}
 		a.Log().Error().Err(err).Msg("failed to sign router approve tx")
 		return OpResult{
 			Continue: false,
@@ -556,6 +565,9 @@ func (a *SwapMemolessActor) signTokenSwap() OpResult {
 
 	approveTxID, err := client.BroadcastTx(signedApprove)
 	if err != nil {
+		if result, ok := a.finishAfterMemolessFundingError(err); ok {
+			return result
+		}
 		a.Log().Error().Err(err).Msg("failed to broadcast router approve tx")
 		return OpResult{
 			Continue: false,
@@ -583,6 +595,9 @@ func (a *SwapMemolessActor) signTokenSwap() OpResult {
 
 	a.signedSwap, err = client.SignContractTx(depositTx)
 	if err != nil {
+		if result, ok := a.finishAfterMemolessFundingError(err); ok {
+			return result
+		}
 		a.Log().Error().Err(err).Msg("failed to sign token memoless swap tx")
 		return OpResult{
 			Continue: false,
@@ -607,6 +622,9 @@ func (a *SwapMemolessActor) broadcastSwap(config *OpConfig) OpResult {
 		a.swapTxID, err = client.BroadcastTx(a.signedSwap)
 	}
 	if err != nil {
+		if result, ok := a.finishAfterMemolessFundingError(err); ok {
+			return result
+		}
 		a.Log().Error().Err(err).Msg("failed to broadcast tx")
 		return OpResult{
 			Continue: false,
@@ -626,6 +644,15 @@ func (a *SwapMemolessActor) broadcastSwap(config *OpConfig) OpResult {
 ////////////////////////////////////////////////////////////////////////////////////////
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////
+
+// finishAfterMemolessFundingError keeps memoless swaps from retrying forever
+// after a selected user loses the spendable balance needed for the inbound.
+func (a *SwapMemolessActor) finishAfterMemolessFundingError(err error) (OpResult, bool) {
+	if !isPostSelectionFundingError(err) {
+		return OpResult{}, false
+	}
+	return a.finishAfterPostSelectionFundingError(err), true
+}
 
 func (a *SwapMemolessActor) amountModulus() uint64 {
 	memolessRefCount := constants.NewConstantValue().GetInt64Value(constants.MemolessTxnRefCount)

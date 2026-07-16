@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -206,6 +207,7 @@ type memolessBroadcastClient struct {
 	broadcastCalls int
 	lastSigned     []byte
 	signPayload    []byte
+	signErr        error
 	txid           string
 }
 
@@ -215,6 +217,9 @@ func (m *memolessBroadcastClient) GetAccount(*common.PubKey) (*common.Account, e
 
 func (m *memolessBroadcastClient) SignTx(simtypes.SimTx) ([]byte, error) {
 	m.signCalls++
+	if m.signErr != nil {
+		return nil, m.signErr
+	}
 	if m.signPayload != nil {
 		return m.signPayload, nil
 	}
@@ -228,6 +233,17 @@ func (m *memolessBroadcastClient) BroadcastTx(payload []byte) (string, error) {
 		return "ok", nil
 	}
 	return m.txid, nil
+}
+
+func TestSwapMemolessNonFundingErrorIsUnhandled(t *testing.T) {
+	t.Parallel()
+
+	_, handled := (&SwapMemolessActor{}).finishAfterMemolessFundingError(
+		errors.New("temporary RPC failure"),
+	)
+	if handled {
+		t.Fatal("expected non-funding error to remain unhandled")
+	}
 }
 
 func TestSwapMemolessBroadcastSwapUsesFreshSigningForSol(t *testing.T) {
@@ -265,6 +281,51 @@ func TestSwapMemolessBroadcastSwapUsesFreshSigningForSol(t *testing.T) {
 	}
 	if actor.swapTxID != "sol-tx" {
 		t.Fatalf("expected SOL swap txid to be recorded, got %s", actor.swapTxID)
+	}
+}
+
+func TestSwapMemolessBroadcastSwapSkipsPostSelectionFundingError(t *testing.T) {
+	t.Parallel()
+
+	fundingErr := errors.New("fail to get unspent UTXO: insufficient balance: 0.000000 < 0.061000")
+	client := &memolessBroadcastClient{
+		signErr: fundingErr,
+	}
+	user := newTestSwapUser(t, "selected", common.SOLAsset, sdkmath.NewUint(100), common.BTCAsset, sdkmath.ZeroUint())
+	user.ChainClients[common.SOLChain] = client
+	if !user.Acquire() {
+		t.Fatal("expected to lock selected user")
+	}
+
+	actor := &SwapMemolessActor{
+		SwapActor: SwapActor{
+			user: user,
+			from: common.SOLAsset,
+			to:   common.BTCAsset,
+		},
+		swapTx: simtypes.SimTx{Chain: common.SOLChain},
+	}
+	defer func() {
+		if actor.user != nil {
+			actor.releaseUserSelection()
+		}
+	}()
+
+	result := actor.broadcastSwap(nil)
+	if !result.Finish || result.Continue || result.Error != nil {
+		t.Fatalf("expected memoless broadcast funding failure to finish non-fatally, got %+v", result)
+	}
+	if actor.user != nil {
+		t.Fatal("expected selected user to be cleared")
+	}
+	if user.IsLocked() {
+		t.Fatal("expected selected user to be released")
+	}
+	if client.signCalls != 1 {
+		t.Fatalf("expected one SOL signing attempt, got %d", client.signCalls)
+	}
+	if client.broadcastCalls != 0 {
+		t.Fatalf("expected no SOL broadcast after signing failure, got %d", client.broadcastCalls)
 	}
 }
 
