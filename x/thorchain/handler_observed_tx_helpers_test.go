@@ -167,6 +167,133 @@ func (s *HandlerObservedTxHelpersSuite) TestGenerateReferenceMemoIDDecimalPrecis
 	}
 }
 
+// TestExtractReferenceFromAmountERC20 exercises ExtractReferenceFromAmount directly
+// (rather than through the generateReferenceMemoID wrapper) for ETH ERC20 assets at
+// both the 6-decimal boundary (USDC, USDT — the "divide to native" branch) and
+// 18 decimals (WETH — the "no division" branch). Direct coverage matters because
+// ExtractReferenceFromAmount is also called by queryReferenceMemoPreflight, and the
+// decimal-aware normalization is the pivotal piece of Path A memoless for ERC20s.
+func (s *HandlerObservedTxHelpersSuite) TestExtractReferenceFromAmountERC20(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// --- ETH.USDC at 6 decimals (real mainnet contract) ---
+	usdcAsset := common.Asset{
+		Chain:  common.ETHChain,
+		Symbol: "USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
+		Ticker: "USDC",
+		Synth:  false,
+	}
+	usdcPool := NewPool()
+	usdcPool.Asset = usdcAsset
+	usdcPool.Decimals = 6
+	usdcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	usdcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, usdcPool), IsNil)
+
+	// User sends 1.000042 USDC. Native 6-dec = 1_000_042; bifrost normalizes to 1e8
+	// precision = 100_004_200. ExtractReferenceFromAmount divides by 100 (= 10^(8-6))
+	// to recover the native value, then takes amount % 100_000 = 42 → "00042".
+	refID, err := ExtractReferenceFromAmount(ctx, mgr, usdcAsset, 100_004_200)
+	c.Assert(err, IsNil)
+	c.Assert(refID, Equals, "00042", Commentf("USDC 1.000042 → ref 00042"))
+
+	// 50.012345 USDC: native 50_012_345, 1e8 = 5_001_234_500, /100 = 50_012_345,
+	// % 100_000 = 12345 → "12345".
+	refID, err = ExtractReferenceFromAmount(ctx, mgr, usdcAsset, 5_001_234_500)
+	c.Assert(err, IsNil)
+	c.Assert(refID, Equals, "12345", Commentf("USDC 50.012345 → ref 12345"))
+
+	// --- ETH.USDT at 6 decimals (different pool, same decimal branch) ---
+	usdtAsset := common.Asset{
+		Chain:  common.ETHChain,
+		Symbol: "USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7",
+		Ticker: "USDT",
+		Synth:  false,
+	}
+	usdtPool := NewPool()
+	usdtPool.Asset = usdtAsset
+	usdtPool.Decimals = 6
+	usdtPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	usdtPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, usdtPool), IsNil)
+
+	// 10.099999 USDT: native 10_099_999, 1e8 = 1_009_999_900, /100 = 10_099_999,
+	// % 100_000 = 99999 (max ref) → "99999".
+	refID, err = ExtractReferenceFromAmount(ctx, mgr, usdtAsset, 1_009_999_900)
+	c.Assert(err, IsNil)
+	c.Assert(refID, Equals, "99999", Commentf("USDT 10.099999 → ref 99999 (max)"))
+
+	// --- ETH.WETH at 18 decimals (no division branch) ---
+	wethAsset := common.Asset{
+		Chain:  common.ETHChain,
+		Symbol: "WETH-0XC02AAA39B223FE8D0A0E5C4F27EAD9083C756CC2",
+		Ticker: "WETH",
+		Synth:  false,
+	}
+	wethPool := NewPool()
+	wethPool.Asset = wethAsset
+	wethPool.Decimals = 18
+	wethPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	wethPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, wethPool), IsNil)
+
+	// For decimals >= 8 the normalization branch is skipped. Bifrost has already
+	// scaled 18-dec raw values down to 1e8 precision. The last 5 digits of the
+	// 1e8 amount ARE the ref directly.
+	//
+	// 1.00000000000042 WETH: native 1_000_000_000_000_420_000, 1e8 = 100_000_042,
+	// % 100_000 = 42 → "00042".
+	refID, err = ExtractReferenceFromAmount(ctx, mgr, wethAsset, 100_000_042)
+	c.Assert(err, IsNil)
+	c.Assert(refID, Equals, "00042", Commentf("WETH 1.00000000000042 → ref 00042"))
+
+	// 2.00012345 WETH: 1e8 = 200_012_345, % 100_000 = 12345 → "12345".
+	refID, err = ExtractReferenceFromAmount(ctx, mgr, wethAsset, 200_012_345)
+	c.Assert(err, IsNil)
+	c.Assert(refID, Equals, "12345", Commentf("WETH 2.00012345 → ref 12345"))
+
+	// --- zero-ref rejection on both decimal branches ---
+
+	// WETH 1.00000000 → 1e8 = 100_000_000 → 100_000_000 % 100_000 = 0 → error.
+	_, err = ExtractReferenceFromAmount(ctx, mgr, wethAsset, 100_000_000)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*zero reference.*")
+
+	// USDC 1.000000 → 1e8 = 100_000_000 → /100 = 1_000_000 → % 100_000 = 0 → error.
+	_, err = ExtractReferenceFromAmount(ctx, mgr, usdcAsset, 100_000_000)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*zero reference.*")
+
+	// --- sentinel: pool.Decimals=0 for a non-gas asset is treated as 8 ---
+	fakeAsset := common.Asset{
+		Chain:  common.ETHChain,
+		Symbol: "FAKE-0X0000000000000000000000000000000000000000",
+		Ticker: "FAKE",
+		Synth:  false,
+	}
+	fakePool := NewPool()
+	fakePool.Asset = fakeAsset
+	fakePool.Decimals = 0 // sentinel → ExtractReferenceFromAmount substitutes 8
+	fakePool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	fakePool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, fakePool), IsNil)
+
+	// decimals=8 → no division → 42_004_242 % 100_000 = 4242 → "04242".
+	refID, err = ExtractReferenceFromAmount(ctx, mgr, fakeAsset, 42_004_242)
+	c.Assert(err, IsNil)
+	c.Assert(refID, Equals, "04242", Commentf("Decimals=0 sentinel treated as 8"))
+
+	// --- error cases ---
+
+	_, err = ExtractReferenceFromAmount(ctx, mgr, common.EmptyAsset, 100_004_242)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*asset is empty.*")
+
+	_, err = ExtractReferenceFromAmount(ctx, mgr, usdcAsset, 0)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, ".*zero amount.*")
+}
+
 func (s *HandlerObservedTxHelpersSuite) TestGenerateReferenceMemoIDModulus(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 

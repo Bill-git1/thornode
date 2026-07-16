@@ -93,6 +93,10 @@ func simulationStages() []simulationStage {
 		{name: "swaps", defaultOn: true, constructor: suites.Swaps},
 		{name: "memoless-swaps", defaultOn: true, constructor: suites.MemolessSwaps},
 		{name: "consolidate", defaultOn: true, constructor: features.Consolidate},
+		// memoless-refunds runs before churn (and before xmr-post-churn, which
+		// triggers the cluster churn) so the refund actors exercise the pre-churn
+		// vault set, per issue #2839 Section B.
+		{name: "memoless-refunds", defaultOn: false, constructor: features.MemolessRefunds},
 		{name: "churn", defaultOn: false, constructor: core.NewChurnActor},
 		{name: "xmr-post-churn", defaultOn: false, constructor: suites.XMRPostChurn},
 		{name: "xmr-keygen-jail", defaultOn: false, constructor: suites.XMRKeygenJail},

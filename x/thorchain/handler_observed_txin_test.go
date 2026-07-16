@@ -1625,6 +1625,192 @@ func (s *HandlerObservedTxInSuite) TestMemolessTxns(c *C) {
 	c.Check(memo, check.Equals, "", check.Commentf("Expected to return empty memo when reference memo is expired"))
 }
 
+// TestMemolessERC20EndToEnd drives the full observed-tx-in handler pipeline for
+// ERC20 memoless inbounds. It verifies that an empty-memo ERC20 tx with an
+// amount-encoded reference passes through processTxInAttestation +
+// handleObservedTxInQuorum, has its memo synthesized and resolved, and is
+// dispatched as a MsgSwap carrying the original registered memo.
+//
+// Coverage:
+//   - 6-decimal amount-mode (USDC): exercises the divide-by-100 normalization
+//     branch of ExtractReferenceFromAmount at the handler level.
+//   - 18-decimal amount-mode (WETH): exercises the no-op (decimals >= 8)
+//     branch and the max ref boundary (99999) at the handler level.
+func (s *HandlerObservedTxInSuite) TestMemolessERC20EndToEnd(c *C) {
+	s.testMemolessERC20AmountMode6Dec(c)
+	s.testMemolessERC20AmountMode18Dec(c)
+}
+
+func (s *HandlerObservedTxInSuite) testMemolessERC20AmountMode6Dec(c *C) {
+	var err error
+	ctx, mgr := setupManagerForTest(c)
+	// Block height must exceed the reference memo's registration height so the
+	// anti-front-running guard in fetchMemoFromReference (tx observation height
+	// must be > ref height) passes.
+	ctx = ctx.WithBlockHeight(100)
+
+	// Real mainnet USDC contract at 6 decimals.
+	usdcAsset := common.Asset{
+		Chain:  common.ETHChain,
+		Symbol: "USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
+		Ticker: "USDC",
+		Synth:  false,
+	}
+
+	// The registered memo that memoless should resolve to. Kept as a real,
+	// parseable swap memo so processOneTxIn can build a MsgSwap from it.
+	resolvedMemo := "SWAP:BTC.BTC:" + GetRandomBTCAddress().String()
+
+	// Build the inbound observed tx:
+	//   - Empty memo → triggers amount-mode synth path in handleObservedTxInQuorum.
+	//   - Amount 100_004_200 at 1e8 precision decodes to ref "00042":
+	//       100_004_200 / 100 (= 10^(8-6))  = 1_000_042
+	//       1_000_042 % 100_000            = 42 → padded "00042"
+	//   - BlockHeight == FinaliseHeight so IsFinal() is true immediately and
+	//     a single handler.handle call reaches quorum + runs the memoless logic.
+	tx := GetRandomTx()
+	tx.Chain = common.ETHChain
+	tx.Memo = ""
+	tx.Coins = common.NewCoins(common.NewCoin(usdcAsset, cosmos.NewUint(100_004_200)))
+
+	obTx := NewObservedTx(tx, 100, GetRandomPubKey(), 100)
+	txs := ObservedTxs{obTx}
+
+	// ToAddress is derived from a chain address; the vault is located by
+	// ObservedPubKey (matching the existing testHandleWithVersion pattern).
+	pk := GetRandomPubKey()
+	txs[0].Tx.ToAddress, err = pk.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+
+	vault := GetRandomVault()
+	vault.PubKey = obTx.ObservedPubKey
+
+	keeper := &TestObservedTxInHandleKeeper{
+		nas:   NodeAccounts{GetRandomValidatorNode(NodeActive)},
+		voter: NewObservedTxVoter(tx.ID, make(ObservedTxs, 0)),
+		vault: vault,
+		pool: Pool{
+			Asset:        usdcAsset,
+			Decimals:     6,
+			BalanceRune:  cosmos.NewUint(1000 * common.One),
+			BalanceAsset: cosmos.NewUint(1000 * common.One),
+		},
+		vaultExists: true,
+	}
+
+	// Pre-register the reference memo for ref "00042" at height 0.
+	// Tx observation height will be 100 → 100 > 0 passes the height guard.
+	refMemo := NewReferenceMemo(usdcAsset, resolvedMemo, "00042", 0)
+	keeper.SetReferenceMemo(ctx, refMemo)
+
+	mgr.K = keeper
+	handler := NewObservedTxInHandler(mgr)
+
+	msg := NewMsgObservedTxIn(txs, keeper.nas[0].NodeAddress)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+	mgr.ObMgr().EndBlock(ctx, keeper)
+
+	// After the handler runs, the captured MsgSwap should carry the RESOLVED
+	// memo (not the synthesized "r:00042", not the empty original memo).
+	c.Check(keeper.msg.Tx.ID.String(), Equals, tx.ID.String(),
+		Commentf("swap should be dispatched for the inbound tx"))
+	c.Check(keeper.msg.Tx.Memo, Equals, resolvedMemo,
+		Commentf("resolved memo should be attached to the swap, not r:00042"))
+
+	// The swap target should be BTC.BTC as declared in the registered memo.
+	c.Check(keeper.msg.TargetAsset.Equals(common.BTCAsset), Equals, true,
+		Commentf("swap target asset should match the resolved memo"))
+
+	// Reference memo usage should be tracked for our tx.
+	got, err := keeper.GetReferenceMemo(ctx, usdcAsset, "00042")
+	c.Assert(err, IsNil)
+	c.Check(got.GetUsageCount(), Equals, int64(1),
+		Commentf("reference memo usage count should be 1 after successful resolve"))
+	c.Check(got.HasBeenUsedBy(tx.ID), Equals, true,
+		Commentf("reference memo should record our tx ID"))
+}
+
+func (s *HandlerObservedTxInSuite) testMemolessERC20AmountMode18Dec(c *C) {
+	var err error
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+
+	// Real mainnet WETH contract at 18 decimals.
+	wethAsset := common.Asset{
+		Chain:  common.ETHChain,
+		Symbol: "WETH-0XC02AAA39B223FE8D0A0E5C4F27EAD9083C756CC2",
+		Ticker: "WETH",
+		Synth:  false,
+	}
+
+	// A different resolved memo from the 6-decimal sub-test so a regression
+	// returning stale state is detectable.
+	resolvedMemo := "SWAP:BTC.BTC:" + GetRandomBTCAddress().String()
+
+	// Build the inbound observed tx:
+	//   - Empty memo → amount-mode synth path.
+	//   - Amount 100_099_999 at 1e8 precision decodes to ref "99999":
+	//       decimals = 18, so the "decimals < 8" branch is SKIPPED (no division).
+	//       100_099_999 % 100_000 = 99999 → "99999" (max ref boundary).
+	//   - User-side derivation: 1.00099999 WETH native = 1_000_999_990_000_000_000
+	//     raw, which bifrost divides by 10^10 to normalize → 100_099_999 at 1e8.
+	tx := GetRandomTx()
+	tx.Chain = common.ETHChain
+	tx.Memo = ""
+	tx.Coins = common.NewCoins(common.NewCoin(wethAsset, cosmos.NewUint(100_099_999)))
+
+	obTx := NewObservedTx(tx, 100, GetRandomPubKey(), 100)
+	txs := ObservedTxs{obTx}
+
+	pk := GetRandomPubKey()
+	txs[0].Tx.ToAddress, err = pk.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+
+	vault := GetRandomVault()
+	vault.PubKey = obTx.ObservedPubKey
+
+	keeper := &TestObservedTxInHandleKeeper{
+		nas:   NodeAccounts{GetRandomValidatorNode(NodeActive)},
+		voter: NewObservedTxVoter(tx.ID, make(ObservedTxs, 0)),
+		vault: vault,
+		pool: Pool{
+			Asset:        wethAsset,
+			Decimals:     18,
+			BalanceRune:  cosmos.NewUint(1000 * common.One),
+			BalanceAsset: cosmos.NewUint(1000 * common.One),
+		},
+		vaultExists: true,
+	}
+
+	// Register ref "99999" at height 0. Tx observation height is 100 so the
+	// anti-front-running guard in fetchMemoFromReference passes.
+	refMemo := NewReferenceMemo(wethAsset, resolvedMemo, "99999", 0)
+	keeper.SetReferenceMemo(ctx, refMemo)
+
+	mgr.K = keeper
+	handler := NewObservedTxInHandler(mgr)
+
+	msg := NewMsgObservedTxIn(txs, keeper.nas[0].NodeAddress)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+	mgr.ObMgr().EndBlock(ctx, keeper)
+
+	c.Check(keeper.msg.Tx.ID.String(), Equals, tx.ID.String(),
+		Commentf("swap should be dispatched for the inbound tx"))
+	c.Check(keeper.msg.Tx.Memo, Equals, resolvedMemo,
+		Commentf("resolved memo should be attached to the swap, not r:99999"))
+	c.Check(keeper.msg.TargetAsset.Equals(common.BTCAsset), Equals, true,
+		Commentf("swap target asset should match the resolved memo"))
+
+	got, err := keeper.GetReferenceMemo(ctx, wethAsset, "99999")
+	c.Assert(err, IsNil)
+	c.Check(got.GetUsageCount(), Equals, int64(1),
+		Commentf("reference memo usage count should be 1 after successful resolve"))
+	c.Check(got.HasBeenUsedBy(tx.ID), Equals, true,
+		Commentf("reference memo should record our tx ID"))
+}
+
 func (s *HandlerObservedTxInSuite) TestMemoUsageTracking(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockHeight(15)
