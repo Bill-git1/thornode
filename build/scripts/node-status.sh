@@ -23,16 +23,17 @@ API=http://thornode:1317
 THORNODE_PORT="${THORNODE_SERVICE_PORT_RPC:-27147}"
 RPC=http://thornode:${THORNODE_PORT}
 
-BITCOIN_ENDPOINT="${BTC_HOST:-bitcoin-daemon:${BITCOIN_DAEMON_SERVICE_PORT_RPC:-8332}}"
-LITECOIN_ENDPOINT="${LTC_HOST:-litecoin-daemon:${LITECOIN_DAEMON_SERVICE_PORT_RPC:-9332}}"
-BITCOIN_CASH_ENDPOINT="${BCH_HOST:-bitcoin-cash-daemon:${BITCOIN_CASH_DAEMON_SERVICE_PORT_RPC:-8332}}"
-DOGECOIN_ENDPOINT="${DOGE_HOST:-dogecoin-daemon:${DOGECOIN_DAEMON_SERVICE_PORT_RPC:-22555}}"
-ETHEREUM_ENDPOINT="${ETH_HOST:-http://ethereum-daemon:${ETHEREUM_DAEMON_SERVICE_PORT_RPC:-8545}}"
-ETHEREUM_BEACON_ENDPOINT="${ETHEREUM_ENDPOINT%:*}:3500"
+BITCOIN_ENDPOINT="${BIFROST_CHAINS_BTC_RPC_HOST:-${BTC_HOST:-bitcoin-daemon:${BITCOIN_DAEMON_SERVICE_PORT_RPC:-8332}}}"
+LITECOIN_ENDPOINT="${BIFROST_CHAINS_LTC_RPC_HOST:-${LTC_HOST:-litecoin-daemon:${LITECOIN_DAEMON_SERVICE_PORT_RPC:-9332}}}"
+BITCOIN_CASH_ENDPOINT="${BIFROST_CHAINS_BCH_RPC_HOST:-${BCH_HOST:-bitcoin-cash-daemon:${BITCOIN_CASH_DAEMON_SERVICE_PORT_RPC:-8332}}}"
+DOGECOIN_ENDPOINT="${BIFROST_CHAINS_DOGE_RPC_HOST:-${DOGE_HOST:-dogecoin-daemon:${DOGECOIN_DAEMON_SERVICE_PORT_RPC:-22555}}}"
+ETHEREUM_ENDPOINT="${BIFROST_CHAINS_ETH_RPC_HOST:-${ETH_HOST:-http://ethereum-daemon:${ETHEREUM_DAEMON_SERVICE_PORT_RPC:-8545}}}"
+ETHEREUM_BEACON_ENDPOINT=$(printf '%s' "$ETHEREUM_ENDPOINT" | sed -E 's#^([a-zA-Z][a-zA-Z0-9+.-]*://)([^/:]+)(:[0-9]+)?(/.*)?$#\1\2:3500#')
 BINANCE_SMART_ENDPOINT="${BIFROST_CHAINS_BSC_RPC_HOST:-http://binance-smart-daemon:${BINANCE_SMART_DAEMON_SERVICE_PORT_RPC:-8545}}"
 BASE_ENDPOINT="${BIFROST_CHAINS_BASE_RPC_HOST:-http://base-daemon:${BASE_DAEMON_SERVICE_PORT_RPC:-8545}}"
-GAIA_ENDPOINT="${GAIA_HOST:-http://gaia-daemon:26657}"
-AVALANCHE_ENDPOINT="${AVAX_HOST:-http://avalanche-daemon:9650/ext/bc/C/rpc}"
+GAIA_ENDPOINT="${BIFROST_CHAINS_GAIA_RPC_HOST:-${GAIA_HOST:-http://gaia-daemon:26657}}"
+AVALANCHE_ENDPOINT="${BIFROST_CHAINS_AVAX_RPC_HOST:-${AVAX_HOST:-http://avalanche-daemon:9650/ext/bc/C/rpc}}"
+SOLANA_ENDPOINT="${BIFROST_CHAINS_SOL_RPC_HOST:-${SOL_HOST:-http://solana-daemon:8899}}"
 XRP_ENDPOINT="${BIFROST_CHAINS_XRP_RPC_HOST:-http://xrp-daemon:${XRP_DAEMON_SERVICE_PORT_RPC:-51234}}"
 TRON_ENDPOINT="${BIFROST_CHAINS_TRON_API_HOST:-http://tron-daemon:16667}"
 
@@ -129,7 +130,7 @@ if [ "$VALIDATOR" = "true" ]; then
   BSC_PROGRESS=$(calc_progress "$BSC_SYNC_HEIGHT" "$BSC_HEIGHT")
 
   # calculate BASE chain sync progress
-  BASE_HEIGHT_RESULT=$(curl -X POST -sL --fail -m 10 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H 'content-type: application/json' "https://base.llamarpc.com")
+  BASE_HEIGHT_RESULT=$(curl -X POST -sL --fail -m 10 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H 'content-type: application/json' "https://mainnet.base.org")
   BASE_SYNC_HEIGHT_RESULT=$(curl -X POST -sL --fail -m 10 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H 'content-type: application/json' "$BASE_ENDPOINT")
   BASE_HEIGHT=$(printf "%.0f" "$(echo "$BASE_HEIGHT_RESULT" | jq -r ".result")")
   if [ -n "$BASE_SYNC_HEIGHT_RESULT" ]; then
@@ -150,6 +151,14 @@ if [ "$VALIDATOR" = "true" ]; then
       XRP_SYNC_HEIGHT=0
     fi
     XRP_PROGRESS=$(calc_progress "$XRP_SYNC_HEIGHT" "$XRP_HEIGHT")
+  fi
+
+  if [ "$BIFROST_CHAINS_SOL_DISABLED" = "false" ]; then
+    SOL_HEIGHT_RESULT=$(curl -X POST -sL --fail -m 10 --data '{"jsonrpc":"2.0","method":"getSlot","params":[{"commitment":"finalized"}],"id":1}' -H 'content-type: application/json' "https://api.mainnet-beta.solana.com")
+    SOL_SYNC_HEIGHT_RESULT=$(curl -X POST -sL --fail -m 10 --data '{"jsonrpc":"2.0","method":"getSlot","params":[{"commitment":"finalized"}],"id":1}' -H 'content-type: application/json' "$SOLANA_ENDPOINT")
+    SOL_HEIGHT=$(echo "$SOL_HEIGHT_RESULT" | jq -r '.result // 0')
+    SOL_SYNC_HEIGHT=$(echo "$SOL_SYNC_HEIGHT_RESULT" | jq -r '.result // 0')
+    SOL_PROGRESS=$(calc_progress "$SOL_SYNC_HEIGHT" "$SOL_HEIGHT")
   fi
 fi
 
@@ -227,6 +236,8 @@ GAIA_HEIGHT=${GAIA_HEIGHT:=0}
 GAIA_SYNC_HEIGHT=${GAIA_SYNC_HEIGHT:=0}
 BASE_HEIGHT=${BASE_HEIGHT:=0}
 BASE_SYNC_HEIGHT=${BASE_SYNC_HEIGHT:=0}
+SOL_HEIGHT=${SOL_HEIGHT:=0}
+SOL_SYNC_HEIGHT=${SOL_SYNC_HEIGHT:=0}
 TRON_HEIGHT=${TRON_HEIGHT:=0}
 TRON_SYNC_HEIGHT=${TRON_SYNC_HEIGHT:=0}
 
@@ -250,6 +261,9 @@ if [ "$VALIDATOR" = "true" ]; then
   fi
   if [ "$BIFROST_CHAINS_TRON_DISABLED" = "false" ]; then
     printf "%-18s %-10s %-14s %-10s\n" TRON "$TRON_PROGRESS" "$(format_int $((TRON_SYNC_HEIGHT - TRON_HEIGHT)))" "$(format_int "$TRON_HEIGHT")"
+  fi
+  if [ "$BIFROST_CHAINS_SOL_DISABLED" = "false" ]; then
+    printf "%-18s %-10s %-14s %-10s\n" SOL "$SOL_PROGRESS" "$(format_int $((SOL_SYNC_HEIGHT - SOL_HEIGHT)))" "$(format_int "$SOL_HEIGHT")"
   fi
 fi
 
