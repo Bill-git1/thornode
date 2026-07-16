@@ -459,4 +459,7 @@ func (s *HandlerDepositSuite) TestMemolessNativeDepositReferenceResolution(c *C)
 
 	// The handler should have resolved "r:00123" to "=:BTC.BTC:bc1qyyy"
 	// and queued a swap
+	storedReference, err := k.GetReferenceMemo(ctx, common.RuneNative, "00123")
+	c.Assert(err, IsNil)
+	c.Check(storedReference.GetUsageCount(), Equals, int64(1))
 }

@@ -407,6 +407,50 @@ func (s *MemoSuite) TestParseWithAbbreviated(c *C) {
 	c.Assert(err, NotNil)
 }
 
+// TestAddLiquidityMemoCompositeAddressParsing keeps keeper-backed and keeperless
+// parsing aligned while treating an invalid optional asset address as absent.
+func (s *MemoSuite) TestAddLiquidityMemoCompositeAddressParsing(c *C) {
+	pairAddr := types.GetRandomTHORAddress()
+	assetAddr := "45v8VYPut8S9wY9fTvn1gKiGN5AMMzsCK9kLNcEpEESygy4vU3Jf3uE4Zyqv2bDLwTToH8ArrsZ3W28kmKUKJkjY8fN9anA"
+	validMemo := fmt.Sprintf("+:XMR.XMR:%s/%s", pairAddr, assetAddr)
+	invalidMemo := fmt.Sprintf("+:XMR.XMR:%s/not-an-address", pairAddr)
+	missingPairMemo := fmt.Sprintf("+:XMR.XMR:/%s", assetAddr)
+	nonExplicitChainMemo := fmt.Sprintf("+:BTC.BTC:%s/%s", pairAddr, types.GetRandomBTCAddress())
+
+	parsers := []func(string) (Memo, error){
+		func(memo string) (Memo, error) {
+			return ParseMemo(types.GetCurrentVersion(), memo)
+		},
+		func(memo string) (Memo, error) {
+			return ParseMemoWithTHORNames(s.ctx, s.k, memo)
+		},
+	}
+
+	for _, parse := range parsers {
+		parsed, err := parse(validMemo)
+		c.Assert(err, IsNil)
+		addMemo, ok := parsed.(AddLiquidityMemo)
+		c.Assert(ok, Equals, true)
+		c.Check(addMemo.GetDestination(), Equals, pairAddr)
+		c.Check(addMemo.GetAssetAddress().String(), Equals, assetAddr)
+
+		parsed, err = parse(invalidMemo)
+		c.Assert(err, IsNil)
+		addMemo, ok = parsed.(AddLiquidityMemo)
+		c.Assert(ok, Equals, true)
+		c.Check(addMemo.GetDestination(), Equals, pairAddr)
+		c.Check(addMemo.GetAssetAddress().IsEmpty(), Equals, true)
+
+		_, err = parse(missingPairMemo)
+		c.Assert(err, NotNil)
+
+		// ADD composite addresses are XMR-scoped. On chains with an observable
+		// sender, accepting this field would silently discard the asset address.
+		_, err = parse(nonExplicitChainMemo)
+		c.Assert(err, NotNil)
+	}
+}
+
 func (s *MemoSuite) TestParse(c *C) {
 	ctx := s.ctx
 	k := s.k

@@ -142,8 +142,7 @@ func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) e
 
 	assetSender := common.ResolveObservedSender(msg.Asset.GetLayer1Asset().GetChain(), msg.AssetAddress)
 	txSender := msg.Tx.ObservedSender()
-	isXMRUnknownSenderObserved := msg.Asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) &&
-		(assetSender.RefundAddressRequired || txSender.RefundAddressRequired)
+	isUnknownSenderObserved := assetSender.RefundAddressRequired || txSender.RefundAddressRequired
 
 	if !msg.AssetAddress.IsEmpty() {
 		// If the needsSwap check disallows a cross-chain AssetAddress,
@@ -154,7 +153,7 @@ func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) e
 			if !msg.AssetAddress.IsChain(common.THORChain) {
 				return errAddLiquidityMismatchAddr
 			}
-		} else if !isXMRUnknownSenderObserved && !msg.AssetAddress.IsChain(msg.Asset.GetLayer1Asset().GetChain()) {
+		} else if !isUnknownSenderObserved && !msg.AssetAddress.IsChain(msg.Asset.GetLayer1Asset().GetChain()) {
 			return errAddLiquidityMismatchAddr
 		}
 
@@ -232,13 +231,16 @@ func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) err
 		return h.swap(ctx, msg)
 	}
 
-	txSender := msg.Tx.ObservedSender()
 	assetAddress := msg.AssetAddress
-	if msg.Asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) && txSender.RefundAddressRequired {
-		// Monero inbound observations cannot reliably recover the sender address.
-		// Normalize the asset-side address here as a final guard so staged LP
+	assetSender := common.ResolveObservedSender(msg.Asset.GetLayer1Asset().GetChain(), msg.AssetAddress)
+	if assetSender.RefundAddressRequired {
+		// The inbound observation cannot reliably recover the sender address.
+		// Normalize an unknown-sender marker here as a final guard so staged LP
 		// reconciliation can reuse the paired address from the RUNE-side memo.
-		assetAddress = txSender.Address
+		// Resolve from the address value itself, not the observed tx sender: a
+		// memoless XMR add carries a real asset address registered in the memo
+		// even though the observed tx sender is the unknown marker.
+		assetAddress = assetSender.Address
 	}
 
 	// Use L1 pool for secured assets only, don't change behaviour for synths
@@ -562,13 +564,13 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	}
 	effectiveRuneAddr := runeAddr
 	effectiveAssetAddr := assetAddr
-	// addLiquidity is called both from handle(), which pre-normalizes XMR
+	// addLiquidity is called both from handle(), which pre-normalizes
 	// unknown senders to NoAddress, and from direct/unit-test paths that can
-	// still supply the raw xmrunknown marker. Re-resolve here so both entry
+	// still supply the raw unknown-sender marker. Re-resolve here so both entry
 	// points converge on the same staged-LP behavior.
 	effectiveAssetSender := common.ResolveObservedSender(asset.GetLayer1Asset().GetChain(), effectiveAssetAddr)
-	if asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) && effectiveAssetSender.RefundAddressRequired {
-		// Monero inbound observations cannot recover the sender address, so the
+	if effectiveAssetSender.RefundAddressRequired {
+		// Some inbound observations cannot recover the sender address, so the
 		// asset-side tx may arrive with an xmrunknown marker instead of the user's
 		// real address. Preserve the staged LP address instead of treating that as
 		// a mismatched counterparty.
@@ -578,17 +580,17 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	if err != nil {
 		return ErrInternal(err, "fail to get liquidity provider")
 	}
-	if asset.GetLayer1Asset().GetChain().Equals(common.XMRChain) &&
+	if asset.GetLayer1Asset().GetChain().RequiresExplicitRefundAddress() &&
 		!effectiveRuneAddr.IsEmpty() &&
 		!effectiveAssetAddr.IsEmpty() {
-		// Once a real XMR asset address is known, do not allow a different RUNE
-		// address to bind against an existing LP record for that same asset-side
-		// address. Unknown-sender staging still works, but it cannot overwrite an
-		// established LP pairing.
+		// Once a real asset address is known for a sender-opaque chain, do not
+		// allow a different RUNE address to bind against the same asset-side
+		// address. Unknown-sender staging still works, but it cannot overwrite
+		// an established LP pairing.
 		//
 		// Keeper only indexes LPs by the canonical fetch address, so this is
 		// currently an O(n) scan across the asset LP set. That is acceptable for
-		// the low-cardinality XMR pool today; add a reverse index if LP counts
+		// low-cardinality sender-opaque pools; add a reverse index if LP counts
 		// grow enough for this guard to become hot.
 		iter := h.mgr.Keeper().GetLiquidityProviderIterator(ctx, asset)
 		defer iter.Close()

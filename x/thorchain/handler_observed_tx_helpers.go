@@ -16,6 +16,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	mem "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 )
 
 // processTxInAttestation processes a single attestation for an observed tx.
@@ -309,6 +310,25 @@ func handleObservedTxInQuorum(
 		return nil
 	}
 
+	// Resolve reference memo before any finalized refund path. In particular,
+	// an inactive-vault XMR refund needs the registered ADD asset address rather
+	// than the unavailable observed sender encoded by the raw r:<ref> memo.
+	// Keep the parsed memo aligned as well so post-handler completion logic uses
+	// the actual transaction type rather than TxReferenceReadMemo.
+	// Amount-encoded memoless inbounds have their synthesized r:<ref> memo on
+	// the voter, while the observed transaction memo remains empty. Preserve
+	// that synthesized memo so successful processing consumes the reference.
+	referenceMemo := voter.Tx.Tx.Memo
+	referenceAsset := common.EmptyAsset
+	if len(tx.Tx.Coins) > 0 {
+		referenceAsset = tx.Tx.Coins[0].Asset
+	}
+	referenceResolved := false
+	if resolvedMemo, ok := resolveReferenceMemo(ctx, mgr, k, &tx, &voter); ok {
+		memo = resolvedMemo
+		referenceResolved = true
+	}
+
 	ctx.Logger().Debug(
 		"tx in finalized and has consensus",
 		"id", tx.Tx.ID.String(),
@@ -328,16 +348,6 @@ func handleObservedTxInQuorum(
 			ctx.Logger().Error("fail to refund", "error", newErr)
 		}
 		return nil
-	}
-
-	// Resolve reference memo if needed before processing
-	if len(tx.Tx.Coins) > 0 {
-		asset := tx.Tx.Coins[0].Asset
-		resolvedMemo := fetchMemoFromReference(ctx, mgr, asset, voter.Tx.Tx, voter.UnfinalizedHeight)
-		preMemo := voter.Tx.Tx.Memo
-		voter.Tx.Tx.Memo = resolvedMemo
-		ctx.Logger().Info("reference memo conversion", "pre", preMemo, "post", voter.Tx.Tx.Memo, "asset", asset)
-		k.SetObservedTxInVoter(ctx, voter)
 	}
 
 	// construct msg from memo
@@ -370,6 +380,10 @@ func handleObservedTxInQuorum(
 				ctx.Logger().Error("fail to refund swap", "error", refundErr)
 				return fmt.Errorf("swap failed and refund also failed: %w, refund error: %v", err, refundErr)
 			}
+			return nil
+		}
+		if referenceResolved {
+			trackReferenceMemoUsage(ctx, mgr, referenceAsset, referenceMemo, tx.Tx.ID)
 		}
 		return nil
 	}
@@ -405,6 +419,9 @@ func handleObservedTxInQuorum(
 		}
 		voter.SetDone()
 		k.SetObservedTxInVoter(ctx, voter)
+	}
+	if referenceResolved {
+		trackReferenceMemoUsage(ctx, mgr, referenceAsset, referenceMemo, tx.Tx.ID)
 	}
 
 	ctx.Logger().Info("tx in processed", "chain", tx.Tx.Chain, "id", tx.Tx.ID, "finalized", tx.IsFinal())
@@ -1136,8 +1153,88 @@ func findOriginalMemoForOutbound(ctx cosmos.Context, mgr Manager, tx common.Obse
 	return matches[0].item.Memo
 }
 
-// fetchMemoFromReference fetches memo from reference if it's a memoless transaction
+// resolveReferenceMemo resolves and parses a memoless reference memo before
+// processing. A successful resolution updates both the stored voter and the
+// in-flight observed tx so processing, refund, and completion paths share the
+// same memo. A failed resolution empties only the voter memo to prevent
+// execution; the in-flight copy keeps the raw r:<ref> for refund events. When
+// memoless transactions are halted, an otherwise-valid reference is resolved
+// only into the in-flight copy so it can provide a safe refund address without
+// becoming executable.
+func resolveReferenceMemo(ctx cosmos.Context, mgr Manager, k keeper.Keeper, tx *common.ObservedTx, voter *ObservedTxVoter) (mem.Memo, bool) {
+	if len(tx.Tx.Coins) == 0 {
+		return mem.EmptyMemo, false
+	}
+
+	preMemo := voter.Tx.Tx.Memo
+	referenceMemo, err := ParseMemoWithTHORNames(ctx, k, preMemo)
+	if err != nil || !referenceMemo.IsType(TxReferenceReadMemo) {
+		return mem.EmptyMemo, false
+	}
+
+	asset := tx.Tx.Coins[0].Asset
+	lookup := lookupMemoFromReference(ctx, mgr, asset, voter.Tx.Tx, voter.UnfinalizedHeight)
+	resolvedMemo := lookup.memo
+	// The voter memo is the source used by processOneTxIn. Store the lookup
+	// result even when it is empty so a missing, expired, or exhausted
+	// reference cannot execute using the raw r:<ref> memo.
+	voter.Tx.Tx.Memo = resolvedMemo
+	ctx.Logger().Info("reference memo conversion", "pre", preMemo, "post", resolvedMemo, "asset", asset)
+
+	if resolvedMemo == "" {
+		// Do not also blank tx.Tx.Memo. This in-flight copy is used by refund
+		// events, where preserving the observed r:<ref> is more informative than
+		// replacing it with an empty memo and does not make the reference executable.
+		k.SetObservedTxInVoter(ctx, *voter)
+		return mem.EmptyMemo, false
+	}
+
+	parsedMemo, err := ParseMemoWithTHORNames(ctx, k, resolvedMemo)
+	if err != nil {
+		voter.Tx.Tx.Memo = ""
+		k.SetObservedTxInVoter(ctx, *voter)
+		return mem.EmptyMemo, false
+	}
+
+	tx.Tx.Memo = resolvedMemo
+	if lookup.halted {
+		// HaltMemoless must stop execution, but sender-opaque chains still need
+		// the validated registered memo on the in-flight copy so refundTx can
+		// recover its explicit refund address. Keep the stored voter empty and
+		// do not report a successful resolution, which also prevents usage from
+		// being tracked by the caller.
+		voter.Tx.Tx.Memo = ""
+		k.SetObservedTxInVoter(ctx, *voter)
+		return mem.EmptyMemo, false
+	}
+
+	k.SetObservedTxInVoter(ctx, *voter)
+	// The caller parsed its local memo before reference resolution. Return the
+	// resolved parsed value so post-handler HasOutbound/SetDone decisions use
+	// the registered transaction type rather than TxReferenceReadMemo.
+	return parsedMemo, true
+}
+
+type referenceMemoLookupResult struct {
+	memo   string
+	halted bool
+}
+
+// fetchMemoFromReference fetches a memo without consuming the reference. Usage
+// is recorded only after the resolved transaction has been accepted for execution.
 func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset, tx common.Tx, txObservationHeight int64) string {
+	lookup := lookupMemoFromReference(ctx, mgr, asset, tx, txObservationHeight)
+	if lookup.halted {
+		return ""
+	}
+	return lookup.memo
+}
+
+// lookupMemoFromReference validates a reference independently from the
+// operational halt. Callers that process transactions must still reject a
+// halted lookup, while refund handling can use an otherwise-valid memo solely
+// to recover its explicit refund address.
+func lookupMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset, tx common.Tx, txObservationHeight int64) referenceMemoLookupResult {
 	mem, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), tx.Memo)
 	if err != nil {
 		ctx.Logger().Debug("failed to parse memo in fetchMemoFromReference", "error", err, "memo", tx.Memo, "txid", tx.ID)
@@ -1145,33 +1242,34 @@ func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset,
 	if mem.GetType() == TxReferenceReadMemo {
 		m, ok := mem.(ReferenceReadMemo)
 		if !ok {
-			return tx.Memo
+			return referenceMemoLookupResult{memo: tx.Memo}
 		}
-		// Check if memoless transactions are halted
+
+		result := referenceMemoLookupResult{}
 		haltMemoless, err := mgr.Keeper().GetMimir(ctx, constants.HaltMemoless.String())
 		if err == nil && haltMemoless > 0 {
-			return ""
+			result.halted = true
 		}
 
 		// Check if the reference memo exists before proceeding
 		if !mgr.Keeper().ReferenceMemoExists(ctx, asset, m.Reference) {
 			ctx.Logger().Debug("reference memo not found", "reference", m.Reference, "asset", asset)
-			return ""
+			return result
 		}
 
 		refMemo, err := mgr.Keeper().GetReferenceMemo(ctx, asset, m.Reference)
 		if err != nil {
 			ctx.Logger().Error("unable to fetch pool for ref memo lookup", "error", err, "asset", asset)
-			return ""
+			return result
 		}
 
 		// Ensure transaction was observed after the reference memo was created
 		if txObservationHeight <= refMemo.Height {
 			ctx.Logger().Info("transaction observed before reference memo creation", "tx_height", txObservationHeight, "memo_height", refMemo.Height, "reference", m.Reference)
-			// Track usage for audit purposes - we intentionally track all usage attempts (including failures)
-			// to maintain a record of who tried to use the reference memo, even if the attempt was invalid.
-			trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
-			return ""
+			// Do not track this attempt against the current record. Reference numbers
+			// are recycled, so the record may belong to a later registrant whose
+			// usage allowance must not be consumed by an older observation.
+			return result
 		}
 
 		ttl := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnTTL)
@@ -1180,23 +1278,16 @@ func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset,
 			maxUse := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnMaxUse)
 			if maxUse > 0 && refMemo.GetUsageCount() >= maxUse {
 				ctx.Logger().Info("reference memo usage limit exceeded in fetchMemoFromReference", "reference", m.Reference, "usage_count", refMemo.GetUsageCount(), "max_use", maxUse)
-				// Track usage for audit purposes - we intentionally track all usage attempts (including failures)
-				// to maintain a record of who tried to use the reference memo, even if the attempt was invalid.
-				trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
-				return ""
+				return result
 			}
 
-			// Track successful usage
-			trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
-			return refMemo.Memo
+			result.memo = refMemo.Memo
+			return result
 		}
 
-		// Track usage for audit purposes - we intentionally track all usage attempts (including failures)
-		// to maintain a record of who tried to use the reference memo, even if the attempt was invalid (expired).
-		trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
-		return ""
+		return result
 	}
-	return tx.Memo
+	return referenceMemoLookupResult{memo: tx.Memo}
 }
 
 // trackReferenceMemoUsage tracks that a transaction has used a reference memo

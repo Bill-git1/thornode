@@ -312,3 +312,174 @@ func (s *HandlerReferenceMemoSuite) TestConcurrentRegistration(c *C) {
 	c.Check(mgr.Keeper().ReferenceMemoExists(ctx, asset, "20000"), NotNil)
 	c.Check(mgr.Keeper().ReferenceMemoExists(ctx, asset, "40000"), NotNil)
 }
+
+func (s *HandlerReferenceMemoSuite) TestValidateMemolessXMRAddRequiresAssetAddress(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewReferenceMemoHandler(mgr)
+	signer := GetRandomBech32Addr()
+
+	pool := NewPool()
+	pool.Asset = common.XMRAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Decimals = 8
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
+
+	thorAddr := GetRandomTHORAddress()
+	xmrAddr, err := GetRandomEd25519PubKey().GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	btcAddr := GetRandomBTCAddress()
+
+	// XMR registration must provide a refund target before funds move rather
+	// than rely on a later paired RUNE-side add to supply the asset address.
+	msg := NewMsgReferenceMemo(common.XMRAsset, "+:XMR.XMR:"+thorAddr.String(), signer)
+	c.Assert(handler.validate(ctx, *msg), NotNil)
+
+	// A malformed asset address is permissive at memo parsing time but must be
+	// rejected while registering the reference, before any XMR funds move.
+	msg = NewMsgReferenceMemo(common.XMRAsset, "+:XMR.XMR:"+thorAddr.String()+"/not-an-address", signer)
+	c.Assert(handler.validate(ctx, *msg), NotNil)
+
+	// with an XMR asset address the registration is accepted
+	msg = NewMsgReferenceMemo(common.XMRAsset, "+:XMR.XMR:"+thorAddr.String()+"/"+xmrAddr.String(), signer)
+	c.Assert(handler.validate(ctx, *msg), IsNil)
+
+	// an asset address on the wrong chain is rejected
+	msg = NewMsgReferenceMemo(common.XMRAsset, "+:XMR.XMR:"+thorAddr.String()+"/"+btcAddr.String(), signer)
+	c.Assert(handler.validate(ctx, *msg), NotNil)
+
+	// On mocknet a checksummed featured-mainnet address is valid XMR syntax but
+	// belongs to the wrong network, so registration must reject it as well.
+	if common.CurrentChainNetwork == common.MockNet {
+		wrongNetworkAddr, err := common.NewAddress(common.XMRChecksummedDummyAddress('C'))
+		c.Assert(err, IsNil)
+		c.Assert(wrongNetworkAddr.IsChain(common.XMRChain), Equals, true)
+		c.Assert(common.XMRChain.IsValidAddress(wrongNetworkAddr), Equals, false)
+		msg = NewMsgReferenceMemo(common.XMRAsset, "+:XMR.XMR:"+thorAddr.String()+"/"+wrongNetworkAddr.String(), signer)
+		c.Assert(handler.validate(ctx, *msg), NotNil)
+	}
+
+	// non-XMR adds are unaffected
+	msg = NewMsgReferenceMemo(common.BTCAsset, "+:BTC.BTC", signer)
+	c.Assert(handler.validate(ctx, *msg), IsNil)
+
+	// Non-XMR adds reject the composite form instead of accepting and silently
+	// discarding an asset address that their handlers do not use.
+	msg = NewMsgReferenceMemo(common.BTCAsset, "+:BTC.BTC:"+btcAddr.String()+"/"+btcAddr.String(), signer)
+	c.Assert(handler.validate(ctx, *msg), NotNil)
+}
+
+func (s *HandlerReferenceMemoSuite) TestValidateMemolessXMRSwapRequiresRefundAddress(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewReferenceMemoHandler(mgr)
+	signer := GetRandomBech32Addr()
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
+
+	xmrAddr, err := GetRandomEd25519PubKey().GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	btcAddr := GetRandomBTCAddress()
+	ethAddr := GetRandomETHAddress()
+
+	type testCase struct {
+		name      string
+		asset     common.Asset
+		memo      string
+		expectErr bool
+	}
+	testCases := []testCase{
+		{
+			name:      "XMR swap without refund address",
+			asset:     common.XMRAsset,
+			memo:      fmt.Sprintf("=:BTC.BTC:%s:100", btcAddr),
+			expectErr: true,
+		},
+		{
+			name:  "XMR swap with refund address",
+			asset: common.XMRAsset,
+			memo:  fmt.Sprintf("=:BTC.BTC:%s/%s:100", btcAddr, xmrAddr),
+		},
+		{
+			name:      "XMR limit swap without refund address",
+			asset:     common.XMRAsset,
+			memo:      fmt.Sprintf("=<:BTC.BTC:%s:100", btcAddr),
+			expectErr: true,
+		},
+		{
+			name:  "XMR limit swap with refund address",
+			asset: common.XMRAsset,
+			memo:  fmt.Sprintf("=<:BTC.BTC:%s/%s:100", btcAddr, xmrAddr),
+		},
+		{
+			name:      "XMR swap with wrong-chain refund address",
+			asset:     common.XMRAsset,
+			memo:      fmt.Sprintf("=:BTC.BTC:%s/%s:100", btcAddr, btcAddr),
+			expectErr: true,
+		},
+		{
+			name:  "non-XMR swap without refund address",
+			asset: common.BTCAsset,
+			memo:  fmt.Sprintf("=:ETH.ETH:%s:100", ethAddr),
+		},
+		{
+			name:  "non-XMR swap with refund address",
+			asset: common.BTCAsset,
+			memo:  fmt.Sprintf("=:ETH.ETH:%s/%s:100", ethAddr, btcAddr),
+		},
+	}
+
+	if common.CurrentChainNetwork == common.MockNet {
+		wrongNetworkAddr, addressErr := common.NewAddress(common.XMRChecksummedDummyAddress('C'))
+		c.Assert(addressErr, IsNil)
+		testCases = append(testCases, testCase{
+			name:      "XMR swap with wrong-network refund address",
+			asset:     common.XMRAsset,
+			memo:      fmt.Sprintf("=:BTC.BTC:%s/%s:100", btcAddr, wrongNetworkAddr),
+			expectErr: true,
+		})
+	}
+
+	for _, tc := range testCases {
+		msg := NewMsgReferenceMemo(tc.asset, tc.memo, signer)
+		err := handler.validate(ctx, *msg)
+		if tc.expectErr {
+			c.Check(err, NotNil, Commentf(tc.name))
+		} else {
+			c.Check(err, IsNil, Commentf(tc.name))
+		}
+	}
+}
+
+func (s *HandlerReferenceMemoSuite) TestValidateMemolessXMRRejectsMemosWithoutRefundAddress(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewReferenceMemoHandler(mgr)
+	signer := GetRandomBech32Addr()
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
+
+	xmrAddr, err := GetRandomEd25519PubKey().GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	testCases := []struct {
+		name string
+		memo string
+	}{
+		{name: "withdraw", memo: "-:XMR.XMR:5000"},
+		{name: "donate", memo: "DONATE:XMR.XMR"},
+		{name: "trade account deposit", memo: fmt.Sprintf("TRADE+:%s", signer)},
+		{name: "trade account withdrawal", memo: fmt.Sprintf("TRADE-:%s", xmrAddr)},
+		{name: "secured asset deposit", memo: fmt.Sprintf("SECURE+:%s", signer)},
+		{name: "secured asset withdrawal", memo: fmt.Sprintf("SECURE-:%s", xmrAddr)},
+		{name: "noop", memo: "NOOP"},
+	}
+
+	for _, tc := range testCases {
+		msg := NewMsgReferenceMemo(common.XMRAsset, tc.memo, signer)
+		err := handler.validate(ctx, *msg)
+		c.Check(err, ErrorMatches, "memoless XMR .* memo is not supported because it cannot provide an explicit refund address", Commentf(tc.name))
+
+		// Observable-sender chains retain their existing reference-memo behavior.
+		msg.Asset = common.BTCAsset
+		c.Check(handler.validate(ctx, *msg), IsNil, Commentf("non-XMR %s", tc.name))
+	}
+}

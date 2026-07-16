@@ -346,6 +346,13 @@ func (c Chain) GetGasAssetDecimal() int64 {
 	}
 }
 
+// RequiresExplicitRefundAddress reports whether an inbound observation may be
+// unable to provide a usable sender address. Higher layers use this capability
+// to require an explicit asset-chain address before funds arrive.
+func (c Chain) RequiresExplicitRefundAddress() bool {
+	return c.Equals(XMRChain)
+}
+
 // IsValidAddress make sure the address is correct for the chain
 // And this also make sure mocknet doesn't use mainnet address vice versa
 func (c Chain) IsValidAddress(addr Address) bool {

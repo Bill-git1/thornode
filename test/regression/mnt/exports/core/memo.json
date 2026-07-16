@@ -421,10 +421,7 @@
           "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
           "reference": "00002",
           "registered_by": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-          "registration_hash": "F5BB07B23EEAFCE0D2E24A14357A0266A77A734D9AB7086D603A05ED709F3C8B",
-          "used_by_txs": [
-            "000000000000000000000000000000000000000000000000000000000000000a"
-          ]
+          "registration_hash": "F5BB07B23EEAFCE0D2E24A14357A0266A77A734D9AB7086D603A05ED709F3C8B"
         },
         {
           "asset": "ETH.ETH",
@@ -434,8 +431,7 @@
           "registered_by": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "registration_hash": "976635B814C787084EECC8F853956D055B3137203946D7B85A35097754EC7A75",
           "used_by_txs": [
-            "000000000000000000000000000000000000000000000000000000000000000e",
-            "0000000000000000000000000000000000000000000000000000000000000010"
+            "000000000000000000000000000000000000000000000000000000000000000e"
           ]
         },
         {

@@ -45,9 +45,38 @@ func (h ReferenceMemoHandler) validate(ctx cosmos.Context, msg MsgReferenceMemo)
 		return err
 	}
 
-	_, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
+	parsedMemo, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
 	if err != nil {
 		return err
+	}
+
+	// Chains whose observations may omit the inbound sender cannot issue a safe
+	// refund after funds arrive. Only register memo types that can carry an
+	// explicit asset-chain refund address, and require that address before funds
+	// move. Keep this fail-closed so newly added memo types are not accidentally
+	// enabled for sender-opaque chains without a safe refund path.
+	inboundChain := msg.Asset.GetLayer1Asset().GetChain()
+	addressRole := ""
+	addressField := ""
+	if inboundChain.RequiresExplicitRefundAddress() {
+		switch {
+		case parsedMemo.IsType(TxAdd):
+			addressRole = "add liquidity asset address"
+			addressField = "pair_address/asset_address"
+		case parsedMemo.IsType(TxSwap):
+			addressRole = "swap refund address"
+			addressField = "destination/refund_address"
+		default:
+			return fmt.Errorf("memoless %s %s memo is not supported because it cannot provide an explicit refund address", inboundChain, parsedMemo.GetType())
+		}
+
+		refundAddr := parsedMemo.GetRefundAddress()
+		if refundAddr.IsEmpty() {
+			return fmt.Errorf("memoless %s %s is required in the memo (%s)", inboundChain, addressRole, addressField)
+		}
+		if !inboundChain.IsValidAddress(refundAddr) {
+			return fmt.Errorf("memoless %s %s %s is not valid for the current network", inboundChain, addressRole, refundAddr)
+		}
 	}
 
 	// Check if memoless transactions are halted

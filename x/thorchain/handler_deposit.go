@@ -148,22 +148,28 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transaction")
 	}
 
+	var referenceAsset common.Asset
+	var referenceMemo string
+	referenceResolved := false
+
 	// Resolve reference memo before determining target module to ensure funds go to the correct module
 	if len(msg.Coins) > 0 && memo.GetType() == TxReferenceReadMemo {
-		asset := msg.Coins[0].Asset
+		referenceAsset = msg.Coins[0].Asset
+		referenceMemo = msg.Memo
 		// Create a temporary tx for resolution context
 		tempTx := common.NewTx(txID, from, common.NoAddress, msg.Coins, common.Gas{}, msg.Memo)
 		// Use current block height as observation height for native deposits (instant finality)
-		resolvedMemo := fetchMemoFromReference(ctx, h.mgr, asset, tempTx, ctx.BlockHeight())
+		resolvedMemo := fetchMemoFromReference(ctx, h.mgr, referenceAsset, tempTx, ctx.BlockHeight())
 		preMemo := msg.Memo
 		msg.Memo = resolvedMemo
-		ctx.Logger().Info("reference memo conversion for native deposit", "pre", preMemo, "post", msg.Memo, "asset", asset)
+		ctx.Logger().Info("reference memo conversion for native deposit", "pre", preMemo, "post", msg.Memo, "asset", referenceAsset)
 
 		// Re-parse the resolved memo
 		memo, err = ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
 		if err != nil {
 			return nil, ErrInternal(err, "invalid resolved memo")
 		}
+		referenceResolved = resolvedMemo != ""
 	}
 
 	var targetModule string
@@ -236,6 +242,10 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 					ctx.Logger().Error("fail to refund swap", "error", refundErr)
 					return nil, fmt.Errorf("swap failed and refund also failed: %w, refund error: %v", err, refundErr)
 				}
+				return &cosmos.Result{}, nil
+			}
+			if referenceResolved {
+				trackReferenceMemoUsage(ctx, h.mgr, referenceAsset, referenceMemo, txID)
 			}
 		}
 		return &cosmos.Result{}, nil
@@ -256,6 +266,9 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		}
 		voter.SetDone()
 		h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+	}
+	if referenceResolved {
+		trackReferenceMemoUsage(ctx, h.mgr, referenceAsset, referenceMemo, txID)
 	}
 	return result, nil
 }

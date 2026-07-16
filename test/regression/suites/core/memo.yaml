@@ -399,6 +399,12 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 8 }}"
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/memo/GAIA.ATOM/00001
+asserts:
+  - .used_by_txs | length == 1
+  - .used_by_txs | contains(["{{ observe_txid 8 }}"])
+---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -457,6 +463,12 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 6 }}"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/memo/BTC.BTC/00001
+asserts:
+  - .used_by_txs | length == 1
+  - .used_by_txs | contains(["{{ observe_txid 6 }}"])
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

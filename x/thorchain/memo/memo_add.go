@@ -13,11 +13,21 @@ import (
 type AddLiquidityMemo struct {
 	MemoBase
 	Address              common.Address
+	AssetAddress         common.Address
 	AffiliateAddress     common.Address
 	AffiliateBasisPoints cosmos.Uint
 }
 
 func (m AddLiquidityMemo) GetDestination() common.Address { return m.Address }
+
+func (m AddLiquidityMemo) GetAssetAddress() common.Address { return m.AssetAddress }
+
+// GetRefundAddress returns the explicit asset-chain address supplied alongside
+// the pair address (PAIRADDR/ASSETADDR). It doubles as the LP asset address and
+// the refund target when an observed sender is unavailable.
+func (m AddLiquidityMemo) GetRefundAddress() common.Address {
+	return m.GetAssetAddress()
+}
 
 func (m AddLiquidityMemo) String() string {
 	txType := m.TxType.String()
@@ -25,16 +35,21 @@ func (m AddLiquidityMemo) String() string {
 		txType = "+"
 	}
 
+	addrString := m.Address.String()
+	if !m.GetRefundAddress().IsEmpty() {
+		addrString = m.Address.String() + "/" + m.GetAssetAddress().String()
+	}
+
 	args := []string{
 		txType,
 		m.Asset.String(),
-		m.Address.String(),
+		addrString,
 		m.AffiliateAddress.String(),
 		m.AffiliateBasisPoints.String(),
 	}
 
 	last := 2
-	if !m.Address.IsEmpty() {
+	if !m.Address.IsEmpty() || !m.GetRefundAddress().IsEmpty() {
 		last = 3
 	}
 	if !m.AffiliateAddress.IsEmpty() {
@@ -59,7 +74,13 @@ func (p *parser) ParseAddLiquidityMemo() (AddLiquidityMemo, error) {
 	}
 
 	asset := p.getAsset(1, true, common.EmptyAsset)
-	addr := p.getAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
+	var addr, assetAddr common.Address
+	if asset.GetLayer1Asset().GetChain().RequiresExplicitRefundAddress() {
+		addr, assetAddr = p.getAddressAndRefundAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
+	} else {
+		// Preserve the existing single-address ADD grammar on every other chain.
+		addr = p.getAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
+	}
 	affChain := common.THORChain
 	if asset.IsSyntheticAsset() {
 		// For a Savers add, an Affiliate THORName must be resolved
@@ -68,18 +89,38 @@ func (p *parser) ParseAddLiquidityMemo() (AddLiquidityMemo, error) {
 	}
 	affAddr := p.getAddressWithKeeper(3, false, common.NoAddress, affChain)
 	affPts := p.getUintWithMaxValue(4, false, 0, constants.MaxBasisPts)
-	return NewAddLiquidityMemo(asset, addr, affAddr, affPts), p.Error()
+	memo := NewAddLiquidityMemo(asset, addr, affAddr, affPts)
+	memo.AssetAddress = assetAddr
+	return memo, p.Error()
 }
 
 func ParseAddLiquidityMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (AddLiquidityMemo, error) {
 	var err error
 	addr := common.NoAddress
+	assetAddr := common.NoAddress
 	affAddr := common.NoAddress
 	affPts := uint64(0)
 	if len(parts) >= 3 && len(parts[2]) > 0 {
-		if keeper == nil {
+		switch {
+		case asset.GetLayer1Asset().GetChain().RequiresExplicitRefundAddress():
+			// Build a lightweight parser so keeperless ParseMemo consumers apply
+			// the same PAIRADDR/ASSETADDR rules as keeper-backed parsing. An invalid
+			// optional asset address is treated as absent, while an asset address
+			// without a pair address remains invalid.
+			addressParser := parser{
+				memo:   strings.Join(parts, ":"),
+				ctx:    ctx,
+				keeper: keeper,
+				parts:  parts,
+				errs:   make([]error, 0),
+			}
+			addr, assetAddr = addressParser.getAddressAndRefundAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
+			if parseErr := addressParser.Error(); parseErr != nil {
+				return AddLiquidityMemo{}, parseErr
+			}
+		case keeper == nil:
 			addr, err = common.NewAddress(parts[2])
-		} else {
+		default:
 			addr, err = FetchAddress(ctx, keeper, parts[2], asset.Chain)
 		}
 		if err != nil {
@@ -101,5 +142,7 @@ func ParseAddLiquidityMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset com
 			return AddLiquidityMemo{}, err
 		}
 	}
-	return NewAddLiquidityMemo(asset, addr, affAddr, cosmos.NewUint(affPts)), nil
+	memo := NewAddLiquidityMemo(asset, addr, affAddr, cosmos.NewUint(affPts))
+	memo.AssetAddress = assetAddr
+	return memo, nil
 }

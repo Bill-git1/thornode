@@ -231,8 +231,13 @@ func (s *HandlerObservedTxHelpersSuite) TestReferenceMemoIntegration(c *C) {
 	resolvedMemo := fetchMemoFromReference(ctx, mgr, common.BTCAsset, tx.Tx, 1) // tx observed at height 1, memo created at height 0
 	c.Assert(resolvedMemo, Equals, "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890")
 
-	// Verify usage was tracked
+	// Resolution is read-only until the transaction is accepted.
 	updatedRefMemo, err := mgr.Keeper().GetReferenceMemo(ctx, common.BTCAsset, refID)
+	c.Assert(err, IsNil)
+	c.Assert(updatedRefMemo.GetUsageCount(), Equals, int64(0))
+
+	trackReferenceMemoUsage(ctx, mgr, common.BTCAsset, tx.Tx.Memo, tx.Tx.ID)
+	updatedRefMemo, err = mgr.Keeper().GetReferenceMemo(ctx, common.BTCAsset, refID)
 	c.Assert(err, IsNil)
 	c.Assert(updatedRefMemo.GetUsageCount(), Equals, int64(1))
 	c.Assert(updatedRefMemo.HasBeenUsedBy(tx.Tx.ID), Equals, true)
@@ -313,12 +318,14 @@ func (s *HandlerObservedTxHelpersSuite) TestReferenceMemoIntegrationWithUsageLim
 	testTx := common.NewTx(txID1, common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, memoStr)
 	resolvedMemo := fetchMemoFromReference(ctx, mgr, common.BTCAsset, testTx, 1) // tx observed at height 1, memo created at height 0
 	c.Assert(resolvedMemo, Equals, "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890")
+	trackReferenceMemoUsage(ctx, mgr, common.BTCAsset, testTx.Memo, testTx.ID)
 
 	// Second usage should succeed
 	txID2, _ := common.NewTxID("2222222222222222222222222222222222222222222222222222222222222222")
 	testTx2 := common.NewTx(txID2, common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, memoStr)
 	resolvedMemo = fetchMemoFromReference(ctx, mgr, common.BTCAsset, testTx2, 2) // tx observed at height 2, memo created at height 0
 	c.Assert(resolvedMemo, Equals, "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890")
+	trackReferenceMemoUsage(ctx, mgr, common.BTCAsset, testTx2.Memo, testTx2.ID)
 
 	// Third usage should fail (exceed limit)
 	txID3, _ := common.NewTxID("3333333333333333333333333333333333333333333333333333333333333333")
@@ -326,10 +333,10 @@ func (s *HandlerObservedTxHelpersSuite) TestReferenceMemoIntegrationWithUsageLim
 	resolvedMemo = fetchMemoFromReference(ctx, mgr, common.BTCAsset, testTx3, 3) // tx observed at height 3, memo created at height 0
 	c.Assert(resolvedMemo, Equals, "")
 
-	// Verify usage count is 3 (all attempts are tracked for audit purposes, including failures)
+	// Only the two accepted transactions consume the reference.
 	updatedRefMemo, err := mgr.Keeper().GetReferenceMemo(ctx, common.BTCAsset, refID)
 	c.Assert(err, IsNil)
-	c.Assert(updatedRefMemo.GetUsageCount(), Equals, int64(3))
+	c.Assert(updatedRefMemo.GetUsageCount(), Equals, int64(2))
 }
 
 func (s *HandlerObservedTxHelpersSuite) TestReferenceMemoIntegrationNonExistentReference(c *C) {
@@ -399,7 +406,8 @@ func (s *HandlerObservedTxHelpersSuite) TestReferenceMemoIntegrationFullWorkflow
 	resolvedMemo := fetchMemoFromReference(ctx, mgr, common.BTCAsset, testTx, 1) // tx observed at height 1, memo created at height 0
 	c.Assert(resolvedMemo, Equals, actualMemo)
 
-	// Step 5: Usage is automatically tracked by fetchMemoFromReference
+	// Step 5: Track usage after the resolved transaction is accepted
+	trackReferenceMemoUsage(ctx, mgr, common.BTCAsset, generatedMemo, tx.Tx.ID)
 
 	// Verify the full workflow worked
 	updatedRefMemo, err := mgr.Keeper().GetReferenceMemo(ctx, common.BTCAsset, refID)

@@ -138,16 +138,28 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 			toAddr := tx.Tx.FromAddress
 			usesSourceSender := true
 			memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), tx.Tx.Memo)
-			if err == nil && memo.IsType(TxSwap) && !memo.GetRefundAddress().IsEmpty() && !coin.Asset.GetChain().IsTHORChain() {
+			hasMemoRefundAddress := false
+			if err == nil {
+				hasMemoRefundAddress = memo.IsType(TxSwap) ||
+					(memo.IsType(TxAdd) && coin.Asset.GetChain().RequiresExplicitRefundAddress())
+			}
+			if err == nil && hasMemoRefundAddress && !memo.GetRefundAddress().IsEmpty() && !coin.Asset.GetChain().IsTHORChain() {
 				// If the memo specifies a refund address, send the refund to that address. If
 				// refund memo can't be parsed or is invalid for the refund chain, it will
-				// default back to the sender address
-				if memo.GetRefundAddress().IsChain(coin.Asset.GetChain()) {
-					toAddr = memo.GetRefundAddress()
+				// default back to the sender address. Add-liquidity memo addresses are used
+				// only on chains that require an explicit refund address.
+				refundAddress := memo.GetRefundAddress()
+				validRefundAddress := refundAddress.IsChain(coin.Asset.GetChain())
+				if coin.Asset.GetChain().RequiresExplicitRefundAddress() {
+					validRefundAddress = validRefundAddress && coin.Asset.GetChain().IsValidAddress(refundAddress)
+				}
+				if validRefundAddress {
+					toAddr = refundAddress
 					usesSourceSender = false
 				}
 			}
 
+			sender := tx.Tx.ObservedSender()
 			var vault Vault
 			if !tx.ObservedPubKey.IsEmpty() {
 				vault, err = mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
@@ -185,10 +197,9 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				continue
 			}
 
-			sender := tx.Tx.ObservedSender()
-			if coin.Asset.GetChain().Equals(common.XMRChain) && usesSourceSender && sender.RefundAddressRequired {
-				ctx.Logger().Info("skip xmr refund to unknown sender marker", "in_hash", tx.Tx.ID.String(), "coin", coin.String())
-				refundReason = fmt.Sprintf("%s; fail to refund (%s): unknown xmr sender and no explicit refund address", refundReason, toi.Coin.String())
+			if usesSourceSender && sender.RefundAddressRequired {
+				ctx.Logger().Info("skip refund to unavailable sender", "in_hash", tx.Tx.ID.String(), "coin", coin.String())
+				refundReason = fmt.Sprintf("%s; fail to refund (%s): sender unavailable and no explicit refund address", refundReason, toi.Coin.String())
 				unrefundableCoinCleanup(ctx, mgr, toi, "failed_refund_unknown_sender")
 				continue
 			}

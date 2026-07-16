@@ -459,7 +459,7 @@ func ResolveObservedSender(chain Chain, addr Address) ObservedSenderInfo {
 		Address: addr,
 		Known:   !addr.IsEmpty(),
 	}
-	if chain.Equals(XMRChain) && IsXMRUnknownSenderAddress(addr) {
+	if chain.RequiresExplicitRefundAddress() && IsXMRUnknownSenderAddress(addr) {
 		info.Address = NoAddress
 		info.Known = false
 		info.RefundAddressRequired = true
