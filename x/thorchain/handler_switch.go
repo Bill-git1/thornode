@@ -49,10 +49,18 @@ func (h SwitchHandler) validate(ctx cosmos.Context, msg MsgSwitch) error {
 }
 
 func (h SwitchHandler) handle(ctx cosmos.Context, msg MsgSwitch) error {
+	// The native mint and the L1 burn outbound must be atomic: minting the native
+	// replacement token before the burn outbound is durably scheduled would allow
+	// the supply to be inflated without a corresponding L1 burn if scheduling later
+	// fails or the outbound is dropped. Perform both inside a cache context and only
+	// commit once the outbound has been successfully scheduled; any earlier return
+	// discards the mint along with every other cached side effect.
+	cacheCtx, commit := ctx.CacheContext()
+
 	// Mint the full amount as native tokens. Switch assets are tokens (not gas assets),
 	// so the outbound burn gas is subsidized by the gas asset pool—no outbound fee
 	// deduction from the switch amount is needed.
-	addr, err := h.mgr.SwitchManager().Switch(ctx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
+	addr, err := h.mgr.SwitchManager().Switch(cacheCtx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
 	if err != nil {
 		ctx.Logger().Error("fail to handle switch", "error", err)
 		return err
@@ -65,13 +73,17 @@ func (h SwitchHandler) handle(ctx cosmos.Context, msg MsgSwitch) error {
 		Coin:      common.NewCoin(msg.Asset, msg.Amount),
 	}
 
-	ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, cosmos.ZeroUint())
+	ok, err := h.mgr.TxOutStore().TryAddTxOutItem(cacheCtx, h.mgr, toi, cosmos.ZeroUint())
 	if err != nil {
 		return multierror.Append(errFailAddOutboundTx, err)
 	}
 	if !ok {
 		return errFailAddOutboundTx
 	}
+
+	// Both the mint and the burn outbound succeeded; commit the cached state and
+	// events to the parent context.
+	commit()
 
 	return nil
 }

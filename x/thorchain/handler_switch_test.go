@@ -251,6 +251,70 @@ func (s *HandlerSwitchSuite) TestSwitchHandler_TxOutReturnsFalseNoError(c *C) {
 	c.Assert(errors.Is(err, errFailAddOutboundTx), Equals, true)
 }
 
+// mintedSwitchAsset returns the THORChain-native asset that the switch manager
+// mints for the given L1 switch asset.
+func mintedSwitchAsset(asset common.Asset) common.Asset {
+	return common.Asset{Chain: common.THORChain, Symbol: asset.Symbol, Ticker: asset.Ticker}
+}
+
+// TestSwitchHandler_MintRolledBackOnTxOutFailure ensures the native mint is
+// discarded when the burn outbound cannot be scheduled, so supply is never
+// inflated without a corresponding L1 burn (#3033).
+func (s *HandlerSwitchSuite) TestSwitchHandler_MintRolledBackOnTxOutFailure(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	h := NewSwitchHandler(mgr)
+
+	signer := GetRandomBech32Addr()
+	tx := GetRandomTx()
+	asset := common.Asset{Chain: common.GAIAChain, Symbol: "KUJI", Ticker: "KUJI"}
+	native := mintedSwitchAsset(asset)
+
+	// Enable switching
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSwitch, asset.Chain.String(), asset.Symbol.String())
+	mgr.Keeper().SetMimir(ctx, mimirKey, 1)
+
+	// Use the real switch manager (which mints) with a tx out store that always fails.
+	mgr.txOutStore = NewTxStoreFailDummy()
+
+	// No native tokens minted to the owner yet.
+	c.Assert(mgr.Keeper().GetBalanceOf(ctx, signer, native).Amount.IsZero(), Equals, true)
+
+	msg := NewMsgSwitch(asset, cosmos.NewUint(100), signer, signer, tx)
+	_, err := h.Run(ctx, msg)
+	c.Assert(err, NotNil)
+
+	// The mint must have been rolled back along with the failed outbound.
+	c.Assert(mgr.Keeper().GetBalanceOf(ctx, signer, native).Amount.IsZero(), Equals, true)
+}
+
+// TestSwitchHandler_MintRolledBackWhenOutboundDropped ensures that when the burn
+// outbound is silently dropped (TryAddTxOutItem returns false without an error)
+// the native mint is discarded rather than left un-burned (#3033).
+func (s *HandlerSwitchSuite) TestSwitchHandler_MintRolledBackWhenOutboundDropped(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	h := NewSwitchHandler(mgr)
+
+	signer := GetRandomBech32Addr()
+	tx := GetRandomTx()
+	asset := common.Asset{Chain: common.GAIAChain, Symbol: "KUJI", Ticker: "KUJI"}
+	native := mintedSwitchAsset(asset)
+
+	// Enable switching
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSwitch, asset.Chain.String(), asset.Symbol.String())
+	mgr.Keeper().SetMimir(ctx, mimirKey, 1)
+
+	// Real switch manager mints; tx out store drops the output (false, nil).
+	mgr.txOutStore = &txOutStoreReturnFalseDummy{}
+
+	msg := NewMsgSwitch(asset, cosmos.NewUint(100), signer, signer, tx)
+	_, err := h.Run(ctx, msg)
+	c.Assert(err, NotNil)
+	c.Assert(errors.Is(err, errFailAddOutboundTx), Equals, true)
+
+	// The mint must have been rolled back since no outbound was scheduled.
+	c.Assert(mgr.Keeper().GetBalanceOf(ctx, signer, native).Amount.IsZero(), Equals, true)
+}
+
 func (s *HandlerSwitchSuite) TestSwitchHandler_HappyPath(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	h := NewSwitchHandler(mgr)

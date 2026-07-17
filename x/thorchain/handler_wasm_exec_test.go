@@ -249,6 +249,58 @@ func (s *HandlerWasmExecSuite) TestWasmExecHandler_ExecuteContractFails(c *C) {
 	c.Assert(err.Error(), Equals, "execute contract failed")
 }
 
+// TestWasmExecHandler_DepositRolledBackOnExecuteFailure ensures that when a
+// non-secured asset is deposited (minting secured shares and increasing pool
+// depth) but the contract execution subsequently fails, the deposit is fully
+// rolled back so no shares are left minted without a completed execution (#3032).
+func (s *HandlerWasmExecSuite) TestWasmExecHandler_DepositRolledBackOnExecuteFailure(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// WasmManager fails on ExecuteContract, after the deposit has been performed.
+	mgr.wasmManager = &failingWasmManager{}
+
+	h := NewWasmExecHandler(mgr)
+
+	// Set up a BTC pool so SecuredAssetManager.Deposit can succeed.
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	sender := GetRandomBech32Addr()
+	securedAsset := common.BTCAsset.GetSecuredAsset()
+
+	// No secured shares and no secured-asset pool depth before the call.
+	c.Assert(mgr.Keeper().GetBalanceOf(ctx, sender, securedAsset).Amount.IsZero(), Equals, true)
+
+	msg := NewMsgWasmExec(
+		common.BTCAsset,
+		cosmos.NewUint(100),
+		GetRandomBech32Addr(),
+		sender,
+		GetRandomBech32Addr(),
+		[]byte(`{"action":"test"}`),
+		common.Tx{
+			ID:          GetRandomTxHash(),
+			FromAddress: GetRandomBTCAddress(),
+		},
+	)
+
+	result, err := h.Run(ctx, msg)
+	c.Assert(err, NotNil)
+	c.Assert(result, IsNil)
+
+	// The secured-asset mint must have been rolled back with the failed execution.
+	c.Assert(mgr.Keeper().GetBalanceOf(ctx, sender, securedAsset).Amount.IsZero(), Equals, true)
+
+	// The secured-asset pool depth increase must have been rolled back too.
+	securedPool, err := mgr.Keeper().GetSecuredAsset(ctx, securedAsset)
+	c.Assert(err, IsNil)
+	c.Assert(securedPool.Depth.IsZero(), Equals, true)
+}
+
 // failingWasmManager is a test double that returns errors on ExecuteContract
 type failingWasmManager struct {
 	DummyWasmManager

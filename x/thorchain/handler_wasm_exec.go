@@ -56,19 +56,32 @@ func (h WasmExecHandler) handle(ctx cosmos.Context, msg MsgWasmExec) (*cosmos.Re
 		err     error
 	)
 
+	// The secured-asset deposit (which mints secured shares and increases pool
+	// depth) and the contract execution must be atomic. Minting shares before the
+	// contract call succeeds would allow a failing/reverting contract to leave the
+	// minted shares in place while the original L1 inbound is refunded elsewhere,
+	// double-spending vault liquidity. Run both inside a cache context and only
+	// commit once execution succeeds; any earlier return discards the deposit along
+	// with every other cached side effect.
+	cacheCtx, commit := ctx.CacheContext()
+
 	if msg.Asset.IsSecuredAsset() {
 		execAmt = cosmos.NewCoin(msg.Asset.Native(), math.Int(msg.Amount))
 	} else {
-		execAmt, err = h.mgr.SecuredAssetManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Sender, msg.Tx.FromAddress, msg.Tx.ID)
+		execAmt, err = h.mgr.SecuredAssetManager().Deposit(cacheCtx, msg.Asset, msg.Amount, msg.Sender, msg.Tx.FromAddress, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	_, err = h.mgr.WasmManager().ExecuteContract(ctx, msg.Contract, msg.Sender, msg.Msg, cosmos.NewCoins(execAmt))
+	_, err = h.mgr.WasmManager().ExecuteContract(cacheCtx, msg.Contract, msg.Sender, msg.Msg, cosmos.NewCoins(execAmt))
 	if err != nil {
 		return nil, err
 	}
+
+	// Both the deposit and the contract execution succeeded; commit the cached
+	// state and events to the parent context.
+	commit()
 
 	return &cosmos.Result{}, nil
 }
