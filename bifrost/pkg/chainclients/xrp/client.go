@@ -1,6 +1,7 @@
 package xrp
 
 import (
+	"context"
 	"crypto/sha512"
 	"encoding/asn1"
 	"encoding/hex"
@@ -293,6 +294,58 @@ func (c *Client) processOutboundTx(tx stypes.TxOutItem) (*transactions.Payment, 
 	return &payment, nil
 }
 
+// verifyBroadcast is the signer-cache verifyFn: it reports whether the recorded
+// broadcast sig is on chain, via the rippled `tx` query (bounded by a timeout).
+// A validated tx is present; txnNotFound with searched_all is definitively absent
+// (txnNotFound without searched_all — a pruned online_delete node — is ambiguous);
+// any RPC/parse error or in-flight response is ambiguous (fail-closed).
+func (c *Client) verifyBroadcast(sig string) signercache.LookupResult {
+	// Wrap the lookup in an explicit timeout to bound the signer goroutine.
+	type lookupRes struct {
+		res rpc.XRPLResponse
+		err error
+	}
+	resultCh := make(chan lookupRes, 1)
+	go func() {
+		res, rpcErr := c.rpcClient.Request(&requests.TxRequest{Transaction: sig})
+		resultCh <- lookupRes{res: res, err: rpcErr}
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var res rpc.XRPLResponse
+	var rpcErr error
+	select {
+	case r := <-resultCh:
+		res, rpcErr = r.res, r.err
+	case <-ctx.Done():
+		rpcErr = ctx.Err()
+	}
+	// The xrpl-go client surfaces a rippled result-level error (e.g. txnNotFound for
+	// a missing tx) as a non-nil rpcErr with a NIL response — so we cannot recover
+	// searched_all to distinguish a genuinely-absent tx from a pruned (online_delete)
+	// node. Treating txnNotFound as definitive absence would risk clearing the cache
+	// and re-signing a tx that a pruned node simply couldn't find (double-spend), so
+	// any error is fail-closed ambiguous. XRP recovers a dropped broadcast via a
+	// manual/operator cache clear rather than this verify path.
+	if rpcErr != nil || res == nil {
+		return signercache.LookupAmbiguous
+	}
+	var parsed struct {
+		Validated bool `json:"validated"`
+	}
+	if parseErr := res.GetResult(&parsed); parseErr != nil {
+		return signercache.LookupAmbiguous
+	}
+	if parsed.Validated {
+		// rippled reports the tx in a validated (closed) ledger — the recorded
+		// broadcast is definitively on chain, so respect the cache and record it as
+		// present (PhaseVerifiedFound) rather than merely ambiguous.
+		return signercache.LookupFound
+	}
+	// Non-validated (in flight) or unrecognized response — respect cache.
+	return signercache.LookupAmbiguous
+}
+
 // SignTx sign the the given TxArrayItem
 func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, checkpoint []byte, _ *stypes.TxInItem, err error) {
 	defer func() {
@@ -318,8 +371,23 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, c
 		}
 	}()
 
-	if c.signerCacheManager.HasSigned(tx.CacheHash()) {
-		c.logger.Info().Interface("tx", tx).Msg("transaction already signed, ignoring...")
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSkipSignerCache, c.cfg.ChainID)
+	gateFn := func() bool {
+		skipCache, mimirErr := c.thorchainBridge.GetMimir(mimirKey)
+		return mimirErr == nil && skipCache > 0
+	}
+	check := c.signerCacheManager.SignTxCacheCheck(tx.CacheHash(), gateFn, c.verifyBroadcast)
+	if check.Phase != signercache.PhaseNoEntry {
+		ev := c.logger.Info()
+		if check.Noteworthy() {
+			ev = c.logger.Warn()
+		}
+		ev.Stringer("phase", check.Phase).
+			Str("sig", check.Sig).
+			Interface("tx", tx).
+			Msg(check.Phase.String())
+	}
+	if check.SkipSign {
 		return nil, nil, nil, nil
 	}
 
@@ -601,7 +669,8 @@ func (c *Client) BroadcastTx(tx stypes.TxOutItem, txBytes []byte) (string, error
 	}
 
 	c.accts.SeqInc(tx.VaultPubKey)
-	if err = c.signerCacheManager.SetSigned(tx.CacheHash(), tx.CacheVault(c.GetChain()), txHash); err != nil {
+	expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+	if err = c.signerCacheManager.SetSignedWithExpiry(tx.CacheHash(), tx.CacheVault(c.GetChain()), txHash, expiry); err != nil {
 		c.logger.Err(err).Msg("fail to set signer cache")
 	}
 
@@ -618,6 +687,11 @@ func (c *Client) ConfirmationCountReady(txIn stypes.TxIn) bool {
 // If the transaction was successful, we know it is included in a block and thus immutable.
 func (c *Client) GetConfirmationCount(txIn stypes.TxIn) int64 {
 	return 0
+}
+
+// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+func (c *Client) getSignerCacheExpiry() time.Duration {
+	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
 }
 
 // GetGasEstimateForSolvency returns the current gas fee estimate used by solvency checks.

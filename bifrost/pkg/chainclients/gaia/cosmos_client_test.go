@@ -2,6 +2,8 @@ package gaia
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +15,8 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	cmtcoretypes "github.com/cometbft/cometbft/rpc/core/types"
+	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -24,7 +28,10 @@ import (
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
@@ -38,9 +45,77 @@ import (
 
 func TestPackage(t *testing.T) { TestingT(t) }
 
+// fakeCometRPC is an injectable cometMempoolClient for verifyFn mempool tests.
+type fakeCometRPC struct {
+	res *cmtcoretypes.ResultUnconfirmedTxs
+	err error
+}
+
+func (f fakeCometRPC) UnconfirmedTxs(context.Context, *int) (*cmtcoretypes.ResultUnconfirmedTxs, error) {
+	return f.res, f.err
+}
+
+// TestGaiaMempoolLookup covers the CometBFT mempool fallback used by the signer-
+// cache verifyFn once GetTx reports the tx as not committed: present → respect
+// cache, definitively absent → clear + re-sign, and any uncertainty (RPC error,
+// nil client, or a mempool larger than we could fetch) → fail-closed.
+func TestGaiaMempoolLookup(t *testing.T) {
+	pending := cmttypes.Tx([]byte("pending-broadcast-bytes"))
+	sig := fmt.Sprintf("%X", pending.Hash())
+	ctx := context.Background()
+
+	cases := []struct {
+		name string
+		rpc  cometMempoolClient
+		want signercache.LookupResult
+	}{
+		{"nil client", nil, signercache.LookupAmbiguous},
+		{"rpc error", fakeCometRPC{err: errors.New("boom")}, signercache.LookupAmbiguous},
+		{"present in mempool", fakeCometRPC{res: &cmtcoretypes.ResultUnconfirmedTxs{Txs: []cmttypes.Tx{pending}, Total: 1}}, signercache.LookupFound},
+		{"absent, full mempool scanned", fakeCometRPC{res: &cmtcoretypes.ResultUnconfirmedTxs{Txs: []cmttypes.Tx{}, Total: 0}}, signercache.LookupNotFound},
+		{"mempool larger than fetched", fakeCometRPC{res: &cmtcoretypes.ResultUnconfirmedTxs{Txs: []cmttypes.Tx{[]byte("other")}, Total: 99}}, signercache.LookupAmbiguous},
+	}
+	for _, tc := range cases {
+		cc := CosmosClient{cometRPC: tc.rpc}
+		if got := cc.mempoolLookup(ctx, sig); got != tc.want {
+			t.Fatalf("%s: got %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// TestGaiaVerifyBroadcast covers the signer-cache verifyFn routing: a committed tx
+// (GetTx ok) is present; a not-committed tx falls back to the mempool; any other
+// gRPC error is ambiguous (fail-closed).
+func TestGaiaVerifyBroadcast(t *testing.T) {
+	pending := cmttypes.Tx([]byte("pending-broadcast-bytes"))
+	sig := fmt.Sprintf("%X", pending.Hash())
+	notCommitted := status.Error(codes.NotFound, "tx not found")
+	inMempool := fakeCometRPC{res: &cmtcoretypes.ResultUnconfirmedTxs{Txs: []cmttypes.Tx{pending}, Total: 1}}
+	emptyMempool := fakeCometRPC{res: &cmtcoretypes.ResultUnconfirmedTxs{Txs: []cmttypes.Tx{}, Total: 0}}
+
+	cases := []struct {
+		name     string
+		getTxErr error
+		rpc      cometMempoolClient
+		want     signercache.LookupResult
+	}{
+		{"committed", nil, emptyMempool, signercache.LookupFound},
+		{"not committed, in mempool", notCommitted, inMempool, signercache.LookupFound},
+		{"not committed, absent", notCommitted, emptyMempool, signercache.LookupNotFound},
+		{"grpc error", errors.New("boom"), emptyMempool, signercache.LookupAmbiguous},
+	}
+	for _, tc := range cases {
+		cc := CosmosClient{txClient: mockTxServiceClient{getTxErr: tc.getTxErr}, cometRPC: tc.rpc}
+		if got := cc.verifyBroadcast(sig); got != tc.want {
+			t.Fatalf("%s: got %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
 type mockTxServiceClient struct {
-	resp *txtypes.BroadcastTxResponse
-	err  error
+	resp     *txtypes.BroadcastTxResponse
+	err      error
+	getTxErr error
 }
 
 func (m mockTxServiceClient) Simulate(context.Context, *txtypes.SimulateRequest, ...grpc.CallOption) (*txtypes.SimulateResponse, error) {
@@ -48,7 +123,7 @@ func (m mockTxServiceClient) Simulate(context.Context, *txtypes.SimulateRequest,
 }
 
 func (m mockTxServiceClient) GetTx(context.Context, *txtypes.GetTxRequest, ...grpc.CallOption) (*txtypes.GetTxResponse, error) {
-	return nil, nil
+	return nil, m.getTxErr
 }
 
 func (m mockTxServiceClient) BroadcastTx(context.Context, *txtypes.BroadcastTxRequest, ...grpc.CallOption) (*txtypes.BroadcastTxResponse, error) {

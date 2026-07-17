@@ -472,40 +472,35 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		return nil, nil, nil, errors.New("vault public key is empty")
 	}
 
-	if signed, expired := c.signerCacheManager.HasSignedWithExpiry(tx.CacheHash()); signed {
-		if !expired {
-			// Pre-expiry: the recorded broadcast's blockhash may still allow it to
-			// land, so never re-sign during this window — doing so risks a second
-			// broadcast that lands alongside the first and double-spends.
-			c.logger.Info().Interface("tx", tx).Msg("transaction signed before, ignore")
-			return nil, nil, nil, nil
-		}
-
-		// Expired: re-signing is only safe after chain-side verification confirms
-		// the recorded broadcast is not on chain. Any other invalidation (expiry
-		// alone, RPC error) would risk a double-spend when thorchain observation
-		// consensus lags behind actual Solana inclusion.
-		sig, ok := c.signerCacheManager.GetSignedTxHash(tx.CacheHash())
-		if !ok {
-			// No recorded broadcast hash to verify — respect the cache.
-			c.logger.Info().Interface("tx", tx).Msg("transaction signed before, ignore")
-			return nil, nil, nil, nil
-		}
+	// Solana is the canonical reference for the cache-and-verify pattern. Unlike
+	// the EVM/UTXO/Cosmos/TRON/XRP clients (which gate the verification path
+	// behind a SkipSignerCache<Chain> mimir), Solana enables verification
+	// unconditionally because the broadcast's blockhash already constrains
+	// re-sign safety to a tight window (~60s).
+	verifyFn := func(sig string) signercache.LookupResult {
 		result, lookupErr := c.rpcClient.GetTransactionConfirmed(sig)
 		switch {
 		case lookupErr != nil:
-			c.logger.Warn().Err(lookupErr).Str("sig", sig).Interface("tx", tx).
-				Msg("signature lookup failed, respecting signer cache")
-			return nil, nil, nil, nil
+			return signercache.LookupAmbiguous
 		case result.Slot > 0:
-			c.logger.Info().Str("sig", sig).Interface("tx", tx).
-				Msg("cached broadcast confirmed on chain, respecting signer cache")
-			return nil, nil, nil, nil
+			return signercache.LookupFound
 		default:
-			c.logger.Warn().Str("sig", sig).Interface("tx", tx).
-				Msg("expired cached broadcast not found on chain, clearing signer cache")
-			c.signerCacheManager.RemoveSigned(sig)
+			return signercache.LookupNotFound
 		}
+	}
+	check := c.signerCacheManager.SignTxCacheCheck(tx.CacheHash(), func() bool { return true }, verifyFn)
+	if check.Phase != signercache.PhaseNoEntry {
+		ev := c.logger.Info()
+		if check.Noteworthy() {
+			ev = c.logger.Warn()
+		}
+		ev.Stringer("phase", check.Phase).
+			Str("sig", check.Sig).
+			Interface("tx", tx).
+			Msg(check.Phase.String())
+	}
+	if check.SkipSign {
+		return nil, nil, nil, nil
 	}
 
 	// GetMemo returns OriginalMemo for memoless outbounds

@@ -81,6 +81,11 @@ type EVMClient struct {
 	signingReady atomic.Bool
 }
 
+// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+func (c *EVMClient) getSignerCacheExpiry() time.Duration {
+	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+}
+
 // NewEVMClient creates a new EVMClient.
 func NewEVMClient(
 	thorKeys *thorclient.Keys,
@@ -981,6 +986,28 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 
 // --------------------------------- sign ---------------------------------
 
+// verifyBroadcast is the signer-cache verifyFn: it reports whether the recorded
+// broadcast sig is on chain. It uses TransactionByHash instead of TransactionReceipt
+// because receipts only exist for MINED txs, so a pending mempool tx would surface
+// as ethereum.NotFound and be misclassified as absent. TransactionByHash returns
+// (tx, pending, err) and only returns NotFound for genuinely absent txs. A
+// non-NotFound RPC error is ambiguous (fail-closed). Same approach as unstuckTx.
+func (c *EVMClient) verifyBroadcast(sig string) signercache.LookupResult {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	onchainTx, _, lookupErr := c.ethClient.TransactionByHash(ctx, ecommon.HexToHash(sig))
+	switch {
+	case lookupErr != nil && !errors.Is(lookupErr, ethereum.NotFound):
+		return signercache.LookupAmbiguous
+	case lookupErr == nil && onchainTx != nil:
+		// Mined or pending — both mean the recorded broadcast is alive, so
+		// re-signing risks double-spend at a different pending nonce.
+		return signercache.LookupFound
+	default:
+		return signercache.LookupNotFound
+	}
+}
+
 // SignTx returns the signed transaction.
 func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error) {
 	// Wait for liability reconstruction to complete before signing
@@ -992,8 +1019,23 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		return nil, nil, nil, fmt.Errorf("chain %s is not support by evm chain client", tx.Chain)
 	}
 
-	if c.signerCacheManager.HasSigned(tx.CacheHash()) {
-		c.logger.Info().Interface("tx", tx).Msg("transaction signed before, ignore")
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSkipSignerCache, c.cfg.ChainID)
+	gateFn := func() bool {
+		skipCache, err := c.bridge.GetMimir(mimirKey)
+		return err == nil && skipCache > 0
+	}
+	check := c.signerCacheManager.SignTxCacheCheck(tx.CacheHash(), gateFn, c.verifyBroadcast)
+	if check.Phase != signercache.PhaseNoEntry {
+		ev := c.logger.Info()
+		if check.Noteworthy() {
+			ev = c.logger.Warn()
+		}
+		ev.Stringer("phase", check.Phase).
+			Str("sig", check.Sig).
+			Interface("tx", tx).
+			Msg(check.Phase.String())
+	}
+	if check.SkipSign {
 		return nil, nil, nil, nil
 	}
 
@@ -1429,7 +1471,8 @@ func (c *EVMClient) BroadcastTx(txOutItem stypes.TxOutItem, hexTx []byte) (strin
 	c.logger.Info().Str("memo", txOutItem.Memo).Str("txid", txID).Msg("broadcast tx")
 
 	// update the signer cache
-	if err := c.signerCacheManager.SetSigned(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), txID); err != nil {
+	expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+	if err := c.signerCacheManager.SetSignedWithExpiry(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), txID, expiry); err != nil {
 		c.logger.Err(err).Interface("txOutItem", txOutItem).Msg("fail to mark tx out item as signed")
 	}
 

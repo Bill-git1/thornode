@@ -595,6 +595,32 @@ func (c *Client) convertThorchainAmountToWei(amt *big.Int) *big.Int {
 	return big.NewInt(0).Mul(amt, big.NewInt(common.One*100))
 }
 
+// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+func (c *Client) getSignerCacheExpiry() time.Duration {
+	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+}
+
+// verifyBroadcast is the signer-cache verifyFn: it reports whether the recorded
+// broadcast sig is on chain. It uses TransactionByHash (not TransactionReceipt),
+// which returns (tx, pending, err) and only NotFound for genuinely absent txs, so
+// a pending mempool tx is not misclassified as absent. A non-NotFound RPC error is
+// ambiguous (fail-closed). Same approach as unstuckTx.
+func (c *Client) verifyBroadcast(sig string) signercache.LookupResult {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	onchainTx, _, lookupErr := c.client.TransactionByHash(ctx, ecommon.HexToHash(sig))
+	switch {
+	case lookupErr != nil && !errors.Is(lookupErr, ethereum.NotFound):
+		return signercache.LookupAmbiguous
+	case lookupErr == nil && onchainTx != nil:
+		// Mined or pending — both mean the recorded broadcast is alive, so
+		// re-signing risks double-spend at a different pending nonce.
+		return signercache.LookupFound
+	default:
+		return signercache.LookupNotFound
+	}
+}
+
 // SignTx sign the the given TxArrayItem
 func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error) {
 	// Wait for liability reconstruction to complete before signing
@@ -606,8 +632,23 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		return nil, nil, nil, fmt.Errorf("chain %s is not support by ETH chain client", tx.Chain)
 	}
 
-	if c.signerCacheManager.HasSigned(tx.CacheHash()) {
-		c.logger.Info().Msgf("transaction(%+v), signed before , ignore", tx)
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSkipSignerCache, c.cfg.ChainID)
+	gateFn := func() bool {
+		skipCache, err := c.bridge.GetMimir(mimirKey)
+		return err == nil && skipCache > 0
+	}
+	check := c.signerCacheManager.SignTxCacheCheck(tx.CacheHash(), gateFn, c.verifyBroadcast)
+	if check.Phase != signercache.PhaseNoEntry {
+		ev := c.logger.Info()
+		if check.Noteworthy() {
+			ev = c.logger.Warn()
+		}
+		ev.Stringer("phase", check.Phase).
+			Str("sig", check.Sig).
+			Interface("tx", tx).
+			Msg(check.Phase.String())
+	}
+	if check.SkipSign {
 		return nil, nil, nil, nil
 	}
 
@@ -1259,7 +1300,8 @@ func (c *Client) BroadcastTx(txOutItem stypes.TxOutItem, hexTx []byte) (string, 
 	txID := tx.Hash().String()
 	c.logger.Info().Msgf("broadcast tx with memo: %s to ETH chain , hash: %s", txOutItem.Memo, txID)
 
-	if err := c.signerCacheManager.SetSigned(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), txID); err != nil {
+	expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+	if err := c.signerCacheManager.SetSignedWithExpiry(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), txID, expiry); err != nil {
 		c.logger.Err(err).Msgf("fail to mark tx out item (%+v) as signed", txOutItem)
 	}
 

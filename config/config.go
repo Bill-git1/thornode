@@ -758,8 +758,9 @@ type BifrostSignerConfiguration struct {
 
 	// RescheduleBufferBlocks is the number of blocks before reschedule we will stop
 	// attempting to sign and broadcast (for outbounds not in round 7 retry).
-	RescheduleBufferBlocks int64          `mapstructure:"reschedule_buffer_blocks"`
-	LevelDB                LevelDBOptions `mapstructure:"leveldb"`
+	RescheduleBufferBlocks int64 `mapstructure:"reschedule_buffer_blocks"`
+
+	LevelDB LevelDBOptions `mapstructure:"leveldb"`
 
 	// AutoObserve will automatically submit the observation for outbound transactions once
 	// they are signed - regardless of broadcast success.
@@ -882,6 +883,13 @@ type BifrostChainConfiguration struct {
 	// MinConfirmations is the minimum number of confirmations to require before an
 	// observed inbound transaction is considered valid.
 	MinConfirmations uint64 `mapstructure:"min_confirmations"`
+
+	// SignerCacheExpiry is the duration after broadcast during which the signer
+	// cache entry is respected unconditionally. After expiry, the cache can be
+	// bypassed if the operational mimir SkipSignerCache<Chain> is set and the
+	// broadcast tx is not found on chain. Chains that embed a recent block hash
+	// (e.g. Solana) use their own shorter expiry. Default: 72h (3 days).
+	SignerCacheExpiry time.Duration `mapstructure:"signer_cache_expiry"`
 
 	// MaxRPCRetries is the maximum number of retries for RPC requests.
 	MaxRPCRetries int `mapstructure:"max_rpc_retries"`

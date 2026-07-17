@@ -8,11 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
 	errorsmod "cosmossdk.io/errors"
 	"github.com/cometbft/cometbft/crypto"
+	rpcclienthttp "github.com/cometbft/cometbft/rpc/client/http"
+	cmtcoretypes "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -44,7 +47,9 @@ import (
 	"gitlab.com/thorchain/thornode/v3/constants"
 	memo "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // CosmosSuccessCodes a transaction is considered successful if it returns 0
@@ -53,6 +58,13 @@ var CosmosSuccessCodes = map[uint32]bool{
 	errorsmod.SuccessABCICode:                 true,
 	errortypes.ErrTxInMempoolCache.ABCICode(): true,
 	errortypes.ErrWrongSequence.ABCICode():    true,
+}
+
+// cometMempoolClient is the subset of the CometBFT RPC client used to check the
+// mempool during signer-cache verification; narrowed to an interface so tests can
+// inject a fake. *rpcclienthttp.HTTP satisfies it.
+type cometMempoolClient interface {
+	UnconfirmedTxs(ctx context.Context, limit *int) (*cmtcoretypes.ResultUnconfirmedTxs, error)
 }
 
 // CosmosClient is a structure to sign and broadcast tx to Cosmos chain used by signer mostly
@@ -72,6 +84,7 @@ type CosmosClient struct {
 	blockScanner        *blockscanner.BlockScanner
 	signerCacheManager  *signercache.CacheManager
 	cosmosScanner       *CosmosBlockScanner
+	cometRPC            cometMempoolClient
 	globalSolvencyQueue chan stypes.Solvency
 	// Serializes ReportSolvency when FetchTxs prefetch callbacks and SolvencyCheckRunner can both enter.
 	solvencyLock sync.Mutex
@@ -166,6 +179,13 @@ func NewCosmosClient(
 		return nil, fmt.Errorf("failed to create cosmos scanner: %w", err)
 	}
 
+	// Reused by the SignTx verifyFn mempool fallback (mempoolLookup) so it doesn't
+	// construct a CometBFT client per call.
+	c.cometRPC, err = rpcclienthttp.New(c.cfg.RPCHost, "/websocket")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cometbft rpc client: %w", err)
+	}
+
 	c.blockScanner, err = blockscanner.NewBlockScanner(c.cfg.BlockScanner, c.storage, m, c.thorchainBridge, c.cosmosScanner)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create block scanner: %w", err)
@@ -237,6 +257,11 @@ func (c *CosmosClient) GetLatestTxForVault(vault string) (string, string, error)
 	}
 	lastBroadCasted, err := c.signerCacheManager.GetLatestRecordedTx(stypes.BroadcastCacheKey(vault, c.GetChain().String()))
 	return lastObserved, lastBroadCasted, err
+}
+
+// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+func (c *CosmosClient) getSignerCacheExpiry() time.Duration {
+	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
 }
 
 // GetAddress return current signer address, it will be bech32 encoded address
@@ -332,6 +357,52 @@ func (c *CosmosClient) processOutboundTx(tx stypes.TxOutItem, thorchainHeight in
 	}, nil
 }
 
+// mempoolLookup reports whether sig (a broadcast tx hash) is currently in the
+// CometBFT mempool. It returns LookupFound if present, LookupNotFound only when
+// the full mempool was fetched and sig is absent, and LookupAmbiguous (fail
+// closed) on any RPC error or when the mempool is larger than we could fetch — so
+// a still-pending broadcast is never mistaken for "absent" and re-signed.
+func (c *CosmosClient) mempoolLookup(ctx context.Context, sig string) signercache.LookupResult {
+	if c.cometRPC == nil {
+		return signercache.LookupAmbiguous
+	}
+	limit := 1000
+	res, err := c.cometRPC.UnconfirmedTxs(ctx, &limit)
+	if err != nil {
+		return signercache.LookupAmbiguous
+	}
+	for _, tx := range res.Txs {
+		if strings.EqualFold(fmt.Sprintf("%X", tx.Hash()), sig) {
+			return signercache.LookupFound
+		}
+	}
+	if res.Total > len(res.Txs) {
+		// Mempool larger than we could fetch — cannot confirm absence, fail closed.
+		return signercache.LookupAmbiguous
+	}
+	return signercache.LookupNotFound
+}
+
+// verifyBroadcast is the signer-cache verifyFn: it reports whether the recorded
+// broadcast sig is on chain. txClient.GetTx returns only COMMITTED (in-block) txs,
+// so a tx still pending in the mempool returns codes.NotFound; before treating that
+// as "absent" and clearing the cache — which would re-sign at a new sequence while
+// the original at the old sequence still settles, a double-spend — it consults the
+// CometBFT mempool via mempoolLookup. A non-NotFound RPC error is ambiguous.
+func (c *CosmosClient) verifyBroadcast(sig string) signercache.LookupResult {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	_, txErr := c.txClient.GetTx(ctx, &txtypes.GetTxRequest{Hash: sig})
+	switch {
+	case txErr == nil:
+		return signercache.LookupFound
+	case status.Code(txErr) == codes.NotFound:
+		return c.mempoolLookup(ctx, sig)
+	default:
+		return signercache.LookupAmbiguous
+	}
+}
+
 // SignTx sign the the given TxArrayItem
 func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, checkpoint []byte, _ *stypes.TxInItem, err error) {
 	defer func() {
@@ -357,8 +428,23 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 		}
 	}()
 
-	if c.signerCacheManager.HasSigned(tx.CacheHash()) {
-		c.logger.Info().Interface("tx", tx).Msg("transaction already signed, ignoring...")
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSkipSignerCache, c.cfg.ChainID)
+	gateFn := func() bool {
+		skipCache, mimirErr := c.thorchainBridge.GetMimir(mimirKey)
+		return mimirErr == nil && skipCache > 0
+	}
+	check := c.signerCacheManager.SignTxCacheCheck(tx.CacheHash(), gateFn, c.verifyBroadcast)
+	if check.Phase != signercache.PhaseNoEntry {
+		ev := c.logger.Info()
+		if check.Noteworthy() {
+			ev = c.logger.Warn()
+		}
+		ev.Stringer("phase", check.Phase).
+			Str("sig", check.Sig).
+			Interface("tx", tx).
+			Msg(check.Phase.String())
+	}
+	if check.SkipSign {
 		return nil, nil, nil, nil
 	}
 
@@ -587,7 +673,8 @@ func (c *CosmosClient) BroadcastTx(tx stypes.TxOutItem, txBytes []byte) (string,
 	// Only add the transaction to signer cache when it is sure the transaction has been broadcast successfully.
 	// So for other scenario , like transaction already in mempool , invalid account sequence # , the transaction can be rescheduled , and retried
 	if broadcastRes.TxResponse.Code == errorsmod.SuccessABCICode {
-		if err = c.signerCacheManager.SetSigned(tx.CacheHash(), tx.CacheVault(c.GetChain()), broadcastRes.TxResponse.TxHash); err != nil {
+		expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+		if err = c.signerCacheManager.SetSignedWithExpiry(tx.CacheHash(), tx.CacheVault(c.GetChain()), broadcastRes.TxResponse.TxHash, expiry); err != nil {
 			c.logger.Err(err).Msg("fail to set signer cache")
 		}
 	}

@@ -351,69 +351,53 @@ func (c *TronClient) ConfirmationCountReady(_ types.TxIn) bool {
 // OnObservedTxIn is called when a new observed tx is received.
 func (c *TronClient) OnObservedTxIn(_ types.TxInItem, _ int64) {}
 
+// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+func (c *TronClient) getSignerCacheExpiry() time.Duration {
+	return signercache.ResolveExpiry(c.config.SignerCacheExpiry)
+}
+
 // SignTx returns the signed transaction.
 func (c *TronClient) SignTx(
 	txOutItem types.TxOutItem,
 	thorchainHeight int64,
 ) ([]byte, []byte, *types.TxInItem, error) {
-	if c.signerCacheManager.HasSigned(txOutItem.CacheHash()) {
-		prevTxID, err := c.signerCacheManager.GetTransactionHash(txOutItem.CacheHash())
-		if err != nil {
-			c.logger.Warn().
-				Err(err).
-				Interface("tx", txOutItem).
-				Msg("signed tx cache missing txid mapping, re-signing tx")
-		} else {
-			prevTx, txErr := c.api.GetTransaction(prevTxID)
-			switch {
-			case txErr != nil && isTronNotFoundErr(txErr):
-				c.logger.Warn().
-					Str("txid", prevTxID).
-					Interface("tx", txOutItem).
-					Msg("cached signed tx missing from chain, re-signing tx")
-				c.signerCacheManager.RemoveSigned(prevTxID)
-			case txErr != nil:
-				c.logger.Err(txErr).
-					Str("txid", prevTxID).
-					Interface("tx", txOutItem).
-					Msg("failed to check signed tx on chain")
-				return nil, nil, nil, txErr
-			case prevTx.TxId != "":
-				prevInfo, infoErr := c.api.GetTransactionInfo(prevTxID)
-				switch {
-				case infoErr == nil && tronTransactionConfirmed(prevInfo):
-					c.logger.Info().
-						Str("txid", prevTxID).
-						Interface("tx", txOutItem).
-						Msg("transaction already signed and confirmed on chain, ignoring...")
-					return nil, nil, nil, nil
-				case infoErr == nil || isTronNotFoundErr(infoErr):
-					if !tronTransactionExpired(prevTx, time.Now()) {
-						c.logger.Info().
-							Str("txid", prevTxID).
-							Interface("tx", txOutItem).
-							Msg("transaction already signed and still pending before expiration, ignoring...")
-						return nil, nil, nil, nil
-					}
-					c.logger.Warn().
-						Str("txid", prevTxID).
-						Interface("tx", txOutItem).
-						Msg("cached signed tx is unconfirmed after expiration, re-signing tx")
-					c.signerCacheManager.RemoveSigned(prevTxID)
-				default:
-					c.logger.Err(infoErr).
-						Str("txid", prevTxID).
-						Interface("tx", txOutItem).
-						Msg("failed to check signed tx confirmation on chain")
-					return nil, nil, nil, infoErr
-				}
-			default:
-				c.logger.Err(txErr).
-					Interface("tx", txOutItem).
-					Msg("cached signed tx missing txid on chain, re-signing tx")
-				c.signerCacheManager.RemoveSigned(prevTxID)
-			}
+	// Signer-cache check, standardized across chains: respect the cache while fresh;
+	// after the expiry window, only bypass when the operational SkipSignerCache<Chain>
+	// mimir is set AND the recorded broadcast is verified absent on chain.
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSkipSignerCache, c.config.ChainID)
+	gateFn := func() bool {
+		skipCache, err := c.bridge.GetMimir(mimirKey)
+		return err == nil && skipCache > 0
+	}
+	// gettransactionbyid reports presence regardless of confirmation, so the
+	// verification path can positively decide whether the recorded broadcast is on
+	// chain before clearing the cache: a populated TxId means present (respect the
+	// cache), an empty result with no error means absent (safe to clear and
+	// re-sign). Transport errors stay ambiguous (fail-closed, cache respected).
+	verifyFn := func(sig string) signercache.LookupResult {
+		tx, txErr := c.api.GetTransaction(sig)
+		switch {
+		case txErr == nil && tx.TxId != "":
+			return signercache.LookupFound
+		case txErr == nil, isTronNotFoundErr(txErr):
+			return signercache.LookupNotFound
+		default:
+			return signercache.LookupAmbiguous
 		}
+	}
+	check := c.signerCacheManager.SignTxCacheCheck(txOutItem.CacheHash(), gateFn, verifyFn)
+	if check.Phase != signercache.PhaseNoEntry {
+		ev := c.logger.Info()
+		if check.Noteworthy() {
+			ev = c.logger.Warn()
+		}
+		ev.Stringer("phase", check.Phase).
+			Str("sig", check.Sig).
+			Interface("tx", txOutItem).
+			Msg(check.Phase.String())
+	}
+	if check.SkipSign {
+		return nil, nil, nil, nil
 	}
 
 	refBlocks := c.tronScanner.refBlockSnapshot()
@@ -623,10 +607,12 @@ func (c *TronClient) BroadcastTx(
 		return "", err
 	}
 
-	err = c.signerCacheManager.SetSigned(
+	expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+	err = c.signerCacheManager.SetSignedWithExpiry(
 		txOutItem.CacheHash(),
 		txOutItem.CacheVault(c.GetChain()),
 		response.TxId,
+		expiry,
 	)
 	if err != nil {
 		c.logger.Err(err).
@@ -635,17 +621,6 @@ func (c *TronClient) BroadcastTx(
 	}
 
 	return response.TxId, nil
-}
-
-func tronTransactionConfirmed(info api.TransactionInfo) bool {
-	return info.BlockNumber > 0 || info.ID != "" || info.Fee > 0
-}
-
-func tronTransactionExpired(tx api.Transaction, now time.Time) bool {
-	if tx.RawData.Expiration == 0 {
-		return true
-	}
-	return tx.RawData.Expiration <= now.UnixMilli()
 }
 
 func isTronNotFoundErr(err error) bool {

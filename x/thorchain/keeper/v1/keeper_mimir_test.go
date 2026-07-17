@@ -78,3 +78,21 @@ func (s *KeeperMimirSuite) TestDisableTSSSignerFilteringIsEconomicMimir(c *C) {
 
 	c.Check(k.IsOperationalMimir(constants.MimirKeyDisableTSSSignerFiltering), Equals, false)
 }
+
+func (s *KeeperMimirSuite) TestIsOperationalMimirSkipSignerCache(c *C) {
+	_, k := setupKeeperForTest(c)
+
+	// SkipSignerCache<Chain> is the per-chain bifrost gate that authorizes the
+	// expired-cache verification path (and a possible cache clear). Every node
+	// in the network MUST observe the same gate value at the same height —
+	// otherwise some bifrosts re-broadcast a tx while others don't, splitting
+	// observation consensus. Marking it operational forces consensus storage,
+	// closing the operator-misconfiguration divergence vector.
+	c.Check(k.IsOperationalMimir("SkipSignerCacheBTC"), Equals, true)
+	c.Check(k.IsOperationalMimir("SkipSignerCacheETH"), Equals, true)
+	c.Check(k.IsOperationalMimir("SkipSignerCacheXRP"), Equals, true)
+
+	// Case-insensitive (partial match uppercases the key).
+	c.Check(k.IsOperationalMimir("skipsignercacheBTC"), Equals, true)
+	c.Check(k.IsOperationalMimir("SKIPSIGNERCACHEBTC"), Equals, true)
+}

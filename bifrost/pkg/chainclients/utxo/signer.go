@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	bchwire "github.com/gcash/bchd/wire"
 	"github.com/gcash/bchutil"
@@ -20,16 +21,20 @@ import (
 
 	ltctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/ltcd-txscript"
 
+	"github.com/btcsuite/btcd/btcjson"
 	btcwire "github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	dogewire "github.com/eager7/dogd/wire"
 	"github.com/eager7/dogutil"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/rpc/zec"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 
 	"github.com/btcsuite/btcd/mempool"
 )
@@ -64,8 +69,34 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	}
 
 	// skip outbounds that have been signed
-	if c.signerCacheManager.HasSigned(tx.CacheHash()) {
-		c.log.Info().Msgf("ignoring already signed transaction: (%+v)", tx)
+	mimirKey := fmt.Sprintf(constants.MimirTemplateSkipSignerCache, c.cfg.ChainID)
+	gateFn := func() bool {
+		skipCache, err := c.bridge.GetMimir(mimirKey)
+		return err == nil && skipCache > 0
+	}
+	verifyFn := func(sig string) signercache.LookupResult {
+		_, txLookupErr := c.rpc.GetRawTransactionVerbose(sig)
+		switch {
+		case txLookupErr == nil:
+			return signercache.LookupFound
+		case isUTXOTxNotFoundErr(txLookupErr):
+			return signercache.LookupNotFound
+		default:
+			return signercache.LookupAmbiguous
+		}
+	}
+	check := c.signerCacheManager.SignTxCacheCheck(tx.CacheHash(), gateFn, verifyFn)
+	if check.Phase != signercache.PhaseNoEntry {
+		ev := c.log.Info()
+		if check.Noteworthy() {
+			ev = c.log.Warn()
+		}
+		ev.Stringer("phase", check.Phase).
+			Str("sig", check.Sig).
+			Interface("tx", tx).
+			Msg(check.Phase.String())
+	}
+	if check.SkipSign {
 		return nil, nil, nil, nil
 	}
 
@@ -420,6 +451,35 @@ func allNotSelectedForKeysign(err error) bool {
 	return true
 }
 
+// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+func (c *Client) getSignerCacheExpiry() time.Duration {
+	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+}
+
+// isUTXOTxNotFoundErr returns true when the error from GetRawTransactionVerbose
+// indicates the transaction is definitively not found (RPC error code -5).
+//
+// Backends:
+//   - bitcoind (BTC): returns *btcjson.RPCError code -5 ("Invalid or non-wallet
+//     transaction id"); litecoind (LTC), dogecoind (DOGE), bcashnode (BCH) are
+//     bitcoind-derived and behave the same.
+//   - zebrad (ZEC): surfaces JSON-RPC errors as *zec.Error (not *btcjson.RPCError);
+//     getrawtransaction on a missing tx returns code -5, bitcoind-compatible.
+//
+// Any other error shape returns false, so the caller respects the cache
+// (fail-closed and safe) rather than clearing it and re-signing on ambiguity.
+func isUTXOTxNotFoundErr(err error) bool {
+	var rpcErr *btcjson.RPCError
+	if errors.As(err, &rpcErr) {
+		return rpcErr.Code == btcjson.ErrRPCInvalidAddressOrKey
+	}
+	var zecErr *zec.Error
+	if errors.As(err, &zecErr) {
+		return zecErr.Code == int(btcjson.ErrRPCInvalidAddressOrKey)
+	}
+	return false
+}
+
 // GetVaultLock returns a mutex for the given vault pubkey. This is primarily used to
 // ensure transactions from the signer do not conflict with consolidate transactions.
 func (c *Client) GetVaultLock(vaultPubKey string) *sync.Mutex {
@@ -519,9 +579,10 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		for _, msg := range msgs {
 			if strings.Contains(err.Error(), msg) {
 				c.log.Info().Str("hash", txid).Msg("broadcasted by another node")
-				err = c.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(c.GetChain()), txid)
-				if err != nil {
-					c.log.Err(err).Msgf("fail to mark tx out item (%+v) as signed", txOut)
+				expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+				cacheErr := c.signerCacheManager.SetSignedWithExpiry(txOut.CacheHash(), txOut.CacheVault(c.GetChain()), txid, expiry)
+				if cacheErr != nil {
+					c.log.Err(cacheErr).Msgf("fail to mark tx out item (%+v) as signed", txOut)
 				}
 				return txid, nil
 			}
@@ -531,7 +592,8 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 	}
 
 	// save tx id to block meta in case we need to errata later
-	if err = c.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(c.GetChain()), txid); err != nil {
+	expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+	if err = c.signerCacheManager.SetSignedWithExpiry(txOut.CacheHash(), txOut.CacheVault(c.GetChain()), txid, expiry); err != nil {
 		c.log.Err(err).Msgf("fail to mark tx out item (%+v) as signed", txOut)
 	}
 

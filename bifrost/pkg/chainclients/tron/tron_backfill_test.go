@@ -422,6 +422,35 @@ func (s *BackfillSuite) TestBroadcastTxDupTransaction(c *C) {
 	s.client.api = savedApi
 }
 
+// TestBroadcastTxRecordsExpiringEntry is a regression guard: BroadcastTx must
+// record an EXPIRING cache entry (SetSignedWithExpiry), not a legacy never-
+// expiring SetSigned entry — otherwise TRON's whole expiry/mimir/verify path is
+// unreachable in production (HasSignedWithExpiry always reports expired=false).
+func (s *BackfillSuite) TestBroadcastTxRecordsExpiringEntry(c *C) {
+	saved := s.client.config.SignerCacheExpiry
+	s.client.config.SignerCacheExpiry = time.Nanosecond // expire (almost) immediately
+	defer func() { s.client.config.SignerCacheExpiry = saved }()
+
+	txOutItem := types.TxOutItem{
+		Chain:       common.TRONChain,
+		ToAddress:   "TU6nEM4GTca2L5AuDTnY1qp1rkQ2t8NxvM",
+		VaultPubKey: s.client.localKeyManager.Pubkey(),
+		Coins:       common.Coins{{Asset: common.TRXAsset, Amount: cosmos.NewUint(100)}},
+		GasRate:     1,
+	}
+	txBytes, _ := json.Marshal(api.Transaction{TxId: "expiring-entry"})
+
+	_, err := s.client.BroadcastTx(txOutItem, txBytes)
+	c.Assert(err, IsNil)
+
+	time.Sleep(2 * time.Millisecond)
+	signed, expired := s.client.signerCacheManager.HasSignedWithExpiry(txOutItem.CacheHash())
+	c.Assert(signed, Equals, true)
+	// A legacy SetSigned entry would report expired=false forever; that this
+	// entry has already lapsed proves BroadcastTx wrote an expiring one.
+	c.Assert(expired, Equals, true)
+}
+
 func (s *BackfillSuite) TestBroadcastTxFailedBroadcast(c *C) {
 	// Create a mock server that returns a failure
 	failServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

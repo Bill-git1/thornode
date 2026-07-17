@@ -103,6 +103,7 @@ bifrost:
   chains:
     btc: &default-chain
       disabled: false
+      signer_cache_expiry: 72h # 3 days - for chains without embedded block hashes
       chain_id: BTC
       cosmos_chain_id: ""
       username: thorchain

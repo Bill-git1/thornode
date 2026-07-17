@@ -209,7 +209,8 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 
 	// add cancel transaction to signer cache so scanner removes outbound on confirmation
 	toi := item.TxOutItem
-	err = c.signerCacheManager.SetSigned(toi.CacheHash(), toi.CacheVault(c.GetChain()), broadcastTx.Hash().Hex())
+	expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
+	err = c.signerCacheManager.SetSignedWithExpiry(toi.CacheHash(), toi.CacheVault(c.GetChain()), broadcastTx.Hash().Hex(), expiry)
 	if err != nil {
 		clog.Err(err).Msg("fail to set signed tx, unstuck outbound will not retry")
 	}

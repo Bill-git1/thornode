@@ -51,6 +51,12 @@ type TronTestSuite struct {
 // mockBridge is a mock implementation of ThorchainBridge for testing
 type mockBridge struct {
 	thorclient.ThorchainBridge
+	// skipCacheMimir is returned by GetMimir; set >0 to open the SkipSignerCache gate.
+	skipCacheMimir int64
+}
+
+func (m *mockBridge) GetMimir(_ string) (int64, error) {
+	return m.skipCacheMimir, nil
 }
 
 func (m *mockBridge) GetBlockTimestamp(height int64) (time.Time, error) {
@@ -316,10 +322,18 @@ func (s *TronTestSuite) TestSignTxReSignsWhenCachedBroadcastIsMissingFromChain(c
 		GasRate:     1,
 	}
 
-	err := s.client.signerCacheManager.SetSigned(
+	// Expired cache entry + operational mimir set: verifyFn checks the recorded
+	// broadcast on chain; "missing-txid" is absent (gettransactionbyid returns {}),
+	// so the cache is cleared and the tx re-signs.
+	mb, ok := s.client.bridge.(*mockBridge)
+	c.Assert(ok, Equals, true)
+	mb.skipCacheMimir = 1
+	defer func() { mb.skipCacheMimir = 0 }()
+	err := s.client.signerCacheManager.SetSignedWithExpiry(
 		txOutItem.CacheHash(),
 		txOutItem.CacheVault(s.client.GetChain()),
 		"missing-txid",
+		time.Now().Add(-time.Hour).UnixMilli(),
 	)
 	c.Assert(err, IsNil)
 
@@ -364,7 +378,7 @@ func (s *TronTestSuite) TestSignTxSkipsWhenCachedBroadcastStillExistsOnChain(c *
 	c.Assert(txIn, IsNil)
 }
 
-func (s *TronTestSuite) TestSignTxReSignsWhenCachedBroadcastIsUnconfirmedAfterExpiration(c *C) {
+func (s *TronTestSuite) TestSignTxRespectsExpiredCacheWhenBroadcastPresent(c *C) {
 	coins := []common.Coin{{
 		Asset:    common.TRXAsset,
 		Amount:   cosmos.NewUint(150_000_000_000),
@@ -386,16 +400,24 @@ func (s *TronTestSuite) TestSignTxReSignsWhenCachedBroadcastIsUnconfirmedAfterEx
 		GasRate:     1,
 	}
 
-	err := s.client.signerCacheManager.SetSigned(
+	// Expired cache entry + mimir set, but the recorded broadcast IS on chain
+	// (gettransactionbyid returns a populated tx) → verifyFn LookupFound → respect
+	// the cache and skip, avoiding a double-spend.
+	mb, ok := s.client.bridge.(*mockBridge)
+	c.Assert(ok, Equals, true)
+	mb.skipCacheMimir = 1
+	defer func() { mb.skipCacheMimir = 0 }()
+	err := s.client.signerCacheManager.SetSignedWithExpiry(
 		txOutItem.CacheHash(),
 		txOutItem.CacheVault(s.client.GetChain()),
-		"deadbeef9034d95770d5704c9898e3414780c5fcbe282350080db8c4cef3e729",
+		"77ddfa7093cc5f745c0d3a54abb89ef070f983343c05e0f89e5a52f3e5401299",
+		time.Now().Add(-time.Hour).UnixMilli(),
 	)
 	c.Assert(err, IsNil)
 
 	signed, _, _, err := s.client.SignTx(txOutItem, 1)
 	c.Assert(err, IsNil)
-	c.Assert(signed, NotNil)
+	c.Assert(signed, IsNil)
 }
 
 func (s *TronTestSuite) TestSignTxUsesOriginalMemoForMemolessOutbounds(c *C) {

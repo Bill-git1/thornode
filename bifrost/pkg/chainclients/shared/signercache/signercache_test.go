@@ -17,6 +17,7 @@ type mockStorageAccessor struct {
 	hasSignedResult          bool
 	hasSignedExpiredResult   bool
 	removeSignedErr          error
+	removeSignedCalls        []string // captures hashes passed to RemoveSigned
 	setTransactionHashMapErr error
 	getSignedTxHashResult    string
 	getSignedTxHashOk        bool
@@ -42,6 +43,7 @@ func (m *mockStorageAccessor) HasSignedWithExpiry(hash string) (signed, expired 
 }
 
 func (m *mockStorageAccessor) RemoveSigned(transactionHash string) error {
+	m.removeSignedCalls = append(m.removeSignedCalls, transactionHash)
 	return m.removeSignedErr
 }
 
