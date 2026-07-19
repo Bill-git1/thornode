@@ -1149,3 +1149,57 @@ func (s *RPCSuite) TestBatchGetRawTransactionVerboseUsesBatchCallContext(c *C) {
 	c.Assert(ok, Equals, true)
 	c.Assert(deadline.After(time.Now()), Equals, true)
 }
+
+// TestGetNetworkInfoWarnings verifies getnetworkinfo decodes on both the pre-28
+// string "warnings" and the Core 28/29 array "warnings" without dropping RelayFee.
+func (s *RPCSuite) TestGetNetworkInfoWarnings(c *C) {
+	log := zerolog.Nop()
+	cases := []struct {
+		name     string
+		warnings interface{}
+	}{
+		{"core<=27 string", "some warning"},
+		{"core 28/29 array", []string{"warn a", "warn b"}},
+		{"core 28/29 empty array", []string{}},
+	}
+	for _, tc := range cases {
+		srv := newMockRPCServer(func(method string, params []interface{}) (interface{}, *btcjson.RPCError) {
+			c.Assert(method, Equals, "getnetworkinfo")
+			return map[string]interface{}{
+				"relayfee": 0.00001,
+				"warnings": tc.warnings,
+			}, nil
+		})
+
+		cl, err := NewClient(srv.URL, "user", "pass", 0, time.Second*10, common.BTCChain, log)
+		c.Assert(err, IsNil)
+
+		info, err := cl.GetNetworkInfo()
+		c.Assert(err, IsNil, Commentf("case %s", tc.name))
+		c.Assert(info, NotNil)
+		c.Assert(info.RelayFee, Equals, 0.00001, Commentf("case %s: RelayFee must survive decode", tc.name))
+		srv.Close()
+	}
+}
+
+// TestFlexibleWarningsUnmarshal covers the raw decode of the warnings field.
+func (s *RPCSuite) TestFlexibleWarningsUnmarshal(c *C) {
+	var w flexibleWarnings
+	c.Assert(json.Unmarshal([]byte(`"hi"`), &w), IsNil)
+	c.Assert([]string(w), DeepEquals, []string{"hi"})
+
+	w = nil
+	c.Assert(json.Unmarshal([]byte(`["a","b"]`), &w), IsNil)
+	c.Assert([]string(w), DeepEquals, []string{"a", "b"})
+
+	w = nil
+	c.Assert(json.Unmarshal([]byte(`""`), &w), IsNil)
+	c.Assert(len(w), Equals, 0)
+
+	w = nil
+	c.Assert(json.Unmarshal([]byte(`null`), &w), IsNil)
+	c.Assert(len(w), Equals, 0)
+
+	w = nil
+	c.Assert(json.Unmarshal([]byte(`123`), &w), NotNil)
+}

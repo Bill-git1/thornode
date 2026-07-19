@@ -358,10 +358,46 @@ func (c *Client) ListUnspent(address string) ([]btcjson.ListUnspentResult, error
 	return unspent, extractBTCError(err)
 }
 
+// flexibleWarnings decodes bitcoind's getnetworkinfo "warnings" field, which is
+// a plain string on Bitcoin Core <=27 and an array of strings on Core 28/29.
+type flexibleWarnings []string
+
+func (w *flexibleWarnings) UnmarshalJSON(b []byte) error {
+	if len(b) == 0 || string(b) == "null" {
+		return nil
+	}
+	switch b[0] {
+	case '[':
+		return json.Unmarshal(b, (*[]string)(w))
+	case '"':
+		var s string
+		if err := json.Unmarshal(b, &s); err != nil {
+			return err
+		}
+		if s != "" {
+			*w = []string{s}
+		}
+		return nil
+	default:
+		return fmt.Errorf("unexpected getnetworkinfo warnings shape: %s", b)
+	}
+}
+
 func (c *Client) GetNetworkInfo() (*btcjson.GetNetworkInfoResult, error) {
-	var info btcjson.GetNetworkInfoResult
-	err := c.Call(&info, "getnetworkinfo")
-	return &info, extractBTCError(err)
+	// Decode into a shadow of GetNetworkInfoResult whose warnings field accepts
+	// both the pre-28 string and the Core 28/29 array shapes. The shallower
+	// (outer) warnings field wins over the embedded string one during decode, so
+	// the array shape no longer aborts the whole unmarshal (dropping RelayFee).
+	var info struct {
+		btcjson.GetNetworkInfoResult
+		Warnings flexibleWarnings `json:"warnings"`
+	}
+	if err := c.Call(&info, "getnetworkinfo"); err != nil {
+		return nil, extractBTCError(err)
+	}
+	result := info.GetNetworkInfoResult
+	result.Warnings = strings.Join(info.Warnings, "; ")
+	return &result, nil
 }
 
 func (c *Client) Call(result any, method string, args ...interface{}) error {
@@ -405,6 +441,16 @@ func (c *Client) batchCall(batch []rpc.BatchElem) error {
 func extractBTCError(err error) error {
 	if err == nil {
 		return nil
+	}
+
+	// Bitcoin Core >=28 answers JSON-RPC 2.0 requests with HTTP 200 and a
+	// spec-compliant error object, which the go-ethereum rpc client surfaces as
+	// an rpc.Error (structured code + message) rather than the pre-28 HTTP-500
+	// "<status>: <json body>" string the split below expects. Convert it
+	// directly so the RPC error code (e.g. -4 wallet already exists) survives.
+	var rpcErr rpc.Error
+	if errors.As(err, &rpcErr) {
+		return btcjson.NewRPCError(btcjson.RPCErrorCode(rpcErr.ErrorCode()), rpcErr.Error())
 	}
 
 	// split the error into the HTTP status and the JSON response
