@@ -261,6 +261,7 @@ var (
 	// Memo
 	ParseMemo              = mem.ParseMemo
 	ParseMemoWithTHORNames = mem.ParseMemoWithTHORNames
+	StringToTxType         = mem.StringToTxType
 	FetchAddress           = mem.FetchAddress
 	NewRefundMemo          = mem.NewRefundMemo
 	NewOutboundMemo        = mem.NewOutboundMemo

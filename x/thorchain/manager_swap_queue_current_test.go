@@ -559,6 +559,185 @@ func (s SwapQueueSuite) TestStreamingSwapOutbounds(c *C) {
 	mgr.TxOutStore().ClearOutboundItems(ctx)
 }
 
+// TestStreamingSwapOutboundMemoParseFailure is a regression test for issues
+// #2983/#2981: a completed streaming swap's state is removed before the memo is
+// re-parsed. If ParseMemoWithTHORNames fails (e.g. a THORName referenced in the
+// memo expired mid-stream), EndBlock previously returned early, orphaning the
+// already-swapped output (swp.Out) with no outbound and no retry. EndBlock must
+// instead log and still schedule the outbound to the already-resolved destination.
+func (s SwapQueueSuite) TestStreamingSwapOutboundMemoParseFailure(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(143166 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	queue := newSwapQueue(mgr.Keeper())
+	queue.handler = func(mgr Manager) cosmos.Handler {
+		return func(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, error) {
+			return nil, fmt.Errorf("failed handler")
+		}
+	}
+
+	ethAddr := GetRandomETHAddress()
+	btcAddr := GetRandomBTCAddress()
+	txID := GetRandomTxHash()
+	// The memo references a THORName that does not exist, so a later
+	// ParseMemoWithTHORNames call fails even though msg.Destination was already
+	// resolved to btcAddr at swap-creation time.
+	tx := common.NewTx(
+		txID,
+		ethAddr,
+		ethAddr,
+		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*100))),
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
+		"=:BTC.BTC:nonexistentthorname",
+	)
+
+	msg := NewMsgSwap(tx, common.BTCAsset, btcAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 10, 20, types.SwapVersion_v1, GetRandomBech32Addr())
+	swp := msg.GetStreamingSwap()
+	swp.In = swp.Deposit
+	swp.Out = cosmos.NewUint(12345)
+	swp.Count = swp.Quantity
+	mgr.Keeper().SetStreamingSwap(ctx, swp)
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, *msg, 0), IsNil)
+
+	// Even though the memo can no longer be parsed, EndBlock must not return an
+	// error and must still schedule the already-swapped output outbound.
+	c.Assert(queue.EndBlock(ctx, mgr), IsNil)
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 1)
+	c.Check(items[0].Memo, Equals, "") // not a refund, the swapped output is delivered
+	c.Check(items[0].ToAddress.Equals(btcAddr), Equals, true)
+	c.Check(items[0].Coin.Equals(common.NewCoin(common.BTCAsset, cosmos.NewUint(12345))), Equals, true, Commentf("%s", items[0].Coin.String()))
+	// state removed so it is not retried
+	c.Check(mgr.Keeper().StreamingSwapExists(ctx, txID), Equals, false)
+	_, err = mgr.Keeper().GetSwapQueueItem(ctx, txID, 0)
+	c.Assert(err, NotNil)
+	mgr.TxOutStore().ClearOutboundItems(ctx)
+}
+
+// TestStreamingSwapOutboundAggregatorFailure is a regression test for issue
+// #2982: within the completed streaming-swap block (after state removal), a
+// FetchDexAggregator failure previously returned early, orphaning swp.Out and
+// aborting the rest of the queue for the block. EndBlock must instead log and
+// schedule a plain outbound without the aggregator so the funds are delivered.
+func (s SwapQueueSuite) TestStreamingSwapOutboundAggregatorFailure(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(143166 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	queue := newSwapQueue(mgr.Keeper())
+	queue.handler = func(mgr Manager) cosmos.Handler {
+		return func(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, error) {
+			return nil, fmt.Errorf("failed handler")
+		}
+	}
+
+	ethAddr := GetRandomETHAddress()
+	btcAddr := GetRandomBTCAddress()
+	txID := GetRandomTxHash()
+	tx := common.NewTx(
+		txID,
+		ethAddr,
+		ethAddr,
+		common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*100))),
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
+		fmt.Sprintf("=:BTC.BTC:%s", btcAddr),
+	)
+
+	// A non-empty aggregator that is not on the whitelist for the BTC target
+	// chain, so FetchDexAggregator returns an error at completion time.
+	msg := NewMsgSwap(tx, common.BTCAsset, btcAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "notawhitelistedaggregator", "", nil, types.SwapType_market, 10, 20, types.SwapVersion_v1, GetRandomBech32Addr())
+	swp := msg.GetStreamingSwap()
+	swp.In = swp.Deposit
+	swp.Out = cosmos.NewUint(12345)
+	swp.Count = swp.Quantity
+	mgr.Keeper().SetStreamingSwap(ctx, swp)
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, *msg, 0), IsNil)
+
+	// The aggregator lookup fails, but EndBlock must not return an error and must
+	// still schedule the outbound (without an aggregator) so the output is delivered.
+	c.Assert(queue.EndBlock(ctx, mgr), IsNil)
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 1)
+	c.Check(items[0].Memo, Equals, "")
+	c.Check(items[0].Aggregator, Equals, "") // scheduled without the invalid aggregator
+	c.Check(items[0].ToAddress.Equals(btcAddr), Equals, true)
+	c.Check(items[0].Coin.Equals(common.NewCoin(common.BTCAsset, cosmos.NewUint(12345))), Equals, true, Commentf("%s", items[0].Coin.String()))
+	c.Check(mgr.Keeper().StreamingSwapExists(ctx, txID), Equals, false)
+	_, err = mgr.Keeper().GetSwapQueueItem(ctx, txID, 0)
+	c.Assert(err, NotNil)
+	mgr.TxOutStore().ClearOutboundItems(ctx)
+}
+
+// TestStreamingSwapSaversAddMemoParseFailure verifies that when a completed
+// streaming *savers add* can no longer be fully parsed (e.g. an affiliate
+// THORName in the memo expired mid-stream), EndBlock still correctly treats it
+// as an add and does NOT schedule an external outbound for the synth output.
+// The add-type is recovered from the memo prefix, which does not depend on
+// THORName resolution.
+func (s SwapQueueSuite) TestStreamingSwapSaversAddMemoParseFailure(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(143166 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	queue := newSwapQueue(mgr.Keeper())
+	queue.handler = func(mgr Manager) cosmos.Handler {
+		return func(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, error) {
+			return nil, fmt.Errorf("failed handler")
+		}
+	}
+
+	btcAddr := GetRandomBTCAddress()
+	txID := GetRandomTxHash()
+	synthAsset := common.BTCAsset.GetSyntheticAsset()
+	// A savers add memo whose affiliate is a THORName that does not exist, so a
+	// later ParseMemoWithTHORNames fails at completion time.
+	tx := common.NewTx(
+		txID,
+		btcAddr,
+		btcAddr,
+		common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One*100))),
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One))},
+		"+:BTC/BTC::nonexistentthorname:100",
+	)
+
+	msg := NewMsgSwap(tx, synthAsset, common.NoAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 10, 20, types.SwapVersion_v1, GetRandomBech32Addr())
+	swp := msg.GetStreamingSwap()
+	swp.In = swp.Deposit
+	swp.Out = cosmos.NewUint(12345)
+	swp.Count = swp.Quantity
+	mgr.Keeper().SetStreamingSwap(ctx, swp)
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, *msg, 0), IsNil)
+
+	// EndBlock must not error and must NOT schedule an outbound for a savers add,
+	// even though the memo can no longer be fully parsed.
+	c.Assert(queue.EndBlock(ctx, mgr), IsNil)
+	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(items, HasLen, 0, Commentf("savers add must not schedule an outbound"))
+	// state removed
+	c.Check(mgr.Keeper().StreamingSwapExists(ctx, txID), Equals, false)
+	mgr.TxOutStore().ClearOutboundItems(ctx)
+}
+
 // TestStreamingLimitSwapNoDivisionByZero is a regression test for the October 7, 2025 incident
 // where a limit swap with streaming parameters (quantity=2, interval=2) caused a division by zero panic.
 //

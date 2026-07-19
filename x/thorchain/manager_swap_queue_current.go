@@ -222,22 +222,44 @@ func (vm *SwapQueueImpl) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				vm.k.RemoveSwapQueueItem(ctx, pick.msg.Tx.ID, pick.index)
 				vm.k.RemoveStreamingSwap(ctx, pick.msg.Tx.ID)
 
-				memo, err := ParseMemoWithTHORNames(ctx, vm.k, pick.msg.Tx.Memo)
-				if err != nil {
-					return err
+				// The streaming swap and queue state have now been removed, so this
+				// item will never be retried. Any fallible operation below must
+				// therefore never return without first dispatching the already-swapped
+				// output (swp.Out); otherwise those funds are permanently stranded in
+				// the pool/vault with no outbound and no refund. The memo is only
+				// re-parsed here to detect an add (a savers add skips the outbound).
+				// A full re-parse can now fail even for an originally-valid memo (e.g.
+				// an affiliate/destination THORName expired mid-stream), so on failure
+				// fall back to the memo type, which is derived from the memo prefix and
+				// does not depend on THORName resolution. This keeps the add/non-add
+				// decision identical to a successful parse instead of returning and
+				// stranding the output.
+				isSaversAdd := false
+				if memo, memoErr := ParseMemoWithTHORNames(ctx, vm.k, pick.msg.Tx.Memo); memoErr == nil {
+					isSaversAdd = memo.IsType(TxAdd)
+				} else if txType, typeErr := StringToTxType(strings.Split(strings.Split(pick.msg.Tx.Memo, "|")[0], ":")[0]); typeErr == nil {
+					isSaversAdd = txType == TxAdd
+					ctx.Logger().Error("fail to parse streaming swap memo, using memo type for outbound decision", "error", memoErr, "hash", pick.msg.Tx.ID, "is_add", isSaversAdd)
+				} else {
+					ctx.Logger().Error("fail to parse streaming swap memo and memo type, scheduling outbound as non-add", "error", memoErr, "hash", pick.msg.Tx.ID)
 				}
-				isSaversAdd := memo.IsType(TxAdd)
 
 				// If this is a savers add skip scheduling outbound
 				if !swp.Out.IsZero() && !isSaversAdd {
 					dexAgg := ""
 					if len(pick.msg.Aggregator) > 0 {
-						dexAgg, err = FetchDexAggregator(
+						// A failed aggregator lookup (e.g. the aggregator was removed
+						// from the whitelist across an upgrade while the streaming swap
+						// was in flight) must not strand the already-swapped output;
+						// log and schedule a plain outbound without the aggregator.
+						aggregator, aggErr := FetchDexAggregator(
 							pick.msg.TargetAsset.GetChain(),
 							pick.msg.Aggregator,
 						)
-						if err != nil {
-							return err
+						if aggErr != nil {
+							ctx.Logger().Error("fail to fetch dex aggregator, scheduling outbound without aggregator", "error", aggErr, "hash", pick.msg.Tx.ID)
+						} else {
+							dexAgg = aggregator
 						}
 					}
 					dexAggTargetAsset := pick.msg.AggregatorTargetAddress
