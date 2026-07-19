@@ -482,8 +482,19 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		switch {
 		case lookupErr != nil:
 			return signercache.LookupAmbiguous
-		case result.Slot > 0:
+		case result.Slot > 0 && result.Meta.Err == nil:
 			return signercache.LookupFound
+		case result.Slot > 0:
+			// Landed on chain but FAILED at execution (meta.err set, e.g.
+			// "insufficient lamports"): the fee was burned but the transfer never
+			// happened, so the outbound is unfulfilled. Presence on chain is not
+			// enough — only a SUCCESSFUL broadcast is authoritative. Treat a failed
+			// landing like a dropped one (LookupNotFound) so the cache manager clears
+			// it and expiry+verify re-signs. Without this the failed sig keeps
+			// verifying as "found" and permanently wedges the outbound (#3089).
+			c.logger.Warn().Str("sig", sig).Interface("meta_err", result.Meta.Err).Interface("tx", tx).
+				Msg("cached broadcast failed on chain, re-signing")
+			return signercache.LookupNotFound
 		default:
 			return signercache.LookupNotFound
 		}

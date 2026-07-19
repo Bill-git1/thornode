@@ -791,9 +791,10 @@ func TestSolAddrKeyringRoundTrip(t *testing.T) {
 // method-by-method behavior is parameterized so each test can choose whether
 // getTransaction reports the tx as confirmed, missing, or an RPC error.
 type solCacheRPCServer struct {
-	getTxCalls       int
-	getTxReturnsSlot uint64 // > 0 → confirmed on chain
-	getTxReturnsErr  bool   // true → respond with a JSON-RPC error body
+	getTxCalls         int
+	getTxReturnsSlot   uint64 // > 0 → confirmed on chain
+	getTxReturnsErr    bool   // true → respond with a JSON-RPC error body
+	getTxFailedOnChain bool   // true (with slot > 0) → landed but meta.err set (failed execution)
 }
 
 func newSolCacheRPCServer(c *C, s *solCacheRPCServer) *httptest.Server {
@@ -811,7 +812,12 @@ func newSolCacheRPCServer(c *C, s *solCacheRPCServer) *httptest.Server {
 			case s.getTxReturnsErr:
 				_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"rpc error"}}`))
 			case s.getTxReturnsSlot > 0:
-				_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":{"slot":%d,"meta":{},"transaction":{}}}`, s.getTxReturnsSlot)
+				meta := "{}"
+				if s.getTxFailedOnChain {
+					// landed but failed execution — mirrors the mainnet #3089 evidence
+					meta = `{"err":{"InstructionError":[1,{"Custom":1}]}}`
+				}
+				_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":{"slot":%d,"meta":%s,"transaction":{}}}`, s.getTxReturnsSlot, meta)
 			default:
 				// result:null → tx not on chain
 				_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
@@ -917,6 +923,34 @@ func (s *SolTestSuite) TestSignTxExpiredEntryOnChainProtectsAgainstDoubleSpend(c
 	c.Assert(result, IsNil)             // did NOT re-sign
 	c.Assert(rpc.getTxCalls, Equals, 1) // RPC was consulted because expired
 	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
+}
+
+// TestSignTxExpiredEntryLandedButFailedReSigns verifies the #3089 wedge fix: a
+// recorded broadcast that landed on chain but FAILED at execution (meta.err set,
+// e.g. insufficient lamports — fee burned, transfer reverted) must be treated
+// like a dropped broadcast. Presence on chain (Slot > 0) is NOT sufficient; only
+// a SUCCESSFUL landing is authoritative. The cache is cleared and the outbound
+// re-signed, otherwise every node keeps "confirming" the failed sig and refuses
+// to re-sign, wedging the outbound permanently.
+func (s *SolTestSuite) TestSignTxExpiredEntryLandedButFailedReSigns(c *C) {
+	rpc := &solCacheRPCServer{getTxReturnsSlot: 42, getTxFailedOnChain: true} // landed but failed
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "failed-sig", expired,
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)                                                   // re-signed
+	c.Assert(rpc.getTxCalls, Equals, 1)                                        // RPC verified first
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false) // cleared
 }
 
 // TestSignTxExpiredEntryNotOnChainReSigns verifies the only path that re-signs:
