@@ -31,6 +31,9 @@ const (
 	frostRoundShare              = "frost_share"
 	frostRoundResult             = "frost_result"
 	frostEventualityHashHexBytes = 64
+	frostJoinAttemptDomain       = "thorchain-frost-keysign-join-attempt-v1"
+	frostJoinRotationVersion     = "3.20.0"
+	frostMaxJoinLeaderAttempts   = 3
 )
 
 var errFrostResultTimeout = errors.New("timeout waiting for frost result")
@@ -117,6 +120,146 @@ func frostSignerSetHash(signerPubKeys []string) (string, error) {
 		return "", err
 	}
 	return tcommon.MsgToHashString([]byte(strings.Join(members, ",")))
+}
+
+// A join timeout proves only that this reporter did not form a party. It does
+// not distinguish an unavailable leader from a responsive leader waiting on
+// another member, a partition, or local overload. Keep ambiguous availability
+// failures non-slashable until there is signed positive evidence.
+func frostJoinPartyBlame() blame.Blame {
+	return blame.NewBlame(blame.TssSyncFail, nil)
+}
+
+func frostJoinAttemptID(msgID, leader string, eligiblePeers []string, attempt int) (string, error) {
+	msgID = strings.TrimSpace(msgID)
+	leader = strings.TrimSpace(leader)
+	if msgID == "" || leader == "" || len(eligiblePeers) == 0 || attempt < 0 {
+		return "", errors.New("invalid FROST join attempt context")
+	}
+	peerSet := make([]string, 0, len(eligiblePeers))
+	seenPeers := make(map[string]struct{}, len(eligiblePeers))
+	for _, peerID := range eligiblePeers {
+		peerID = strings.TrimSpace(peerID)
+		if peerID == "" {
+			return "", errors.New("invalid FROST join attempt peer")
+		}
+		if _, ok := seenPeers[peerID]; ok {
+			return "", errors.New("duplicate FROST join attempt peer")
+		}
+		seenPeers[peerID] = struct{}{}
+		peerSet = append(peerSet, peerID)
+	}
+	sort.Strings(peerSet)
+	canonical := strings.Join([]string{
+		"domain=" + frostJoinAttemptDomain,
+		"msg_id=" + msgID,
+		"eligible_peers=" + strings.Join(peerSet, ","),
+		"leader=" + leader,
+		"attempt=" + strconv.Itoa(attempt),
+	}, "\n")
+	digest, err := tcommon.MsgToHashString([]byte(canonical))
+	if err != nil {
+		return "", err
+	}
+	return p2p.FrostJoinAttemptIDPrefix + digest, nil
+}
+
+func validateFrostJoinParty(onlinePeers, eligiblePeers []peer.ID, leader string, quorum int) error {
+	if quorum < 1 || len(onlinePeers) < quorum {
+		return fmt.Errorf("formed FROST party has %d peers; need %d", len(onlinePeers), quorum)
+	}
+	eligible := make(map[string]struct{}, len(eligiblePeers))
+	for _, peerID := range eligiblePeers {
+		eligible[peerID.String()] = struct{}{}
+	}
+	seen := make(map[string]struct{}, len(onlinePeers))
+	leaderPresent := false
+	for _, peerID := range onlinePeers {
+		peerString := peerID.String()
+		if _, ok := eligible[peerString]; !ok {
+			return fmt.Errorf("formed FROST party contains ineligible peer %s", peerString)
+		}
+		if _, ok := seen[peerString]; ok {
+			return fmt.Errorf("formed FROST party contains duplicate peer %s", peerString)
+		}
+		seen[peerString] = struct{}{}
+		if peerString == leader {
+			leaderPresent = true
+		}
+	}
+	if !leaderPresent {
+		return errors.New("formed FROST party does not contain its selected leader")
+	}
+	return nil
+}
+
+// joinFrostKeySignParty retries only party formation. No FROST nonce or share
+// exists yet, so rotating a keyless or unavailable coordinator cannot create a
+// second signing attempt.
+func (t *TssServer) joinFrostKeySignParty(
+	msgID,
+	version string,
+	blockHeight int64,
+	participants []string,
+	threshold int,
+	sigChan chan string,
+) ([]peer.ID, string, error) {
+	oldRotation, err := conversion.VersionLTCheck(strings.TrimSpace(version), frostJoinRotationVersion)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail to parse FROST join rotation version: %w", err)
+	}
+	if oldRotation {
+		return t.joinParty(msgID, version, blockHeight, participants, threshold, sigChan)
+	}
+
+	eligiblePeers, err := conversion.GetPeerIDsFromPubKeys(participants)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail to resolve FROST join peers: %w", err)
+	}
+	peerStrings := peerIDsToStrings(eligiblePeers)
+	leaders, err := p2p.LeaderNodes(msgID, blockHeight, peerStrings)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail to order FROST join leaders: %w", err)
+	}
+	attempts := len(leaders)
+	if attempts > frostMaxJoinLeaderAttempts {
+		attempts = frostMaxJoinLeaderAttempts
+	}
+
+	var lastErr error
+	var lastLeader string
+	for attempt := 0; attempt < attempts; attempt++ {
+		leader := leaders[attempt]
+		joinID, idErr := frostJoinAttemptID(msgID, leader, peerStrings, attempt)
+		if idErr != nil {
+			return nil, leader, idErr
+		}
+		onlinePeers, selectedLeader, joinErr := t.partyCoordinator.JoinPartyWithSelectedLeader(
+			joinID,
+			leader,
+			peerStrings,
+			threshold,
+			sigChan,
+		)
+		t.partyCoordinator.ReleaseStream(joinID)
+		if joinErr == nil {
+			joinErr = validateFrostJoinParty(onlinePeers, eligiblePeers, selectedLeader, threshold+1)
+		}
+		if joinErr == nil {
+			return onlinePeers, selectedLeader, nil
+		}
+		lastErr = joinErr
+		lastLeader = selectedLeader
+		t.logger.Warn().
+			Err(joinErr).
+			Str("msg_id", msgID).
+			Str("join_id", joinID).
+			Str("leader", selectedLeader).
+			Int("attempt", attempt+1).
+			Int("max_attempts", attempts).
+			Msg("FROST join attempt failed; rotating coordinator without blame")
+	}
+	return nil, lastLeader, fmt.Errorf("all %d deterministic FROST join attempts failed: %w", attempts, lastErr)
 }
 
 // frostActiveSignerPubKeys returns the filtered FROST signing party when one
@@ -386,7 +529,7 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 		return waitResp, nil
 	}
 
-	onlinePeers, _, errJoinParty := t.joinParty(
+	onlinePeers, leader, errJoinParty := t.joinFrostKeySignParty(
 		msgID,
 		req.Version,
 		req.BlockHeight,
@@ -395,9 +538,10 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 		sigChan,
 	)
 	if errJoinParty != nil {
+		t.logger.Error().Err(errJoinParty).Str("msg_id", msgID).Str("leader", leader).Msg("fail to form FROST keysign party")
 		return FrostKeySignResponse{
 			Status: tcommon.Fail,
-			Blame:  blame.NewBlame(errJoinParty.Error(), nil),
+			Blame:  frostJoinPartyBlame(),
 		}, nil
 	}
 

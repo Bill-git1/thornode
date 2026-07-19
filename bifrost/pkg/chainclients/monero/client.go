@@ -1396,6 +1396,28 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	if memberErr != nil {
 		return nil, nil, nil, fmt.Errorf("fail to resolve vault signing members for FROST signing: %w", memberErr)
 	}
+
+	// A node whose sidecar holds no threshold share for this vault cannot
+	// contribute signing shares, and if elected FROST leader it would consume a
+	// coordinator attempt before the party rotates. Stand down proactively;
+	// the filtered party can reach threshold without us.
+	// An unavailable or malformed key-status response cannot prove signability.
+	// Fail before party formation instead of letting a node with an unknown local
+	// share state join and veto the round. Bifrost will retry once exact-vault
+	// signability is available again; no blame is posted for this local error.
+	hasKeys, keysErr := c.sidecarHasVaultKeys(signReqCtx.vaultPubKey)
+	if keysErr != nil {
+		return nil, nil, nil, fmt.Errorf(
+			"refuse XMR FROST keysign while local vault signability is unknown: %w",
+			keysErr,
+		)
+	}
+	if !hasKeys {
+		c.logger.Warn().
+			Str("vault_pubkey", signReqCtx.vaultPubKey.String()).
+			Msg("local sidecar holds no FROST keyshare for vault; standing down from keysign")
+		return nil, nil, nil, nil
+	}
 	version, err := c.thorchainBridge.GetThorchainVersion()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to resolve thorchain version: %w", err)
@@ -2410,6 +2432,36 @@ func monovaultKeygenLabel(blockHeight int64, poolPubKey common.PubKey, members [
 		return hrp + "1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
 	}
 	return placeholder
+}
+
+// sidecarHasVaultKeys reports whether the local sidecar holds a FROST
+// threshold share for the vault. The sidecar may key the vault record by
+// either the bech32 vault pubkey or the raw hex group key, so both identifiers
+// are matched. An unknown vault means no keys.
+func (c *Client) sidecarHasVaultKeys(vaultPubKey common.PubKey) (bool, error) {
+	if c.sidecar == nil {
+		return false, fmt.Errorf("sidecar not configured")
+	}
+	if vaultPubKey.IsEmpty() {
+		return false, fmt.Errorf("vault pubkey is empty")
+	}
+	vaults, err := c.sidecar.Vaults()
+	if err != nil {
+		return false, fmt.Errorf("fail to list sidecar vault keys: %w", err)
+	}
+	identifiers := []string{vaultPubKey.String()}
+	if groupKeyHex, hexErr := groupKeyHexFromVaultPubKey(vaultPubKey); hexErr == nil {
+		identifiers = append(identifiers, groupKeyHex)
+	}
+	for _, vault := range vaults {
+		recorded := strings.TrimSpace(vault.VaultPubKey)
+		for _, identifier := range identifiers {
+			if strings.EqualFold(recorded, identifier) {
+				return vault.HasFrostKeys, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 // vaultSigningMembers returns both signer views needed by FROST: full vault

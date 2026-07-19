@@ -211,6 +211,14 @@ type consolidationSidecar struct {
 func (s *consolidationSidecar) handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	switch {
+	case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/keys":
+		s.mu.Lock()
+		vaults := make([]sidecar.VaultKey, 0, len(s.balanceByVault))
+		for pubKey := range s.balanceByVault {
+			vaults = append(vaults, sidecar.VaultKey{VaultPubKey: pubKey, HasFrostKeys: true})
+		}
+		s.mu.Unlock()
+		_ = json.NewEncoder(w).Encode(map[string]any{"vaults": vaults})
 	case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register":
 		_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
 	case strings.HasPrefix(r.URL.Path, "/v1/monero/balance/"):

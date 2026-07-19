@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +27,13 @@ var (
 	ErrNotActiveSigner  = errors.New("not active signer")
 	ErrSigGenerated     = errors.New("signature generated")
 )
+
+// FrostJoinAttemptIDPrefix identifies ephemeral, retryable FROST join-party
+// sessions. Unlike legacy join IDs, an early request for one of these sessions
+// is safe to reset: members retry the selected leader every 500ms, and a node
+// which intentionally stood down because it has no keyshare will never create
+// a peer group or otherwise release the parked stream.
+const FrostJoinAttemptIDPrefix = "frostjoin-"
 
 type PartyCoordinator struct {
 	logger             zerolog.Logger
@@ -66,12 +74,8 @@ func (pc *PartyCoordinator) Stop() {
 }
 
 func (pc *PartyCoordinator) processRespMsg(respMsg *messages.JoinPartyLeaderComm, stream network.Stream) {
-	pc.streamMgr.AddStream(respMsg.ID, stream)
-
+	peerGroup, ok := pc.trackJoinStream(respMsg.ID, stream)
 	remotePeer := stream.Conn().RemotePeer()
-	pc.joinPartyGroupLock.Lock()
-	peerGroup, ok := pc.peersGroup[respMsg.ID]
-	pc.joinPartyGroupLock.Unlock()
 	if !ok {
 		pc.logger.Info().Msgf("message ID from peer(%s) can not be found", remotePeer)
 		return
@@ -89,23 +93,15 @@ func (pc *PartyCoordinator) processRespMsg(respMsg *messages.JoinPartyLeaderComm
 	}
 }
 
-// TODO(stream-leak): streams parked here (and in HandleStream /
+// TODO(stream-leak): legacy streams parked here (and in HandleStream /
 // HandleStreamWithLeader) under a msgID whose join-party never runs locally
 // are never released — ReleaseStream only fires at local keygen/keysign
-// completion. Unlike the equivalent fix in communication.go handleStreamTss,
-// resetting eagerly here is NOT a dead-branch change: "party not ready" is
-// often a legitimate early arrival cleaned up by the later ReleaseStream, and
-// some branches ack on the inbound stream (HandleStreamWithLeader "response"),
-// so an eager reset is sender-visible during party formation. Fixing this
-// safely needs a pass over the join-party stream lifecycle (or a TTL sweep
-// like signature_notifier's cleanupStaleNotifiers). Leak volume is the
-// smallest of the family: a few streams per op, only for ops that never run
-// locally.
+// completion. Resetting every unmatched legacy stream is unsafe because
+// "party not ready" is often a legitimate early arrival. Retryable FROST join
+// attempts are explicitly namespaced and handled by trackJoinStream below;
+// the remaining legacy lifecycle needs a TTL sweep or protocol-level change.
 func (pc *PartyCoordinator) processReqMsg(requestMsg *messages.JoinPartyLeaderComm, stream network.Stream) {
-	pc.streamMgr.AddStream(requestMsg.ID, stream)
-	pc.joinPartyGroupLock.Lock()
-	peerGroup, ok := pc.peersGroup[requestMsg.ID]
-	pc.joinPartyGroupLock.Unlock()
+	peerGroup, ok := pc.trackJoinStream(requestMsg.ID, stream)
 	if !ok {
 		pc.logger.Info().Msg("this party is not ready")
 		return
@@ -119,6 +115,30 @@ func (pc *PartyCoordinator) processReqMsg(requestMsg *messages.JoinPartyLeaderCo
 	if partyFormed {
 		peerGroup.notify <- true
 	}
+}
+
+// trackJoinStream preserves the legacy behavior of parking unmatched join
+// streams while failing closed for retryable FROST attempt IDs. The peer-group
+// lock ensures a matched stream is tracked before the local Join call can
+// remove its group and release that attempt's streams.
+func (pc *PartyCoordinator) trackJoinStream(msgID string, stream network.Stream) (*peerStatus, bool) {
+	pc.joinPartyGroupLock.Lock()
+	peerGroup, ok := pc.peersGroup[msgID]
+	if ok {
+		pc.streamMgr.AddStream(msgID, stream)
+	}
+	pc.joinPartyGroupLock.Unlock()
+	if ok {
+		return peerGroup, true
+	}
+	if strings.HasPrefix(msgID, FrostJoinAttemptIDPrefix) {
+		if err := stream.Reset(); err != nil {
+			pc.logger.Debug().Err(err).Str("msg_id", msgID).Msg("fail to reset unmatched ephemeral FROST join stream")
+		}
+		return nil, false
+	}
+	pc.streamMgr.AddStream(msgID, stream)
+	return nil, false
 }
 
 func (pc *PartyCoordinator) HandleStream(stream network.Stream) {
@@ -443,6 +463,18 @@ func (pc *PartyCoordinator) JoinPartyWithLeader(msgID string, blockHeight int64,
 	if err != nil {
 		return nil, "", err
 	}
+	return pc.JoinPartyWithSelectedLeader(msgID, leader, peers, threshold, sigChan)
+}
+
+// JoinPartyWithSelectedLeader forms a party using a coordinator selected by a
+// deterministic protocol above this layer. The selected leader must be a
+// member of peers. Callers which retry must use a distinct msgID per attempt
+// so delayed responses from an earlier coordinator cannot satisfy a later
+// party-formation attempt.
+func (pc *PartyCoordinator) JoinPartyWithSelectedLeader(msgID, leader string, peers []string, threshold int, sigChan chan string) ([]peer.ID, string, error) {
+	if msgID == "" || leader == "" || len(peers) == 0 {
+		return nil, "", errors.New("invalid input for joining party with selected leader")
+	}
 	leaderID, err := peer.Decode(leader)
 	if err != nil {
 		return nil, "", err
@@ -450,6 +482,16 @@ func (pc *PartyCoordinator) JoinPartyWithLeader(msgID string, blockHeight int64,
 	peerIDs, err := pc.getPeerIDs(peers)
 	if err != nil {
 		return nil, "", err
+	}
+	leaderIsMember := false
+	for _, peerID := range peerIDs {
+		if peerID == leaderID {
+			leaderIsMember = true
+			break
+		}
+	}
+	if !leaderIsMember {
+		return nil, "", errors.New("selected leader is not a party member")
 	}
 	if len(peerIDs) == 1 && peerIDs[0] == pc.host.ID() && threshold <= 0 {
 		return peerIDs, leader, nil

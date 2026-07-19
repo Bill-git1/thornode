@@ -388,6 +388,14 @@ func newFrostBalanceServer(t *testing.T, balanceByPubKey map[string]sidecar.Bala
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && r.URL.Path == "/v1/monero/keys" {
+			vaults := make([]sidecar.VaultKey, 0, len(balanceByPubKey))
+			for pubKey := range balanceByPubKey {
+				vaults = append(vaults, sidecar.VaultKey{VaultPubKey: pubKey, HasFrostKeys: true})
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"vaults": vaults})
+			return
+		}
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
 			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
 			return

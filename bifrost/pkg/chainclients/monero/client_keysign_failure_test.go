@@ -191,6 +191,12 @@ func newFrostSignTxCleanupFixture(t *testing.T, tssServer *mockFrostTssServer, c
 	clearHits := int32(0)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && r.URL.Path == "/v1/monero/keys" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"vaults": []sidecar.VaultKey{{VaultPubKey: vaultPubKey.String(), HasFrostKeys: true}},
+			})
+			return
+		}
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
 			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
 			return

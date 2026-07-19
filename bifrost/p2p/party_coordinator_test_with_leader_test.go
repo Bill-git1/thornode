@@ -8,12 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto" // nolint: staticcheck
 	"github.com/libp2p/go-libp2p-core/host"
 	tnet "github.com/libp2p/go-libp2p-testing/net"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )
 
 func init() {
@@ -234,6 +236,88 @@ func TestJoinPartyWithLeaderSinglePeerReturnsImmediately(t *testing.T) {
 	assert.Len(t, onlinePeers, 1)
 	assert.Equal(t, hosts[0].ID(), onlinePeers[0])
 	assert.Less(t, elapsed, timeout/2)
+}
+
+func TestJoinPartyWithSelectedLeaderUsesRequestedMember(t *testing.T) {
+	hosts := setupHosts(t, 3)
+	timeout := 2 * time.Second
+	coordinators := make([]*PartyCoordinator, 0, len(hosts))
+	peers := make([]string, 0, len(hosts))
+	for _, h := range hosts {
+		coordinators = append(coordinators, NewPartyCoordinator(h, timeout))
+		peers = append(peers, h.ID().String())
+	}
+	defer func() {
+		for _, coordinator := range coordinators {
+			coordinator.Stop()
+		}
+	}()
+
+	selectedLeader := peers[1]
+	joinID := conversion.RandStringBytesMask(64)
+	var wg sync.WaitGroup
+	for _, coordinator := range coordinators {
+		wg.Add(1)
+		go func(coordinator *PartyCoordinator) {
+			defer wg.Done()
+			online, leader, err := coordinator.JoinPartyWithSelectedLeader(
+				joinID,
+				selectedLeader,
+				peers,
+				2,
+				make(chan string),
+			)
+			assert.NoError(t, err)
+			assert.Equal(t, selectedLeader, leader)
+			assert.Len(t, online, 3)
+		}(coordinator)
+	}
+	wg.Wait()
+}
+
+func TestJoinPartyWithSelectedLeaderRejectsNonMember(t *testing.T) {
+	hosts := setupHosts(t, 3)
+	coordinator := NewPartyCoordinator(hosts[0], time.Second)
+	defer coordinator.Stop()
+
+	outsider := hosts[2].ID().String()
+	_, _, err := coordinator.JoinPartyWithSelectedLeader(
+		conversion.RandStringBytesMask(64),
+		outsider,
+		[]string{hosts[0].ID().String(), hosts[1].ID().String()},
+		1,
+		make(chan string),
+	)
+	assert.EqualError(t, err, "selected leader is not a party member")
+}
+
+func TestUnmatchedEphemeralFrostJoinStreamsAreNotParked(t *testing.T) {
+	hosts := setupHosts(t, 2)
+	sender := NewPartyCoordinator(hosts[0], time.Second)
+	receiver := NewPartyCoordinator(hosts[1], time.Second)
+	defer sender.Stop()
+	defer receiver.Stop()
+
+	for _, msgType := range []string{"request", "response"} {
+		joinID := FrostJoinAttemptIDPrefix + msgType
+		payload, err := proto.Marshal(&messages.JoinPartyLeaderComm{
+			ID:      joinID,
+			MsgType: msgType,
+		})
+		assert.NoError(t, err)
+
+		// Waiting for a response makes this call return only after the receiver
+		// resets the unmatched ephemeral stream. sendMsgToPeer deliberately
+		// treats that read-side reset as a completed send.
+		err = sender.sendMsgToPeer(payload, joinID, hosts[1].ID(), joinPartyProtocolWithLeader, true)
+		assert.NoError(t, err)
+
+		receiver.streamMgr.streamLocker.RLock()
+		_, parked := receiver.streamMgr.unusedStreams[joinID]
+		receiver.streamMgr.streamLocker.RUnlock()
+		assert.False(t, parked, "unmatched ephemeral FROST join stream must not be retained")
+		sender.ReleaseStream(joinID)
+	}
 }
 
 func TestGetPeerIDs(t *testing.T) {
