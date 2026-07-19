@@ -476,33 +476,50 @@ func (o *Observer) processTxIns() {
 			}
 			return
 		case txIn := <-o.globalTxsQueue:
+			if len(txIn.TxArray) == 0 {
+				continue
+			}
+
 			o.lastNodeStatusMu.RLock()
 			lastNodeStatus := o.lastNodeStatus
 			o.lastNodeStatusMu.RUnlock()
 
-			if lastNodeStatus != stypes.NodeStatus_Active {
-				continue
+			process := func(tx types.TxIn) {
+				o.processObservedTx(tx)
 			}
-
-			// Check if there are any items to process
-			if len(txIn.TxArray) == 0 {
-				continue
+			operation := "processObservedTx"
+			if lastNodeStatus != stypes.NodeStatus_Active {
+				if txIn.Chain.Equals(common.XMRChain) {
+					// Churned-out members do not produce ordinary observations, but
+					// they may still provide an exact signed source-vault certificate
+					// for an outbound from a retiring vault they historically owned.
+					// This path performs network I/O, so run it in the same bounded pool
+					// as active observation processing instead of blocking this queue.
+					process = func(tx types.TxIn) {
+						if err := o.attestHistoricalXMRSpentRefCertificates(tx); err != nil {
+							o.logger.Error().Err(err).Msg("failed to attest historical XMR spent-ref certificates")
+						}
+					}
+					operation = "attestHistoricalXMRSpentRefCertificates"
+				} else {
+					continue
+				}
 			}
 
 			// Acquire a token from semaphore
 			sem <- struct{}{}
 
 			// Process observed tx in a goroutine
-			go func(tx types.TxIn) {
+			go func(tx types.TxIn, process func(types.TxIn), operation string) {
 				defer func() {
 					// Release the token back to semaphore when done
 					<-sem
 				}()
 
 				start := time.Now()
-				o.processObservedTx(tx)
-				o.logger.Debug().Msgf("processObservedTx took %s", time.Since(start))
-			}(txIn)
+				process(tx)
+				o.logger.Debug().Msgf("%s took %s", operation, time.Since(start))
+			}(txIn, process, operation)
 		}
 	}
 }
@@ -595,6 +612,66 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 		o.logger.Error().Err(err).Msg("fail to add tx to storage")
 	}
 	o.logger.Debug().Msgf("AddOrUpdateTx new took %s", time.Since(setDeckStart))
+}
+
+// attestHistoricalXMRSpentRefCertificates converts only pre-attributed XMR
+// outbounds with spent refs. AttestObservedTx applies the retiring-vault,
+// historical-membership, exact-signature, and planned-outbound gates and routes
+// the result over the certificate-only protocol when this observer is inactive.
+func (o *Observer) attestHistoricalXMRSpentRefCertificates(txIn types.TxIn) error {
+	if !txIn.Chain.Equals(common.XMRChain) || txIn.MemPool || len(txIn.TxArray) == 0 {
+		return nil
+	}
+
+	filtered := txIn.TxArray
+	if !txIn.Filtered {
+		filtered = o.filterObservations(txIn.Chain, txIn.TxArray, txIn.MemPool)
+	}
+	certificateItems := make([]*types.TxInItem, 0, len(filtered))
+	for _, item := range filtered {
+		if item == nil || item.ObservedVaultPubKey.IsEmpty() || len(item.SpentOutputRefs) == 0 {
+			continue
+		}
+		vaultAddress, err := item.ObservedVaultPubKey.GetAddress(common.XMRChain)
+		if err != nil || vaultAddress.IsEmpty() || item.Sender != vaultAddress.String() {
+			continue
+		}
+		certificateItems = append(certificateItems, item)
+	}
+	if len(certificateItems) == 0 {
+		return nil
+	}
+
+	certificateTxIn := txIn
+	certificateTxIn.Filtered = true
+	certificateTxIn.TxArray = certificateItems
+	chainClient, err := o.getChain(common.XMRChain)
+	if err != nil {
+		return err
+	}
+	certificateTxIn.ConfirmationRequired = chainClient.GetConfirmationCount(certificateTxIn)
+	finaliseHeight := certificateItems[0].BlockHeight + certificateTxIn.ConfirmationRequired
+	observed, _, err := o.getThorchainTxIns(&certificateTxIn, false, finaliseHeight)
+	if err != nil {
+		return err
+	}
+	for i := range observed {
+		if err = o.attestationGossip.AttestObservedTx(
+			context.Background(),
+			&observed[i],
+			false,
+			false,
+		); err != nil {
+			// Most pre-attributed XMR outbounds are from vaults this node never
+			// controlled. They are intentionally ignored by the narrow admission
+			// gate rather than turning an inactive scanner block into an error.
+			o.logger.Debug().Err(err).
+				Str("tx_id", observed[i].Tx.ID.String()).
+				Str("vault", observed[i].ObservedPubKey.String()).
+				Msg("inactive observer did not qualify for historical XMR certificate")
+		}
+	}
+	return nil
 }
 
 func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInItem, memPool bool) []*types.TxInItem {

@@ -131,10 +131,13 @@ func setupTestGossip(t *testing.T) (*AttestationGossip, *MockHost, *MockKeys, *M
 		eventClient: eventClient,
 		batcher:     batcher,
 
-		observedTxs: make(map[txKey]*AttestationState[*attestableObservedTx]),
-		networkFees: make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
-		solvencies:  make(map[common.TxID]*AttestationState[*common.Solvency]),
-		errataTxs:   make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
+		observedTxs:                make(map[txKey]*AttestationState[*attestableObservedTx]),
+		networkFees:                make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
+		solvencies:                 make(map[common.TxID]*AttestationState[*common.Solvency]),
+		errataTxs:                  make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
+		authorizedXMRSpentRefs:     make(map[xmrSpentRefsConflictKey]*xmrSpentRefsConflictEntry),
+		applySpentRefsSem:          make(chan struct{}, 16),
+		applyCommittedSpentRefsSem: make(chan struct{}, 4),
 
 		observedTxsPool: NewAttestationStatePool[*attestableObservedTx](),
 		networkFeesPool: NewAttestationStatePool[*common.NetworkFee](),
@@ -959,10 +962,13 @@ func TestXMRSpentOutputRefsCallback(t *testing.T) {
 		return common.PubKeys{"pk1", "pk2", "pk3"}, nil
 	}
 
-	t.Run("callback fires for locally attested XMR outbound with spent refs", func(t *testing.T) {
+	t.Run("callback does not fire for lone local XMR attestation", func(t *testing.T) {
 		var callbackTx *common.ObservedTx
-		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 			callbackTx = &tx
+			if onOutcome != nil {
+				onOutcome(true)
+			}
 		})
 
 		refs := []common.OutputRef{
@@ -984,19 +990,20 @@ func TestXMRSpentOutputRefsCallback(t *testing.T) {
 
 		time.Sleep(50 * time.Millisecond)
 
-		require.NotNil(t, callbackTx)
-		assert.Equal(t, 2, len(callbackTx.SpentOutputRefs))
-		assert.Equal(t, "aaa111", callbackTx.SpentOutputRefs[0].TxHash)
+		require.Nil(t, callbackTx, "local identity must not bypass source-vault quorum")
 	})
 
 	t.Run("callback skips unauthorized peer XMR outbound spent refs", func(t *testing.T) {
 		var called bool
-		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 			called = true
+			if onOutcome != nil {
+				onOutcome(true)
+			}
 		})
 
 		// This peer has a syntactically valid attestation, but it is not an
-		// active source-vault member with a matching planned outbound. The
+		// source-vault quorum with a matching planned outbound. The
 		// handler should retain the peer vote without importing refs.
 		tx := common.ObservedTx{
 			Tx:              common.Tx{ID: "xmr-peer-out-1", Chain: common.XMRChain},
@@ -1017,8 +1024,11 @@ func TestXMRSpentOutputRefsCallback(t *testing.T) {
 
 	t.Run("callback does not fire for non-XMR chain", func(t *testing.T) {
 		var called bool
-		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 			called = true
+			if onOutcome != nil {
+				onOutcome(true)
+			}
 		})
 
 		tx := common.ObservedTx{
@@ -1040,8 +1050,11 @@ func TestXMRSpentOutputRefsCallback(t *testing.T) {
 
 	t.Run("callback does not fire for inbound XMR", func(t *testing.T) {
 		var called bool
-		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 			called = true
+			if onOutcome != nil {
+				onOutcome(true)
+			}
 		})
 
 		tx := common.ObservedTx{
@@ -1063,8 +1076,11 @@ func TestXMRSpentOutputRefsCallback(t *testing.T) {
 
 	t.Run("callback does not fire when refs exceed cap", func(t *testing.T) {
 		var called bool
-		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 			called = true
+			if onOutcome != nil {
+				onOutcome(true)
+			}
 		})
 
 		refs := make([]common.OutputRef, 33)

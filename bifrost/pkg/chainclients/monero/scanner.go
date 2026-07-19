@@ -948,7 +948,7 @@ func (s *Scanner) transferToTxInItem(
 		height = fallbackHeight
 	}
 
-	return stypes.NewTxInItem(
+	item := stypes.NewTxInItem(
 		height,
 		transfer.TxID,
 		memo,
@@ -960,7 +960,56 @@ func (s *Scanner) transferToTxInItem(
 		"",
 		"",
 		nil,
-	), true
+	)
+	item.SpentOutputRefs = s.echoedSpentOutputRefs(transfer, sender, vaultPubKey)
+	return item, true
+}
+
+// echoedSpentOutputRefs mirrors the sidecar-verified spent refs of an outgoing
+// transfer into the observation, in sidecar order with SpendTxHash set to the
+// observed tx, exactly as the signing path attests them. A non-signing
+// observer can only see the outbound after a verified mark-spent import, so
+// echoing keeps every validator's observation identical and lets signer and
+// peer attestations pool into a single quorum variant. Refs that would not
+// survive ObservedTx validation are dropped as a set rather than poisoning
+// the whole observation.
+func (s *Scanner) echoedSpentOutputRefs(transfer sidecar.Transfer, sender string, vaultPubKey common.PubKey) []*common.OutputRef {
+	if len(transfer.SpentOutputRefs) == 0 {
+		return nil
+	}
+	// Refs are only valid on outbound observations (spends from the vault);
+	// thornode rejects inbound observed txs that carry them. Incoming
+	// transfers never have refs, but do not rely on the sidecar for that.
+	deriveChain := s.chain
+	if deriveChain.IsEmpty() {
+		deriveChain = common.XMRChain
+	}
+	vaultAddress, err := vaultPubKey.GetAddress(deriveChain)
+	if err != nil || !common.AddressEquals(common.XMRChain, common.Address(sender), vaultAddress) {
+		return nil
+	}
+	refs := make([]common.OutputRef, len(transfer.SpentOutputRefs))
+	for i, ref := range transfer.SpentOutputRefs {
+		refs[i] = common.OutputRef{
+			TxHash:      ref.TxHash,
+			OutputIndex: ref.OutputIndex,
+			KeyImage:    ref.KeyImage,
+			SpendTxHash: transfer.TxID,
+		}
+	}
+	if err := common.ValidateSpentOutputRefs(common.XMRChain, common.TxID(transfer.TxID), refs); err != nil {
+		s.logger.Warn().
+			Err(err).
+			Str("txid", transfer.TxID).
+			Int("refs", len(refs)).
+			Msg("skip echoing invalid xmr spent output refs from sidecar")
+		return nil
+	}
+	out := make([]*common.OutputRef, len(refs))
+	for i := range refs {
+		out[i] = &refs[i]
+	}
+	return out
 }
 
 func (s *Scanner) dedupeTxInItemsByTxID(items []*stypes.TxInItem) []*stypes.TxInItem {

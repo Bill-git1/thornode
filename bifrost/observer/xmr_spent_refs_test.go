@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -138,6 +139,12 @@ func TestXMRPlannedOutboundMatcherRejectsMismatches(t *testing.T) {
 		assert.False(t, xmrObservedTxMatchesPlanned(mutated, planned))
 	})
 
+	t.Run("rejects case-variant destination", func(t *testing.T) {
+		mutated := obsTx
+		mutated.Tx.ToAddress = common.Address(strings.ToUpper(mutated.Tx.ToAddress.String()))
+		assert.False(t, xmrObservedTxMatchesPlanned(mutated, planned))
+	})
+
 	t.Run("rejects wrong amount", func(t *testing.T) {
 		mutated := obsTx
 		mutated.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(1)))
@@ -162,6 +169,12 @@ func TestXMRPlannedOutboundMatcherRejectsMismatches(t *testing.T) {
 		assert.False(t, xmrObservedTxMatchesPlanned(mutated, planned))
 	})
 
+	t.Run("rejects case-variant source address", func(t *testing.T) {
+		mutated := obsTx
+		mutated.Tx.FromAddress = common.Address(strings.ToUpper(mutated.Tx.FromAddress.String()))
+		assert.False(t, xmrObservedTxMatchesPlanned(mutated, planned))
+	})
+
 	t.Run("rejects zero gas", func(t *testing.T) {
 		mutated := obsTx
 		mutated.Tx.Gas = common.Gas{common.NewCoin(common.XMRAsset, cosmos.ZeroUint())}
@@ -181,13 +194,13 @@ func TestXMRPlannedOutboundMatcherRejectsMismatches(t *testing.T) {
 	})
 }
 
-// TestPeerXMRSpentRefsRequirePlannedOutboundAndSourceVaultMember verifies that
-// pre-quorum peer refs are importable only when the peer is allowed to introduce
-// refs for this source vault and the observed tx matches THORChain's plan.
+// TestPeerXMRSpentRefsRequirePlannedOutboundAndSourceVaultQuorum verifies that
+// pre-chain peer refs are importable only when the exact observation has a
+// historical source-vault quorum and matches THORChain's plan.
 //
 // These tests intentionally assert that no local attestation is added: peer
 // import only seeds the sidecar so the scanner can later observe independently.
-func TestPeerXMRSpentRefsRequirePlannedOutboundAndSourceVaultMember(t *testing.T) {
+func TestPeerXMRSpentRefsRequirePlannedOutboundAndSourceVaultQuorum(t *testing.T) {
 	origVerifySignature := verifySignature
 	defer func() { verifySignature = origVerifySignature }()
 	// The tests below focus on the authorization gates that run after
@@ -212,7 +225,7 @@ func TestPeerXMRSpentRefsRequirePlannedOutboundAndSourceVaultMember(t *testing.T
 		callback := assertNoSpentRefCallback(t, ag)
 		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, attester))
 		callback()
-		assertObserverStateHasOnlyPeerAttestation(t, ag, obsTx)
+		assertObserverStateAttestationCount(t, ag, obsTx, 1)
 	})
 
 	t.Run("active non-source-vault member", func(t *testing.T) {
@@ -223,51 +236,84 @@ func TestPeerXMRSpentRefsRequirePlannedOutboundAndSourceVaultMember(t *testing.T
 		otherMember := observerTestPubKey(t, secp256k1.GenPrivKey())
 		ag.setActiveValidators(common.PubKeys{attesterPubKey})
 		// The planned outbound exists, but this active peer is not in the source
-		// vault membership. Newly churned-in validators may import refs, but
-		// they cannot introduce refs for an old-vault spend.
+		// vault membership. A newly churned-in validator cannot certify an
+		// old-vault spend it never controlled.
 		bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, otherMember)
 		bridge.getKeysignFunc = observerTestKeysignFunc(planned)
 
 		callback := assertNoSpentRefCallback(t, ag)
 		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, attester))
 		callback()
-		assertObserverStateHasOnlyPeerAttestation(t, ag, obsTx)
+		assertObserverStateAttestationCount(t, ag, obsTx, 1)
 	})
 
-	t.Run("inactive source-vault member", func(t *testing.T) {
+	t.Run("inactive source-vault quorum remains authoritative", func(t *testing.T) {
 		ag, _, _, _, bridge, _ := setupTestGossip(t)
 		obsTx, planned := observerTestXMRPlan(t)
-		attester := secp256k1.GenPrivKey()
-		attesterPubKey := observerTestPubKey(t, attester)
-		// The peer belongs to the source vault and the tx matches the plan, but
-		// it is not active. Churned-out vault members must not introduce refs.
+		first := secp256k1.GenPrivKey()
+		second := secp256k1.GenPrivKey()
+		third := secp256k1.GenPrivKey()
+		members := common.PubKeys{
+			observerTestPubKey(t, first),
+			observerTestPubKey(t, second),
+			observerTestPubKey(t, third),
+		}
+		// Historical membership—not the post-churn active set—controls an old
+		// vault's spend certificate. Two of three exact attestations are enough.
 		ag.setActiveValidators(nil)
-		bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, attesterPubKey)
-		bridge.getKeysignFunc = observerTestKeysignFunc(planned)
-
-		callback := assertNoSpentRefCallback(t, ag)
-		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, attester))
-		callback()
-		assertObserverStateHasOnlyPeerAttestation(t, ag, obsTx)
-	})
-
-	t.Run("source-vault member with planned outbound match", func(t *testing.T) {
-		ag, _, _, _, bridge, _ := setupTestGossip(t)
-		obsTx, planned := observerTestXMRPlan(t)
-		attester := secp256k1.GenPrivKey()
-		attesterPubKey := observerTestPubKey(t, attester)
-		ag.setActiveValidators(common.PubKeys{attesterPubKey})
-		// This is the permitted peer path: an active source-vault member signs
-		// the exact observation and that observation matches a planned txout.
-		bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, attesterPubKey)
+		bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, members...)
 		bridge.getKeysignFunc = observerTestKeysignFunc(planned)
 
 		applied := make(chan common.ObservedTx, 1)
-		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 			applied <- tx
+			if onOutcome != nil {
+				onOutcome(true)
+			}
 		})
 
-		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, attester))
+		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, first))
+		assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, second))
+		select {
+		case got := <-applied:
+			assert.Equal(t, obsTx.Tx.ID, got.Tx.ID)
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for historical source-vault quorum import")
+		}
+		assertObserverStateAttestationCount(t, ag, obsTx, 2)
+	})
+
+	t.Run("one source-vault member and local self do not bypass quorum", func(t *testing.T) {
+		ag, _, _, _, bridge, _ := setupTestGossip(t)
+		obsTx, planned := observerTestXMRPlan(t)
+		self := secp256k1.GenPrivKey()
+		second := secp256k1.GenPrivKey()
+		third := secp256k1.GenPrivKey()
+		members := common.PubKeys{
+			observerTestPubKey(t, self),
+			observerTestPubKey(t, second),
+			observerTestPubKey(t, third),
+		}
+		ag.pubKey = self.PubKey().Bytes()
+		ag.setActiveValidators(members)
+		bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, members...)
+		bridge.getKeysignFunc = observerTestKeysignFunc(planned)
+
+		applied := make(chan common.ObservedTx, 1)
+		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
+			applied <- tx
+			if onOutcome != nil {
+				onOutcome(true)
+			}
+		})
+
+		// Even an attestation produced by this process is only one certificate
+		// share and must leave sidecar state untouched.
+		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, self))
+		assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+
+		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, second))
 
 		select {
 		case got := <-applied:
@@ -276,7 +322,7 @@ func TestPeerXMRSpentRefsRequirePlannedOutboundAndSourceVaultMember(t *testing.T
 		case <-time.After(time.Second):
 			t.Fatal("timed out waiting for peer spent-ref import")
 		}
-		assertObserverStateHasOnlyPeerAttestation(t, ag, obsTx)
+		assertObserverStateAttestationCount(t, ag, obsTx, 2)
 	})
 }
 
@@ -295,15 +341,20 @@ func TestPeerXMRSpentRefsUnauthorizedFirstDoesNotBlockAuthorizedImport(t *testin
 	ag, _, _, _, bridge, _ := setupTestGossip(t)
 	obsTx, planned := observerTestXMRPlan(t)
 	unauthorized := secp256k1.GenPrivKey()
-	authorized := secp256k1.GenPrivKey()
-	authorizedPubKey := observerTestPubKey(t, authorized)
-	ag.setActiveValidators(common.PubKeys{authorizedPubKey})
-	bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, authorizedPubKey)
+	first := secp256k1.GenPrivKey()
+	second := secp256k1.GenPrivKey()
+	third := secp256k1.GenPrivKey()
+	members := common.PubKeys{observerTestPubKey(t, first), observerTestPubKey(t, second), observerTestPubKey(t, third)}
+	ag.setActiveValidators(members)
+	bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, members...)
 	bridge.getKeysignFunc = observerTestKeysignFunc(planned)
 
 	applied := make(chan common.ObservedTx, 1)
-	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 		applied <- tx
+		if onOutcome != nil {
+			onOutcome(true)
+		}
 	})
 
 	// This first peer is neither active nor in the source vault. It should not
@@ -311,7 +362,9 @@ func TestPeerXMRSpentRefsUnauthorizedFirstDoesNotBlockAuthorizedImport(t *testin
 	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, unauthorized))
 	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
 
-	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, authorized))
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, first))
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, second))
 
 	select {
 	case got := <-applied:
@@ -322,13 +375,298 @@ func TestPeerXMRSpentRefsUnauthorizedFirstDoesNotBlockAuthorizedImport(t *testin
 	}
 }
 
+// TestPeerXMRSpentRefsFailedImportDoesNotBlockAuthorizedRetry protects the
+// latch around sidecar import. A failed import must not consume the tx's
+// spent-ref opportunity because the peer sidecar can be behind the scanner.
+func TestPeerXMRSpentRefsFailedImportDoesNotBlockAuthorizedRetry(t *testing.T) {
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error { return nil }
+
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+	obsTx, planned := observerTestXMRPlan(t)
+	first := secp256k1.GenPrivKey()
+	second := secp256k1.GenPrivKey()
+	third := secp256k1.GenPrivKey()
+	firstPubKey := observerTestPubKey(t, first)
+	secondPubKey := observerTestPubKey(t, second)
+	thirdPubKey := observerTestPubKey(t, third)
+	ag.setActiveValidators(common.PubKeys{firstPubKey, secondPubKey, thirdPubKey})
+	bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, firstPubKey, secondPubKey, thirdPubKey)
+	bridge.getKeysignFunc = observerTestKeysignFunc(planned)
+
+	applied := make(chan common.ObservedTx, 2)
+	results := make(chan bool, 2)
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
+		applied <- tx
+		if onOutcome != nil {
+			onOutcome(<-results)
+		} else {
+			<-results
+		}
+	})
+
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, first))
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, second))
+	select {
+	case got := <-applied:
+		assert.Equal(t, obsTx.Tx.ID, got.Tx.ID)
+		results <- false
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for first spent-ref import attempt")
+	}
+
+	require.Eventually(t, func() bool {
+		return !observerTestSpentRefsApplied(t, ag, obsTx)
+	}, time.Second, 10*time.Millisecond)
+
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, third))
+	select {
+	case got := <-applied:
+		assert.Equal(t, obsTx.Tx.ID, got.Tx.ID)
+		results <- true
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for second spent-ref import attempt")
+	}
+
+	require.Eventually(t, func() bool {
+		return observerTestSpentRefsApplied(t, ag, obsTx)
+	}, time.Second, 10*time.Millisecond)
+}
+
+// TestPeerXMRSpentRefsAuthorizedConflictBlocksSecondImport verifies that two
+// authorized source-vault peers cannot race different spent-ref mappings for the
+// same outbound into the local sidecar.
+func TestPeerXMRSpentRefsAuthorizedConflictBlocksSecondImport(t *testing.T) {
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error { return nil }
+
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+	obsTx, planned := observerTestXMRPlan(t)
+	conflicting := obsTx
+	conflicting.SpentOutputRefs = []common.OutputRef{observerTestOutputRef("xmr-peer-conflict", obsTx.Tx.ID.String())}
+
+	first := secp256k1.GenPrivKey()
+	second := secp256k1.GenPrivKey()
+	third := secp256k1.GenPrivKey()
+	firstPubKey := observerTestPubKey(t, first)
+	secondPubKey := observerTestPubKey(t, second)
+	thirdPubKey := observerTestPubKey(t, third)
+	ag.setActiveValidators(common.PubKeys{firstPubKey, secondPubKey, thirdPubKey})
+	bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, firstPubKey, secondPubKey, thirdPubKey)
+	bridge.getKeysignFunc = observerTestKeysignFunc(planned)
+
+	applied := make(chan common.ObservedTx, 2)
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
+		applied <- tx
+		if onOutcome != nil {
+			onOutcome(true)
+		}
+	})
+
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, first))
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, second))
+	select {
+	case got := <-applied:
+		assert.Equal(t, obsTx.SpentOutputRefs, got.SpentOutputRefs)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for first spent-ref import")
+	}
+
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(conflicting, second))
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(conflicting, third))
+	assertNoSpentRefImportDuring(t, applied, 150*time.Millisecond)
+}
+
 // TestXMRSpentRefGateFailsClosedForNilAttestation verifies the import gate does
 // not treat malformed/empty gossip as source authority for sidecar mutation.
 func TestXMRSpentRefGateFailsClosedForNilAttestation(t *testing.T) {
 	ag, _, _, _, _, _ := setupTestGossip(t)
 	obsTx, _ := observerTestXMRPlan(t)
 
-	assert.False(t, ag.shouldApplyXMRSpentRefsFromAttestation(obsTx, nil))
+	assert.False(t, ag.shouldApplyXMRSpentRefsFromAttestations(obsTx, nil))
+}
+
+// TestSingleVaultMemberCannotScheduleSpentRefVariantFlood is the direct
+// regression for XMR-01/XMR-08: one historical member may gossip arbitrarily
+// many real-looking ref variants, but none may reserve an authorized identity,
+// consume sidecar worker capacity, or create retry work.
+func TestSingleVaultMemberCannotScheduleSpentRefVariantFlood(t *testing.T) {
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error { return nil }
+
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+	base, planned := observerTestXMRPlan(t)
+	malicious := secp256k1.GenPrivKey()
+	second := secp256k1.GenPrivKey()
+	third := secp256k1.GenPrivKey()
+	members := common.PubKeys{
+		observerTestPubKey(t, malicious),
+		observerTestPubKey(t, second),
+		observerTestPubKey(t, third),
+	}
+	ag.setActiveValidators(members)
+	bridge.getVaultFunc = observerTestVaultFunc(base.ObservedPubKey, members...)
+	bridge.getKeysignFunc = observerTestKeysignFunc(planned)
+
+	applied := make(chan common.ObservedTx, 1)
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
+		applied <- tx
+		if onOutcome != nil {
+			onOutcome(true)
+		}
+	})
+
+	const variants = 128
+	for i := 0; i < variants; i++ {
+		variant := base
+		variant.SpentOutputRefs = []common.OutputRef{
+			observerTestOutputRef(fmt.Sprintf("single-member-variant-%d", i), base.Tx.ID.String()),
+		}
+		ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(variant, malicious))
+	}
+
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+	ag.mu.Lock()
+	require.Empty(t, ag.authorizedXMRSpentRefs)
+	ag.mu.Unlock()
+	require.Empty(t, ag.applySpentRefsSem)
+}
+
+// TestSpentRefCertificateUsesTheExactlySignedStatePayload protects against a
+// subtle txKey collision: memo is signed but is not part of Tx.Hash. A peer may
+// wrap a signature over the existing state item in an envelope with a changed
+// memo; sidecar authorization must use the signed state item, never the latest
+// envelope fields.
+func TestSpentRefCertificateUsesTheExactlySignedStatePayload(t *testing.T) {
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+	signed, planned := observerTestXMRPlan(t)
+	mutatedEnvelope := signed
+	mutatedEnvelope.Tx.Memo = "MIGRATE:999"
+	require.Equal(t,
+		observedTxKey(signed, false, false),
+		observedTxKey(mutatedEnvelope, false, false),
+		"fixture must exercise one attestation-state bucket",
+	)
+
+	first := secp256k1.GenPrivKey()
+	second := secp256k1.GenPrivKey()
+	third := secp256k1.GenPrivKey()
+	members := common.PubKeys{
+		observerTestPubKey(t, first),
+		observerTestPubKey(t, second),
+		observerTestPubKey(t, third),
+	}
+	ag.setActiveValidators(members)
+	bridge.getVaultFunc = observerTestVaultFunc(signed.ObservedPubKey, members...)
+	bridge.getKeysignFunc = observerTestKeysignFunc(planned)
+
+	signable, err := signed.GetSignablePayloadWithInbound(false)
+	require.NoError(t, err)
+	firstSig, err := first.Sign(signable)
+	require.NoError(t, err)
+	secondSig, err := second.Sign(signable)
+	require.NoError(t, err)
+
+	applied := make(chan common.ObservedTx, 1)
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
+		applied <- tx
+		if onOutcome != nil {
+			onOutcome(true)
+		}
+	})
+
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:   signed,
+		Inbound: false,
+		Attestation: &common.Attestation{
+			PubKey:    first.PubKey().Bytes(),
+			Signature: firstSig,
+		},
+	})
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+
+	// This envelope carries a different memo, but its valid signature is over
+	// the original state item. It may complete that original certificate; it
+	// must never authorize the mutated envelope.
+	ag.handleObservedTxAttestation(context.Background(), common.AttestTx{
+		ObsTx:   mutatedEnvelope,
+		Inbound: false,
+		Attestation: &common.Attestation{
+			PubKey:    second.PubKey().Bytes(),
+			Signature: secondSig,
+		},
+	})
+
+	select {
+	case got := <-applied:
+		require.Equal(t, signed.Tx.Memo, got.Tx.Memo)
+		require.NotEqual(t, mutatedEnvelope.Tx.Memo, got.Tx.Memo)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for exact-payload source-vault certificate")
+	}
+}
+
+// TestXMRSpentRefImportCapacityIsAcquiredBeforeSpawn verifies overload is
+// rejected at the boundary rather than accumulating goroutines blocked on a
+// full semaphore. It also pins the committed reserve: pre-quorum saturation
+// must not consume the fast path for an already-committed observation.
+func TestXMRSpentRefImportCapacityIsAcquiredBeforeSpawn(t *testing.T) {
+	ag, _, _, _, _, _ := setupTestGossip(t)
+	ag.applySpentRefsSem = make(chan struct{}, 1)
+	ag.applyCommittedSpentRefsSem = make(chan struct{}, 1)
+
+	first, _ := observerTestXMRPlan(t)
+	second := first
+	second.Tx.ID = common.TxID(observerTestHash("xmr-overload-second"))
+	committed := first
+	committed.Tx.ID = common.TxID(observerTestHash("xmr-overload-committed"))
+
+	started := make(chan common.TxID, 2)
+	release := make(chan struct{})
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
+		started <- tx.Tx.ID
+		<-release
+		if onOutcome != nil {
+			onOutcome(true)
+		}
+	})
+
+	ag.applySpentRefsAsync(first, nil)
+	select {
+	case got := <-started:
+		require.Equal(t, first.Tx.ID, got)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for first pre-quorum import")
+	}
+
+	rejected := make(chan bool, 1)
+	ag.applySpentRefsAsync(second, func(applied bool) { rejected <- applied })
+	select {
+	case applied := <-rejected:
+		require.False(t, applied)
+	case <-time.After(time.Second):
+		t.Fatal("over-capacity pre-quorum import did not fail promptly")
+	}
+	require.Len(t, ag.applySpentRefsSem, 1)
+
+	ag.applyCommittedSpentRefsAsync(committed, nil)
+	select {
+	case got := <-started:
+		require.Equal(t, committed.Tx.ID, got)
+	case <-time.After(time.Second):
+		t.Fatal("committed import was starved by pre-quorum capacity")
+	}
+
+	close(release)
+	require.Eventually(t, func() bool {
+		return len(ag.applySpentRefsSem) == 0 && len(ag.applyCommittedSpentRefsSem) == 0
+	}, time.Second, 10*time.Millisecond)
 }
 
 // TestXMRPlannedOutboundMatcherUsesInboundVoterActions covers the OUT/REFUND
@@ -467,8 +805,11 @@ func assertNoSpentRefCallback(t *testing.T, ag *AttestationGossip) func() {
 	t.Helper()
 
 	applied := make(chan common.ObservedTx, 1)
-	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx) {
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
 		applied <- tx
+		if onOutcome != nil {
+			onOutcome(true)
+		}
 	})
 	return func() {
 		t.Helper()
@@ -493,10 +834,10 @@ func assertNoSpentRefImportDuring(t *testing.T, applied <-chan common.ObservedTx
 	}
 }
 
-// assertObserverStateHasOnlyPeerAttestation checks the important safety
-// invariant: accepting peer refs for possible sidecar import does not create a
-// local attestation or blind co-vote.
-func assertObserverStateHasOnlyPeerAttestation(t *testing.T, ag *AttestationGossip, obsTx common.ObservedTx) {
+// assertObserverStateAttestationCount checks the important safety invariant:
+// accepting peer refs for sidecar import does not manufacture a local
+// attestation or blind co-vote.
+func assertObserverStateAttestationCount(t *testing.T, ag *AttestationGossip, obsTx common.ObservedTx, expected int) {
 	t.Helper()
 
 	k := observedTxKey(obsTx, false, false)
@@ -507,5 +848,176 @@ func assertObserverStateHasOnlyPeerAttestation(t *testing.T, ag *AttestationGoss
 
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	assert.Equal(t, 1, state.AttestationCount())
+	assert.Equal(t, expected, state.AttestationCount())
+}
+
+// observerTestSpentRefsApplied reads the live bucket instead of a captured
+// pointer, matching the production rule that async outcomes must not mutate
+// stale pooled state.
+func observerTestSpentRefsApplied(t *testing.T, ag *AttestationGossip, obsTx common.ObservedTx) bool {
+	t.Helper()
+
+	k := observedTxKey(obsTx, false, false)
+	ag.mu.Lock()
+	state, exists := ag.observedTxs[k]
+	if exists {
+		state.mu.Lock()
+	}
+	ag.mu.Unlock()
+	require.True(t, exists)
+	defer state.mu.Unlock()
+	return state.spentRefsApplied
+}
+
+// observerTestConflictState exposes only the import state for conflict-map
+// assertions; the tests should not depend on timestamps or map entry internals.
+func observerTestConflictState(ag *AttestationGossip, obsTx common.ObservedTx) (xmrSpentRefsImportState, bool) {
+	ag.mu.Lock()
+	defer ag.mu.Unlock()
+	entry, ok := ag.authorizedXMRSpentRefs[xmrSpentRefsConflictKeyFor(obsTx)]
+	if !ok {
+		return 0, false
+	}
+	return entry.state, true
+}
+
+// TestPeerXMRSpentRefsTerminalFailureAllowsDifferingAuthorizedSet covers the
+// conflict-map release: an authorized ref set whose sidecar import fails
+// terminally holds no authority, so a differing authorized set for the same
+// outbound must still be importable instead of being pinned out until restart.
+func TestPeerXMRSpentRefsTerminalFailureAllowsDifferingAuthorizedSet(t *testing.T) {
+	origVerifySignature := verifySignature
+	defer func() { verifySignature = origVerifySignature }()
+	verifySignature = func(signBz, signature, attester []byte) error { return nil }
+
+	ag, _, _, _, bridge, _ := setupTestGossip(t)
+	obsTx, planned := observerTestXMRPlan(t)
+	differing := obsTx
+	differing.SpentOutputRefs = []common.OutputRef{observerTestOutputRef("xmr-peer-honest", obsTx.Tx.ID.String())}
+
+	first := secp256k1.GenPrivKey()
+	second := secp256k1.GenPrivKey()
+	third := secp256k1.GenPrivKey()
+	firstPubKey := observerTestPubKey(t, first)
+	secondPubKey := observerTestPubKey(t, second)
+	thirdPubKey := observerTestPubKey(t, third)
+	ag.setActiveValidators(common.PubKeys{firstPubKey, secondPubKey, thirdPubKey})
+	bridge.getVaultFunc = observerTestVaultFunc(obsTx.ObservedPubKey, firstPubKey, secondPubKey, thirdPubKey)
+	bridge.getKeysignFunc = observerTestKeysignFunc(planned)
+
+	applied := make(chan common.ObservedTx, 2)
+	results := make(chan bool, 2)
+	ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
+		applied <- tx
+		if onOutcome != nil {
+			onOutcome(<-results)
+		} else {
+			<-results
+		}
+	})
+
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, first))
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, second))
+	select {
+	case got := <-applied:
+		assert.Equal(t, obsTx.SpentOutputRefs, got.SpentOutputRefs)
+		results <- false
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for first spent-ref import attempt")
+	}
+
+	// The failed outcome lands asynchronously; the differing set is only
+	// admissible once the conflict entry has been marked failed.
+	require.Eventually(t, func() bool {
+		state, ok := observerTestConflictState(ag, obsTx)
+		return ok && state == xmrSpentRefsImportFailed
+	}, time.Second, 10*time.Millisecond)
+
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(differing, second))
+	assertNoSpentRefImportDuring(t, applied, 100*time.Millisecond)
+	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(differing, third))
+	select {
+	case got := <-applied:
+		assert.Equal(t, differing.SpentOutputRefs, got.SpentOutputRefs)
+		results <- true
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for differing authorized spent-ref import")
+	}
+
+	require.Eventually(t, func() bool {
+		state, ok := observerTestConflictState(ag, differing)
+		return ok && state == xmrSpentRefsImportConfirmed
+	}, time.Second, 10*time.Millisecond)
+}
+
+// TestAuthorizedXMRSpentRefsLifecycle pins the conflict-entry state machine:
+// pending blocks differing sets, terminal failure releases the entry, late
+// outcomes for replaced identities are ignored, confirmation is sticky, and
+// committed quorum refs overwrite everything.
+func TestAuthorizedXMRSpentRefsLifecycle(t *testing.T) {
+	ag, _, _, _, _, _ := setupTestGossip(t)
+	obsTx, _ := observerTestXMRPlan(t)
+	differing := obsTx
+	differing.SpentOutputRefs = []common.OutputRef{observerTestOutputRef("xmr-lifecycle-b", obsTx.Tx.ID.String())}
+
+	key := xmrSpentRefsConflictKeyFor(obsTx)
+	identityA := xmrSpentRefsIdentity(obsTx.SpentOutputRefs)
+	identityB := xmrSpentRefsIdentity(differing.SpentOutputRefs)
+	require.NotEqual(t, identityA, identityB)
+
+	// A pending set blocks both a differing set and duplicate scheduling of
+	// itself; the client owns retries for the one admitted import.
+	require.True(t, ag.rememberAuthorizedXMRSpentRefs(obsTx))
+	require.False(t, ag.rememberAuthorizedXMRSpentRefs(differing))
+	require.False(t, ag.rememberAuthorizedXMRSpentRefs(obsTx))
+
+	// A terminal failure releases the entry for a differing authorized set.
+	ag.resolveAuthorizedXMRSpentRefs(key, identityA, false)
+	require.True(t, ag.rememberAuthorizedXMRSpentRefs(differing))
+
+	// A late outcome for the replaced identity must not clobber the new entry.
+	ag.resolveAuthorizedXMRSpentRefs(key, identityA, true)
+	require.False(t, ag.rememberAuthorizedXMRSpentRefs(obsTx))
+
+	// Confirmation makes the current set sticky against differing sets.
+	ag.resolveAuthorizedXMRSpentRefs(key, identityB, true)
+	require.False(t, ag.rememberAuthorizedXMRSpentRefs(obsTx))
+	require.False(t, ag.rememberAuthorizedXMRSpentRefs(differing))
+
+	// A failed outcome must not demote a confirmed entry.
+	ag.resolveAuthorizedXMRSpentRefs(key, identityB, false)
+	state, ok := observerTestConflictState(ag, differing)
+	require.True(t, ok)
+	require.Equal(t, xmrSpentRefsImportConfirmed, state)
+
+	// Thornode-committed quorum refs overwrite pre-quorum conflict memory.
+	ag.recordCommittedXMRSpentRefs(key, identityA)
+	require.False(t, ag.rememberAuthorizedXMRSpentRefs(obsTx))
+	require.False(t, ag.rememberAuthorizedXMRSpentRefs(differing))
+}
+
+// TestPruneAuthorizedXMRSpentRefsExpiresOldEntries bounds the conflict map:
+// entries survive within the TTL and are dropped once it elapses.
+func TestPruneAuthorizedXMRSpentRefsExpiresOldEntries(t *testing.T) {
+	ag, _, _, _, _, _ := setupTestGossip(t)
+	obsTx, _ := observerTestXMRPlan(t)
+	require.True(t, ag.rememberAuthorizedXMRSpentRefs(obsTx))
+
+	ttl := 2 * ag.config.NonQuorumTimeout
+	if ttl <= 0 {
+		ttl = 2 * defaultNonQuorumTimeout
+	}
+
+	ag.mu.Lock()
+	ag.pruneAuthorizedXMRSpentRefsLocked(time.Now().Add(ttl / 2))
+	surviving := len(ag.authorizedXMRSpentRefs)
+	ag.mu.Unlock()
+	assert.Equal(t, 1, surviving, "entry within TTL must survive pruning")
+
+	ag.mu.Lock()
+	ag.pruneAuthorizedXMRSpentRefsLocked(time.Now().Add(ttl + time.Minute))
+	remaining := len(ag.authorizedXMRSpentRefs)
+	ag.mu.Unlock()
+	assert.Equal(t, 0, remaining, "entry past TTL must be pruned")
 }

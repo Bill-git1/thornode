@@ -46,6 +46,8 @@ func (p *AttestationStatePool[T]) NewAttestationState(initialItem T) *Attestatio
 	state.lastAttestationsSent = time.Time{}
 	state.lastCommittedAttestation = time.Time{}
 	state.spentRefsApplied = false
+	state.spentRefsNextRetryAt = time.Time{}
+	state.spentRefsRetryDelay = 0
 
 	return state
 }
@@ -59,6 +61,8 @@ func (p *AttestationStatePool[T]) PutAttestationState(state *AttestationState[T]
 	state.lastAttestationsSent = time.Time{}
 	state.lastCommittedAttestation = time.Time{}
 	state.spentRefsApplied = false
+	state.spentRefsNextRetryAt = time.Time{}
+	state.spentRefsRetryDelay = 0
 	// Return to pool
 	p.Put(state)
 }
@@ -149,6 +153,10 @@ type AttestationState[T AttestableItem] struct {
 	// sent to the sidecar for this tx, so we only fire once per tx rather than
 	// once per peer attestation.
 	spentRefsApplied bool
+	// Ordinary XMR observation reconciliation uses a per-state schedule so a
+	// failed or sub-quorum item cannot repeat Thornode RPCs on every tick.
+	spentRefsNextRetryAt time.Time
+	spentRefsRetryDelay  time.Duration
 
 	mu sync.Mutex
 }

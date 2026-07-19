@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -206,6 +207,39 @@ func TestApplySpentOutputRefsSidecarCall(t *testing.T) {
 	assert.Equal(t, spendTxHash, capturedRefs[1].SpendTxHash)
 }
 
+// TestValidateXMRSpentRefsForSidecarRejectsDuplicateKeyImage protects the
+// sidecar binding invariant that one Monero key image can only spend one output.
+func TestValidateXMRSpentRefsForSidecarRejectsDuplicateKeyImage(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey := testVaultPubKey(t, "test-vault-duplicate-key-image")
+	vaultAddr, err := vaultPubKey.GetAddress(common.XMRChain)
+	require.NoError(t, err)
+	spendTxHash := testXMRHash("duplicate-key-image")
+
+	obsTx := common.NewObservedTx(
+		common.Tx{
+			ID:          common.TxID(spendTxHash),
+			Chain:       common.XMRChain,
+			FromAddress: vaultAddr,
+			ToAddress:   testOutboundXMRDestination(),
+			Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50))),
+			Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		},
+		100,
+		vaultPubKey,
+		100,
+	)
+	first := *testXMROutputRef("duplicate-key-image-a", 0, spendTxHash)
+	second := *testXMROutputRef("duplicate-key-image-b", 1, spendTxHash)
+	second.KeyImage = strings.ToUpper(first.KeyImage)
+	obsTx.SpentOutputRefs = []common.OutputRef{first, second}
+
+	err = validateXMRSpentRefsForSidecar(obsTx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "duplicate xmr spent ref key image")
+}
+
 // TestApplySpentOutputRefsRetriesTransientNotFound covers the race where peer
 // refs arrive before the Monero daemon/sidecar can query the spend tx. The
 // import should retry boundedly instead of relying only on committed catchup.
@@ -293,6 +327,32 @@ func TestApplySpentOutputRefsRetriesTransientNotFound(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	assert.GreaterOrEqual(t, calls, 2)
+}
+
+// TestApplySpentOutputRefsOnceRetriesPartialNotFound verifies an HTTP-200
+// response with a partially missing ref keeps the bounded retry window open.
+func TestApplySpentOutputRefsOnceRetriesPartialNotFound(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(sidecar.MarkSpentResp{Marked: 1, NotFound: 1})
+	}))
+	defer server.Close()
+
+	signer, err := sidecar.NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	require.NoError(t, err)
+	c := &Client{
+		chain:   common.XMRChain,
+		sidecar: signer,
+		logger:  testLogger(),
+	}
+
+	obsTx := testXMRSpentRefsObservedTx(t, "test-vault-partial-not-found", "partial-not-found")
+	obsTx.SpentOutputRefs = append(obsTx.SpentOutputRefs,
+		*testXMROutputRef("partial-not-found-second", 1, obsTx.Tx.ID.String()))
+	applied, retry := c.applySpentOutputRefsOnce(obsTx)
+	assert.False(t, applied)
+	assert.True(t, retry)
 }
 
 // TestApplySpentOutputRefsRetriesTransientSidecarUnavailable covers the peer
@@ -530,4 +590,187 @@ func TestTxVaultPubKeyPreference(t *testing.T) {
 		VaultPubKey: ecdsa,
 	}
 	assert.True(t, txVaultPubKey(txOnlyEcdsa).IsEmpty(), "should be empty when only ecdsa set")
+}
+
+// testXMRSpentRefsObservedTx builds the minimal valid outbound shape for
+// outcome-callback tests, keeping each case focused on retry semantics.
+func testXMRSpentRefsObservedTx(t *testing.T, vaultLabel, txLabel string) common.ObservedTx {
+	t.Helper()
+
+	vaultPubKey := testVaultPubKey(t, vaultLabel)
+	vaultAddr, err := vaultPubKey.GetAddress(common.XMRChain)
+	require.NoError(t, err)
+	spendTxHash := testXMRHash(txLabel)
+
+	obsTx := common.NewObservedTx(
+		common.Tx{
+			ID:          common.TxID(spendTxHash),
+			Chain:       common.XMRChain,
+			FromAddress: vaultAddr,
+			ToAddress:   testOutboundXMRDestination(),
+			Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(50))),
+			Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		},
+		100,
+		vaultPubKey,
+		100,
+	)
+	obsTx.SpentOutputRefs = []common.OutputRef{
+		*testXMROutputRef(txLabel+"-ref", 0, spendTxHash),
+	}
+	return obsTx
+}
+
+// TestApplySpentOutputRefsWithOutcomeReportsRetrySuccess verifies the outcome
+// callback fires true when a transient sidecar failure succeeds on a bounded
+// retry, so the observer latch can close even when the first attempt raced the
+// daemon.
+func TestApplySpentOutputRefsWithOutcomeReportsRetrySuccess(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		call := calls
+		mu.Unlock()
+		if call == 1 {
+			http.Error(w, "tx not mined yet", http.StatusNotFound)
+			return
+		}
+		var req sidecar.MarkSpentReq
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewEncoder(w).Encode(sidecar.MarkSpentResp{Marked: len(req.SpentRefs)})
+	}))
+	defer server.Close()
+
+	signer, err := sidecar.NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	require.NoError(t, err)
+
+	c := &Client{
+		chain:                     common.XMRChain,
+		sidecar:                   signer,
+		logger:                    testLogger(),
+		wg:                        &sync.WaitGroup{},
+		stopchan:                  make(chan struct{}),
+		spentRefsRetryInterval:    10 * time.Millisecond,
+		spentRefsRetryMaxAttempts: 3,
+	}
+	defer func() {
+		close(c.stopchan)
+		c.wg.Wait()
+	}()
+
+	outcome := make(chan bool, 1)
+	c.ApplySpentOutputRefsWithOutcome(
+		testXMRSpentRefsObservedTx(t, "test-vault-outcome-retry", "outcome-retry-success"),
+		func(applied bool) { outcome <- applied },
+	)
+
+	select {
+	case applied := <-outcome:
+		assert.True(t, applied, "outcome should report the retry success")
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for import outcome")
+	}
+}
+
+// TestApplySpentOutputRefsWithOutcomeReportsTerminalFailure verifies the
+// outcome callback fires false, without retries, when the sidecar rejects the
+// refs terminally, so the observer can release its conflict-map entry.
+func TestApplySpentOutputRefsWithOutcomeReportsTerminalFailure(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		http.Error(w, "spent ref key image conflicts with tracked output", http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	signer, err := sidecar.NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	require.NoError(t, err)
+
+	c := &Client{
+		chain:                     common.XMRChain,
+		sidecar:                   signer,
+		logger:                    testLogger(),
+		wg:                        &sync.WaitGroup{},
+		stopchan:                  make(chan struct{}),
+		spentRefsRetryInterval:    10 * time.Millisecond,
+		spentRefsRetryMaxAttempts: 3,
+	}
+	defer func() {
+		close(c.stopchan)
+		c.wg.Wait()
+	}()
+
+	outcome := make(chan bool, 1)
+	c.ApplySpentOutputRefsWithOutcome(
+		testXMRSpentRefsObservedTx(t, "test-vault-outcome-terminal", "outcome-terminal"),
+		func(applied bool) { outcome <- applied },
+	)
+
+	select {
+	case applied := <-outcome:
+		assert.False(t, applied, "terminal sidecar failure must report a failed outcome")
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for import outcome")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, 1, calls, "terminal failure must not be retried")
+}
+
+// TestApplySpentOutputRefsWithOutcomeReportsExhaustion verifies the outcome
+// callback fires false after the bounded retry window is used up.
+func TestApplySpentOutputRefsWithOutcomeReportsExhaustion(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		http.Error(w, "tx not mined yet", http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	signer, err := sidecar.NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	require.NoError(t, err)
+
+	c := &Client{
+		chain:                     common.XMRChain,
+		sidecar:                   signer,
+		logger:                    testLogger(),
+		wg:                        &sync.WaitGroup{},
+		stopchan:                  make(chan struct{}),
+		spentRefsRetryInterval:    5 * time.Millisecond,
+		spentRefsRetryMaxAttempts: 2,
+	}
+	defer func() {
+		close(c.stopchan)
+		c.wg.Wait()
+	}()
+
+	outcome := make(chan bool, 1)
+	c.ApplySpentOutputRefsWithOutcome(
+		testXMRSpentRefsObservedTx(t, "test-vault-outcome-exhausted", "outcome-exhausted"),
+		func(applied bool) { outcome <- applied },
+	)
+
+	select {
+	case applied := <-outcome:
+		assert.False(t, applied, "exhausted retries must report a failed outcome")
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for import outcome")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, 3, calls, "expected the first attempt plus both retries")
 }

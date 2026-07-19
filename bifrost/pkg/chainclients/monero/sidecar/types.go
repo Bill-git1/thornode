@@ -189,6 +189,10 @@ type Transfer struct {
 	Confirmations uint64 `json:"confirmations"`
 	Note          string `json:"note"`
 	Locked        bool   `json:"locked"`
+	// SpentOutputRefs are the sidecar-verified refs recorded for an outgoing
+	// transfer, either from the local signing session or from a mark-spent
+	// import. Empty for incoming transfers.
+	SpentOutputRefs []SpentRef `json:"spent_output_refs,omitempty"`
 }
 
 type Transfers struct {

@@ -10,6 +10,22 @@ type AddressSuite struct{}
 
 var _ = Suite(&AddressSuite{})
 
+// TestAddressEqualsXMRIsCaseSensitive documents that case is part of Monero
+// base58 address identity.
+func (s *AddressSuite) TestAddressEqualsXMRIsCaseSensitive(c *C) {
+	original := Address("4abcDEF")
+	caseVariant := Address("4Abcdef")
+
+	c.Check(AddressEquals(XMRChain, original, original), Equals, true)
+	c.Check(AddressEquals(XMRChain, original, caseVariant), Equals, false)
+}
+
+// TestAddressEqualsNonXMRPreservesLegacyBehavior protects the case-insensitive
+// fallback used before the chain-aware helper was introduced.
+func (s *AddressSuite) TestAddressEqualsNonXMRPreservesLegacyBehavior(c *C) {
+	c.Check(AddressEquals(BTCChain, Address("legacyAddress"), Address("LEGACYaddress")), Equals, true)
+}
+
 func (s *AddressSuite) TestAddress(c *C) {
 	c.Assert(AllChains, HasLen, 19)
 

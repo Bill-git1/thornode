@@ -7,15 +7,17 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/rs/zerolog"
+	"golang.org/x/time/rate"
 )
 
 const semAcquireTimeout = 50 * time.Millisecond
 
 type peerSemaphore struct {
-	tokens   chan struct{}
-	refCount int
-	lastZero time.Time
-	mu       sync.Mutex
+	tokens                          chan struct{}
+	historicalXMRCertificateLimiter *rate.Limiter
+	refCount                        int
+	lastZero                        time.Time
+	mu                              sync.Mutex
 }
 
 type peerManager struct {

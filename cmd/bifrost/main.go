@@ -400,7 +400,7 @@ func main() {
 	ag.SetObserverHandleObservedTxCommitted(obs)
 
 	if xmrClient, ok := chains[tcommon.XMRChain].(*monero.Client); ok {
-		ag.SetObserverApplySpentOutputRefs(xmrClient.ApplySpentOutputRefs)
+		ag.SetObserverApplySpentOutputRefs(xmrClient.ApplySpentOutputRefsWithOutcome)
 	}
 
 	// start signer

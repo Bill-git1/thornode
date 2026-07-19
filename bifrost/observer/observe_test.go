@@ -50,9 +50,103 @@ type ObserverSuite struct {
 
 var _ = Suite(&ObserverSuite{})
 
+type blockingConfirmationChainClient struct {
+	chainclients.ChainClient
+	started chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (c *blockingConfirmationChainClient) GetConfirmationCount(types.TxIn) int64 {
+	c.once.Do(func() { close(c.started) })
+	<-c.release
+	return 0
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Mock
 ////////////////////////////////////////////////////////////////////////////////////////
+
+// TestProcessTxInsDoesNotBlockSharedQueueOnInactiveXMR verifies slow historical
+// certificate work runs in the bounded worker pool rather than on the global
+// transaction queue consumer shared by every chain. Empty XMR batches must be
+// discarded before worker admission so they cannot block behind that work.
+func TestProcessTxInsDoesNotBlockSharedQueueOnInactiveXMR(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	stop := make(chan struct{})
+	var releaseOnce, stopOnce sync.Once
+	releaseWork := func() { releaseOnce.Do(func() { close(release) }) }
+	stopProcess := func() { stopOnce.Do(func() { close(stop) }) }
+	defer releaseWork()
+	defer stopProcess()
+
+	chainClient := &blockingConfirmationChainClient{started: started, release: release}
+	o := &Observer{
+		logger:          zerolog.Nop(),
+		chains:          map[common.Chain]chainclients.ChainClient{common.XMRChain: chainClient},
+		stopChan:        stop,
+		globalTxsQueue:  make(chan types.TxIn),
+		observerWorkers: 1,
+		lastNodeStatus:  types2.NodeStatus_Standby,
+	}
+	done := make(chan struct{})
+	go func() {
+		o.processTxIns()
+		close(done)
+	}()
+
+	vaultPubKey := randomXMRObservedPubKey(t)
+	vaultAddress, err := vaultPubKey.GetAddress(common.XMRChain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o.globalTxsQueue <- types.TxIn{
+		Chain:    common.XMRChain,
+		Filtered: true,
+		TxArray: []*types.TxInItem{{
+			BlockHeight:         1,
+			Sender:              vaultAddress.String(),
+			ObservedVaultPubKey: vaultPubKey,
+			SpentOutputRefs:     []*common.OutputRef{{}},
+		}},
+	}
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("inactive XMR worker did not start")
+	}
+
+	emptyAccepted := make(chan struct{})
+	go func() {
+		o.globalTxsQueue <- types.TxIn{Chain: common.XMRChain}
+		close(emptyAccepted)
+	}()
+	select {
+	case <-emptyAccepted:
+	case <-time.After(time.Second):
+		t.Fatal("empty inactive XMR batch was not consumed")
+	}
+
+	otherAccepted := make(chan struct{})
+	go func() {
+		o.globalTxsQueue <- types.TxIn{Chain: common.BTCChain}
+		close(otherAccepted)
+	}()
+	select {
+	case <-otherAccepted:
+	case <-time.After(time.Second):
+		t.Fatal("inactive XMR processing blocked the shared transaction queue")
+	}
+
+	releaseWork()
+	stopProcess()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("transaction processor did not stop")
+	}
+}
 
 func (s *ObserverSuite) ResetMockClient(c *C) {
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.metrics)

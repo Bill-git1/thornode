@@ -173,6 +173,7 @@ type Client struct {
 	lastSolvencyCheckHeight *atomic.Int64
 	wg                      *sync.WaitGroup
 	stopchan                chan struct{}
+	lifecycleMu             sync.Mutex
 
 	solvencyDeferralMu     sync.Mutex
 	solvencyDeferralRounds map[string]int
@@ -634,7 +635,9 @@ func (c *Client) getSpentOutputCatchupVaultKeys() (common.PubKeys, error) {
 
 func (c *Client) Stop() {
 	c.blockScanner.Stop()
+	c.lifecycleMu.Lock()
 	close(c.stopchan)
+	c.lifecycleMu.Unlock()
 	c.wg.Wait()
 }
 
@@ -1933,12 +1936,34 @@ func (c *Client) RestoreKeyshare(vaultPubKey common.PubKey, keyBlob []byte) erro
 }
 
 // ApplySpentOutputRefs imports XMR spent refs and outbound metadata from an
-// attestation into the sidecar without creating a local attestation. The
-// scanner must later observe the sidecar-verified outbound before this node
-// signs it locally.
+// attestation into the sidecar without creating a local attestation. A verified
+// outbound also seeds the signer cache so this node does not sign the same
+// outbound again while waiting for scanner observation.
+//
+// Callers that do not need the final outcome can use this fire-and-forget
+// wrapper; the bounded retry continues in the background when appropriate.
 func (c *Client) ApplySpentOutputRefs(tx common.ObservedTx) {
-	if !c.applySpentOutputRefsOnce(tx) {
-		return
+	c.applySpentOutputRefs(tx, nil)
+}
+
+// ApplySpentOutputRefsWithOutcome reports the import's final outcome exactly
+// once: true when the sidecar confirmed the refs, immediately or on a later
+// bounded retry; false when the import failed terminally, exhausted its
+// retries, or could not be queued. Observer latch/conflict bookkeeping needs
+// the final outcome, not just the first attempt's.
+func (c *Client) ApplySpentOutputRefsWithOutcome(tx common.ObservedTx, onOutcome func(applied bool)) {
+	c.applySpentOutputRefs(tx, onOutcome)
+}
+
+// applySpentOutputRefs centralizes the first attempt and final-outcome callback
+// so observer conflict bookkeeping can wait for retry exhaustion or success.
+func (c *Client) applySpentOutputRefs(tx common.ObservedTx, onOutcome func(applied bool)) bool {
+	applied, retry := c.applySpentOutputRefsOnce(tx)
+	if !retry {
+		if onOutcome != nil {
+			onOutcome(applied)
+		}
+		return applied
 	}
 
 	interval := c.spentRefsRetryInterval
@@ -1957,28 +1982,53 @@ func (c *Client) ApplySpentOutputRefs(tx common.ObservedTx) {
 		Int("max_attempts", maxAttempts).
 		Msg("queued xmr spent output refs retry")
 
-	// Retry asynchronously so callers that still need to broadcast the tx, such
-	// as local sign/consolidation paths, are not blocked waiting for the tx to
-	// appear in the Monero daemon.
+	// The first attempt has already run synchronously. Retry asynchronously so
+	// callers that still need to broadcast the tx, such as local
+	// sign/consolidation paths, are not blocked waiting for the tx to appear in
+	// the Monero daemon.
+	c.queueSpentOutputRefsRetry(tx, interval, maxAttempts, onOutcome)
+	return applied
+}
+
+// queueSpentOutputRefsRetry owns the async retry goroutine. If the client is
+// stopping, it reports a failed outcome immediately so observer latches are
+// not left pending forever.
+func (c *Client) queueSpentOutputRefsRetry(tx common.ObservedTx, interval time.Duration, maxAttempts int, onOutcome func(applied bool)) {
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
+
+	select {
+	case <-c.stopchan:
+		c.logger.Debug().
+			Str("tx_hash", tx.Tx.ID.String()).
+			Str("vault", tx.ObservedPubKey.String()).
+			Msg("skip xmr spent output refs retry: client is stopping")
+		if onOutcome != nil {
+			onOutcome(false)
+		}
+		return
+	default:
+	}
+
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		c.retrySpentOutputRefs(tx, interval, maxAttempts)
+		c.retrySpentOutputRefs(tx, interval, maxAttempts, onOutcome)
 	}()
 }
 
-// applySpentOutputRefsOnce performs one verified mark-spent attempt. It returns
-// true only for transient failures where another bounded retry can still seed
-// the sidecar, such as the spend tx not being indexed yet or the sidecar being
-// temporarily unavailable.
-func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) bool {
+// applySpentOutputRefsOnce performs one verified mark-spent attempt. Its retry
+// result is true only for transient failures where another bounded attempt can
+// still seed the sidecar, such as the spend tx not being indexed yet or the
+// sidecar being temporarily unavailable.
+func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) (bool, bool) {
 	if err := validateXMRSpentRefsForSidecar(tx); err != nil {
 		c.logger.Warn().
 			Err(err).
 			Str("tx_hash", tx.Tx.ID.String()).
 			Str("vault", tx.ObservedPubKey.String()).
 			Msg("skip invalid xmr spent output refs")
-		return false
+		return false, false
 	}
 	vaultPubKey := tx.ObservedPubKey.String()
 	txHash := tx.Tx.ID.String()
@@ -1997,14 +2047,14 @@ func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) bool {
 				Str("vault", vaultPubKey).
 				Int("refs", len(refs)).
 				Msg("mark-spent transient failure")
-			return true
+			return false, true
 		}
 		c.logger.Err(err).
 			Str("tx_hash", txHash).
 			Str("vault", vaultPubKey).
 			Int("refs", len(refs)).
 			Msg("failed to apply spent output refs from attestation")
-		return false
+		return false, false
 	}
 	c.logger.Info().
 		Str("tx_hash", txHash).
@@ -2012,7 +2062,13 @@ func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) bool {
 		Int("marked", result.Marked).
 		Int("not_found", result.NotFound).
 		Msg("applied spent output refs from attestation")
-	return false
+	// A ref the sidecar could not find is the same transient state as a 404:
+	// this peer's scanner may simply not have reached the funding output yet.
+	// Keep the bounded retry window open and replay the complete ref set. The
+	// sidecar validates all refs before mutation and treats identical
+	// key-image bindings as idempotent; sending only missing refs would fail its
+	// exact transaction-input coverage check.
+	return result.NotFound == 0, result.NotFound > 0
 }
 
 // isRetryableSpentRefsSidecarErr identifies sidecar failures that should not
@@ -2033,7 +2089,7 @@ func isRetryableSpentRefsSidecarErr(err error) bool {
 // window. This covers peer pre-quorum imports where the XMR spend may not be
 // mined/indexed yet or where the local sidecar is temporarily unavailable, and
 // Thornode catchup cannot help until the refs are committed.
-func (c *Client) retrySpentOutputRefs(tx common.ObservedTx, interval time.Duration, maxAttempts int) {
+func (c *Client) retrySpentOutputRefs(tx common.ObservedTx, interval time.Duration, maxAttempts int, onOutcome func(applied bool)) {
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 
@@ -2042,11 +2098,18 @@ func (c *Client) retrySpentOutputRefs(tx common.ObservedTx, interval time.Durati
 		// in the Monero daemon/sidecar transaction lookup.
 		select {
 		case <-c.stopchan:
+			if onOutcome != nil {
+				onOutcome(false)
+			}
 			return
 		case <-timer.C:
 		}
 
-		if !c.applySpentOutputRefsOnce(tx) {
+		applied, retry := c.applySpentOutputRefsOnce(tx)
+		if !retry {
+			if onOutcome != nil {
+				onOutcome(applied)
+			}
 			return
 		}
 		if attempt == maxAttempts {
@@ -2062,6 +2125,9 @@ func (c *Client) retrySpentOutputRefs(tx common.ObservedTx, interval time.Durati
 		Str("vault", tx.ObservedPubKey.String()).
 		Int("attempts", maxAttempts).
 		Msg("xmr spent output refs retry exhausted")
+	if onOutcome != nil {
+		onOutcome(false)
+	}
 }
 
 func xmrSpentRefsToSidecar(refs []common.OutputRef) []sidecar.SpentRef {
@@ -2114,6 +2180,7 @@ func validateXMRSpentRefsForSidecar(tx common.ObservedTx) error {
 	if !tx.Tx.FromAddress.Equals(vaultAddress) {
 		return fmt.Errorf("xmr spent refs require outbound from observed vault")
 	}
+	seenKeyImages := make(map[string]struct{}, len(tx.SpentOutputRefs))
 	for _, ref := range tx.SpentOutputRefs {
 		if err := validateFixedHex(ref.TxHash, 32, "spent output tx hash"); err != nil {
 			return err
@@ -2124,6 +2191,11 @@ func validateXMRSpentRefsForSidecar(tx common.ObservedTx) error {
 		if err := validateFixedHex(ref.SpendTxHash, 32, "spend tx hash"); err != nil {
 			return err
 		}
+		keyImage := strings.ToLower(strings.TrimSpace(ref.KeyImage))
+		if _, ok := seenKeyImages[keyImage]; ok {
+			return fmt.Errorf("duplicate xmr spent ref key image: %s", keyImage)
+		}
+		seenKeyImages[keyImage] = struct{}{}
 	}
 	return nil
 }

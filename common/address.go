@@ -542,6 +542,15 @@ func (addr Address) Equals(addr2 Address) bool {
 	return strings.EqualFold(addr.String(), addr2.String())
 }
 
+// AddressEquals compares addresses using the identity rules of their chain.
+// Monero base58 is case-sensitive; legacy chains retain Address.Equals.
+func AddressEquals(chain Chain, addr, addr2 Address) bool {
+	if chain.Equals(XMRChain) {
+		return addr.String() == addr2.String()
+	}
+	return addr.Equals(addr2)
+}
+
 func (addr Address) IsEmpty() bool {
 	return strings.TrimSpace(addr.String()) == ""
 }

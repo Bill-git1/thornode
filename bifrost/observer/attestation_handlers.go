@@ -15,9 +15,10 @@ import (
 
 // AttestObservedTx creates and broadcasts an attestation for an observed transaction
 func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.ObservedTx, inbound, allowFutureObservation bool) error {
-	if !s.isActiveValidator(s.host.ID()) {
-		return fmt.Errorf("skipping attest observed tx: not active")
+	if obsTx == nil {
+		return fmt.Errorf("observed tx is nil")
 	}
+	isActive := s.isActiveValidator(s.host.ID())
 
 	signBz, err := obsTx.GetSignablePayloadWithInbound(inbound)
 	if err != nil {
@@ -37,6 +38,20 @@ func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.
 			PubKey:    s.pubKey,
 			Signature: signature,
 		},
+	}
+	if !isActive {
+		if !obsTx.Tx.Chain.Equals(common.XMRChain) || inbound || len(obsTx.SpentOutputRefs) == 0 {
+			return fmt.Errorf("skipping attest observed tx: not active")
+		}
+		// A churned-out member may still certify a spend by a retiring vault it
+		// historically controlled. Keep this out of observedTxs and the ordinary
+		// batch protocol: it is a source-vault certificate share, never an active
+		// validator observation vote.
+		if err := s.acceptHistoricalXMRSpentRefCertificate(msg, ""); err != nil {
+			return fmt.Errorf("skipping inactive historical XMR certificate: %w", err)
+		}
+		s.broadcastHistoricalXMRSpentRefCertificate(ctx, msg)
+		return nil
 	}
 
 	// Handle the attestation locally first

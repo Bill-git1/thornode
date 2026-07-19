@@ -38,6 +38,22 @@ func TestNewAttestationState(t *testing.T) {
 	assert.True(t, state.lastAttestationsSent.IsZero())
 }
 
+// TestAttestationStatePoolResetsSpentRefsRetryState verifies pooled observation
+// state cannot carry an XMR retry schedule into an unrelated transaction.
+func TestAttestationStatePoolResetsSpentRefsRetryState(t *testing.T) {
+	pool := NewAttestationStatePool[*attestableObservedTx]()
+	first := pool.NewAttestationState(&attestableObservedTx{ObservedTx: &common.ObservedTx{}})
+	first.spentRefsApplied = true
+	first.spentRefsNextRetryAt = time.Now().Add(time.Hour)
+	first.spentRefsRetryDelay = time.Minute
+	pool.PutAttestationState(first)
+
+	second := pool.NewAttestationState(&attestableObservedTx{ObservedTx: &common.ObservedTx{}})
+	assert.False(t, second.spentRefsApplied)
+	assert.True(t, second.spentRefsNextRetryAt.IsZero())
+	assert.Zero(t, second.spentRefsRetryDelay)
+}
+
 // TestAddAttestation tests adding attestations to the state
 func TestAddAttestation(t *testing.T) {
 	// Create a test tx
