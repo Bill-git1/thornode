@@ -332,8 +332,15 @@ func (op *OpCheck) prefetch(routine int) {
 	}
 	req.URL.RawQuery = q.Encode()
 
-	// send request
-	op.prefetchResp, op.prefetchErr = httpClient.Do(req)
+	// Transaction indexing can briefly lag block creation on loaded CI runners.
+	for i := 0; i < 10; i++ {
+		op.prefetchResp, op.prefetchErr = httpClient.Do(req)
+		if op.prefetchErr != nil || op.prefetchResp.StatusCode != http.StatusNotFound || op.Status == http.StatusNotFound || i == 9 {
+			return
+		}
+		op.prefetchResp.Body.Close()
+		time.Sleep(100 * time.Millisecond * getTimeFactor())
+	}
 }
 
 func (op *OpCheck) Execute(out io.Writer, path string, line, routine int, _ *os.Process, logs chan string) error {
