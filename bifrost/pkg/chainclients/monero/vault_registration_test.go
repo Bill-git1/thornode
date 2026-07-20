@@ -61,6 +61,47 @@ func TestVaultPubKeyFromGroupKeyHex(t *testing.T) {
 	}
 }
 
+func TestSetVaultAddressMappingInitializesZeroValueCaches(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey := testVaultPubKey(t, "zero-value-vault-address-cache")
+	address, err := vaultPubKey.GetAddress(common.XMRChain)
+	if err != nil {
+		t.Fatalf("derive address: %v", err)
+	}
+	client := &Client{logger: log.Logger, chain: common.XMRChain}
+
+	client.setVaultAddressMapping(vaultPubKey, address)
+
+	if got, ok := client.vaultAddressMap[vaultPubKey.String()]; !ok || !got.Equals(address) {
+		t.Fatalf("forward vault mapping was not initialized: %v", got)
+	}
+	if got := client.vaultAddrToKey[address.String()]; got != vaultPubKey.String() {
+		t.Fatalf("reverse vault mapping was not initialized: %q", got)
+	}
+}
+
+func TestSetVaultAddressMappingRepairsMissingReverseCache(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey := testVaultPubKey(t, "missing-reverse-vault-address-cache")
+	address, err := vaultPubKey.GetAddress(common.XMRChain)
+	if err != nil {
+		t.Fatalf("derive address: %v", err)
+	}
+	client := &Client{
+		logger:          log.Logger,
+		chain:           common.XMRChain,
+		vaultAddressMap: map[string]common.Address{vaultPubKey.String(): address},
+	}
+
+	client.setVaultAddressMapping(vaultPubKey, address)
+
+	if got := client.vaultAddrToKey[address.String()]; got != vaultPubKey.String() {
+		t.Fatalf("reverse vault mapping was not repaired: %q", got)
+	}
+}
+
 func TestClientEnsureXMRVaultBalanceRegistersVault(t *testing.T) {
 	t.Parallel()
 
@@ -105,7 +146,7 @@ func TestClientEnsureXMRVaultBalanceRegistersVault(t *testing.T) {
 			mu.Lock()
 			registered = true
 			mu.Unlock()
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 		case "/v1/monero/balance/" + vaultPubKey.String():
 			mu.Lock()
 			isRegistered := registered
@@ -192,7 +233,7 @@ func TestEnsureFrostVaultRegisteredIncludesBootstrapSpendKeyForMatchingVault(t *
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+		_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 	}))
 	defer server.Close()
 
@@ -240,7 +281,7 @@ func TestEnsureFrostVaultRegisteredOmitsBootstrapSpendKeyForOtherVault(t *testin
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+		_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 	}))
 	defer server.Close()
 
@@ -281,7 +322,7 @@ func TestGetAccountByAddressRegistersVaultBeforeBalanceQuery(t *testing.T) {
 			mu.Lock()
 			registered = true
 			mu.Unlock()
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 		case strings.HasPrefix(r.URL.Path, "/v1/monero/balance/"):
 			mu.Lock()
 			isRegistered := registered
@@ -337,7 +378,7 @@ func TestGetAccountByAddressUsesTotalBalanceWhenSpendableAlsoProvided(t *testing
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.URL.Path == "/v1/monero/vaults/register":
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 		case strings.HasPrefix(r.URL.Path, "/v1/monero/balance/"):
 			_ = json.NewEncoder(w).Encode(sidecar.Balance{
 				Balance:          9 * moneroAtomicToThorchain,
@@ -416,6 +457,8 @@ func TestResolveVaultAddressOnlyMapsFrostKey(t *testing.T) {
 	require.True(t, found)
 	assert.Equal(t, frostKey, pubKey,
 		"findVaultPubKeyByAddress should return the frost key, not eddsa")
+	_, found = c.findVaultPubKeyByAddress(strings.ToUpper(addr.String()))
+	assert.False(t, found, "case-variant xmr address must not resolve through the vault reverse map")
 }
 
 // TestTxVaultPubKeyNeverReturnsEddsa verifies that txVaultPubKey returns the

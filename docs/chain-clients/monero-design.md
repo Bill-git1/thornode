@@ -182,6 +182,117 @@ Design choices:
 - In mainnet mode, `XMR_FROST_STORE_SECRET` must be strong (32-byte hex/base64 equivalent).
 - `XMR_FROST_MAX_SIGN_SCAN_LAG_BLOCKS` controls fail-closed signing when scan state is stale (default `3`).
 
+## Bifrost `xmr` Config Migration (Breaking)
+
+Three Bifrost `chains.xmr` config behaviors now fail closed. A previously-working
+XMR deployment will refuse to construct the chain client at Bifrost startup until
+its config is updated. All three surface as a startup error, not a silent
+degradation.
+
+### 1. Signer credentials are separate from monerod credentials
+
+`authorization_bearer`, `username`, and `password` now feed **only monerod**. They
+are never forwarded to the signer. The signer reads `signer_authorization_bearer`,
+or the `signer_username` / `signer_password` pair (bearer and basic auth are
+mutually exclusive, and basic auth requires both halves). A non-loopback
+`signer_endpoint` with no signer credentials is rejected.
+
+Before:
+
+```yaml
+chains:
+  xmr:
+    rpc_host: "http://xmr-daemon:18081"
+    username: "monerod-user"
+    password: "monerod-password"
+    signer_endpoint: "https://xmr-frost-signer:8283"
+```
+
+After:
+
+```yaml
+chains:
+  xmr:
+    rpc_host: "http://xmr-daemon:18081"
+    username: "monerod-user" # monerod only; never sent to the signer
+    password: "monerod-password"
+    signer_endpoint: "https://xmr-frost-signer:8283"
+    signer_authorization_bearer: "<signer-token>" # matches XMR_FROST_AUTH_BEARER
+    # or, mutually exclusive with the bearer:
+    # signer_username: "signer-user"
+    # signer_password: "signer-password"
+```
+
+### 2. Plaintext HTTP to a non-loopback signer must be opted into
+
+A non-loopback `http://` `signer_endpoint` is no longer permitted just because the
+node is not on mainnet. It now requires an explicit `signer_allow_insecure_http: true`,
+and that escape hatch is honored **only** when neither the node network nor
+`signer_expected_network` is mainnet. Loopback endpoints (`127.0.0.1`, `localhost`)
+are unaffected. A mocknet/stagenet deployment pointed at `http://xmr-frost-signer:8283`
+now hard-fails at startup unless it sets the flag (or switches to `https://`).
+
+Before:
+
+```yaml
+chains:
+  xmr:
+    signer_endpoint: "http://xmr-frost-signer:8283" # accepted because network != mainnet
+```
+
+After:
+
+```yaml
+chains:
+  xmr:
+    signer_endpoint: "http://xmr-frost-signer:8283"
+    signer_allow_insecure_http: true # development/isolated-compose only; ignored on mainnet
+```
+
+Mainnet operators must terminate TLS and use an `https://` signer endpoint; the flag
+cannot re-enable plaintext there.
+
+### 3. `signer_expected_network` is mandatory
+
+`signer_expected_network` is required on **every** network, including mocknet. Bifrost
+rejects an empty value outright, and rejects a signer whose advertised network does not
+match. It must equal the signer's `XMR_FROST_CHAIN_NETWORK` (`mocknet`, `chainnet`,
+`stagenet`, or `mainnet`). This is what binds a node to the intended deployment and stops
+a stagenet signer from being driven by a mainnet Bifrost (or vice versa).
+
+Before:
+
+```yaml
+chains:
+  xmr:
+    signer_expected_network: "" # inferred / unchecked
+```
+
+After:
+
+```yaml
+chains:
+  xmr:
+    signer_expected_network: "stagenet" # must equal the signer's XMR_FROST_CHAIN_NETWORK
+```
+
+On startup Bifrost additionally requires the signer to advertise the full reviewed
+capability contract (protocol, API major, state schema, source revision, and every
+required capability) over `/v1/monero/info`. An old or partially-featured signer image
+is rejected at construction rather than at first use, so the signer image must be
+upgraded in lockstep with Bifrost.
+
+One capability is optional rather than required: `durable-sign-result-recovery-v1`.
+It asserts that the signer durably replays combine by `(msg_id, session_id,
+all_shares)` -- the signer advertises it alongside the `durable_combine_response`
+path, which replays a committed result after a session loss instead of re-signing --
+so a retried combine cannot broadcast the same Monero transaction twice. A signer that
+advertises it gets bounded combine retries; a signer that does not still runs, but
+combine is single-shot, because retrying against a signer without the durable replay
+contract risks a double broadcast. It is deliberately not in the required set so that
+an older signer image degrades rather than failing to start. The chosen policy is
+logged at startup as `idempotent_combine` on the compatibility line.
+
 ## Primary Code Anchors
 
 - Bifrost Monero client: `bifrost/pkg/chainclients/monero/client.go`

@@ -3,12 +3,12 @@ package monero
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -26,6 +26,8 @@ func TestFetchTxsCallsScannerSyncWithBlockMetadata(t *testing.T) {
 	frostServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/scanner/state":
+			writeTestScannerState(t, w, 100)
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/chain/height":
 			_ = json.NewEncoder(w).Encode(sidecar.ChainHeightResp{Height: 150})
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/monero/chain/block/"):
@@ -38,8 +40,8 @@ func TestFetchTxsCallsScannerSyncWithBlockMetadata(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(sidecar.ChainBlockResp{
 				Height:       height,
 				Reward:       defaultCoinbaseValue + 200000,
-				Hash:         fmt.Sprintf("hash-%d", height),
-				PreviousHash: fmt.Sprintf("hash-%d", height-1),
+				Hash:         testBlockHash(height),
+				PreviousHash: testBlockHash(height - 1),
 				TxHashes:     []string{},
 			})
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
@@ -66,7 +68,18 @@ func TestFetchTxsCallsScannerSyncWithBlockMetadata(t *testing.T) {
 	}
 	scanner := NewScanner(log.Logger, frostSigner, bridge, common.XMRChain, common.EmptyPubKey, 72)
 
-	_, err = scanner.FetchTxs(100, 150)
+	// Bound the call so a future merge cannot combine this function's narrower
+	// continuity lock with an outer scanMu lock and hang the whole test package.
+	fetchDone := make(chan error, 1)
+	go func() {
+		_, fetchErr := scanner.FetchTxs(100, 150)
+		fetchDone <- fetchErr
+	}()
+	select {
+	case err = <-fetchDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("FetchTxs deadlocked while acquiring the scanner continuity lock")
+	}
 	if err != nil {
 		t.Fatalf("fetch txs: %v", err)
 	}
@@ -79,11 +92,11 @@ func TestFetchTxsCallsScannerSyncWithBlockMetadata(t *testing.T) {
 	if captured.TipHeight != 150 {
 		t.Fatalf("expected tip height 150, got %d", captured.TipHeight)
 	}
-	if captured.BlockHash != "hash-100" {
-		t.Fatalf("expected block hash hash-100, got %s", captured.BlockHash)
+	if captured.BlockHash != testBlockHash(100) {
+		t.Fatalf("expected block hash %s, got %s", testBlockHash(100), captured.BlockHash)
 	}
-	if captured.ParentHash != "hash-99" {
-		t.Fatalf("expected parent hash hash-99, got %s", captured.ParentHash)
+	if captured.ParentHash != testBlockHash(99) {
+		t.Fatalf("expected parent hash %s, got %s", testBlockHash(99), captured.ParentHash)
 	}
 	if captured.ReorgWindow != 72 {
 		t.Fatalf("expected reorg window 72, got %d", captured.ReorgWindow)
@@ -96,6 +109,8 @@ func TestFetchTxsMapsScannerSyncHashMismatchToUnavailableBlock(t *testing.T) {
 	frostServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/scanner/state":
+			writeTestScannerState(t, w, 200)
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/chain/height":
 			_ = json.NewEncoder(w).Encode(sidecar.ChainHeightResp{Height: 220})
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/monero/chain/block/"):
@@ -108,14 +123,15 @@ func TestFetchTxsMapsScannerSyncHashMismatchToUnavailableBlock(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(sidecar.ChainBlockResp{
 				Height:       height,
 				Reward:       defaultCoinbaseValue + 200000,
-				Hash:         fmt.Sprintf("hash-%d", height),
-				PreviousHash: fmt.Sprintf("hash-%d", height-1),
+				Hash:         testBlockHash(height),
+				PreviousHash: testBlockHash(height - 1),
 				TxHashes:     []string{},
 			})
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
 			w.WriteHeader(http.StatusConflict)
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"error": "scanner sync hash mismatch at height 200",
+				"code":  "scanner_hash_mismatch",
 			})
 		default:
 			http.NotFound(w, r)

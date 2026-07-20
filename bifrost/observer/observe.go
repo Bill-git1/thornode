@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,6 +42,13 @@ const deckRefreshTime = 1 * time.Second
 // defaultOracleUpdateInterval is the interval in which new oracle prices
 // are computed and gossiped via p2p
 const defaultOracleUpdateInterval = 1 * time.Second
+
+const (
+	committedOnlyErrataSafetyHorizon = 30 * 24 * time.Hour
+	committedOnlyErrataPruneInterval = time.Hour
+	errataAttestationRetryHorizon    = 24 * time.Hour
+	errataAttestationRetryMaxDelay   = time.Hour
+)
 
 type txInKey struct {
 	chain                  common.Chain
@@ -132,7 +140,7 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 		return nil, fmt.Errorf("fail to create oracle instance: %w", err)
 	}
 
-	return &Observer{
+	observer := &Observer{
 		logger:                logger,
 		chains:                chains,
 		oracle:                priceOracle,
@@ -155,7 +163,18 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 		attestationGossip:     attestationGossip,
 		observerWorkers:       observerWorkers,
 		deckDumpFile:          deckDumpFile,
-	}, nil
+	}
+	if attestationGossip != nil {
+		attestationGossip.SetErrataCommittedHandler(func(errata common.ErrataTx) {
+			if markErr := storage.MarkErrataCommitted(types.ErrataTx{Chain: errata.Chain, TxID: errata.Id}); markErr != nil {
+				observer.logger.Error().Err(markErr).
+					Str("chain", errata.Chain.String()).
+					Str("txid", errata.Id.String()).
+					Msg("failed to mark durable errata committed")
+			}
+		})
+	}
+	return observer, nil
 }
 
 func (o *Observer) getChain(chainID common.Chain) (chainclients.ChainClient, error) {
@@ -477,6 +496,7 @@ func (o *Observer) processTxIns() {
 			return
 		case txIn := <-o.globalTxsQueue:
 			if len(txIn.TxArray) == 0 {
+				ackTxInPersisted(txIn, nil)
 				continue
 			}
 
@@ -484,8 +504,8 @@ func (o *Observer) processTxIns() {
 			lastNodeStatus := o.lastNodeStatus
 			o.lastNodeStatusMu.RUnlock()
 
-			process := func(tx types.TxIn) {
-				o.processObservedTx(tx)
+			process := func(tx types.TxIn) error {
+				return o.processObservedTx(tx)
 			}
 			operation := "processObservedTx"
 			if lastNodeStatus != stypes.NodeStatus_Active {
@@ -495,13 +515,12 @@ func (o *Observer) processTxIns() {
 					// for an outbound from a retiring vault they historically owned.
 					// This path performs network I/O, so run it in the same bounded pool
 					// as active observation processing instead of blocking this queue.
-					process = func(tx types.TxIn) {
-						if err := o.attestHistoricalXMRSpentRefCertificates(tx); err != nil {
-							o.logger.Error().Err(err).Msg("failed to attest historical XMR spent-ref certificates")
-						}
+					process = func(tx types.TxIn) error {
+						return o.attestHistoricalXMRSpentRefCertificates(tx)
 					}
 					operation = "attestHistoricalXMRSpentRefCertificates"
 				} else {
+					ackTxInPersisted(txIn, nil)
 					continue
 				}
 			}
@@ -510,14 +529,18 @@ func (o *Observer) processTxIns() {
 			sem <- struct{}{}
 
 			// Process observed tx in a goroutine
-			go func(tx types.TxIn, process func(types.TxIn), operation string) {
+			go func(tx types.TxIn, process func(types.TxIn) error, operation string) {
 				defer func() {
 					// Release the token back to semaphore when done
 					<-sem
 				}()
 
 				start := time.Now()
-				process(tx)
+				err := process(tx)
+				if err != nil {
+					o.logger.Error().Err(err).Msgf("failed to %s", operation)
+				}
+				ackTxInPersisted(tx, err)
 				o.logger.Debug().Msgf("%s took %s", operation, time.Since(start))
 			}(txIn, process, operation)
 		}
@@ -526,9 +549,9 @@ func (o *Observer) processTxIns() {
 
 // processObservedTx will process the observed tx, and either add it to the
 // onDeck queue, or merge it with an existing tx in the onDeck queue.
-func (o *Observer) processObservedTx(txIn types.TxIn) {
+func (o *Observer) processObservedTx(txIn types.TxIn) error {
 	if len(txIn.TxArray) == 0 {
-		return
+		return nil
 	}
 
 	// Create a new slice for filtered transactions
@@ -542,7 +565,7 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 		filteredTxArray = o.filterObservations(txIn.Chain, txIn.TxArray, txIn.MemPool)
 		if len(filteredTxArray) == 0 {
 			o.logger.Debug().Msgf("txin is empty after filtering, ignore it")
-			return
+			return nil
 		}
 
 		// Set the filtered flag and update TxArray
@@ -595,23 +618,38 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 		}
 		o.logger.Debug().Msgf("Dedupe took %s", time.Since(dedupeStart))
 		if len(newTxs) > 0 {
+			originalLen := len(in.TxArray)
 			in.TxArray = append(in.TxArray, newTxs...)
 			setDeckStart := time.Now()
 			if err := o.storage.AddOrUpdateTx(in); err != nil {
+				in.TxArray = in.TxArray[:originalLen]
 				o.logger.Error().Err(err).Msg("fail to add tx to storage")
+				return err
 			}
 			o.logger.Debug().Msgf("AddOrUpdateTx existing took %s", time.Since(setDeckStart))
 		}
 
-		return
+		return nil
 	}
-	o.onDeck[k] = &txIn
 
 	setDeckStart := time.Now()
 	if err := o.storage.AddOrUpdateTx(&txIn); err != nil {
 		o.logger.Error().Err(err).Msg("fail to add tx to storage")
+		return err
 	}
+	o.onDeck[k] = &txIn
 	o.logger.Debug().Msgf("AddOrUpdateTx new took %s", time.Since(setDeckStart))
+	return nil
+}
+
+func ackTxInPersisted(txIn types.TxIn, err error) {
+	if txIn.Persisted == nil {
+		return
+	}
+	select {
+	case txIn.Persisted <- err:
+	default:
+	}
 }
 
 // attestHistoricalXMRSpentRefCertificates converts only pre-attributed XMR
@@ -773,64 +811,321 @@ func (o *Observer) appendPreAttributedXMRObservation(
 }
 
 func (o *Observer) processErrataTx(ctx context.Context) {
+	retryTicker := time.NewTicker(constants.ThorchainBlockTime)
+	pruneTicker := time.NewTicker(committedOnlyErrataPruneInterval)
+	defer retryTicker.Stop()
+	defer pruneTicker.Stop()
+	o.pruneCommittedOnlyErrata()
+
 	for {
 		select {
 		case <-o.stopChan:
 			return
+		case <-retryTicker.C:
+			pending, err := o.storage.GetPendingErrata()
+			if err != nil {
+				o.logger.Error().Err(err).Msg("failed to load durable errata outbox")
+				continue
+			}
+			for _, record := range pending {
+				block := types.ErrataBlock{
+					Height:     record.Height,
+					DeliveryID: record.DeliveryID,
+					Txs:        []types.ErrataTx{record.Tx},
+				}
+				if processErr := o.attestErrataBlock(ctx, block, false); processErr != nil {
+					o.logger.Error().Err(processErr).
+						Str("chain", record.Tx.Chain.String()).
+						Str("txid", record.Tx.TxID.String()).
+						Msg("failed to process durable errata outbox record")
+				}
+			}
+		case <-pruneTicker.C:
+			o.pruneCommittedOnlyErrata()
 		case errataBlock, more := <-o.globalErrataQueue:
 			if !more {
 				return
 			}
-			// filter
-			o.filterErrataTx(errataBlock)
-			o.logger.Info().Msgf("Received a errata block %+v from the Thorchain", errataBlock.Height)
-			for _, errataTx := range errataBlock.Txs {
-				if err := o.attestationGossip.AttestErrata(ctx, common.ErrataTx{
-					Chain: errataTx.Chain,
-					Id:    errataTx.TxID,
-				}); err != nil {
-					o.errCounter.WithLabelValues("fail_to_broadcast_errata_tx", "").Inc()
-					o.logger.Error().Err(err).Msg("fail to broadcast errata tx")
+			if errataBlock.Persisted == nil {
+				if processErr := o.processLegacyErrataBlock(ctx, errataBlock); processErr != nil {
+					o.logger.Error().Err(processErr).
+						Int64("height", errataBlock.Height).
+						Msg("failed to process one-shot errata block")
 				}
+				continue
+			}
+			persistErr := o.storage.AddErrataBlock(errataBlock)
+			if persistErr != nil {
+				ackErrataPersistence(errataBlock, persistErr)
+				o.logger.Error().Err(persistErr).
+					Str("delivery_id", errataBlock.DeliveryID).
+					Msg("failed to persist errata before attestation")
+				continue
+			}
+
+			// The XMR scanner may emit a re-mined transaction as soon as this
+			// acknowledgement is released. Finish both durable on-deck cleanup
+			// and the local errata attestation first, so neither cleanup path can
+			// delete the fresh observation after it enters observer/gossip state.
+			processErr := o.attestErrataBlock(ctx, errataBlock, true)
+			ackErrataPersistence(errataBlock, processErr)
+			if processErr != nil {
+				o.logger.Error().Err(processErr).
+					Str("delivery_id", errataBlock.DeliveryID).
+					Msg("failed to process durable errata block")
 			}
 		}
 	}
+}
+
+// processLegacyErrataBlock preserves the one-shot behavior used by chain
+// clients that do not opt into the acknowledged XMR delivery contract. These
+// events clean local observer state and attest once without entering the
+// durable retry outbox.
+func (o *Observer) processLegacyErrataBlock(ctx context.Context, errataBlock types.ErrataBlock) error {
+	if err := o.filterErrataTx(errataBlock); err != nil {
+		return err
+	}
+	if o.attestationGossip == nil {
+		return fmt.Errorf("attestation gossip is not configured")
+	}
+
+	var broadcastErr error
+	for _, errataTx := range errataBlock.Txs {
+		if err := o.attestationGossip.AttestErrata(ctx, common.ErrataTx{
+			Chain: errataTx.Chain,
+			Id:    errataTx.TxID,
+		}); err != nil {
+			if broadcastErr == nil {
+				broadcastErr = fmt.Errorf("failed to broadcast one-shot errata attestation for %s/%s: %w", errataTx.Chain, errataTx.TxID, err)
+			}
+			if o.errCounter != nil {
+				o.errCounter.WithLabelValues("fail_to_broadcast_errata_tx", "").Inc()
+			}
+			o.logger.Error().Err(err).
+				Str("chain", errataTx.Chain.String()).
+				Str("txid", errataTx.TxID.String()).
+				Msg("fail to broadcast one-shot errata tx")
+		}
+	}
+	return broadcastErr
+}
+
+func ackErrataPersistence(block types.ErrataBlock, err error) {
+	if block.Persisted != nil {
+		block.Persisted <- err
+	}
+}
+
+func (o *Observer) pruneCommittedOnlyErrata() {
+	pruned, err := o.storage.PruneCommittedOnlyErrata(time.Now().Add(-committedOnlyErrataSafetyHorizon))
+	if err != nil {
+		o.logger.Error().Err(err).Msg("failed to prune committed-only errata tombstones")
+		return
+	}
+	if pruned > 0 {
+		o.logger.Info().Int("records", pruned).Msg("pruned expired committed-only errata tombstones")
+	}
+}
+
+func (o *Observer) attestErrataBlock(ctx context.Context, errataBlock types.ErrataBlock, forceAttempt bool) error {
+	if err := o.cleanupErrataBlock(errataBlock); err != nil {
+		return err
+	}
+	return o.broadcastErrataBlock(ctx, errataBlock, time.Now(), forceAttempt)
+}
+
+func (o *Observer) cleanupErrataBlock(errataBlock types.ErrataBlock) error {
+	cleanupBlock := types.ErrataBlock{Height: errataBlock.Height, DeliveryID: errataBlock.DeliveryID}
+	for _, errataTx := range errataBlock.Txs {
+		record, found, err := o.storage.GetPendingErrataTx(errataTx)
+		if err != nil {
+			return err
+		}
+		if found && record.DeliverySeen && !record.CleanupComplete {
+			cleanupBlock.Txs = append(cleanupBlock.Txs, errataTx)
+		}
+	}
+	if len(cleanupBlock.Txs) > 0 {
+		if err := o.filterErrataTx(cleanupBlock); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *Observer) broadcastErrataBlock(ctx context.Context, errataBlock types.ErrataBlock, now time.Time, forceAttempt bool) error {
+	o.logger.Info().Int64("height", errataBlock.Height).
+		Str("delivery_id", errataBlock.DeliveryID).
+		Msg("processing durable errata block")
+	var broadcastErr error
+	for _, errataTx := range errataBlock.Txs {
+		record, found, err := o.storage.GetPendingErrataTx(errataTx)
+		if err != nil {
+			return err
+		}
+		if !found || record.Committed {
+			continue
+		}
+		if record.AttestationRetryExhausted {
+			if forceAttempt && broadcastErr == nil {
+				broadcastErr = fmt.Errorf("errata attestation retry horizon exhausted for %s/%s; operator recovery required", errataTx.Chain, errataTx.TxID)
+			}
+			continue
+		}
+		if !record.CleanupComplete {
+			return fmt.Errorf("local cleanup is not durable for errata %s/%s", errataTx.Chain, errataTx.TxID)
+		}
+		if record.FirstAttemptAtUnixNano != 0 {
+			firstAttempt := time.Unix(0, record.FirstAttemptAtUnixNano)
+			if !now.Before(firstAttempt.Add(errataAttestationRetryHorizon)) {
+				exhausted, exhaustErr := o.storage.MarkErrataAttestationRetryExhausted(errataTx, now)
+				if exhaustErr != nil {
+					return exhaustErr
+				}
+				if exhausted {
+					o.logger.Error().
+						Str("chain", errataTx.Chain.String()).
+						Str("txid", errataTx.TxID.String()).
+						Uint32("attempts", record.AttestationAttempts).
+						Msg("errata attestation retry horizon exhausted; operator must verify THORChain voter state")
+					if o.errCounter != nil {
+						o.errCounter.WithLabelValues("errata_retry_exhausted", errataTx.Chain.String()).Inc()
+					}
+				}
+				if forceAttempt && broadcastErr == nil {
+					broadcastErr = fmt.Errorf("errata attestation retry horizon exhausted for %s/%s; operator recovery required", errataTx.Chain, errataTx.TxID)
+				}
+				continue
+			}
+		}
+		if !forceAttempt && record.LastAttemptAtUnixNano != 0 {
+			lastAttempt := time.Unix(0, record.LastAttemptAtUnixNano)
+			if now.Before(lastAttempt.Add(errataAttestationRetryDelay(record.AttestationAttempts))) {
+				continue
+			}
+		}
+
+		attempt, recorded, attemptErr := o.storage.RecordErrataAttestationAttempt(errataTx, now)
+		if attemptErr != nil {
+			return attemptErr
+		}
+		if !recorded {
+			continue
+		}
+		if o.attestationGossip == nil {
+			return fmt.Errorf("attestation gossip is not configured")
+		}
+		if err := o.attestationGossip.AttestErrata(ctx, common.ErrataTx{
+			Chain: errataTx.Chain,
+			Id:    errataTx.TxID,
+		}); err != nil {
+			if broadcastErr == nil {
+				broadcastErr = fmt.Errorf("failed to accept local errata attestation for %s/%s: %w", errataTx.Chain, errataTx.TxID, err)
+			}
+			if o.errCounter != nil {
+				o.errCounter.WithLabelValues("fail_to_broadcast_errata_tx", "").Inc()
+			}
+			o.logger.Error().Err(err).
+				Str("chain", errataTx.Chain.String()).
+				Str("txid", errataTx.TxID.String()).
+				Uint32("attempt", attempt.AttestationAttempts).
+				Msg("fail to broadcast durable errata tx")
+		}
+	}
+	return broadcastErr
+}
+
+func errataAttestationRetryDelay(attempts uint32) time.Duration {
+	if attempts == 0 {
+		return 0
+	}
+	delay := constants.ThorchainBlockTime
+	for attempt := uint32(1); attempt < attempts && delay < errataAttestationRetryMaxDelay; attempt++ {
+		if delay >= errataAttestationRetryMaxDelay/2 {
+			return errataAttestationRetryMaxDelay
+		}
+		delay *= 2
+	}
+	if delay > errataAttestationRetryMaxDelay {
+		return errataAttestationRetryMaxDelay
+	}
+	return delay
 }
 
 // filterErrataTx with confirmation counting logic in place, all inbound tx to asgard will be parked and waiting for confirmation count to reach
 // the target threshold before it get forward to THORChain,  it is possible that when a re-org happened on BTC / ETH
 // the transaction that has been re-org out ,still in bifrost memory waiting for confirmation, as such, it should be
 // removed from ondeck tx queue, and not forward it to THORChain
-func (o *Observer) filterErrataTx(block types.ErrataBlock) {
+func (o *Observer) filterErrataTx(block types.ErrataBlock) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-BlockLoop:
+
+	targets := make(map[string]struct{}, len(block.Txs))
 	for _, tx := range block.Txs {
-		for k, txIn := range o.onDeck {
-			for i, item := range txIn.TxArray {
-				if item.Tx == tx.TxID.String() {
-					o.logger.Info().Msgf("drop tx (%s) from ondeck memory due to errata", tx.TxID)
-					txIn.TxArray = append(txIn.TxArray[:i], txIn.TxArray[i+1:]...) // nolint
-					if len(txIn.TxArray) == 0 {
-						o.logger.Info().Msgf("ondeck tx is empty, remove it from ondeck")
-						delete(o.onDeck, k)
-						if err := o.storage.RemoveTx(txIn, block.Height); err != nil {
-							o.logger.Error().Err(err).Msg("fail to remove tx from storage")
-						}
-					} else {
-						if i == 0 {
-							// update block confirmation count
-							txIn.ConfirmationRequired = k.height - txIn.TxArray[0].BlockHeight
-						}
-						if err := o.storage.AddOrUpdateTx(txIn); err != nil {
-							o.logger.Error().Err(err).Msg("fail to update tx in storage")
-						}
-					}
-					break BlockLoop
+		targets[errataObservationKey(tx.Chain, tx.TxID.String())] = struct{}{}
+	}
+
+	type deckUpdate struct {
+		key    txInKey
+		txIn   *types.TxIn
+		delete bool
+	}
+	updates := make([]deckUpdate, 0)
+	mutations := make([]errataDeckMutation, 0)
+	for key, txIn := range o.onDeck {
+		if txIn == nil {
+			continue
+		}
+		remaining := make([]*types.TxInItem, 0, len(txIn.TxArray))
+		removed := false
+		for _, item := range txIn.TxArray {
+			if item != nil {
+				if _, ok := targets[errataObservationKey(txIn.Chain, item.Tx)]; ok {
+					removed = true
+					continue
 				}
 			}
+			remaining = append(remaining, item)
 		}
+		if !removed {
+			continue
+		}
+
+		updated := *txIn
+		updated.TxArray = remaining
+		deleteDeck := len(remaining) == 0
+		if !deleteDeck {
+			updated.ConfirmationRequired = key.height - remaining[0].BlockHeight
+		}
+		updates = append(updates, deckUpdate{key: key, txIn: &updated, delete: deleteDeck})
+		mutations = append(mutations, errataDeckMutation{
+			TxIn:           &updated,
+			FinalizeHeight: key.height,
+			Delete:         deleteDeck,
+		})
 	}
+
+	if err := o.storage.CompleteErrataCleanup(block.Txs, mutations); err != nil {
+		return err
+	}
+	for _, update := range updates {
+		if update.delete {
+			delete(o.onDeck, update.key)
+			continue
+		}
+		o.onDeck[update.key] = update.txIn
+	}
+	for _, tx := range block.Txs {
+		o.logger.Info().Str("chain", tx.Chain.String()).
+			Str("txid", tx.TxID.String()).
+			Msg("durably removed on-deck transaction due to errata")
+	}
+	return nil
+}
+
+func errataObservationKey(chain common.Chain, txID string) string {
+	return strings.ToLower(strings.TrimSpace(chain.String())) + "\x00" + strings.ToLower(strings.TrimSpace(txID))
 }
 
 // getThorchainTxIns convert to the type thorchain expected

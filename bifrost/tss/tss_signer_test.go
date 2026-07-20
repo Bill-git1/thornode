@@ -11,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	. "gopkg.in/check.v1"
 
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	tctypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
@@ -220,8 +221,9 @@ func (s *KeysignErrorSuite) TestKeysignErrorString(c *C) {
 }
 
 func (s *KeysignErrorSuite) TestIsTerminalRound(c *C) {
-	// IsTerminalRound is true only for the v3 secp256k1 terminal round
-	// (SignRound9Message) and the ed25519 terminal round (SignRound3Message).
+	// IsTerminalRound is true for the v3 secp256k1 terminal round
+	// (SignRound9Message), the ed25519 terminal round (SignRound3Message), and
+	// the FROST share exchange.
 	// v1's SignRound7Message is no longer accepted — a v3 node will never
 	// emit it for its own terminal failure, and legacy on-chain markers are
 	// not consumed by the per-signer retry path.
@@ -236,6 +238,9 @@ func (s *KeysignErrorSuite) TestIsTerminalRound(c *C) {
 
 	ke4 := NewKeysignError(stypes.Blame{})
 	c.Assert(ke4.IsTerminalRound(), Equals, false)
+
+	ke5 := NewKeysignError(stypes.Blame{Round: tssMessages.FROSTKEYSIGNSHARE})
+	c.Assert(ke5.IsTerminalRound(), Equals, true)
 }
 
 // ---------------------------------------------------------------------------

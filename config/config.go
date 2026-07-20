@@ -217,6 +217,35 @@ func Init() {
 		"XMR_SIGNER_ENDPOINT",
 	))
 	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_authorization_bearer",
+		"XMR_FROST_AUTH_BEARER",
+		"BIFROST_CHAINS_XMR_SIGNER_AUTHORIZATION_BEARER",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_username",
+		"XMR_FROST_AUTH_USERNAME",
+		"BIFROST_CHAINS_XMR_SIGNER_USERNAME",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_password",
+		"XMR_FROST_AUTH_PASSWORD",
+		"BIFROST_CHAINS_XMR_SIGNER_PASSWORD",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_expected_network",
+		"XMR_FROST_CHAIN_NETWORK",
+		"BIFROST_CHAINS_XMR_SIGNER_EXPECTED_NETWORK",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_expected_commit",
+		"XMR_FROST_EXPECTED_COMMIT",
+		"BIFROST_CHAINS_XMR_SIGNER_EXPECTED_COMMIT",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.XMR.signer_allow_insecure_http",
+		"BIFROST_CHAINS_XMR_SIGNER_ALLOW_INSECURE_HTTP",
+	))
+	assert(viper.BindEnv(
 		"bifrost.chains.XMR.xmr_consolidation_enabled",
 		"XMR_CONSOLIDATION_ENABLED",
 	))
@@ -912,6 +941,24 @@ type BifrostChainConfiguration struct {
 	// SignerEndpoint configures an optional endpoint for remote signer backends.
 	// The XMR TSS signer uses this endpoint when configured.
 	SignerEndpoint string `mapstructure:"signer_endpoint"`
+	// SignerAuthorizationBearer is exclusively used for the signer sidecar. It
+	// must never be copied to a chain daemon or wallet endpoint.
+	SignerAuthorizationBearer string `mapstructure:"signer_authorization_bearer"`
+	// SignerUserName and SignerPassword are the sidecar-only Basic credentials.
+	// They are mutually exclusive with SignerAuthorizationBearer.
+	SignerUserName string `mapstructure:"signer_username"`
+	SignerPassword string `mapstructure:"signer_password"`
+	// SignerExpectedNetwork binds the local sidecar to the intended deployment
+	// network (mocknet, chainnet, stagenet, or mainnet).
+	SignerExpectedNetwork string `mapstructure:"signer_expected_network"`
+	// SignerExpectedCommit is optional release metadata for comparing the
+	// sidecar's reported source revision. Deployment tooling must enforce the
+	// immutable image digest; this self-report is not a runtime trust root.
+	SignerExpectedCommit string `mapstructure:"signer_expected_commit"`
+	// SignerAllowInsecureHTTP is a development-only escape hatch for isolated
+	// mocknet/chainnet compose networks. Production deployments should use TLS
+	// or loopback and leave it false.
+	SignerAllowInsecureHTTP bool `mapstructure:"signer_allow_insecure_http"`
 
 	// XMRConsolidationEnabled toggles periodic Monero output consolidation.
 	XMRConsolidationEnabled bool `mapstructure:"xmr_consolidation_enabled"`

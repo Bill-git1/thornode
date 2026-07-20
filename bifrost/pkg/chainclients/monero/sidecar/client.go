@@ -5,18 +5,51 @@ package sidecar
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
-	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
 )
+
+const (
+	// Retrying combine is only safe against a duplicate Monero broadcast if the
+	// signer durably replays combine by (msg_id, session_id, all_shares). The
+	// sidecar image digest is unpinned, so a rollback to a signer without that
+	// contract must not silently double-broadcast: default to single-shot and
+	// only raise the bound for a signer that proves the contract by advertising
+	// CapabilityIdempotentCombine. See SetSignCombineIdempotent.
+	defaultSignCombineMaxAttempts    = 1
+	idempotentSignCombineMaxAttempts = 3
+	defaultSignCombineInitialBackoff = 200 * time.Millisecond
+	defaultSignCombineMaxBackoff     = time.Second
+	scannerStatePath                 = "/v1/monero/scanner/state"
+	scannerRewindPath                = "/v1/monero/scanner/rewind"
+	maxScannerReorgRewind            = uint64(730)
+)
+
+type scannerContinuityCache struct {
+	resetEpoch       uint64
+	nextHeight       uint64
+	strictAfterReset bool
+
+	hasStateDetails bool
+	hasLastHeight   bool
+	lastHeight      uint64
+	lastBlockHash   string
+	lastParentHash  string
+}
 
 // Client is the HTTP client for the xmr-frost-signer sidecar.
 type Client struct {
@@ -44,12 +77,34 @@ type Client struct {
 	chainBlockPath    string
 	chainTxPath       string
 
-	client       *http.Client
-	daemonClient *http.Client
-	signClient   *http.Client
-	username     string
-	password     string
-	bearer       string
+	client          *http.Client
+	daemonClient    *http.Client
+	signClient      *http.Client
+	signerUsername  string
+	signerPassword  string
+	signerBearer    string
+	daemonUsername  string
+	daemonPassword  string
+	expectedNetwork string
+
+	// Sync calls remain serialized, while registration/reset responses may
+	// update the continuity cache as soon as they arrive. Keeping those locks
+	// separate lets a completed registration rewind stop a stale sync before
+	// its first POST.
+	scannerSyncMu       sync.Mutex
+	scannerContinuityMu sync.Mutex
+	scannerContinuity   scannerContinuityCache
+	continuityCached    bool
+	// Kept only across an ambiguous response so the exact compare-and-set can
+	// be replayed through the signer's idempotent post-commit path.
+	pendingScannerRewind *ScannerRewindReq
+
+	// A combine may have durably completed even when its HTTP response is
+	// lost. Retrying the exact same idempotent request lets the signer replay
+	// that result without creating a second transaction or signing session.
+	signCombineMaxAttempts    int
+	signCombineInitialBackoff time.Duration
+	signCombineMaxBackoff     time.Duration
 }
 
 // NewClient wires a sidecar Client from a Bifrost chain configuration.
@@ -75,14 +130,23 @@ func NewClientWithEndpoint(cfg config.BifrostChainConfiguration, endpoint string
 		return nil, fmt.Errorf("sidecar endpoint %q must use https when not loopback", endpoint)
 	}
 
-	username := strings.TrimSpace(cfg.UserName)
-	password := strings.TrimSpace(cfg.Password)
-	bearer := strings.TrimSpace(cfg.AuthorizationBearer)
-	if (username == "") != (password == "") {
+	signerUsername := strings.TrimSpace(cfg.SignerUserName)
+	signerPassword := strings.TrimSpace(cfg.SignerPassword)
+	signerBearer := strings.TrimSpace(cfg.SignerAuthorizationBearer)
+	if (signerUsername == "") != (signerPassword == "") {
 		return nil, fmt.Errorf("sidecar requires both username and password when basic auth is configured")
 	}
-	if !IsLoopbackHost(parsedEndpoint.Hostname()) && bearer == "" && username == "" {
-		return nil, fmt.Errorf("sidecar endpoint %q requires authorization_bearer or username/password", endpoint)
+	if signerBearer != "" && signerUsername != "" {
+		return nil, fmt.Errorf("sidecar bearer and basic authentication are mutually exclusive")
+	}
+	if !IsLoopbackHost(parsedEndpoint.Hostname()) && signerBearer == "" && signerUsername == "" {
+		return nil, fmt.Errorf("sidecar endpoint %q requires signer_authorization_bearer or signer_username/signer_password", endpoint)
+	}
+
+	daemonUsername := strings.TrimSpace(cfg.UserName)
+	daemonPassword := strings.TrimSpace(cfg.Password)
+	if (daemonUsername == "") != (daemonPassword == "") {
+		return nil, fmt.Errorf("monero daemon requires both username and password when basic auth is configured")
 	}
 
 	endpoint = strings.TrimSuffix(parsedEndpoint.String(), "/")
@@ -129,12 +193,19 @@ func NewClientWithEndpoint(cfg config.BifrostChainConfiguration, endpoint string
 		chainBlockPath:    "/v1/monero/chain/block",
 		chainTxPath:       "/v1/monero/chain/tx",
 
-		client:       &http.Client{Timeout: timeout},
-		daemonClient: &http.Client{Timeout: timeout},
-		signClient:   &http.Client{Timeout: signTimeout},
-		username:     username,
-		password:     password,
-		bearer:       bearer,
+		client:          &http.Client{Timeout: timeout},
+		daemonClient:    &http.Client{Timeout: timeout},
+		signClient:      &http.Client{Timeout: signTimeout},
+		signerUsername:  signerUsername,
+		signerPassword:  signerPassword,
+		signerBearer:    signerBearer,
+		daemonUsername:  daemonUsername,
+		daemonPassword:  daemonPassword,
+		expectedNetwork: strings.TrimSpace(cfg.SignerExpectedNetwork),
+
+		signCombineMaxAttempts:    defaultSignCombineMaxAttempts,
+		signCombineInitialBackoff: defaultSignCombineInitialBackoff,
+		signCombineMaxBackoff:     defaultSignCombineMaxBackoff,
 	}, nil
 }
 
@@ -148,7 +219,9 @@ func parseSidecarEndpointURL(endpoint string) (*url.URL, error) {
 	}
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("invalid sidecar endpoint %q: %w", endpoint, err)
+		// url.Error includes the full input URL, which may contain a mistakenly
+		// embedded credential. Keep configuration errors secret-free.
+		return nil, errors.New("invalid sidecar endpoint URL")
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return nil, fmt.Errorf("invalid sidecar endpoint scheme %q", parsed.Scheme)
@@ -156,6 +229,16 @@ func parseSidecarEndpointURL(endpoint string) (*url.URL, error) {
 	if strings.TrimSpace(parsed.Hostname()) == "" {
 		return nil, fmt.Errorf("invalid sidecar endpoint host")
 	}
+	if parsed.User != nil {
+		return nil, fmt.Errorf("sidecar endpoint must not contain URL credentials; use signer authentication fields")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" || parsed.ForceQuery {
+		return nil, fmt.Errorf("sidecar endpoint must not contain a query or fragment")
+	}
+	if parsed.EscapedPath() != "" && parsed.EscapedPath() != "/" {
+		return nil, fmt.Errorf("sidecar endpoint must not contain a path")
+	}
+	parsed.Path = ""
 	return parsed, nil
 }
 
@@ -173,16 +256,12 @@ func IsLoopbackHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// AllowInsecureHTTP decides whether http:// endpoints are accepted. Allowed on
-// the non-public networks (mocknet, chainnet, stagenet), where the sidecar and
-// monerod are reached over internal cluster traffic; mainnet requires TLS.
+// AllowInsecureHTTP decides whether a non-loopback http:// signer endpoint is
+// accepted. It is an explicit development-only escape hatch and is never
+// honored for a signer that claims mainnet.
 func AllowInsecureHTTP(cfg config.BifrostChainConfiguration) bool {
-	chainNetwork := strings.TrimSpace(cfg.ChainNetwork)
-	if strings.EqualFold(chainNetwork, "mocknet") {
-		return true
-	}
-	net := common.CurrentChainNetwork
-	return net == common.MockNet || net == common.ChainNet || net == common.StageNet
+	return cfg.SignerAllowInsecureHTTP &&
+		!strings.EqualFold(strings.TrimSpace(cfg.SignerExpectedNetwork), "mainnet")
 }
 
 // --- FROST DKG ---
@@ -261,14 +340,132 @@ func (c *Client) SignPartial(req SignPartialReq) (SignPartialResp, error) {
 }
 
 func (c *Client) SignCombine(req SignCombineReq) (SignCombineResp, error) {
+	return c.SignCombineContext(context.Background(), req)
+}
+
+// SignCombineContext retries only failures for which the signer may not have
+// returned a definitive application result. The request is serialized once
+// and every attempt reuses those exact bytes, preserving msg_id, session_id,
+// and all_shares for the signer's idempotent durable replay path.
+func (c *Client) SignCombineContext(ctx context.Context, req SignCombineReq) (SignCombineResp, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return SignCombineResp{}, fmt.Errorf("fail to marshal sign combine request: %w", err)
+	}
+
+	maxAttempts, backoff, maxBackoff := c.signCombineRetryPolicy()
 	var out SignCombineResp
-	if err := c.call(http.MethodPost, c.signCombinePath, req, &out); err != nil {
-		return SignCombineResp{}, fmt.Errorf("fail to call sign combine endpoint: %w", err)
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		out = SignCombineResp{}
+		err = c.callJSONContext(ctx, http.MethodPost, c.signCombinePath, body, &out)
+		if err == nil {
+			break
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return SignCombineResp{}, fmt.Errorf("sign combine canceled: %w", ctxErr)
+		}
+		if attempt == maxAttempts || !isRetryableSignCombineError(ctx, err) {
+			return SignCombineResp{}, fmt.Errorf("fail to call sign combine endpoint: %w", err)
+		}
+		if waitErr := waitForSignCombineRetry(ctx, backoff); waitErr != nil {
+			return SignCombineResp{}, fmt.Errorf("sign combine retry canceled: %w", waitErr)
+		}
+		backoff = nextSignCombineBackoff(backoff, maxBackoff)
 	}
 	if strings.TrimSpace(out.TxHash) == "" {
 		return SignCombineResp{}, fmt.Errorf("sign combine endpoint returned empty tx_hash")
 	}
+	if strings.TrimSpace(out.TxKey) == "" {
+		return SignCombineResp{}, fmt.Errorf("sign combine endpoint returned empty tx_key")
+	}
 	return out, nil
+}
+
+// SetSignCombineIdempotent enables bounded combine retries, and must be called
+// only with a signer that advertises CapabilityIdempotentCombine. Retrying a
+// combine against a signer without the durable replay contract can broadcast the
+// same Monero transaction twice, so an unproven signer stays single-shot.
+func (c *Client) SetSignCombineIdempotent(idempotent bool) {
+	if idempotent {
+		c.signCombineMaxAttempts = idempotentSignCombineMaxAttempts
+		return
+	}
+	c.signCombineMaxAttempts = defaultSignCombineMaxAttempts
+}
+
+func (c *Client) signCombineRetryPolicy() (int, time.Duration, time.Duration) {
+	maxAttempts := c.signCombineMaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = defaultSignCombineMaxAttempts
+	}
+	backoff := c.signCombineInitialBackoff
+	if backoff < 0 {
+		backoff = 0
+	} else if backoff == 0 {
+		backoff = defaultSignCombineInitialBackoff
+	}
+	maxBackoff := c.signCombineMaxBackoff
+	if maxBackoff <= 0 {
+		maxBackoff = defaultSignCombineMaxBackoff
+	}
+	if maxBackoff < backoff {
+		maxBackoff = backoff
+	}
+	return maxAttempts, backoff, maxBackoff
+}
+
+func isRetryableSignCombineError(ctx context.Context, err error) bool {
+	if err == nil || (ctx != nil && ctx.Err() != nil) {
+		return false
+	}
+
+	var httpErr *HTTPError
+	if errors.As(err, &httpErr) {
+		return httpErr.Status >= http.StatusInternalServerError ||
+			httpErr.Status == http.StatusRequestTimeout ||
+			httpErr.Status == http.StatusTooEarly ||
+			httpErr.Status == http.StatusTooManyRequests
+	}
+
+	// HTTP transport failures are ambiguous: the signer may have committed
+	// the transaction before the connection failed. A bounded retry of the
+	// same request is safe because combine is idempotent by msg/session/body.
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+func waitForSignCombineRetry(ctx context.Context, delay time.Duration) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func nextSignCombineBackoff(current, maximum time.Duration) time.Duration {
+	if current >= maximum {
+		return maximum
+	}
+	next := current * 2
+	if next < current || next > maximum {
+		return maximum
+	}
+	return next
 }
 
 // ClearSessions drops any cached per-session state on the sidecar. Returns the
@@ -307,10 +504,22 @@ func (c *Client) Balance(vaultPubKey string) (Balance, error) {
 }
 
 func (c *Client) RegisterVault(req RegisterVaultReq) (RegisterVaultResp, error) {
+	return c.RegisterVaultContext(context.Background(), req)
+}
+
+func (c *Client) RegisterVaultContext(ctx context.Context, req RegisterVaultReq) (RegisterVaultResp, error) {
+	if req.VaultCreationHeight < 0 {
+		return RegisterVaultResp{}, fmt.Errorf("vault creation height must be non-negative")
+	}
 	var out RegisterVaultResp
-	if err := c.call(http.MethodPost, c.registerPath, req, &out); err != nil {
+	if err := c.callContext(ctx, http.MethodPost, c.registerPath, req, &out); err != nil {
 		return RegisterVaultResp{}, fmt.Errorf("fail to call register vault endpoint: %w", err)
 	}
+	continuity, err := scannerContinuityFromRegistration(out)
+	if err != nil {
+		return RegisterVaultResp{}, fmt.Errorf("register vault endpoint returned invalid scanner continuity: %w", err)
+	}
+	c.mergeScannerContinuity(continuity)
 	return out, nil
 }
 
@@ -330,25 +539,543 @@ func (c *Client) SyncAt(height, tipHeight int64, blockHash, parentHash string, r
 	if height < 0 {
 		return Transfers{}, fmt.Errorf("height must be >= 0")
 	}
+	if height == math.MaxInt64 {
+		return Transfers{}, fmt.Errorf("height cannot advance beyond the int64 scanner range")
+	}
 	if tipHeight < 0 {
 		tipHeight = 0
 	}
 	if reorgWindow < 0 {
 		reorgWindow = 0
 	}
+	normalizedBlockHash, err := normalizeScannerHash("block_hash", blockHash)
+	if err != nil {
+		return Transfers{}, err
+	}
+	normalizedParentHash, err := normalizeScannerHash("parent_hash", parentHash)
+	if err != nil {
+		return Transfers{}, err
+	}
 
-	var out Transfers
+	c.scannerSyncMu.Lock()
+	defer c.scannerSyncMu.Unlock()
+
+	requestedHeight := uint64(height)
 	req := SyncReq{
 		Height:      height,
 		TipHeight:   tipHeight,
-		BlockHash:   strings.TrimSpace(blockHash),
-		ParentHash:  strings.TrimSpace(parentHash),
+		BlockHash:   normalizedBlockHash,
+		ParentHash:  normalizedParentHash,
 		ReorgWindow: reorgWindow,
 	}
-	if err := c.call(http.MethodPost, c.scannerSyncPath, req, &out); err != nil {
+	if continuity, ok := c.cachedScannerContinuity(); ok {
+		if continuity.nextHeight < requestedHeight {
+			return Transfers{}, scannerRewindError(height, continuity)
+		}
+		bindScannerContinuity(&req, continuity.resetEpoch, requestedHeight)
+	}
+
+	var out Transfers
+	if err = c.call(http.MethodPost, c.scannerSyncPath, req, &out); err == nil {
+		c.cacheSuccessfulScannerSync(req)
+		return out, nil
+	}
+	if !IsHTTPStatus(err, http.StatusConflict) {
 		return Transfers{}, fmt.Errorf("fail to call scanner sync endpoint: %w", err)
 	}
+	originalErr := err
+
+	continuity, stateErr := c.fetchScannerContinuity(context.Background())
+	if stateErr != nil {
+		return Transfers{}, fmt.Errorf("scanner sync conflicted and authenticated continuity refresh failed: %w", stateErr)
+	}
+	continuity = c.mergeScannerContinuity(continuity)
+	if continuity.nextHeight < requestedHeight {
+		return Transfers{}, scannerRewindError(height, continuity)
+	}
+
+	canRetry := scannerContinuityIsExactReplay(
+		continuity,
+		requestedHeight,
+		normalizedBlockHash,
+		normalizedParentHash,
+	) || (continuity.strictAfterReset && continuity.nextHeight == requestedHeight)
+	if !canRetry {
+		return Transfers{}, fmt.Errorf("fail to call scanner sync endpoint: %w", originalErr)
+	}
+
+	bindScannerContinuity(&req, continuity.resetEpoch, requestedHeight)
+	out = Transfers{}
+	if retryErr := c.call(http.MethodPost, c.scannerSyncPath, req, &out); retryErr != nil {
+		return Transfers{}, fmt.Errorf("fail to call scanner sync endpoint after continuity refresh: %w", retryErr)
+	}
+	c.cacheSuccessfulScannerSync(req)
 	return out, nil
+}
+
+// PreflightScannerHeight reads the authenticated sidecar cursor before a
+// caller mutates its local reorg state. A cursor behind the requested height
+// requires a local rewind. A cursor ahead is accepted only for the one exact
+// last-block replay which SyncAt itself permits.
+func (c *Client) PreflightScannerHeight(requestedHeight int64, blockHash, parentHash string) error {
+	if requestedHeight < 0 {
+		return fmt.Errorf("height must be >= 0")
+	}
+	if requestedHeight == math.MaxInt64 {
+		return fmt.Errorf("height cannot advance beyond the int64 scanner range")
+	}
+	normalizedBlockHash, err := normalizeScannerHash("block_hash", blockHash)
+	if err != nil {
+		return err
+	}
+	normalizedParentHash, err := normalizeScannerHash("parent_hash", parentHash)
+	if err != nil {
+		return err
+	}
+
+	c.scannerSyncMu.Lock()
+	defer c.scannerSyncMu.Unlock()
+
+	continuity, err := c.fetchScannerContinuity(context.Background())
+	if err != nil {
+		return fmt.Errorf("fail to preflight authenticated scanner continuity: %w", err)
+	}
+	continuity = c.mergeScannerContinuity(continuity)
+	requested := uint64(requestedHeight)
+	if continuity.nextHeight < requested {
+		return scannerRewindError(requestedHeight, continuity)
+	}
+	if continuity.nextHeight == requested {
+		return nil
+	}
+	if scannerContinuityIsExactReplay(
+		continuity,
+		requested,
+		normalizedBlockHash,
+		normalizedParentHash,
+	) {
+		return nil
+	}
+	return &ScannerRecoveryRequiredError{
+		RequestedHeight: requestedHeight,
+		NextHeight:      int64(continuity.nextHeight),
+		ResetEpoch:      continuity.resetEpoch,
+	}
+}
+
+// RewindScannerForReorg performs a bounded, authenticated compare-and-set on
+// the sidecar's durable global cursor. It is serialized with SyncAt and
+// PreflightScannerHeight so no scan can race between the state read and rewind
+// commit. The exact request is retained across ambiguous transport failures so
+// the signer's post-commit idempotency path can prove a lost response.
+func (c *Client) RewindScannerForReorg(
+	targetNextHeight,
+	anchorHeight int64,
+	anchorHash string,
+) (ScannerRewindResp, error) {
+	if targetNextHeight <= 0 {
+		return ScannerRewindResp{}, fmt.Errorf("scanner reorg target_next_height must be positive")
+	}
+	if anchorHeight < 0 || anchorHeight == math.MaxInt64 {
+		return ScannerRewindResp{}, fmt.Errorf("scanner reorg anchor_height is outside the int64 scanner range")
+	}
+	if targetNextHeight != anchorHeight+1 {
+		return ScannerRewindResp{}, fmt.Errorf("scanner reorg target_next_height must equal anchor_height plus one")
+	}
+	normalizedAnchorHash, err := normalizeScannerHash("anchor_hash", anchorHash)
+	if err != nil {
+		return ScannerRewindResp{}, err
+	}
+	network := strings.ToLower(strings.TrimSpace(c.expectedNetwork))
+	if network == "" {
+		return ScannerRewindResp{}, fmt.Errorf("expected sidecar network is not configured")
+	}
+
+	c.scannerSyncMu.Lock()
+	defer c.scannerSyncMu.Unlock()
+
+	continuity, err := c.fetchScannerContinuity(context.Background())
+	if err != nil {
+		return ScannerRewindResp{}, fmt.Errorf("fail to read authenticated scanner continuity before reorg rewind: %w", err)
+	}
+	continuity = c.mergeScannerContinuity(continuity)
+	if c.pendingScannerRewind == nil && scannerContinuityIsDurableRewindTarget(
+		continuity,
+		uint64(targetNextHeight),
+		uint64(anchorHeight),
+		normalizedAnchorHash,
+	) {
+		// A process restart can lose the in-memory request receipt after the
+		// sidecar durably committed. The authenticated exact anchor is itself
+		// sufficient proof that no rewind mutation remains to be performed.
+		return ScannerRewindResp{
+			Rewound:            false,
+			PreviousNextHeight: continuity.nextHeight,
+			NextHeight:         continuity.nextHeight,
+			ResetEpoch:         continuity.resetEpoch,
+		}, nil
+	}
+	req, err := c.scannerRewindRequestLocked(
+		network,
+		uint64(targetNextHeight),
+		uint64(anchorHeight),
+		normalizedAnchorHash,
+		continuity,
+	)
+	if err != nil {
+		return ScannerRewindResp{}, err
+	}
+
+	var out ScannerRewindResp
+	err = c.call(http.MethodPost, scannerRewindPath, req, &out)
+	if err != nil && isAmbiguousScannerRewindError(err) {
+		// A dropped response may follow a durable commit. Replay the byte-for-byte
+		// equivalent compare-and-set once; the server returns rewound=false only
+		// after proving the already-committed anchor.
+		out = ScannerRewindResp{}
+		err = c.call(http.MethodPost, scannerRewindPath, req, &out)
+	}
+	if err != nil {
+		if scannerRewindErrorIsDefinitive(err) {
+			c.pendingScannerRewind = nil
+		}
+		return ScannerRewindResp{}, fmt.Errorf("fail to call scanner reorg rewind endpoint: %w", err)
+	}
+	if err = validateScannerRewindResponse(req, out); err != nil {
+		return ScannerRewindResp{}, fmt.Errorf("scanner reorg rewind returned invalid continuity: %w", err)
+	}
+
+	if out.Rewound {
+		c.mergeScannerContinuity(scannerContinuityCache{
+			resetEpoch:       out.ResetEpoch,
+			nextHeight:       out.NextHeight,
+			strictAfterReset: true,
+			hasStateDetails:  true,
+			hasLastHeight:    true,
+			lastHeight:       req.AnchorHeight,
+			lastBlockHash:    req.AnchorHash,
+		})
+	} else {
+		// Never trust rewound=false as a success by itself. Refresh the
+		// authenticated state and prove the exact durable anchor and epoch.
+		refreshed, refreshErr := c.fetchScannerContinuity(context.Background())
+		if refreshErr != nil {
+			return ScannerRewindResp{}, fmt.Errorf("fail to verify idempotent scanner rewind: %w", refreshErr)
+		}
+		if !scannerContinuityMatchesRewindAnchor(refreshed, req, out.ResetEpoch) {
+			return ScannerRewindResp{}, fmt.Errorf("idempotent scanner rewind did not prove the requested anchor")
+		}
+		c.mergeScannerContinuity(refreshed)
+	}
+
+	c.pendingScannerRewind = nil
+	return out, nil
+}
+
+func (c *Client) scannerRewindRequestLocked(
+	network string,
+	targetNextHeight,
+	anchorHeight uint64,
+	anchorHash string,
+	continuity scannerContinuityCache,
+) (ScannerRewindReq, error) {
+	if pending := c.pendingScannerRewind; pending != nil {
+		postEpoch, ok := checkedNextResetEpoch(pending.ExpectedResetEpoch)
+		if !ok {
+			return ScannerRewindReq{}, fmt.Errorf("pending scanner rewind reset epoch is exhausted")
+		}
+		// A committed rewind advances the reset epoch, so authenticated continuity
+		// still sitting on the pending rewind's original epoch and height proves it
+		// never committed, and matching its anchor under the post-commit epoch proves
+		// it did. Either way the outcome is known and the latch has served its purpose.
+		atOriginalCursor := continuity.resetEpoch == pending.ExpectedResetEpoch &&
+			continuity.nextHeight == pending.ExpectedNextHeight
+		atCommittedAnchor := scannerContinuityMatchesRewindAnchor(continuity, *pending, postEpoch)
+
+		if pending.Network == network &&
+			pending.TargetNextHeight == targetNextHeight &&
+			pending.AnchorHeight == anchorHeight &&
+			pending.AnchorHash == anchorHash {
+			if !atOriginalCursor && !atCommittedAnchor {
+				return ScannerRewindReq{}, fmt.Errorf("pending scanner rewind no longer matches authenticated continuity")
+			}
+			return *pending, nil
+		}
+
+		// A deeper reorg superseded the ambiguous rewind. Retain the latch only while
+		// its outcome is genuinely unknown; otherwise resolving it here is what keeps
+		// reorg recovery alive, since the superseding rewind can never replay it.
+		if !atOriginalCursor && !atCommittedAnchor {
+			return ScannerRewindReq{}, fmt.Errorf("a different scanner rewind has an ambiguous pending result")
+		}
+		c.pendingScannerRewind = nil
+	}
+
+	if targetNextHeight >= continuity.nextHeight {
+		return ScannerRewindReq{}, fmt.Errorf(
+			"scanner reorg target must be behind current cursor: target %d, current %d",
+			targetNextHeight,
+			continuity.nextHeight,
+		)
+	}
+	if continuity.nextHeight-targetNextHeight > maxScannerReorgRewind {
+		return ScannerRewindReq{}, fmt.Errorf(
+			"scanner reorg rewind exceeds %d-block safety bound",
+			maxScannerReorgRewind,
+		)
+	}
+	if _, ok := checkedNextResetEpoch(continuity.resetEpoch); !ok {
+		return ScannerRewindReq{}, fmt.Errorf("scanner reset epoch is exhausted")
+	}
+
+	req := ScannerRewindReq{
+		Network:            network,
+		ExpectedResetEpoch: continuity.resetEpoch,
+		ExpectedNextHeight: continuity.nextHeight,
+		TargetNextHeight:   targetNextHeight,
+		AnchorHeight:       anchorHeight,
+		AnchorHash:         anchorHash,
+	}
+	c.pendingScannerRewind = &req
+	return req, nil
+}
+
+func validateScannerRewindResponse(req ScannerRewindReq, resp ScannerRewindResp) error {
+	expectedEpoch, ok := checkedNextResetEpoch(req.ExpectedResetEpoch)
+	if !ok {
+		return fmt.Errorf("expected reset epoch cannot advance")
+	}
+	if resp.PreviousNextHeight != req.ExpectedNextHeight {
+		return fmt.Errorf("previous_next_height does not match authenticated pre-rewind cursor")
+	}
+	if resp.NextHeight != req.TargetNextHeight {
+		return fmt.Errorf("next_height does not match requested target")
+	}
+	if resp.ResetEpoch != expectedEpoch {
+		return fmt.Errorf("reset_epoch did not advance exactly once")
+	}
+	return nil
+}
+
+func scannerContinuityMatchesRewindAnchor(
+	continuity scannerContinuityCache,
+	req ScannerRewindReq,
+	resetEpoch uint64,
+) bool {
+	return continuity.resetEpoch == resetEpoch &&
+		continuity.nextHeight == req.TargetNextHeight &&
+		continuity.hasStateDetails &&
+		continuity.hasLastHeight &&
+		continuity.lastHeight == req.AnchorHeight &&
+		continuity.lastBlockHash == req.AnchorHash
+}
+
+func scannerContinuityIsDurableRewindTarget(
+	continuity scannerContinuityCache,
+	targetNextHeight,
+	anchorHeight uint64,
+	anchorHash string,
+) bool {
+	return continuity.strictAfterReset &&
+		continuity.resetEpoch > 0 &&
+		continuity.nextHeight == targetNextHeight &&
+		continuity.hasStateDetails &&
+		continuity.hasLastHeight &&
+		continuity.lastHeight == anchorHeight &&
+		continuity.lastBlockHash == anchorHash
+}
+
+func checkedNextResetEpoch(epoch uint64) (uint64, bool) {
+	if epoch == ^uint64(0) {
+		return 0, false
+	}
+	return epoch + 1, true
+}
+
+func isAmbiguousScannerRewindError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var httpErr *HTTPError
+	if errors.As(err, &httpErr) {
+		return false
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) ||
+		errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+func scannerRewindErrorIsDefinitive(err error) bool {
+	var httpErr *HTTPError
+	return errors.As(err, &httpErr) && httpErr.Status >= http.StatusBadRequest &&
+		httpErr.Status < http.StatusInternalServerError
+}
+
+func (c *Client) fetchScannerContinuity(ctx context.Context) (scannerContinuityCache, error) {
+	var state ScannerState
+	if err := c.callGetContext(ctx, scannerStatePath, &state); err != nil {
+		return scannerContinuityCache{}, err
+	}
+	return scannerContinuityFromState(state)
+}
+
+func scannerContinuityFromRegistration(resp RegisterVaultResp) (scannerContinuityCache, error) {
+	if resp.ExpectedNextHeight == nil {
+		return scannerContinuityCache{}, fmt.Errorf("expected_next_height is nil")
+	}
+	if *resp.ExpectedNextHeight > math.MaxInt64 {
+		return scannerContinuityCache{}, fmt.Errorf("expected_next_height exceeds the int64 scanner range")
+	}
+	return scannerContinuityCache{
+		resetEpoch:       resp.ResetEpoch,
+		nextHeight:       *resp.ExpectedNextHeight,
+		strictAfterReset: resp.ResetEpoch > 0,
+	}, nil
+}
+
+func scannerContinuityFromState(state ScannerState) (scannerContinuityCache, error) {
+	if state.NextHeight == nil {
+		return scannerContinuityCache{}, fmt.Errorf("scanner state next_height is nil")
+	}
+	if *state.NextHeight > math.MaxInt64 {
+		return scannerContinuityCache{}, fmt.Errorf("scanner state next_height exceeds the int64 scanner range")
+	}
+	if state.StrictAfterReset != (state.ResetEpoch > 0) {
+		return scannerContinuityCache{}, fmt.Errorf("scanner state reset epoch and strict mode are inconsistent")
+	}
+
+	continuity := scannerContinuityCache{
+		resetEpoch:       state.ResetEpoch,
+		nextHeight:       *state.NextHeight,
+		strictAfterReset: state.StrictAfterReset,
+		hasStateDetails:  true,
+	}
+	if state.LastHeight == nil {
+		if strings.TrimSpace(state.LastBlockHash) != "" || strings.TrimSpace(state.LastParentHash) != "" {
+			return scannerContinuityCache{}, fmt.Errorf("scanner state has hashes without last_height")
+		}
+		return continuity, nil
+	}
+	if *state.LastHeight >= math.MaxInt64 {
+		return scannerContinuityCache{}, fmt.Errorf("scanner state last_height cannot advance within the int64 scanner range")
+	}
+	if *state.NextHeight != *state.LastHeight+1 {
+		return scannerContinuityCache{}, fmt.Errorf("scanner state next_height is not contiguous with last_height")
+	}
+	lastBlockHash, err := normalizeScannerHash("last_block_hash", state.LastBlockHash)
+	if err != nil {
+		return scannerContinuityCache{}, fmt.Errorf("invalid scanner state: %w", err)
+	}
+	lastParentHash, err := normalizeScannerHash("last_parent_hash", state.LastParentHash)
+	if err != nil {
+		return scannerContinuityCache{}, fmt.Errorf("invalid scanner state: %w", err)
+	}
+
+	continuity.hasLastHeight = true
+	continuity.lastHeight = *state.LastHeight
+	continuity.lastBlockHash = lastBlockHash
+	continuity.lastParentHash = lastParentHash
+	return continuity, nil
+}
+
+// normalizeScannerHash validates every hash crossing the sidecar boundary, in
+// both directions. Outbound, anchor_hash is the compare-and-set token binding a
+// durable cursor mutation to a specific chain and block_hash/parent_hash are what
+// the sidecar uses to detect a continuity break, so they are checked here rather
+// than trusting the sidecar to reject garbage.
+func normalizeScannerHash(field, value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if len(value) != 64 {
+		return "", fmt.Errorf("%s must be a 32-byte hexadecimal hash", field)
+	}
+	if _, err := hex.DecodeString(value); err != nil {
+		return "", fmt.Errorf("%s must be a 32-byte hexadecimal hash", field)
+	}
+	return strings.ToLower(value), nil
+}
+
+func (c *Client) cachedScannerContinuity() (scannerContinuityCache, bool) {
+	c.scannerContinuityMu.Lock()
+	defer c.scannerContinuityMu.Unlock()
+	return c.scannerContinuity, c.continuityCached
+}
+
+// mergeScannerContinuity orders cursors by epoch first and height second. A
+// higher epoch may legitimately move the height backwards; within one epoch,
+// however, a delayed registration/state response may never lower the cursor.
+func (c *Client) mergeScannerContinuity(candidate scannerContinuityCache) scannerContinuityCache {
+	c.scannerContinuityMu.Lock()
+	defer c.scannerContinuityMu.Unlock()
+
+	if !c.continuityCached ||
+		candidate.resetEpoch > c.scannerContinuity.resetEpoch ||
+		(candidate.resetEpoch == c.scannerContinuity.resetEpoch &&
+			candidate.nextHeight > c.scannerContinuity.nextHeight) {
+		c.scannerContinuity = candidate
+		c.continuityCached = true
+		return c.scannerContinuity
+	}
+	if candidate.resetEpoch == c.scannerContinuity.resetEpoch &&
+		candidate.nextHeight == c.scannerContinuity.nextHeight {
+		c.scannerContinuity.strictAfterReset = c.scannerContinuity.strictAfterReset ||
+			candidate.strictAfterReset
+		if candidate.hasStateDetails {
+			c.scannerContinuity.hasStateDetails = true
+			c.scannerContinuity.hasLastHeight = candidate.hasLastHeight
+			c.scannerContinuity.lastHeight = candidate.lastHeight
+			c.scannerContinuity.lastBlockHash = candidate.lastBlockHash
+			c.scannerContinuity.lastParentHash = candidate.lastParentHash
+		}
+	}
+	return c.scannerContinuity
+}
+
+func bindScannerContinuity(req *SyncReq, resetEpoch, expectedHeight uint64) {
+	epoch := resetEpoch
+	expected := expectedHeight
+	req.ResetEpoch = &epoch
+	req.ExpectedNextHeight = &expected
+}
+
+func (c *Client) cacheSuccessfulScannerSync(req SyncReq) {
+	resetEpoch := uint64(0)
+	if req.ResetEpoch != nil {
+		resetEpoch = *req.ResetEpoch
+	}
+	height := uint64(req.Height)
+	c.mergeScannerContinuity(scannerContinuityCache{
+		resetEpoch:       resetEpoch,
+		nextHeight:       height + 1,
+		strictAfterReset: resetEpoch > 0,
+		hasStateDetails:  true,
+		hasLastHeight:    true,
+		lastHeight:       height,
+		lastBlockHash:    req.BlockHash,
+		lastParentHash:   req.ParentHash,
+	})
+}
+
+func scannerContinuityIsExactReplay(
+	continuity scannerContinuityCache,
+	requestedHeight uint64,
+	blockHash,
+	parentHash string,
+) bool {
+	return continuity.hasStateDetails &&
+		continuity.hasLastHeight &&
+		continuity.nextHeight == requestedHeight+1 &&
+		continuity.lastHeight == requestedHeight &&
+		continuity.lastBlockHash == blockHash &&
+		continuity.lastParentHash == parentHash
+}
+
+func scannerRewindError(requestedHeight int64, continuity scannerContinuityCache) error {
+	return &ScannerRewindRequiredError{
+		RequestedHeight: requestedHeight,
+		NextHeight:      int64(continuity.nextHeight),
+		ResetEpoch:      continuity.resetEpoch,
+	}
 }
 
 func (c *Client) Mempool() (Transfers, error) {
@@ -387,11 +1114,27 @@ func (c *Client) FeeRate() (uint64, error) {
 }
 
 func (c *Client) ResetScanner(vaultPubKey string, birthdayHeight int64) error {
+	if birthdayHeight < 0 {
+		return fmt.Errorf("scanner reset birthday height must be non-negative")
+	}
 	req := struct {
 		VaultPubKey    string `json:"vault_pub_key"`
 		BirthdayHeight int64  `json:"birthday_height"`
 	}{vaultPubKey, birthdayHeight}
-	return c.call(http.MethodPost, "/v1/monero/scanner/reset", req, nil)
+	var out ScannerResetResp
+	if err := c.call(http.MethodPost, "/v1/monero/scanner/reset", req, &out); err != nil {
+		return err
+	}
+	if !out.Reset || out.ResetEpoch == 0 || out.ExpectedNextHeight != uint64(birthdayHeight) ||
+		out.ExpectedNextHeight > math.MaxInt64 {
+		return fmt.Errorf("scanner reset returned an invalid continuity cursor")
+	}
+	c.mergeScannerContinuity(scannerContinuityCache{
+		resetEpoch:       out.ResetEpoch,
+		nextHeight:       out.ExpectedNextHeight,
+		strictAfterReset: true,
+	})
+	return nil
 }
 
 func (c *Client) ChainHeight() (int64, error) {
@@ -474,6 +1217,9 @@ func (c *Client) MarkSpent(vaultPubKey, txHash string, refs []SpentRef, skipVeri
 		req.Amount = outbound.Amount
 		req.Fee = outbound.Fee
 		req.Memo = outbound.Memo
+		req.TxKey = outbound.TxKey
+		req.Origin = outbound.Origin
+		req.CertificateHash = outbound.CertificateHash
 	}
 	if err := c.call(http.MethodPost, "/v1/monero/outputs/mark-spent", req, &out); err != nil {
 		return out, fmt.Errorf("fail to call mark-spent endpoint: %w", err)
@@ -484,13 +1230,62 @@ func (c *Client) MarkSpent(vaultPubKey, txHash string, refs []SpentRef, skipVeri
 // Vaults lists every vault the sidecar knows about and whether it holds a
 // threshold share for it.
 func (c *Client) Vaults() ([]VaultKey, error) {
+	return c.VaultsContext(context.Background())
+}
+
+func (c *Client) VaultsContext(ctx context.Context) ([]VaultKey, error) {
 	var out struct {
 		Vaults []VaultKey `json:"vaults"`
 	}
-	if err := c.callGet("/v1/monero/keys", &out); err != nil {
+	if err := c.callGetContext(ctx, "/v1/monero/keys", &out); err != nil {
 		return nil, fmt.Errorf("fail to list vault keys: %w", err)
 	}
 	return out.Vaults, nil
+}
+
+// Info returns the signer's authenticated compatibility contract.
+func (c *Client) Info() (Info, error) {
+	var out Info
+	if err := c.callGet("/v1/monero/info", &out); err != nil {
+		return Info{}, fmt.Errorf("fail to get sidecar compatibility info: %w", err)
+	}
+	return out, nil
+}
+
+// RequireCompatibility fails closed when the local signer is not the reviewed
+// protocol/schema/capability shape. The immutable image digest and provenance
+// are still verified by deployment tooling rather than this self-report.
+func (c *Client) RequireCompatibility(requiredCapabilities ...string) (Info, error) {
+	info, err := c.Info()
+	if err != nil {
+		return Info{}, err
+	}
+	if info.Protocol != ProtocolName {
+		return Info{}, fmt.Errorf("unexpected sidecar protocol %q", info.Protocol)
+	}
+	if info.APIMajor != APIMajorV2 {
+		return Info{}, fmt.Errorf("unsupported sidecar api major %d", info.APIMajor)
+	}
+	if info.StateSchema != StateSchemaV4 {
+		return Info{}, fmt.Errorf("unsupported sidecar state schema %d", info.StateSchema)
+	}
+	if c.expectedNetwork == "" {
+		return Info{}, fmt.Errorf("expected sidecar network is not configured")
+	}
+	if info.Network != c.expectedNetwork {
+		return Info{}, fmt.Errorf("sidecar network %q does not match expected %q", info.Network, c.expectedNetwork)
+	}
+	commit := strings.TrimSpace(info.GitCommit)
+	decodedCommit, decodeErr := hex.DecodeString(commit)
+	if decodeErr != nil || len(decodedCommit) != 20 {
+		return Info{}, fmt.Errorf("sidecar source revision must be a full 40-hex commit")
+	}
+	for _, capability := range requiredCapabilities {
+		if !info.HasCapability(capability) {
+			return Info{}, fmt.Errorf("sidecar missing required capability %q", capability)
+		}
+	}
+	return info, nil
 }
 
 // ExportKeys returns a recovery blob for the given vault's threshold share.
@@ -510,8 +1305,12 @@ func (c *Client) ExportKeys(vaultPubKey string) (string, error) {
 // base64-encoded for transport because raw bytes are not valid UTF-8 and would
 // be mangled by JSON string encoding.
 func (c *Client) RestoreKeys(vaultPubKey string, keyBlob []byte) (bool, error) {
+	return c.RestoreKeysContext(context.Background(), vaultPubKey, keyBlob)
+}
+
+func (c *Client) RestoreKeysContext(ctx context.Context, vaultPubKey string, keyBlob []byte) (bool, error) {
 	var out struct {
-		Restored bool `json:"restored"`
+		Restored *bool `json:"restored"`
 	}
 	req := struct {
 		VaultPubKey string `json:"vault_pub_key"`
@@ -520,25 +1319,30 @@ func (c *Client) RestoreKeys(vaultPubKey string, keyBlob []byte) (bool, error) {
 		VaultPubKey: vaultPubKey,
 		KeyBlobB64:  base64.StdEncoding.EncodeToString(keyBlob),
 	}
-	if err := c.call(http.MethodPost, "/v1/monero/keys/restore", req, &out); err != nil {
+	if err := c.callContext(ctx, http.MethodPost, "/v1/monero/keys/restore", req, &out); err != nil {
 		return false, fmt.Errorf("fail to restore keys: %w", err)
 	}
-	return out.Restored, nil
+	if out.Restored == nil {
+		return false, fmt.Errorf("restore response omitted required restored state")
+	}
+	if !*out.Restored {
+		return false, fmt.Errorf("sidecar did not restore keys for vault %s", vaultPubKey)
+	}
+	return true, nil
 }
 
 // --- HTTP helpers ---
 
 func (c *Client) callGet(path string, out any) error {
-	req, err := http.NewRequest(http.MethodGet, c.endpoint+path, nil)
+	return c.callGetContext(context.Background(), path, out)
+}
+
+func (c *Client) callGetContext(ctx context.Context, path string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.endpoint+path, nil)
 	if err != nil {
 		return fmt.Errorf("fail to create sidecar request: %w", err)
 	}
-	if c.bearer != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.bearer))
-	}
-	if c.username != "" {
-		req.SetBasicAuth(c.username, c.password)
-	}
+	c.applySignerAuth(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -550,16 +1354,16 @@ func (c *Client) callGet(path string, out any) error {
 		}
 	}()
 
+	if resp.StatusCode >= http.StatusBadRequest {
+		respBody, truncated, readErr := readBoundedErrorBody(resp.Body)
+		if readErr != nil {
+			return fmt.Errorf("fail to read sidecar error response: %w", readErr)
+		}
+		return newHTTPError(path, resp.StatusCode, respBody, truncated)
+	}
 	respBody, err := readBoundedResponseBody(resp.Body, maxResponseBytes)
 	if err != nil {
 		return fmt.Errorf("fail to read sidecar response: %w", err)
-	}
-	if resp.StatusCode >= http.StatusBadRequest {
-		return &HTTPError{
-			Path:   path,
-			Status: resp.StatusCode,
-			Body:   strings.TrimSpace(string(respBody)),
-		}
 	}
 	if out == nil {
 		return nil
@@ -577,7 +1381,7 @@ func (c *Client) callGet(path string, out any) error {
 		if msg == "" {
 			msg = strings.TrimSpace(env.Message)
 		}
-		return fmt.Errorf("sidecar endpoint %s error: %s", path, msg)
+		return remoteApplicationError(path, msg)
 	}
 	if len(env.Result) > 0 {
 		return json.Unmarshal(env.Result, out)
@@ -586,25 +1390,27 @@ func (c *Client) callGet(path string, out any) error {
 }
 
 func (c *Client) call(method, path string, payload any, out any) error {
+	return c.callContext(context.Background(), method, path, payload, out)
+}
+
+func (c *Client) callContext(ctx context.Context, method, path string, payload any, out any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("fail to marshal sidecar request payload: %w", err)
 	}
+	return c.callJSONContext(ctx, method, path, body, out)
+}
 
-	req, err := http.NewRequest(method, c.endpoint+path, bytes.NewReader(body))
+func (c *Client) callJSONContext(ctx context.Context, method, path string, body []byte, out any) error {
+	req, err := http.NewRequestWithContext(ctx, method, c.endpoint+path, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("fail to create sidecar request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if c.bearer != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.bearer))
-	}
-	if c.username != "" {
-		req.SetBasicAuth(c.username, c.password)
-	}
+	c.applySignerAuth(req)
 
 	httpClient := c.client
-	if path == c.signPreparePath && c.signClient != nil {
+	if (path == c.signPreparePath || path == c.signPartialPath || path == c.signCombinePath) && c.signClient != nil {
 		httpClient = c.signClient
 	}
 	resp, err := httpClient.Do(req)
@@ -617,16 +1423,16 @@ func (c *Client) call(method, path string, payload any, out any) error {
 		}
 	}()
 
+	if resp.StatusCode >= http.StatusBadRequest {
+		respBody, truncated, readErr := readBoundedErrorBody(resp.Body)
+		if readErr != nil {
+			return fmt.Errorf("fail to read sidecar error response: %w", readErr)
+		}
+		return newHTTPError(path, resp.StatusCode, respBody, truncated)
+	}
 	respBody, err := readBoundedResponseBody(resp.Body, maxResponseBytes)
 	if err != nil {
 		return fmt.Errorf("fail to read sidecar response: %w", err)
-	}
-	if resp.StatusCode >= http.StatusBadRequest {
-		return &HTTPError{
-			Path:   path,
-			Status: resp.StatusCode,
-			Body:   strings.TrimSpace(string(respBody)),
-		}
 	}
 	if out == nil {
 		return nil
@@ -647,10 +1453,23 @@ func (c *Client) call(method, path string, payload any, out any) error {
 		if msg == "" {
 			msg = strings.TrimSpace(env.Message)
 		}
-		return fmt.Errorf("sidecar endpoint %s error: %s", path, msg)
+		return remoteApplicationError(path, msg)
 	}
 	if len(env.Result) > 0 {
 		return json.Unmarshal(env.Result, out)
 	}
 	return json.Unmarshal(respBody, out)
+}
+
+func (c *Client) applySignerAuth(req *http.Request) {
+	if c == nil || req == nil {
+		return
+	}
+	if c.signerBearer != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.signerBearer))
+		return
+	}
+	if c.signerUsername != "" {
+		req.SetBasicAuth(c.signerUsername, c.signerPassword)
+	}
 }

@@ -863,6 +863,7 @@ func (s *HandlerTssSuite) TestXMRMonovaultKeygenFinalizesOnSuperMajority(c *C) {
 		voter.Signers = append(voter.Signers, addr.String())
 	}
 	helper.keeper.SetTssVoter(helper.ctx, voter)
+	c.Assert(helper.keeper.SetLastChainHeight(helper.ctx, common.XMRChain, observedMoneroHeight+500), IsNil)
 
 	_, err = handler.Run(helper.ctx, msg)
 	c.Assert(err, IsNil)

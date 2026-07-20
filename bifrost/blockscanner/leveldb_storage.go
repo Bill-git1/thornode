@@ -4,18 +4,24 @@ import (
 	"encoding/binary"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 // LevelDBScannerStorage is a scanner storage backed by level db
 type LevelDBScannerStorage struct {
-	db *leveldb.DB
+	db          *leveldb.DB
+	syncScanPos bool
 }
 
 const ScanPosKey = "blockscanpos"
 
 // NewLevelDBScannerStorage create a new instance of LevelDBScannerStorage
 func NewLevelDBScannerStorage(db *leveldb.DB) (*LevelDBScannerStorage, error) {
-	return &LevelDBScannerStorage{db: db}, nil
+	return newLevelDBScannerStorage(db, false)
+}
+
+func newLevelDBScannerStorage(db *leveldb.DB, syncScanPos bool) (*LevelDBScannerStorage, error) {
+	return &LevelDBScannerStorage{db: db, syncScanPos: syncScanPos}, nil
 }
 
 // GetScanPos get current Scan Pos
@@ -32,7 +38,11 @@ func (ldbss *LevelDBScannerStorage) GetScanPos() (int64, error) {
 func (ldbss *LevelDBScannerStorage) SetScanPos(block int64) error {
 	buf := make([]byte, 8)
 	n := binary.PutVarint(buf, block)
-	return ldbss.db.Put([]byte(ScanPosKey), buf[:n], nil)
+	var writeOptions *opt.WriteOptions
+	if ldbss.syncScanPos {
+		writeOptions = &opt.WriteOptions{Sync: true}
+	}
+	return ldbss.db.Put([]byte(ScanPosKey), buf[:n], writeOptions)
 }
 
 func (ldbss *LevelDBScannerStorage) Close() error {

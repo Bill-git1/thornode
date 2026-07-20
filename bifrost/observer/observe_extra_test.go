@@ -221,7 +221,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxDedup(c *C) {
 			},
 		},
 	}
-	obs.processObservedTx(txIn)
+	c.Assert(obs.processObservedTx(txIn), IsNil)
 
 	// Should have 1 entry
 	obs.lock.Lock()
@@ -229,7 +229,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxDedup(c *C) {
 	obs.lock.Unlock()
 
 	// Duplicate observation - same tx, should be deduped
-	obs.processObservedTx(txIn)
+	c.Assert(obs.processObservedTx(txIn), IsNil)
 	obs.lock.Lock()
 	key := TxInKey(&txIn)
 	c.Assert(len(obs.onDeck[key].TxArray), Equals, 1) // still 1 (deduped)
@@ -247,7 +247,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxDedup(c *C) {
 			},
 		},
 	}
-	obs.processObservedTx(txIn2)
+	c.Assert(obs.processObservedTx(txIn2), IsNil)
 	obs.lock.Lock()
 	c.Assert(len(obs.onDeck[key].TxArray), Equals, 2) // now 2
 	obs.lock.Unlock()
@@ -257,7 +257,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxDedup(c *C) {
 		Chain:   common.BTCChain,
 		TxArray: []*types.TxInItem{},
 	}
-	obs.processObservedTx(empty) // should be a no-op
+	c.Assert(obs.processObservedTx(empty), IsNil) // should be a no-op
 }
 
 // ---------------------------------------------------------------------------
@@ -414,7 +414,7 @@ func (s *ObserveExtraSuite) TestFilterErrataTx(c *C) {
 			{TxID: common.TxID(txID), Chain: common.BTCChain},
 		},
 	}
-	obs.filterErrataTx(errataBlock)
+	c.Assert(obs.filterErrataTx(errataBlock), IsNil)
 
 	// First tx should be removed, second should remain
 	obs.lock.Lock()
@@ -431,7 +431,7 @@ func (s *ObserveExtraSuite) TestFilterErrataTx(c *C) {
 			{TxID: common.TxID("tx2"), Chain: common.BTCChain},
 		},
 	}
-	obs.filterErrataTx(errataBlock2)
+	c.Assert(obs.filterErrataTx(errataBlock2), IsNil)
 
 	// Deck should be removed entirely
 	obs.lock.Lock()
@@ -3031,7 +3031,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxNewAndDedup(c *C) {
 	}
 
 	// Test 1: empty TxArray
-	o.processObservedTx(types.TxIn{})
+	c.Assert(o.processObservedTx(types.TxIn{}), IsNil)
 
 	// Test 2: new entry with pre-filtered TxIn
 	txIn := types.TxIn{
@@ -3050,7 +3050,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxNewAndDedup(c *C) {
 		},
 		ConfirmationRequired: 0,
 	}
-	o.processObservedTx(txIn)
+	c.Assert(o.processObservedTx(txIn), IsNil)
 	c.Assert(len(o.onDeck), Equals, 1)
 
 	// Test 3: dedup - same tx again should not add duplicate
@@ -3070,7 +3070,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxNewAndDedup(c *C) {
 		},
 		ConfirmationRequired: 0,
 	}
-	o.processObservedTx(txInDup)
+	c.Assert(o.processObservedTx(txInDup), IsNil)
 	// Should still only have 1 item in onDeck entry
 	for _, deck := range o.onDeck {
 		c.Assert(len(deck.TxArray), Equals, 1)
@@ -3093,7 +3093,7 @@ func (s *ObserveExtraSuite) TestProcessObservedTxNewAndDedup(c *C) {
 		},
 		ConfirmationRequired: 0,
 	}
-	o.processObservedTx(txInNew)
+	c.Assert(o.processObservedTx(txInNew), IsNil)
 	for _, deck := range o.onDeck {
 		c.Assert(len(deck.TxArray), Equals, 2)
 	}
@@ -3258,7 +3258,7 @@ func (s *ObserveExtraSuite) TestFilterErrataTxMatch(c *C) {
 			{TxID: "AABB", Chain: common.BTCChain},
 		},
 	}
-	o.filterErrataTx(block)
+	c.Assert(o.filterErrataTx(block), IsNil)
 
 	// First item should be removed, second remains
 	c.Assert(len(o.onDeck[key].TxArray), Equals, 1)
@@ -3299,7 +3299,7 @@ func (s *ObserveExtraSuite) TestFilterErrataTxRemoveAll(c *C) {
 			{TxID: "AABB", Chain: common.BTCChain},
 		},
 	}
-	o.filterErrataTx(block)
+	c.Assert(o.filterErrataTx(block), IsNil)
 
 	// Entire deck entry should be removed
 	_, exists := o.onDeck[key]

@@ -157,7 +157,7 @@ func TestValidateXMRSignTxRejectsInsufficientBalance(t *testing.T) {
 	balanceServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 			return
 		}
 		if strings.Contains(r.URL.Path, "/v1/monero/balance/") {
@@ -216,7 +216,7 @@ func TestValidateXMRSignTxRejectsLockedOnlyBalance(t *testing.T) {
 	balanceServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 			return
 		}
 		if strings.Contains(r.URL.Path, "/v1/monero/balance/") {
@@ -391,13 +391,23 @@ func newFrostBalanceServer(t *testing.T, balanceByPubKey map[string]sidecar.Bala
 		if r.Method == http.MethodGet && r.URL.Path == "/v1/monero/keys" {
 			vaults := make([]sidecar.VaultKey, 0, len(balanceByPubKey))
 			for pubKey := range balanceByPubKey {
-				vaults = append(vaults, sidecar.VaultKey{VaultPubKey: pubKey, HasFrostKeys: true})
+				vault, err := common.NewPubKey(pubKey)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				groupKey, err := groupKeyHexFromVaultPubKey(vault)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				vaults = append(vaults, sidecar.VaultKey{VaultPubKey: pubKey, GroupKey: groupKey, HasFrostKeys: true, Signable: true})
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"vaults": vaults})
 			return
 		}
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 			return
 		}
 		// Path format: /v1/monero/balance/{vault_pub_key}

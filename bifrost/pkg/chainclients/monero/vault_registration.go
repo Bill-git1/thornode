@@ -1,6 +1,7 @@
 package monero
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -59,6 +60,19 @@ func ensureVaultRegistered(
 	source string,
 	birthday int64,
 ) (common.Address, error) {
+	return ensureVaultRegisteredContext(context.Background(), logger, client, chain, vaultPubKey, bootstrap, source, birthday)
+}
+
+func ensureVaultRegisteredContext(
+	ctx context.Context,
+	logger zerolog.Logger,
+	client *sidecar.Client,
+	chain common.Chain,
+	vaultPubKey common.PubKey,
+	bootstrap *vaultBootstrap,
+	source string,
+	birthday int64,
+) (common.Address, error) {
 	if client == nil {
 		return common.NoAddress, fmt.Errorf("sidecar client is not initialized")
 	}
@@ -98,7 +112,7 @@ func ensureVaultRegistered(
 		}
 	}
 
-	if _, err = client.RegisterVault(req); err != nil {
+	if _, err = client.RegisterVaultContext(ctx, req); err != nil {
 		logger.Debug().
 			Err(err).
 			Str("vault_pubkey", vaultPubKey.String()).

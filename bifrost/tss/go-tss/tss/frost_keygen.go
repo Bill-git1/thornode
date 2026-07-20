@@ -24,12 +24,23 @@ import (
 const (
 	frostKeygenMsgIDDomain = "thorchain-frost-keygen-msgid-v1"
 	frostDKGContextDomain  = "thorchain-frost-dkg-context-v1"
+	frostDKGReorgMargin    = int64(10)
 
 	frostDKGRound1 = "frost_dkg_round1"
 	frostDKGRound2 = "frost_dkg_round2"
 	frostDKGRound3 = "frost_dkg_round3"
 	frostDKGResult = "frost_dkg_result"
 )
+
+// frostKeygenMsgTypes are the p2p message types a FROST DKG session subscribes
+// to. Subscribe and cancel must cover exactly this set.
+var frostKeygenMsgTypes = []messages.THORChainTSSMessageType{
+	messages.TSSFrostDKGRound1Msg,
+	messages.TSSFrostDKGRound2Msg,
+	messages.TSSFrostDKGRound3Msg,
+	messages.TSSFrostVerifyMsg,
+	messages.TSSFrostDKGResultMsg,
+}
 
 type FrostKeygenCoordinator struct {
 	logger           zerolog.Logger
@@ -115,20 +126,32 @@ func (t *TssServer) FrostKeygen(req FrostKeygenRequest, sidecar FrostSidecarKeyg
 	if err != nil {
 		return FrostKeygenResponse{}, fmt.Errorf("fail to compute frost keygen msgID: %w", err)
 	}
-	msgChan := make(chan *p2p.Message, 1024)
-	sigChan := make(chan string, 2)
+	// Restrict DKG ingress to the declared participant set with the same hard
+	// per-session budgets keysign uses. An unrestricted subscription accepts
+	// frames from any authenticated peer with no byte or message ceiling.
+	allowedPeerIDs, err := conversion.GetPeerIDsFromPubKeys(req.SignerPubKeys)
+	if err != nil {
+		return FrostKeygenResponse{}, fmt.Errorf("fail to resolve frost keygen session peers: %w", err)
+	}
 
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostDKGRound1Msg, msgID, msgChan)
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostDKGRound2Msg, msgID, msgChan)
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostDKGRound3Msg, msgID, msgChan)
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostVerifyMsg, msgID, msgChan)
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostDKGResultMsg, msgID, msgChan)
+	msgChan := make(chan *p2p.Message, p2p.FrostSessionQueueSize)
+	sigChan := make(chan string, 2)
+	verificationMessageLimit := p2p.FrostVerificationMessagesPerPeer(len(req.SignerPubKeys), 3)
+
+	for _, msgType := range frostKeygenMsgTypes {
+		messageLimit := p2p.FrostMaxMessagesPerPeer
+		if msgType == messages.TSSFrostVerifyMsg {
+			messageLimit = verificationMessageLimit
+		}
+		t.p2pCommunication.SetSubscribeWithPeers(
+			msgType, msgID, msgChan, allowedPeerIDs,
+			p2p.FrostMaxSessionPayload, messageLimit,
+		)
+	}
 	defer func() {
-		t.p2pCommunication.CancelSubscribe(messages.TSSFrostDKGRound1Msg, msgID)
-		t.p2pCommunication.CancelSubscribe(messages.TSSFrostDKGRound2Msg, msgID)
-		t.p2pCommunication.CancelSubscribe(messages.TSSFrostDKGRound3Msg, msgID)
-		t.p2pCommunication.CancelSubscribe(messages.TSSFrostVerifyMsg, msgID)
-		t.p2pCommunication.CancelSubscribe(messages.TSSFrostDKGResultMsg, msgID)
+		for _, msgType := range frostKeygenMsgTypes {
+			t.p2pCommunication.CancelSubscribe(msgType, msgID)
+		}
 		t.p2pCommunication.ReleaseStream(msgID)
 		t.partyCoordinator.ReleaseStream(msgID)
 		close(sigChan)
@@ -147,6 +170,16 @@ func (t *TssServer) FrostKeygen(req FrostKeygenRequest, sidecar FrostSidecarKeyg
 			Status: tcommon.Fail,
 			Blame:  blame.NewBlame(errJoinParty.Error(), nil),
 		}, nil
+	}
+
+	// Party formation resolved the peers that actually joined; narrow the
+	// allow-list to them so a declared-but-absent signer cannot inject frames.
+	// The result type keeps the full signer allow-list, matching keysign.
+	for _, msgType := range frostKeygenMsgTypes {
+		if msgType == messages.TSSFrostDKGResultMsg {
+			continue
+		}
+		t.p2pCommunication.UpdateSubscribePeers(msgType, msgID, onlinePeers)
 	}
 
 	activeParticipants, err := conversion.GetPubKeysFromPeerIDs(peerIDsToStrings(onlinePeers))
@@ -462,7 +495,7 @@ func (c *FrostKeygenCoordinator) Execute(
 		localMoneroHeight = h
 	}
 
-	address, groupKey, minMoneroHeight, failResp := c.exchangeRound3(
+	address, groupKey, birthdayHeight, failResp := c.exchangeRound3(
 		activeSet,
 		participantIndexMap,
 		activePeerIDs,
@@ -477,7 +510,7 @@ func (c *FrostKeygenCoordinator) Execute(
 	if failResp != nil {
 		return *failResp
 	}
-	if minMoneroHeight <= 0 {
+	if birthdayHeight <= 0 {
 		return FrostKeygenResponse{
 			Status: tcommon.Fail,
 			Blame:  buildBlame("frost keygen result has no positive observed monero height", frostDKGRound3, nil),
@@ -515,7 +548,7 @@ func (c *FrostKeygenCoordinator) Execute(
 		Address:              address,
 		GroupKey:             groupKey,
 		KeyBytesHex:          keyBytesHex,
-		ObservedMoneroHeight: minMoneroHeight,
+		ObservedMoneroHeight: birthdayHeight,
 		Status:               tcommon.Success,
 		Blame:                blame.Blame{},
 	}
@@ -858,7 +891,9 @@ func (c *FrostKeygenCoordinator) exchangeRound3(
 
 	groupAddress := strings.TrimSpace(local.Address)
 	groupKey := strings.TrimSpace(local.GroupKey)
-	minMoneroHeight := local.ObservedMoneroHeight
+	heightsBySender := map[string]int64{
+		normalizePubKey(local.SenderPubKey): local.ObservedMoneroHeight,
+	}
 	if groupAddress == "" || groupKey == "" {
 		resp := c.failForPubKeys("empty address/group key in local round3 payload", frostDKGRound3, []string{local.SenderPubKey})
 		return "", "", 0, &resp
@@ -953,9 +988,6 @@ func (c *FrostKeygenCoordinator) exchangeRound3(
 					resp := c.failForPubKeys("DKG group key mismatch across participants", frostDKGRound3, []string{incoming.SenderPubKey})
 					return "", "", 0, &resp
 				}
-				if h := incoming.ObservedMoneroHeight; h > 0 && (minMoneroHeight <= 0 || h < minMoneroHeight) {
-					minMoneroHeight = h
-				}
 				payloadHash, err := FrostTranscriptDKGRound3Hash(c.msgID, incoming)
 				if err != nil {
 					resp := c.failForPubKeys(fmt.Sprintf("failed to hash round3 payload: %v", err), frostDKGRound3, []string{incoming.SenderPubKey})
@@ -969,6 +1001,7 @@ func (c *FrostKeygenCoordinator) exchangeRound3(
 				if !isNewPayload {
 					continue
 				}
+				heightsBySender[senderNorm] = incoming.ObservedMoneroHeight
 				if err := c.broadcastTranscriptVerification(frostDKGRound3, incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash, activePeerIDs); err != nil {
 					resp := c.failForPubKeys(fmt.Sprintf("failed to broadcast round3 verification: %v", err), frostDKGRound3, nil)
 					return "", "", 0, &resp
@@ -1012,12 +1045,6 @@ func (c *FrostKeygenCoordinator) exchangeRound3(
 		case <-timer.C:
 			missingPayloads := verifier.missingPayloadPubKeys()
 			missingVerifiers := verifier.missingVerifierPubKeys()
-			if len(missingPayloads) == 0 && len(missingVerifiers) > 0 {
-				c.logger.Warn().
-					Strs("missing_verifiers", missingVerifiers).
-					Msg("accepting matching round3 payloads after transcript verification timeout")
-				return groupAddress, groupKey, minMoneroHeight, nil
-			}
 			missing := mergePubKeyLists(missingPayloads, missingVerifiers)
 			resp := c.failForPubKeys(
 				transcriptTimeoutReason("round3 results", missingPayloads, missingVerifiers),
@@ -1028,7 +1055,41 @@ func (c *FrostKeygenCoordinator) exchangeRound3(
 		}
 	}
 
-	return groupAddress, groupKey, minMoneroHeight, nil
+	birthday, err := frostDKGBirthdayHeight(heightsBySender, len(activeSet.originalByNormalized))
+	if err != nil {
+		resp := c.failForPubKeys(err.Error(), frostDKGRound3, nil)
+		return "", "", 0, &resp
+	}
+	return groupAddress, groupKey, birthday, nil
+}
+
+// frostDKGBirthdayHeight derives one robust scanner birthday from the
+// authenticated height vector. Zero is an abstention; a supermajority of
+// positive reports is required so unavailable scanners do not block keygen
+// and a minority of outliers cannot move the result outside the honest range.
+func frostDKGBirthdayHeight(heightsBySender map[string]int64, expected int) (int64, error) {
+	if expected <= 0 || len(heightsBySender) != expected {
+		return 0, fmt.Errorf("cannot derive DKG birthday without every authenticated round3 payload")
+	}
+	heights := make([]int64, 0, len(heightsBySender))
+	for _, height := range heightsBySender {
+		if height < 0 {
+			return 0, fmt.Errorf("cannot derive DKG birthday from negative height")
+		}
+		if height > 0 {
+			heights = append(heights, height)
+		}
+	}
+	requiredHeights := frostKeygenAdoptionQuorum(expected)
+	if len(heights) < requiredHeights {
+		return 0, fmt.Errorf("cannot derive DKG birthday without %d positive authenticated heights", requiredHeights)
+	}
+	sort.Slice(heights, func(i, j int) bool { return heights[i] < heights[j] })
+	lowerMedian := heights[(len(heights)-1)/2]
+	if lowerMedian <= frostDKGReorgMargin {
+		return 0, fmt.Errorf("DKG birthday does not leave the required reorg margin")
+	}
+	return lowerMedian - frostDKGReorgMargin, nil
 }
 
 // AdoptQuorumSuccess turns a quorum keygen success into this node's own
@@ -1158,18 +1219,10 @@ func (c *FrostKeygenCoordinator) WaitForResult(activeParticipants []string, quor
 				c.logger.Warn().Err(err).Str("sender", payload.SenderPubKey).Msg("skipping malformed frost dkg result")
 				continue
 			}
-			if prevKey, voted := voteBySender[senderNorm]; voted {
-				if prevKey == matchKey {
-					continue
-				}
-				if prev := buckets[prevKey]; prev != nil {
-					delete(prev.voters, senderNorm)
-					if len(prev.voters) == 0 {
-						delete(buckets, prevKey)
-					}
-				}
+			prevKey, voted := voteBySender[senderNorm]
+			if voted && prevKey == matchKey {
+				continue
 			}
-			voteBySender[senderNorm] = matchKey
 			bucket := buckets[matchKey]
 			if bucket == nil {
 				bucket = &dkgResultVoteBucket{
@@ -1178,6 +1231,15 @@ func (c *FrostKeygenCoordinator) WaitForResult(activeParticipants []string, quor
 				}
 				buckets[matchKey] = bucket
 			}
+			if voted {
+				if prev := buckets[prevKey]; prev != nil {
+					delete(prev.voters, senderNorm)
+					if len(prev.voters) == 0 {
+						delete(buckets, prevKey)
+					}
+				}
+			}
+			voteBySender[senderNorm] = matchKey
 			bucket.voters[senderNorm] = struct{}{}
 			if len(bucket.voters) >= quorum {
 				return bucket.response, nil

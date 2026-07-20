@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -50,12 +51,165 @@ const (
 
 	StreamUnknown = "UNKNOWN"
 	StreamMsgDone = "done"
+
+	// FrostMaxSessionPayload bounds a single FROST outer frame before its full
+	// allocation. Monero transactions and DKG maps are well below this ceiling;
+	// keeping a distinct limit prevents the 20 MiB legacy TSS frame allowance
+	// from becoming the FROST session allowance.
+	FrostMaxSessionPayload = 1 * 1024 * 1024
+	// FrostSessionQueueSize bounds the shared coordinator queue. Together with
+	// the per-frame limit, at most 64 MiB can be retained while the coordinator
+	// is stalled.
+	FrostSessionQueueSize = 64
+	// FrostMaxMessagesPerPeer is the baseline retained/processed traffic bound
+	// per peer for one message type and session. Shared FROST verification topics
+	// use FrostVerificationMessagesPerPeer because one peer legitimately echoes
+	// every participant's transcript in every ceremony round.
+	FrostMaxMessagesPerPeer = uint32(128)
+	// frostVerificationMessageHeadroom permits a small, bounded amount of
+	// delivery overlap without weakening the cumulative byte limits below.
+	frostVerificationMessageHeadroom = uint32(16)
+	// FrostMaxBytesPerPeer is a per-peer MEMORY backstop, not a fairness
+	// guarantee. It is a fixed constant, so it does not scale down with party
+	// size: at the maximum ~128-member vault it is ~16x a peer's fair share of
+	// FrostMaxSessionBytes, which means a handful of authenticated members
+	// (FrostMaxSessionBytes/FrostMaxBytesPerPeer = 8) can spend the whole
+	// session budget and starve the rest. This is tolerated because such an
+	// attacker must already be an authorized party member, who can fail the
+	// ceremony by other means (bad share, refusing to sign) and is attributable
+	// via equivocation evidence. Honest full-size load stays far under the
+	// session cap (see TestFrostFullPartyCompletesWithinSessionBudget); the
+	// starvation characteristic is pinned by
+	// TestFrostPerPeerCapIsAMemoryBackstopNotFairness.
+	// FrostMaxSessionBytes bounds cumulative bytes accepted for one type+msgID
+	// subscription before any full-frame allocation.
+	FrostMaxBytesPerPeer = uint64(8 * 1024 * 1024)
+	FrostMaxSessionBytes = uint64(64 * 1024 * 1024)
 )
+
+// FrostVerificationMessagesPerPeer sizes the shared verification-topic count
+// for a complete ceremony. The baseline preserves the existing allowance for
+// small parties; larger parties receive exactly one echo per participant and
+// round plus bounded delivery headroom. Byte budgets remain the hard memory
+// bound even if the participant set grows unexpectedly.
+func FrostVerificationMessagesPerPeer(partySize, rounds int) uint32 {
+	if partySize <= 0 || rounds <= 0 {
+		return FrostMaxMessagesPerPeer
+	}
+	max := ^uint32(0)
+	party := uint64(partySize)
+	roundCount := uint64(rounds)
+	if party > uint64(max-frostVerificationMessageHeadroom)/roundCount {
+		return max
+	}
+	limit := uint32(party*roundCount) + frostVerificationMessageHeadroom
+	if limit < FrostMaxMessagesPerPeer {
+		return FrostMaxMessagesPerPeer
+	}
+	return limit
+}
 
 // Message that get transfer across the wire
 type Message struct {
 	PeerID  peer.ID
 	Payload []byte
+}
+
+const maxTSSFrameMsgIDBytes = 256
+
+type tssFrameHeader struct {
+	MessageType messages.THORChainTSSMessageType
+	MsgID       string
+}
+
+// decodeTSSFrameHeader parses only the canonical fields emitted before the
+// base64 payload in WrappedMessage. Non-canonical/oversized headers fail
+// closed instead of forcing allocation of the declared outer frame.
+func decodeTSSFrameHeader(prefix []byte) (tssFrameHeader, error) {
+	decoder := json.NewDecoder(bytes.NewReader(prefix))
+	token, err := decoder.Token()
+	if err != nil {
+		return tssFrameHeader{}, fmt.Errorf("invalid TSS frame header: %w", err)
+	}
+	opening, ok := token.(json.Delim)
+	if !ok || opening != '{' {
+		return tssFrameHeader{}, fmt.Errorf("TSS frame is not a JSON object")
+	}
+
+	var header tssFrameHeader
+	seenType := false
+	seenMsgID := false
+	for {
+		token, err = decoder.Token()
+		if err != nil {
+			return tssFrameHeader{}, fmt.Errorf("TSS frame header exceeds bounded prefix")
+		}
+		if closing, ok := token.(json.Delim); ok && closing == '}' {
+			return tssFrameHeader{}, fmt.Errorf("TSS frame header is incomplete")
+		}
+		field, ok := token.(string)
+		if !ok {
+			return tssFrameHeader{}, fmt.Errorf("invalid TSS frame header field")
+		}
+		switch field {
+		case "message_type":
+			if seenType {
+				return tssFrameHeader{}, fmt.Errorf("duplicate TSS message_type header")
+			}
+			if err := decoder.Decode(&header.MessageType); err != nil {
+				return tssFrameHeader{}, fmt.Errorf("invalid TSS message_type header")
+			}
+			seenType = true
+		case "message_id":
+			if seenMsgID {
+				return tssFrameHeader{}, fmt.Errorf("duplicate TSS message_id header")
+			}
+			if err := decoder.Decode(&header.MsgID); err != nil {
+				return tssFrameHeader{}, fmt.Errorf("invalid TSS message_id header")
+			}
+			if !validTSSFrameMsgID(header.MsgID) {
+				return tssFrameHeader{}, fmt.Errorf("invalid TSS message_id header")
+			}
+			seenMsgID = true
+		case "payload":
+			return tssFrameHeader{}, fmt.Errorf("TSS payload appeared before complete session header")
+		default:
+			return tssFrameHeader{}, fmt.Errorf("unexpected TSS frame header field")
+		}
+		if seenType && seenMsgID {
+			return header, nil
+		}
+	}
+}
+
+func validTSSFrameMsgID(msgID string) bool {
+	if msgID == "" || len(msgID) > maxTSSFrameMsgIDBytes {
+		return false
+	}
+	for i := 0; i < len(msgID); i++ {
+		if msgID[i] < 0x21 || msgID[i] > 0x7e {
+			return false
+		}
+	}
+	return true
+}
+
+// preflightTSSFrame authenticates and reserves exactly one message allowance
+// before the outer frame is allocated. Legacy subscriptions retain their
+// existing 20 MiB frame limit only when type+msgID actually match.
+func (c *Communication) preflightTSSFrame(remotePeer peer.ID, length uint32, prefix []byte) (tssFrameHeader, *MessageSubscription, error) {
+	header, err := decodeTSSFrameHeader(prefix)
+	if err != nil {
+		return tssFrameHeader{}, nil, err
+	}
+	subscription := c.getSubscriber(header.MessageType, header.MsgID)
+	if subscription == nil {
+		return tssFrameHeader{}, nil, fmt.Errorf("no matching TSS session subscription")
+	}
+	if !subscription.accepts(remotePeer, int(length)) {
+		return tssFrameHeader{}, nil, fmt.Errorf("unauthorized, over-limit, or exhausted TSS session frame")
+	}
+	return header, subscription, nil
 }
 
 // Communication use p2p to broadcast messages among all the TSS nodes
@@ -232,16 +386,29 @@ func (c *Communication) writeToStream(pID peer.ID, msg []byte, msgID string) err
 }
 
 func (c *Communication) handleStreamTss(stream network.Stream) {
-	peerID := stream.Conn().RemotePeer().String()
+	remotePeer := stream.Conn().RemotePeer()
+	peerID := remotePeer.String()
 	c.logger.Debug().Msgf("reading from tss stream of peer: %s", peerID)
 
 	select {
 	case <-c.stopChan:
 		return
 	default:
-		dataBuf, err := ReadStreamWithBuffer(stream)
+		var preflightHeader tssFrameHeader
+		var subscription *MessageSubscription
+		dataBuf, err := readStreamWithBufferPreflight(stream, TSSFramePreflightBytes, func(length uint32, prefix []byte) error {
+			var preflightErr error
+			preflightHeader, subscription, preflightErr = c.preflightTSSFrame(remotePeer, length, prefix)
+			return preflightErr
+		})
 		if err != nil {
 			c.logger.Error().Err(err).Msgf("fail to read from stream,peerID: %s", peerID)
+			if errors.Is(err, ErrTSSFramePreflightRejected) {
+				if resetErr := stream.Reset(); resetErr != nil {
+					c.logger.Debug().Err(resetErr).Msg("fail to reset preflight-rejected TSS stream")
+				}
+				return
+			}
 			c.streamMgr.AddStream(StreamUnknown, stream)
 			return
 		}
@@ -251,24 +418,43 @@ func (c *Communication) handleStreamTss(stream network.Stream) {
 			c.streamMgr.AddStream(StreamUnknown, stream)
 			return
 		}
-		c.logger.Debug().Msgf(">>>>>>>[%s] %s", wrappedMsg.MessageType, string(wrappedMsg.Payload))
-		channel := c.getSubscriber(wrappedMsg.MessageType, wrappedMsg.MsgID)
-		if nil == channel {
-			c.logger.Debug().Msgf("no MsgID %s found for this message", wrappedMsg.MsgID)
-			c.logger.Debug().Msgf("no MsgID %s found for this message", wrappedMsg.MessageType)
-			// No subscriber means no local operation will ever call
-			// ReleaseStream for this msgID — parking the stream in StreamMgr
-			// would leak it forever (the parked set is cleanup-only; streams
-			// are never read back out, only Reset). Reset it now.
+		if wrappedMsg.MessageType != preflightHeader.MessageType || wrappedMsg.MsgID != preflightHeader.MsgID {
+			c.logger.Warn().Msg("dropping TSS frame whose full message changed its preflight session header")
 			if err := stream.Reset(); err != nil {
-				c.logger.Error().Err(err).Msg("fail to reset unsubscribed stream")
+				c.logger.Debug().Err(err).Msg("fail to reset header-mismatched TSS stream")
 			}
 			return
 		}
-		c.streamMgr.AddStream(wrappedMsg.MsgID, stream)
-		channel <- &Message{
-			PeerID:  stream.Conn().RemotePeer(),
+		if current := c.getSubscriber(wrappedMsg.MessageType, wrappedMsg.MsgID); current != subscription ||
+			!subscription.authorized(remotePeer, len(dataBuf)) {
+			c.logger.Warn().Msg("dropping TSS frame whose subscription changed after preflight")
+			if err := stream.Reset(); err != nil {
+				c.logger.Debug().Err(err).Msg("fail to reset stale-subscription TSS stream")
+			}
+			return
+		}
+		c.logger.Debug().
+			Str("message_type", wrappedMsg.MessageType.String()).
+			Str("msg_id", wrappedMsg.MsgID).
+			Int("payload_bytes", len(wrappedMsg.Payload)).
+			Msg("received TSS message")
+		message := &Message{
+			PeerID:  remotePeer,
 			Payload: dataBuf,
+		}
+		// Park before delivery so a consumer cannot race ReleaseStream ahead of
+		// this stream being tracked. Bounded FROST queues apply backpressure rather
+		// than dropping a valid ceremony frame during a burst.
+		c.streamMgr.AddStream(wrappedMsg.MsgID, stream)
+		if !subscription.deliver(message, c.stopChan) {
+			c.logger.Warn().
+				Str("peer", remotePeer.String()).
+				Str("msg_id", wrappedMsg.MsgID).
+				Str("message_type", wrappedMsg.MessageType.String()).
+				Msg("stopped before TSS session message delivery completed")
+			if err := stream.Reset(); err != nil {
+				c.logger.Debug().Err(err).Msg("fail to reset undelivered TSS stream")
+			}
 		}
 
 	}
@@ -604,7 +790,52 @@ func (c *Communication) SetSubscribe(topic messages.THORChainTSSMessageType, msg
 	messageIDSubscribers.Subscribe(msgID, channel)
 }
 
-func (c *Communication) getSubscriber(topic messages.THORChainTSSMessageType, msgID string) chan *Message {
+// SetSubscribeWithPeers creates a session subscription that accepts messages
+// only from the supplied authenticated libp2p peers and applies hard per-
+// session resource limits before delivery to the protocol coordinator.
+func (c *Communication) SetSubscribeWithPeers(
+	topic messages.THORChainTSSMessageType,
+	msgID string,
+	channel chan *Message,
+	allowedPeers []peer.ID,
+	maxPayloadBytes int,
+	maxMessagesPerPeer uint32,
+) {
+	c.subscriberLocker.Lock()
+	defer c.subscriberLocker.Unlock()
+
+	messageIDSubscribers, ok := c.subscribers[topic]
+	if !ok {
+		messageIDSubscribers = NewMessageIDSubscriber()
+		c.subscribers[topic] = messageIDSubscribers
+	}
+	// Copy the caller-owned slice so later party filtering cannot mutate the
+	// authorization decision of an already registered subscription.
+	peers := append([]peer.ID(nil), allowedPeers...)
+	messageIDSubscribers.SubscribeRestrictedWithBudgets(
+		msgID,
+		channel,
+		peers,
+		maxPayloadBytes,
+		maxMessagesPerPeer,
+		FrostMaxBytesPerPeer,
+		FrostMaxSessionBytes,
+	)
+}
+
+// UpdateSubscribePeers narrows (or replaces) the authenticated allow-list for
+// an existing session after party formation. It never creates a subscription.
+func (c *Communication) UpdateSubscribePeers(topic messages.THORChainTSSMessageType, msgID string, allowedPeers []peer.ID) bool {
+	c.subscriberLocker.Lock()
+	messageIDSubscribers := c.subscribers[topic]
+	c.subscriberLocker.Unlock()
+	if messageIDSubscribers == nil {
+		return false
+	}
+	return messageIDSubscribers.UpdateAllowedPeers(msgID, append([]peer.ID(nil), allowedPeers...))
+}
+
+func (c *Communication) getSubscriber(topic messages.THORChainTSSMessageType, msgID string) *MessageSubscription {
 	c.subscriberLocker.Lock()
 	defer c.subscriberLocker.Unlock()
 	messageIDSubscribers, ok := c.subscribers[topic]

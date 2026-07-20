@@ -156,3 +156,22 @@ func (s CommonSuite) TestObservedTxSignablePayloadFieldCoverage(c *C) {
 			Commentf("ObservedTx field %q is not classified — decide whether it must be signature-covered or excluded and add it to the appropriate map in this test", f))
 	}
 }
+
+func (s CommonSuite) TestXMRObservedTxPayloadIsNetworkBound(c *C) {
+	observed := ObservedTx{Tx: Tx{ID: "tx1", Chain: XMRChain}}
+	for _, inbound := range []bool{false, true} {
+		chainnet, err := observed.getSignablePayloadWithInboundForNetwork(inbound, ChainNet)
+		c.Assert(err, IsNil)
+		mainnet, err := observed.getSignablePayloadWithInboundForNetwork(inbound, MainNet)
+		c.Assert(err, IsNil)
+		c.Assert(chainnet, Not(DeepEquals), mainnet)
+	}
+
+	// Other chains retain the established payload format.
+	observed.Tx.Chain = BTCChain
+	chainnet, err := observed.getSignablePayloadWithInboundForNetwork(false, ChainNet)
+	c.Assert(err, IsNil)
+	mainnet, err := observed.getSignablePayloadWithInboundForNetwork(false, MainNet)
+	c.Assert(err, IsNil)
+	c.Assert(chainnet, DeepEquals, mainnet)
+}

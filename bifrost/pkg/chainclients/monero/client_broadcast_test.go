@@ -11,9 +11,28 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/monero/sidecar"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	tssp "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
 )
+
+func testBroadcastPayload(t *testing.T, txHash, txMetadata, msgID string) signedTxPayload {
+	t.Helper()
+	txKey := strings.Repeat("1", 64)
+	txKeyHash, err := tssp.FrostTxKeyHash(txKey)
+	if err != nil {
+		t.Fatalf("hash test tx key: %v", err)
+	}
+	return signedTxPayload{
+		TxHash:     txHash,
+		TxMetadata: txMetadata,
+		TxKey:      txKey,
+		MsgID:      msgID,
+		Eventuality: tssp.FrostEventuality{
+			TxKeyHash: txKeyHash,
+		},
+	}
+}
 
 func TestBroadcastTxPreservesSignedHashWhenSidecarHashEmpty(t *testing.T) {
 	t.Parallel()
@@ -35,7 +54,7 @@ func TestBroadcastTxPreservesSignedHashWhenSidecarHashEmpty(t *testing.T) {
 		mu.Lock()
 		gotReq = req
 		mu.Unlock()
-		_ = json.NewEncoder(w).Encode(sidecar.BroadcastResp{TxHash: ""})
+		_ = json.NewEncoder(w).Encode(sidecar.BroadcastResp{TxHash: "", TxKey: req.TxKey})
 	}))
 	defer server.Close()
 
@@ -55,11 +74,7 @@ func TestBroadcastTxPreservesSignedHashWhenSidecarHashEmpty(t *testing.T) {
 		VaultPubKeyEddsa: vaultPubKey,
 		VaultPubKeyFrost: vaultPubKey,
 	}
-	payload := signedTxPayload{
-		TxHash:     "signed-hash",
-		TxMetadata: "deadbeef",
-		MsgID:      "broadcast-msg-id-1",
-	}
+	payload := testBroadcastPayload(t, "signed-hash", "deadbeef", "broadcast-msg-id-1")
 
 	txHash, err := client.broadcastTx(tx, payload)
 	if err != nil {
@@ -105,7 +120,7 @@ func TestBroadcastTxIgnoresSidecarHashOverride(t *testing.T) {
 		gotReq = req
 		mu.Unlock()
 		// Sidecar returns a different hash than FROST-validated one.
-		_ = json.NewEncoder(w).Encode(sidecar.BroadcastResp{TxHash: "daemon-hash"})
+		_ = json.NewEncoder(w).Encode(sidecar.BroadcastResp{TxHash: "daemon-hash", TxKey: req.TxKey})
 	}))
 	defer server.Close()
 
@@ -125,11 +140,7 @@ func TestBroadcastTxIgnoresSidecarHashOverride(t *testing.T) {
 		VaultPubKeyEddsa: vaultPubKey,
 		VaultPubKeyFrost: vaultPubKey,
 	}
-	payload := signedTxPayload{
-		TxHash:     "signed-hash",
-		TxMetadata: "deadbeef",
-		MsgID:      "broadcast-msg-id-2",
-	}
+	payload := testBroadcastPayload(t, "signed-hash", "deadbeef", "broadcast-msg-id-2")
 
 	txHash, err := client.broadcastTx(tx, payload)
 	if err != nil {
@@ -181,11 +192,7 @@ func TestBroadcastTxRequiresMsgID(t *testing.T) {
 		VaultPubKeyEddsa: vaultPubKey,
 		VaultPubKeyFrost: vaultPubKey,
 	}
-	payload := signedTxPayload{
-		TxHash:     "signed-hash",
-		TxMetadata: "deadbeef",
-		MsgID:      "   ",
-	}
+	payload := testBroadcastPayload(t, "signed-hash", "deadbeef", "   ")
 
 	_, err = client.broadcastTx(tx, payload)
 	if err == nil {
@@ -223,11 +230,7 @@ func TestBroadcastTxRequiresFrostVaultPubKey(t *testing.T) {
 		Chain:       common.XMRChain,
 		VaultPubKey: vaultPubKey,
 	}
-	payload := signedTxPayload{
-		TxHash:     "signed-hash",
-		TxMetadata: "deadbeef",
-		MsgID:      "broadcast-msg-id-missing-vault",
-	}
+	payload := testBroadcastPayload(t, "signed-hash", "deadbeef", "broadcast-msg-id-missing-vault")
 
 	_, err = client.broadcastTx(tx, payload)
 	if err == nil {
@@ -263,7 +266,7 @@ func TestBroadcastTxIgnoresBroadcastedFlagAndStillCallsSidecar(t *testing.T) {
 		mu.Lock()
 		gotReq = req
 		mu.Unlock()
-		_ = json.NewEncoder(w).Encode(sidecar.BroadcastResp{TxHash: "daemon-hash"})
+		_ = json.NewEncoder(w).Encode(sidecar.BroadcastResp{TxHash: "daemon-hash", TxKey: req.TxKey})
 	}))
 	defer server.Close()
 
@@ -283,12 +286,8 @@ func TestBroadcastTxIgnoresBroadcastedFlagAndStillCallsSidecar(t *testing.T) {
 		VaultPubKeyEddsa: vaultPubKey,
 		VaultPubKeyFrost: vaultPubKey,
 	}
-	payload := signedTxPayload{
-		TxHash:      "signed-hash",
-		TxMetadata:  "deadbeef",
-		MsgID:       "broadcast-msg-id-3",
-		Broadcasted: true,
-	}
+	payload := testBroadcastPayload(t, "signed-hash", "deadbeef", "broadcast-msg-id-3")
+	payload.Broadcasted = true
 
 	txHash, err := client.broadcastTx(tx, payload)
 	if err != nil {
@@ -337,12 +336,8 @@ func TestBroadcastTxBroadcastedFlagStillRequiresTxMetadata(t *testing.T) {
 		VaultPubKeyEddsa: vaultPubKey,
 		VaultPubKeyFrost: vaultPubKey,
 	}
-	payload := signedTxPayload{
-		TxHash:      "signed-hash",
-		TxMetadata:  "   ",
-		MsgID:       "broadcast-msg-id-4",
-		Broadcasted: true,
-	}
+	payload := testBroadcastPayload(t, "signed-hash", "   ", "broadcast-msg-id-4")
+	payload.Broadcasted = true
 
 	_, err = client.broadcastTx(tx, payload)
 	if err == nil {

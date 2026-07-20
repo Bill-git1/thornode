@@ -504,11 +504,16 @@ func (h TssHandler) handle(ctx cosmos.Context, msg *MsgTssPool) error {
 			vault.PubKeyFrost = voter.PoolPubKeyFrost
 			vault.Membership = voter.PubKeys
 			if vault.GetChains().Has(common.XMRChain) {
-				xmrHeight, _ := h.mgr.Keeper().GetLastChainHeight(ctx, common.XMRChain)
-				if xmrHeight <= 0 && voter.ObservedMoneroHeight > 0 {
-					xmrHeight = voter.ObservedMoneroHeight
-					ctx.Logger().Info("XMR vault birthday: using node-observed Monero height from keygen", "height", xmrHeight)
-				} else if xmrHeight <= 0 {
+				// Round 3 already applies the reorg margin to its quorum-derived,
+				// transcript-bound birthday. Persist that exact value so a newer
+				// global height cannot skip early vault outputs.
+				xmrHeight := voter.ObservedMoneroHeight
+				if xmrHeight > 0 {
+					ctx.Logger().Info("XMR vault birthday: using transcript-bound Monero height from keygen", "height", xmrHeight)
+				} else {
+					xmrHeight, _ = h.mgr.Keeper().GetLastChainHeight(ctx, common.XMRChain)
+				}
+				if xmrHeight <= 0 {
 					ctx.Logger().Error("XMR vault birthday: no observed chain height available at keygen, vault scanner will use chain tip")
 				}
 				vault.VaultCreationHeightXmr = xmrHeight

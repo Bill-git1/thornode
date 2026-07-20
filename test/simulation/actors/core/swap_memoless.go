@@ -187,7 +187,7 @@ func (a *SwapMemolessActor) getQuote(config *OpConfig) OpResult {
 func (a *SwapMemolessActor) registerSwap(config *OpConfig) OpResult {
 	// build the swap
 	coin := common.NewCoin(common.RuneNative, sdkmath.ZeroUint())
-	a.registeredMemo = fmt.Sprintf("=:%s:%s", a.to, a.toAddress)
+	a.registeredMemo = buildMemolessSwapRegistrationMemo(a.from, a.to, a.toAddress, a.fromAddress)
 	registerMemo := fmt.Sprintf("REFERENCE:%s:%s", a.from, a.registeredMemo)
 
 	a.Log().Info().
@@ -229,6 +229,14 @@ func (a *SwapMemolessActor) registerSwap(config *OpConfig) OpResult {
 	return OpResult{
 		Continue: true,
 	}
+}
+
+func buildMemolessSwapRegistrationMemo(from, to common.Asset, destination, refundAddress common.Address) string {
+	address := destination.String()
+	if from.GetLayer1Asset().GetChain().RequiresExplicitRefundAddress() {
+		address += "/" + refundAddress.String()
+	}
+	return fmt.Sprintf("=:%s:%s", to, address)
 }
 
 func (a *SwapMemolessActor) getMemolessRef(config *OpConfig) OpResult {

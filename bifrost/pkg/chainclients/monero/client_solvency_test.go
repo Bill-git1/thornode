@@ -18,6 +18,8 @@ import (
 	ttypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
+func intPtr(v int) *int { return &v }
+
 func TestShouldReportSolvency(t *testing.T) {
 	c := &Client{
 		cfg:                     config.BifrostChainConfiguration{SolvencyBlocks: 10},
@@ -59,7 +61,7 @@ func TestReportSolvencySkipsUnreconciledSidecarBalance(t *testing.T) {
 	balanceServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/v1/monero/balance/") {
@@ -121,13 +123,16 @@ func TestReportSolvencyReportsReconciledVaultWhenSiblingUnreconciled(t *testing.
 			UnlockedBalance:      100 * moneroAtomicToThorchain,
 			SpendableBalance:     uint64Ptr(100 * moneroAtomicToThorchain),
 			Reconciled:           &unreconciled,
-			PendingOutgoingCount: 1,
+			ReconciliationState:  "pending_outgoing",
+			PendingOutgoingCount: intPtr(1),
 		},
 		reconciledPubKey.String(): {
-			Balance:          10 * moneroAtomicToThorchain,
-			UnlockedBalance:  10 * moneroAtomicToThorchain,
-			SpendableBalance: uint64Ptr(10 * moneroAtomicToThorchain),
-			Reconciled:       &reconciled,
+			Balance:              10 * moneroAtomicToThorchain,
+			UnlockedBalance:      10 * moneroAtomicToThorchain,
+			SpendableBalance:     uint64Ptr(10 * moneroAtomicToThorchain),
+			Reconciled:           &reconciled,
+			ReconciliationState:  "reconciled",
+			PendingOutgoingCount: intPtr(0),
 		},
 	})
 	defer balanceServer.Close()
@@ -178,20 +183,23 @@ func TestReportSolvencyResumesAfterUnreconciledSidecarBalance(t *testing.T) {
 	balanceServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/v1/monero/balance/") {
 			balanceCalls++
 			resp := sidecar.Balance{
-				Balance:          100 * moneroAtomicToThorchain,
-				UnlockedBalance:  100 * moneroAtomicToThorchain,
-				SpendableBalance: uint64Ptr(100 * moneroAtomicToThorchain),
-				Reconciled:       &reconciled,
+				Balance:              100 * moneroAtomicToThorchain,
+				UnlockedBalance:      100 * moneroAtomicToThorchain,
+				SpendableBalance:     uint64Ptr(100 * moneroAtomicToThorchain),
+				Reconciled:           &reconciled,
+				ReconciliationState:  "reconciled",
+				PendingOutgoingCount: intPtr(0),
 			}
 			if balanceCalls == 1 {
 				resp.Reconciled = &unreconciled
-				resp.PendingOutgoingCount = 1
+				resp.ReconciliationState = "pending_outgoing"
+				resp.PendingOutgoingCount = intPtr(1)
 			}
 			_ = json.NewEncoder(w).Encode(resp)
 			return
@@ -245,9 +253,11 @@ func TestReportSolvencyAutoUnhaltUsesCheckedVaultCount(t *testing.T) {
 	vaultPubKey, vaultAddress := testVaultPubKeyAndAddress(t)
 	balanceServer := newFrostBalanceServer(t, map[string]sidecar.Balance{
 		vaultPubKey.String(): {
-			Balance:          100 * moneroAtomicToThorchain,
-			UnlockedBalance:  100 * moneroAtomicToThorchain,
-			SpendableBalance: uint64Ptr(100 * moneroAtomicToThorchain),
+			Balance:              100 * moneroAtomicToThorchain,
+			UnlockedBalance:      100 * moneroAtomicToThorchain,
+			SpendableBalance:     uint64Ptr(100 * moneroAtomicToThorchain),
+			ReconciliationState:  "reconciled",
+			PendingOutgoingCount: intPtr(0),
 		},
 	})
 	defer balanceServer.Close()
@@ -293,19 +303,22 @@ func TestReportSolvencyDeferralEscalationCounter(t *testing.T) {
 	balanceServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/v1/monero/balance/") {
 			pending := 1
+			state := "pending"
 			if reconciledFlag.Load() {
 				pending = 0
+				state = "reconciled"
 			}
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"balance":                100 * moneroAtomicToThorchain,
 				"unlocked_balance":       100 * moneroAtomicToThorchain,
 				"spendable_balance":      100 * moneroAtomicToThorchain,
 				"reconciled":             reconciledFlag.Load(),
+				"reconciliation_state":   state,
 				"pending_outgoing_count": pending,
 			})
 			return

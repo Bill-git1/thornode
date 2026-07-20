@@ -106,10 +106,14 @@ func main() {
 		log.Fatal().Err(err).Msg("fail to start pubkey manager")
 	}
 
-	// automatically attempt to recover TSS keyshares if they are missing
-	if err = btss.RecoverKeyShares(cfg, thorchainBridge); err != nil {
-		log.Error().Err(err).Msg("fail to recover key shares")
+	// Legacy shares back the process-wide TSS stack and remain a startup
+	// prerequisite. XMR FROST shares are isolated by exact-vault readiness, so a
+	// missing historical XMR vault is retried without disabling healthy chains.
+	if !recoverLegacyKeysharesBeforeStartup(cfg, thorchainBridge) {
+		return
 	}
+	recoveryCtx, cancelRecovery := context.WithCancel(context.Background())
+	go superviseFrostKeyshareRecovery(recoveryCtx, cfg, thorchainBridge)
 
 	// setup TSS signing
 	priKey, err := k.GetPrivateKey()
@@ -420,6 +424,7 @@ func main() {
 	case <-restart:
 	}
 	log.Info().Msg("stop signal received")
+	cancelRecovery()
 
 	// TEMP: keyverify — fire both stop signals together. keyverifyCancel
 	// cancels the per-attempt ctx (processVerify exits via <-ctx.Done()
@@ -465,6 +470,54 @@ func main() {
 	tssIns.Stop()
 	if err = healthServer.Stop(); err != nil {
 		log.Fatal().Err(err).Msg("fail to stop health server")
+	}
+}
+
+func recoverLegacyKeysharesBeforeStartup(cfg config.Bifrost, bridge thorclient.ThorchainBridge) bool {
+	ctx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopSignals()
+
+	for attempt := 1; ; attempt++ {
+		if err := btss.RecoverLegacyKeyShares(cfg, bridge); err == nil {
+			return true
+		} else {
+			log.Error().Err(err).Int("attempt", attempt).Msg("legacy keyshare recovery incomplete; retrying before TSS startup")
+		}
+		timer := time.NewTimer(constants.ThorchainBlockTime)
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			return false
+		}
+	}
+}
+
+func superviseFrostKeyshareRecovery(ctx context.Context, cfg config.Bifrost, bridge thorclient.ThorchainBridge) {
+	for attempt := 1; ; attempt++ {
+		if err := btss.RecoverFrostKeyShares(cfg, bridge); err == nil {
+			return
+		} else {
+			log.Error().Err(err).Int("attempt", attempt).Msg("XMR FROST keyshare recovery incomplete; healthy vaults remain available while retrying")
+		}
+
+		timer := time.NewTimer(constants.ThorchainBlockTime)
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			return
+		}
 	}
 }
 

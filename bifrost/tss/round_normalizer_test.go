@@ -50,9 +50,9 @@ func TestCanonicalTssRoundEd25519(t *testing.T) {
 }
 
 // TestKeysignErrorIsTerminalRound verifies the signer retry path recognises
-// both the canonical and raw final-round names for secp256k1 (v3 KEYSIGN9
-// only) and ed25519 (EDDSAKEYSIGN3). The legacy v1 KEYSIGN7 marker is
-// intentionally not accepted on the signer side.
+// the canonical and raw final-round names for secp256k1 (v3 KEYSIGN9 only),
+// ed25519 (EDDSAKEYSIGN3), and FROST (share exchange). The legacy v1 KEYSIGN7
+// marker is intentionally not accepted on the signer side.
 func TestKeysignErrorIsTerminalRound(t *testing.T) {
 	t.Parallel()
 
@@ -81,6 +81,21 @@ func TestKeysignErrorIsTerminalRound(t *testing.T) {
 			name:  "raw eddsa last round",
 			round: "thorchain.tsslib.eddsa.signing.SignRound3Message",
 			want:  true,
+		},
+		{
+			name:  "frost share is terminal",
+			round: tssMessages.FROSTKEYSIGNSHARE,
+			want:  true,
+		},
+		{
+			name:  "frost preprocess is non-terminal",
+			round: tssMessages.FROSTKEYSIGNPREPROCESS,
+			want:  false,
+		},
+		{
+			name:  "frost result is non-terminal",
+			round: tssMessages.FROSTKEYSIGNRESULT,
+			want:  false,
 		},
 		{
 			// v1 terminal round — not accepted on the signer side.

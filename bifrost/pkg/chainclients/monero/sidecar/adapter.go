@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"context"
 	"fmt"
 
 	tssp "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
@@ -12,11 +13,48 @@ import (
 // conventional Client methods.
 type FrostAdapter struct {
 	client *Client
+	ctx    context.Context
 }
 
 // NewFrostAdapter wires a sidecar.Client into the go-tss FROST coordinator.
 func NewFrostAdapter(client *Client) *FrostAdapter {
-	return &FrostAdapter{client: client}
+	return NewFrostAdapterWithContext(client, context.Background())
+}
+
+// NewFrostAdapterWithContext wires lifecycle cancellation into sidecar calls.
+func NewFrostAdapterWithContext(client *Client, ctx context.Context) *FrostAdapter {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return &FrostAdapter{client: client, ctx: ctx}
+}
+
+// NewFrostAdapterWithStop adapts the chain client's lifecycle channel without
+// allocating a watcher goroutine for every signing attempt.
+func NewFrostAdapterWithStop(client *Client, stop <-chan struct{}) *FrostAdapter {
+	if stop == nil {
+		return NewFrostAdapter(client)
+	}
+	return NewFrostAdapterWithContext(client, stopChannelContext{
+		Context: context.Background(),
+		done:    stop,
+	})
+}
+
+type stopChannelContext struct {
+	context.Context
+	done <-chan struct{}
+}
+
+func (c stopChannelContext) Done() <-chan struct{} { return c.done }
+
+func (c stopChannelContext) Err() error {
+	select {
+	case <-c.done:
+		return context.Canceled
+	default:
+		return nil
+	}
 }
 
 func (a *FrostAdapter) FrostSignPrepare(req tssp.FrostSidecarPrepareReq) (tssp.FrostSidecarPrepareResp, error) {
@@ -41,8 +79,9 @@ func (a *FrostAdapter) FrostSignPrepare(req tssp.FrostSidecarPrepareReq) (tssp.F
 		return tssp.FrostSidecarPrepareResp{}, err
 	}
 	return tssp.FrostSidecarPrepareResp{
-		SessionID:  resp.SessionID,
-		Preprocess: resp.Preprocess,
+		SessionID:      resp.SessionID,
+		Preprocess:     resp.Preprocess,
+		SelectedInputs: spentRefsToTSS(resp.SelectedInputs),
 	}, nil
 }
 
@@ -67,7 +106,7 @@ func (a *FrostAdapter) FrostSignCombine(req tssp.FrostSidecarCombineReq) (tssp.F
 	if a == nil || a.client == nil {
 		return tssp.FrostSidecarCombineResp{}, fmt.Errorf("frost adapter is not initialized")
 	}
-	resp, err := a.client.SignCombine(SignCombineReq{
+	resp, err := a.client.SignCombineContext(a.ctx, SignCombineReq{
 		MsgID:     req.MsgID,
 		SessionID: req.SessionID,
 		AllShares: req.AllShares,
@@ -87,6 +126,7 @@ func (a *FrostAdapter) FrostSignCombine(req tssp.FrostSidecarCombineReq) (tssp.F
 	return tssp.FrostSidecarCombineResp{
 		TxHash:          resp.TxHash,
 		TxHex:           resp.TxHex,
+		TxKey:           resp.TxKey,
 		FeeAtomic:       resp.FeeAtomic,
 		SpentOutputRefs: spentRefs,
 	}, nil
@@ -171,6 +211,22 @@ func spentRefsFromTSS(refs []tssp.FrostSpentOutputRef) []SpentRef {
 	out := make([]SpentRef, 0, len(refs))
 	for _, ref := range refs {
 		out = append(out, SpentRef{
+			TxHash:      ref.TxHash,
+			OutputIndex: ref.OutputIndex,
+			KeyImage:    ref.KeyImage,
+			SpendTxHash: ref.SpendTxHash,
+		})
+	}
+	return out
+}
+
+func spentRefsToTSS(refs []SpentRef) []tssp.FrostSpentOutputRef {
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]tssp.FrostSpentOutputRef, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, tssp.FrostSpentOutputRef{
 			TxHash:      ref.TxHash,
 			OutputIndex: ref.OutputIndex,
 			KeyImage:    ref.KeyImage,

@@ -20,6 +20,18 @@ type TxIn struct {
 	// whether this originated from a "instant observation" - e.g. by a member of the signing party
 	// immediately after signing, and also has incorrect gas, requiring a re-observation to correct.
 	AllowFutureObservation bool `json:"allow_future_observation"`
+
+	// Persisted is an optional local durability acknowledgement. Chain scanners
+	// with a restart journal use it to retain replay data until BlockScanner has
+	// queued the observations and durably advanced its scan position.
+	Persisted chan error `json:"-"`
+	// FinalizePersistence atomically publishes any chain-scanner replay metadata
+	// after Observer persistence succeeds but before BlockScanner advances its
+	// scan position. A crash in between only causes a safe duplicate rescan.
+	FinalizePersistence func() error `json:"-"`
+	// AbortPersistence releases an in-process replay delivery reservation after
+	// Observer persistence fails; the synced replay journal remains for retry.
+	AbortPersistence func() `json:"-"`
 }
 
 type TxInItem struct {

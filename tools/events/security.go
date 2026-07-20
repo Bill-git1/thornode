@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog/log"
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
 	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/notify"
@@ -119,12 +120,14 @@ func LastRoundFailures(block *thorscan.BlockResponse) {
 				// to surface alerts on pre-upgrade KEYSIGN7 records. The chain-
 				// side handler and the per-signer retry path (bifrost/tss/
 				// keysign_error.go::IsTerminalRound) are stricter and accept
-				// only v3 KEYSIGN9 + EDDSAKEYSIGN3 going forward. Withholding
-				// the terminal-round message after computing the signature
-				// share is the exploit pattern this alert exists to surface.
+				// only v3 KEYSIGN9 + EDDSAKEYSIGN3 + the FROST share phase going
+				// forward. Withholding the terminal-round message after computing
+				// the signature share is the exploit pattern this alert exists to
+				// surface.
 				if msgKeysignFail.Blame.Round != "SignRound7Message" &&
 					msgKeysignFail.Blame.Round != "SignRound9Message" &&
-					msgKeysignFail.Blame.Round != "EDDSASignRound3Message" {
+					msgKeysignFail.Blame.Round != "EDDSASignRound3Message" &&
+					msgKeysignFail.Blame.Round != tssMessages.FROSTKEYSIGNSHARE {
 					continue
 				}
 

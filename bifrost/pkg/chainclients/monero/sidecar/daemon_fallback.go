@@ -35,10 +35,11 @@ func (e *daemonRPCError) Error() string {
 	if e == nil {
 		return ""
 	}
-	if strings.TrimSpace(e.Message) == "" {
+	message := strings.TrimSpace(e.Message)
+	if message == "" {
 		return fmt.Sprintf("daemon rpc error %d", e.Code)
 	}
-	return fmt.Sprintf("daemon rpc error %d: %s", e.Code, strings.TrimSpace(e.Message))
+	return remoteApplicationError(fmt.Sprintf("monerod-json-rpc/%d", e.Code), message).Error()
 }
 
 type daemonGetInfoResp struct {
@@ -71,18 +72,30 @@ func parseDaemonEndpointURL(endpoint string) (*url.URL, error) {
 	if endpoint == "" {
 		return nil, fmt.Errorf("monero rpc host is empty")
 	}
-	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+	// Only default the scheme when there is none. Matching on a lowercase
+	// "http://" prefix instead would prepend a second scheme to "HTTPS://host",
+	// which parses as host "HTTPS" and slips past the allowlist below, leaving a
+	// mis-cased or wrong scheme accepted as a garbage host.
+	if !strings.Contains(endpoint, "://") {
 		endpoint = "http://" + endpoint
 	}
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("invalid monero rpc host %q: %w", endpoint, err)
+		// Do not wrap url.Error: it embeds the full input and may disclose
+		// credentials an operator accidentally placed in the URL.
+		return nil, errors.New("invalid monero rpc host URL")
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return nil, fmt.Errorf("invalid monero rpc host scheme %q", parsed.Scheme)
 	}
 	if strings.TrimSpace(parsed.Hostname()) == "" {
 		return nil, fmt.Errorf("invalid monero rpc host")
+	}
+	if parsed.User != nil {
+		return nil, fmt.Errorf("monero rpc host must not contain URL credentials; use daemon username/password fields")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" || parsed.ForceQuery {
+		return nil, fmt.Errorf("monero rpc host must not contain a query or fragment")
 	}
 	return parsed, nil
 }
@@ -162,8 +175,8 @@ func (c *Client) daemonRPC(method string, params any, out any) error {
 		return fmt.Errorf("fail to create monero daemon request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if c.username != "" {
-		req.SetBasicAuth(c.username, c.password)
+	if c.daemonUsername != "" {
+		req.SetBasicAuth(c.daemonUsername, c.daemonPassword)
 	}
 
 	resp, err := c.daemonClient.Do(req)
@@ -176,12 +189,16 @@ func (c *Client) daemonRPC(method string, params any, out any) error {
 		}
 	}()
 
+	if resp.StatusCode >= http.StatusBadRequest {
+		respBody, truncated, readErr := readBoundedErrorBody(resp.Body)
+		if readErr != nil {
+			return fmt.Errorf("fail to read monero daemon error response: %w", readErr)
+		}
+		return newHTTPError("monerod-json-rpc/"+method, resp.StatusCode, respBody, truncated)
+	}
 	respBody, err := readBoundedResponseBody(resp.Body, maxResponseBytes)
 	if err != nil {
 		return fmt.Errorf("fail to read monero daemon response: %w", err)
-	}
-	if resp.StatusCode >= http.StatusBadRequest {
-		return fmt.Errorf("monero daemon rpc %s returned status %d: %s", method, resp.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 	if out == nil {
 		return nil

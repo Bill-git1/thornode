@@ -162,6 +162,74 @@ func (b *BlockScanner) rollback(height int64) error {
 	return nil
 }
 
+// rewindToNextHeight durably positions the scanner immediately before
+// nextHeight. Unlike operator-driven rollback, a chain-client cursor rewind is
+// never clamped: every bound must be satisfied exactly or the request fails.
+func (b *BlockScanner) rewindToNextHeight(currentHeight, nextHeight int64) error {
+	if nextHeight <= 0 {
+		return fmt.Errorf("invalid cursor rewind next height %d: must be positive", nextHeight)
+	}
+	if nextHeight >= currentHeight {
+		return fmt.Errorf("invalid cursor rewind next height %d: must be below current height %d", nextHeight, currentHeight)
+	}
+	if currentHeight-nextHeight > btypes.MaxCursorRewindBlocks {
+		return fmt.Errorf(
+			"cursor rewind from %d to %d exceeds hard limit of %d blocks",
+			currentHeight,
+			nextHeight,
+			btypes.MaxCursorRewindBlocks,
+		)
+	}
+
+	previousHeight := nextHeight - 1
+	if previousHeight < b.cfg.FloorBlockHeight {
+		return fmt.Errorf(
+			"cursor rewind next height %d would move previous height %d below floor %d",
+			nextHeight,
+			previousHeight,
+			b.cfg.FloorBlockHeight,
+		)
+	}
+
+	// LevelDBScannerStorage performs a synchronous write. Publish the in-memory
+	// cursor only after that durable write succeeds so a restart and the running
+	// process always agree on the next block to fetch.
+	if err := b.scannerStorage.SetScanPos(previousHeight); err != nil {
+		return fmt.Errorf("fail to persist cursor rewind to %d: %w", previousHeight, err)
+	}
+	atomic.StoreInt64(&b.previousBlock, previousHeight)
+	return nil
+}
+
+func rewindRequiredNextHeight(err error) (int64, bool) {
+	// RewindRequiredError intentionally has a value receiver, so tolerate both
+	// value and pointer construction by chain scanners, including wrapped errors.
+	var value btypes.RewindRequiredError
+	if errors.As(err, &value) {
+		return value.NextHeight, true
+	}
+	var pointer *btypes.RewindRequiredError
+	if errors.As(err, &pointer) && pointer != nil {
+		return pointer.NextHeight, true
+	}
+	return 0, false
+}
+
+func scannerRecoveryRequired(err error) (*btypes.ScannerRecoveryRequiredError, bool) {
+	// ScannerRecoveryRequiredError also has a value receiver. Accept both forms
+	// so a producer cannot accidentally turn an operator fail-stop into an
+	// endlessly retried transient error merely by returning a value.
+	var value btypes.ScannerRecoveryRequiredError
+	if errors.As(err, &value) {
+		return &value, true
+	}
+	var pointer *btypes.ScannerRecoveryRequiredError
+	if errors.As(err, &pointer) && pointer != nil {
+		return pointer, true
+	}
+	return nil, false
+}
+
 // GetMessages return the channel
 func (b *BlockScanner) GetMessages() <-chan int64 {
 	return b.scanChan
@@ -308,7 +376,21 @@ func (b *BlockScanner) scanBlocks() {
 		txIn types.TxIn
 		err  error
 	}
-	prefetch := map[int64]chan fetchTxsResult{}
+	type prefetchedFetch struct {
+		result    chan fetchTxsResult
+		abandoned chan struct{}
+	}
+	prefetch := map[int64]*prefetchedFetch{}
+	clearPrefetch := func() {
+		abandoned := prefetch
+		prefetch = make(map[int64]*prefetchedFetch)
+		for _, fetch := range abandoned {
+			// Signal the existing bounded fetch goroutine rather than creating
+			// an unbounded set of drain goroutines on repeated rewinds.
+			close(fetch.abandoned)
+		}
+	}
+	defer clearPrefetch()
 
 	// start up to grab those blocks
 	for {
@@ -318,10 +400,13 @@ func (b *BlockScanner) scanBlocks() {
 		case amount := <-b.rollbackChan:
 			if err := b.rollback(amount); err != nil {
 				b.logger.Error().Err(err).Msg("fail to rollback block scanner")
-				b.errorCounter.WithLabelValues(b.cfg.ChainID.String()).Inc()
+				b.recordError("rollback_failed")
 				time.Sleep(b.cfg.BlockHeightDiscoverBackoff)
 				continue
 			}
+			// Results fetched before a rollback belong to the abandoned cursor
+			// lineage and must never be replayed after the cursor moves.
+			clearPrefetch()
 		default:
 			preBlockHeight := atomic.LoadInt64(&b.previousBlock)
 			currentBlock := preBlockHeight + 1
@@ -351,9 +436,14 @@ func (b *BlockScanner) scanBlocks() {
 
 			// get the prefetched result or call FetchTxs for the block
 			var txIn types.TxIn
-			if resultChan, ok := prefetch[currentBlock]; ok {
+			if fetch, ok := prefetch[currentBlock]; ok {
 				// already prefetched, just wait for the result
-				result := <-resultChan
+				var result fetchTxsResult
+				select {
+				case result = <-fetch.result:
+				case <-b.stopChan:
+					return
+				}
 				delete(prefetch, currentBlock)
 				txIn, err = result.txIn, result.err
 			} else {
@@ -361,6 +451,45 @@ func (b *BlockScanner) scanBlocks() {
 			}
 
 			if err != nil {
+				// A fetcher may reserve durable replay state before it discovers a
+				// later error. Release that in-process reservation on every failed
+				// fetch; its synced journal remains available for the retry.
+				if txIn.AbortPersistence != nil {
+					txIn.AbortPersistence()
+				}
+
+				if recoveryRequired, recovery := scannerRecoveryRequired(err); recovery {
+					clearPrefetch()
+					b.logger.Error().Err(err).
+						Int64("current_height", recoveryRequired.CurrentHeight).
+						Int64("next_height", recoveryRequired.NextHeight).
+						Msg("chain scanner stopped pending operator recovery")
+					b.healthy.Store(false)
+					b.recordError("operator_recovery_required")
+					return
+				}
+
+				if nextHeight, rewindRequired := rewindRequiredNextHeight(err); rewindRequired {
+					// Even a rejected rewind proves the prefetched results were
+					// produced against a cursor lineage the chain client abandoned.
+					clearPrefetch()
+					if rewindErr := b.rewindToNextHeight(currentBlock, nextHeight); rewindErr != nil {
+						b.logger.Error().Err(rewindErr).
+							Int64("current_height", currentBlock).
+							Int64("next_height", nextHeight).
+							Msg("reject chain scanner cursor rewind")
+						b.healthy.Store(false)
+						b.recordError("cursor_rewind_rejected")
+						time.Sleep(b.cfg.BlockHeightDiscoverBackoff)
+						continue
+					}
+					b.logger.Warn().
+						Int64("current_height", currentBlock).
+						Int64("next_height", nextHeight).
+						Msg("rewound block scanner to chain client cursor")
+					continue
+				}
+
 				// don't log an error if its because the block doesn't exist yet
 				if !errors.Is(err, btypes.ErrUnavailableBlock) {
 					b.logger.Error().Err(err).Int64("block height", currentBlock).Msg("fail to get RPCBlock")
@@ -375,12 +504,25 @@ func (b *BlockScanner) scanBlocks() {
 				for i := int64(1); i < b.cfg.PrefetchBlocks; i++ {
 					prefetchHeight := currentBlock + i
 					if _, ok := prefetch[prefetchHeight]; !ok && prefetchHeight <= chainHeight {
-						resultChan := make(chan fetchTxsResult, 1)
-						prefetch[prefetchHeight] = resultChan
-						go func(height int64, resultChan chan fetchTxsResult) {
+						fetch := &prefetchedFetch{
+							result:    make(chan fetchTxsResult),
+							abandoned: make(chan struct{}),
+						}
+						prefetch[prefetchHeight] = fetch
+						go func(height int64, fetch *prefetchedFetch) {
 							fetchTxIn, fetchErr := b.chainScanner.FetchTxs(height, chainHeight)
-							resultChan <- fetchTxsResult{txIn: fetchTxIn, err: fetchErr}
-						}(prefetchHeight, resultChan)
+							select {
+							case fetch.result <- fetchTxsResult{txIn: fetchTxIn, err: fetchErr}:
+							case <-fetch.abandoned:
+								if fetchTxIn.AbortPersistence != nil {
+									fetchTxIn.AbortPersistence()
+								}
+							case <-b.stopChan:
+								if fetchTxIn.AbortPersistence != nil {
+									fetchTxIn.AbortPersistence()
+								}
+							}
+						}(prefetchHeight, fetch)
 					}
 				}
 			}
@@ -409,8 +551,6 @@ func (b *BlockScanner) scanBlocks() {
 					Bool("healthy", b.healthy.Load()).
 					Msg("scan block")
 			}
-			atomic.AddInt64(&b.previousBlock, 1)
-
 			// consider 3 blocks or the configured lag time behind tip as healthy
 			lagDuration := time.Duration((chainHeight-currentBlock)*ms) * time.Millisecond
 			if chainHeight-currentBlock <= 3 || lagDuration < b.cfg.MaxHealthyLag {
@@ -421,19 +561,86 @@ func (b *BlockScanner) scanBlocks() {
 			b.logger.Debug().Msgf("the gap is %d , healthy: %+v", chainHeight-currentBlock, b.healthy.Load())
 
 			b.metrics.GetCounter(metrics.TotalBlockScanned).Inc()
-			if len(txIn.TxArray) > 0 {
+			// A scanner may need Observer to acknowledge durable metadata even when
+			// the delivery contains no transaction items. Enqueue those handshakes so
+			// Observer's empty-TxIn acknowledgement path remains reachable.
+			if len(txIn.TxArray) > 0 || txIn.Persisted != nil {
 				select {
 				case <-b.stopChan:
 					return
 				case b.globalTxsQueue <- txIn:
 				}
 			}
-			if err = b.scannerStorage.SetScanPos(b.previousBlock); err != nil {
-				b.logger.Error().Err(err).Msg("fail to save block scan pos")
-				// alert!!
+			if err = waitTxInPersistence(txIn, b.stopChan); err != nil {
+				if txIn.AbortPersistence != nil {
+					txIn.AbortPersistence()
+				}
+				if !b.backoffAfterPersistenceFailure(err, "observation_persistence_failed", "observer failed to persist scanned transactions") {
+					return
+				}
 				continue
 			}
+			if txIn.FinalizePersistence != nil {
+				if err = txIn.FinalizePersistence(); err != nil {
+					if !b.backoffAfterPersistenceFailure(err, "persistence_finalize_failed", "chain scanner failed to finalize persisted transactions") {
+						return
+					}
+					continue
+				}
+			}
+			if err = b.scannerStorage.SetScanPos(currentBlock); err != nil {
+				if !b.backoffAfterPersistenceFailure(err, "scan_position_persistence_failed", "fail to save block scan pos") {
+					return
+				}
+				continue
+			}
+			atomic.StoreInt64(&b.previousBlock, currentBlock)
 		}
+	}
+}
+
+// backoffAfterPersistenceFailure makes a durable-progress failure visible and
+// prevents the scanner from hammering the same block and re-enqueuing its
+// observations in a tight loop. The wait is cancellable so Stop remains prompt.
+func (b *BlockScanner) backoffAfterPersistenceFailure(err error, errorName, message string) bool {
+	b.logger.Error().Err(err).Msg(message)
+	b.healthy.Store(false)
+	b.recordError(errorName)
+
+	backoff := b.cfg.BlockHeightDiscoverBackoff
+	if backoff <= 0 {
+		backoff = constants.ThorchainBlockTime
+	}
+	timer := time.NewTimer(backoff)
+	defer timer.Stop()
+	select {
+	case <-b.stopChan:
+		return false
+	case <-timer.C:
+		return true
+	}
+}
+
+func (b *BlockScanner) recordError(errorName string) {
+	if b.errorCounter == nil {
+		return
+	}
+	b.errorCounter.WithLabelValues(errorName, b.cfg.ChainID.String()).Inc()
+}
+
+func waitTxInPersistence(txIn types.TxIn, stop <-chan struct{}) error {
+	if txIn.Persisted == nil {
+		return nil
+	}
+	timer := time.NewTimer(2 * constants.ThorchainBlockTime)
+	defer timer.Stop()
+	select {
+	case err := <-txIn.Persisted:
+		return err
+	case <-stop:
+		return fmt.Errorf("block scanner stopped before observation persistence")
+	case <-timer.C:
+		return fmt.Errorf("timed out waiting for observation persistence")
 	}
 }
 

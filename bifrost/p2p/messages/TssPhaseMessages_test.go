@@ -9,19 +9,22 @@ import (
 // must be a deliberate edit that updates both the constants and this test.
 func TestValidTssKeysignRounds_HasExpectedCanonicalSet(t *testing.T) {
 	expected := map[string]bool{
-		KEYSIGN1aUnicast: true,
-		KEYSIGN1b:        true,
-		KEYSIGN2Unicast:  true,
-		KEYSIGN3:         true,
-		KEYSIGN4:         true,
-		KEYSIGN5:         true,
-		KEYSIGN6:         true,
-		KEYSIGN7:         true,
-		KEYSIGN8:         true,
-		KEYSIGN9:         true,
-		EDDSAKEYSIGN1:    true,
-		EDDSAKEYSIGN2:    true,
-		EDDSAKEYSIGN3:    true,
+		KEYSIGN1aUnicast:       true,
+		KEYSIGN1b:              true,
+		KEYSIGN2Unicast:        true,
+		KEYSIGN3:               true,
+		KEYSIGN4:               true,
+		KEYSIGN5:               true,
+		KEYSIGN6:               true,
+		KEYSIGN7:               true,
+		KEYSIGN8:               true,
+		KEYSIGN9:               true,
+		EDDSAKEYSIGN1:          true,
+		EDDSAKEYSIGN2:          true,
+		EDDSAKEYSIGN3:          true,
+		FROSTKEYSIGNPREPROCESS: true,
+		FROSTKEYSIGNSHARE:      true,
+		FROSTKEYSIGNRESULT:     true,
 	}
 
 	if len(ValidTssKeysignRounds) != len(expected) {
@@ -44,19 +47,22 @@ func TestValidTssKeysignRounds_HasExpectedCanonicalSet(t *testing.T) {
 // KEYSIGN8 = "SignRound7Message" would silently corrupt blame round mapping).
 func TestKeysignRoundConstants_AreDistinctAndNonEmpty(t *testing.T) {
 	consts := map[string]string{
-		"KEYSIGN1aUnicast": KEYSIGN1aUnicast,
-		"KEYSIGN1b":        KEYSIGN1b,
-		"KEYSIGN2Unicast":  KEYSIGN2Unicast,
-		"KEYSIGN3":         KEYSIGN3,
-		"KEYSIGN4":         KEYSIGN4,
-		"KEYSIGN5":         KEYSIGN5,
-		"KEYSIGN6":         KEYSIGN6,
-		"KEYSIGN7":         KEYSIGN7,
-		"KEYSIGN8":         KEYSIGN8,
-		"KEYSIGN9":         KEYSIGN9,
-		"EDDSAKEYSIGN1":    EDDSAKEYSIGN1,
-		"EDDSAKEYSIGN2":    EDDSAKEYSIGN2,
-		"EDDSAKEYSIGN3":    EDDSAKEYSIGN3,
+		"KEYSIGN1aUnicast":       KEYSIGN1aUnicast,
+		"KEYSIGN1b":              KEYSIGN1b,
+		"KEYSIGN2Unicast":        KEYSIGN2Unicast,
+		"KEYSIGN3":               KEYSIGN3,
+		"KEYSIGN4":               KEYSIGN4,
+		"KEYSIGN5":               KEYSIGN5,
+		"KEYSIGN6":               KEYSIGN6,
+		"KEYSIGN7":               KEYSIGN7,
+		"KEYSIGN8":               KEYSIGN8,
+		"KEYSIGN9":               KEYSIGN9,
+		"EDDSAKEYSIGN1":          EDDSAKEYSIGN1,
+		"EDDSAKEYSIGN2":          EDDSAKEYSIGN2,
+		"EDDSAKEYSIGN3":          EDDSAKEYSIGN3,
+		"FROSTKEYSIGNPREPROCESS": FROSTKEYSIGNPREPROCESS,
+		"FROSTKEYSIGNSHARE":      FROSTKEYSIGNSHARE,
+		"FROSTKEYSIGNRESULT":     FROSTKEYSIGNRESULT,
 	}
 
 	seen := map[string]string{}
@@ -68,6 +74,17 @@ func TestKeysignRoundConstants_AreDistinctAndNonEmpty(t *testing.T) {
 			t.Errorf("constants %s and %s both equal %q", name, prev, value)
 		}
 		seen[value] = name
+	}
+}
+
+func TestValidTssKeysignRounds_RejectsUnvalidatedFrostEvidence(t *testing.T) {
+	for _, round := range []string{
+		FrostBlameRoundPreprocessEquivocation,
+		FrostBlameRoundShareEquivocation,
+	} {
+		if ValidTssKeysignRounds[round] {
+			t.Fatalf("unvalidated evidence round %q must not be accepted on-chain", round)
+		}
 	}
 }
 

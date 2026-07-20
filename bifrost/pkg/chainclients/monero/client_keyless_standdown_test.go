@@ -62,19 +62,19 @@ func TestSidecarHasVaultKeys(t *testing.T) {
 	}{
 		{
 			name:   "bech32 keyed vault with keys",
-			vaults: []sidecar.VaultKey{{VaultPubKey: vaultPubKey.String(), HasFrostKeys: true}},
+			vaults: []sidecar.VaultKey{{VaultPubKey: vaultPubKey.String(), GroupKey: groupKeyHex, HasFrostKeys: true, Signable: true}},
 			status: http.StatusOK,
 			want:   true,
 		},
 		{
 			name:   "bech32 keyed vault without keys",
-			vaults: []sidecar.VaultKey{{VaultPubKey: vaultPubKey.String(), HasFrostKeys: false}},
+			vaults: []sidecar.VaultKey{{VaultPubKey: vaultPubKey.String(), GroupKey: groupKeyHex, HasFrostKeys: false}},
 			status: http.StatusOK,
 			want:   false,
 		},
 		{
 			name:   "hex keyed vault with keys",
-			vaults: []sidecar.VaultKey{{VaultPubKey: groupKeyHex, HasFrostKeys: true}},
+			vaults: []sidecar.VaultKey{{VaultPubKey: groupKeyHex, GroupKey: groupKeyHex, HasFrostKeys: true, Signable: true}},
 			status: http.StatusOK,
 			want:   true,
 		},

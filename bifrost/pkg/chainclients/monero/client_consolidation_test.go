@@ -168,12 +168,15 @@ func (m *consolidationTSS) FrostKeySign(req tssp.FrostKeySignRequest, _ tssp.Fro
 		if strings.TrimSpace(resp.TxHex) == "" {
 			resp.TxHex = "deadbeef"
 		}
+		if strings.TrimSpace(resp.TxKey) == "" {
+			resp.TxKey = strings.Repeat("1", 64)
+		}
 		if resp.Eventuality.Version == 0 {
 			planHash, err := tssp.FrostPlanHash(req, resp.MsgID)
 			if err != nil {
 				return tssp.FrostKeySignResponse{}, err
 			}
-			eventuality, err := tssp.BuildFrostEventuality(planHash, resp.TxHash, resp.TxHex, resp.FeeAtomic)
+			eventuality, err := tssp.BuildFrostEventuality(planHash, resp.TxHash, resp.TxHex, resp.TxKey, resp.FeeAtomic)
 			if err != nil {
 				return tssp.FrostKeySignResponse{}, err
 			}
@@ -215,12 +218,22 @@ func (s *consolidationSidecar) handler(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		vaults := make([]sidecar.VaultKey, 0, len(s.balanceByVault))
 		for pubKey := range s.balanceByVault {
-			vaults = append(vaults, sidecar.VaultKey{VaultPubKey: pubKey, HasFrostKeys: true})
+			vault, err := common.NewPubKey(pubKey)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			groupKey, err := groupKeyHexFromVaultPubKey(vault)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			vaults = append(vaults, sidecar.VaultKey{VaultPubKey: pubKey, GroupKey: groupKey, HasFrostKeys: true, Signable: true})
 		}
 		s.mu.Unlock()
 		_ = json.NewEncoder(w).Encode(map[string]any{"vaults": vaults})
 	case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register":
-		_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+		_ = json.NewEncoder(w).Encode(testRegisterVaultResponse(0))
 	case strings.HasPrefix(r.URL.Path, "/v1/monero/balance/"):
 		vault := strings.TrimPrefix(r.URL.Path, "/v1/monero/balance/")
 		s.mu.Lock()
@@ -269,6 +282,7 @@ func (s *consolidationSidecar) handler(w http.ResponseWriter, r *http.Request) {
 		s.mu.Unlock()
 		_ = json.NewEncoder(w).Encode(sidecar.BroadcastResp{
 			TxHash: "xmr-consolidation-hash",
+			TxKey:  req.TxKey,
 		})
 	default:
 		http.NotFound(w, r)

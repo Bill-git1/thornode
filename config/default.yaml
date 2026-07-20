@@ -126,6 +126,12 @@ bifrost:
       wallet_authorization_bearer: ""
       signer_backend: ""
       signer_endpoint: ""
+      signer_authorization_bearer: ""
+      signer_username: ""
+      signer_password: ""
+      signer_expected_network: ""
+      signer_expected_commit: ""
+      signer_allow_insecure_http: false
       xmr_consolidation_enabled: false
       xmr_consolidation_check_interval_blocks: 0
       xmr_consolidation_cooldown_blocks: 0
@@ -489,6 +495,12 @@ bifrost:
       chain_id: XMR
       signer_backend: "tss" # monero signer backend
       signer_endpoint: "http://127.0.0.1:8283" # this node's xmr tss signer endpoint
+      signer_authorization_bearer: "" # xmr-frost-signer bearer only; never sent to monerod
+      signer_username: "" # xmr-frost-signer basic auth username (mutually exclusive with bearer)
+      signer_password: "" # xmr-frost-signer basic auth password
+      signer_expected_network: "" # required on every network: mocknet, chainnet, stagenet, or mainnet
+      signer_expected_commit: "" # optional release metadata; enforce the immutable image digest in deployment tooling
+      signer_allow_insecure_http: false # development-only isolated compose escape hatch
       xmr_consolidation_enabled: true
       xmr_consolidation_check_interval_blocks: 10
       xmr_consolidation_cooldown_blocks: 30

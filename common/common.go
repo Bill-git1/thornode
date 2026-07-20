@@ -36,12 +36,28 @@ func (o *ObservedTx) IsValid() bool {
 // inbound is appended as a trailing byte so any flip of QuorumTx.Inbound by a malicious
 // proposer changes the verified bytes and invalidates every attestation in the quorum.
 func (o *ObservedTx) GetSignablePayloadWithInbound(inbound bool) ([]byte, error) {
+	return o.getSignablePayloadWithInboundForNetwork(inbound, CurrentChainNetwork)
+}
+
+func (o *ObservedTx) getSignablePayloadWithInboundForNetwork(inbound bool, network ChainNetwork) ([]byte, error) {
 	canonical := *o
 	canonical.KeysignMs = 0
 	canonical.SpentOutputRefs = normalizeSpentOutputRefs(o.SpentOutputRefs)
 	bz, err := canonical.Marshal()
 	if err != nil {
 		return nil, err
+	}
+	// XMR observations can carry outbound ref certificates transported by
+	// retiring vault members after churn. Bind every XMR attestation to one
+	// THORChain network so all XMR observations share one format and a valid
+	// chainnet/test signature cannot be replayed on another network.
+	if canonical.Tx.Chain.Equals(XMRChain) {
+		prefix := []byte(fmt.Sprintf(
+			"domain=thorchain-xmr-observed-tx-v2\nnetwork=%s\npayload_length=%d\n",
+			ChainNetworkName(network),
+			len(bz),
+		))
+		bz = append(prefix, bz...)
 	}
 	var b byte
 	if inbound {

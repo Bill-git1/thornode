@@ -13,6 +13,7 @@ import (
 
 	"github.com/blang/semver"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/monero/sidecar"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
@@ -188,17 +189,30 @@ func newFrostSignTxCleanupFixture(t *testing.T, tssServer *mockFrostTssServer, c
 	t.Helper()
 
 	vaultPubKey, vaultAddress := testVaultPubKeyAndAddress(t)
+	groupKey, err := groupKeyHexFromVaultPubKey(vaultPubKey)
+	if err != nil {
+		t.Fatalf("group key: %v", err)
+	}
 	clearHits := int32(0)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet && r.URL.Path == "/v1/monero/keys" {
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"vaults": []sidecar.VaultKey{{VaultPubKey: vaultPubKey.String(), HasFrostKeys: true}},
+				"vaults": []sidecar.VaultKey{{VaultPubKey: vaultPubKey.String(), GroupKey: groupKey, HasFrostKeys: true, Signable: true}},
 			})
 			return
 		}
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register" {
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			var req sidecar.RegisterVaultReq
+			if decodeErr := json.NewDecoder(r.Body).Decode(&req); decodeErr != nil {
+				http.Error(w, "invalid register request", http.StatusBadRequest)
+				return
+			}
+			nextHeight := uint64(req.VaultCreationHeight)
+			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{
+				Registered:         true,
+				ExpectedNextHeight: &nextHeight,
+			})
 			return
 		}
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/monero/sessions/clear" {
@@ -396,6 +410,33 @@ func TestSignTxClearsSidecarSessionsOnEmptyMsgID(t *testing.T) {
 	if signErr == nil || !strings.Contains(signErr.Error(), "empty msg_id") {
 		t.Fatalf("expected empty msg_id error, got %T %v", signErr, signErr)
 	}
+	var keysignErr bifrosttss.KeysignError
+	if !errors.As(signErr, &keysignErr) || !keysignErr.IsTerminalRound() {
+		t.Fatalf("empty post-share result must retain terminal FROST semantics: %v", signErr)
+	}
+	if got := atomic.LoadInt32(clearHits); got != 1 {
+		t.Fatalf("expected clear sessions hit once, got %d", got)
+	}
+}
+
+func TestSignTxInvalidEventualityRetainsTerminalShare(t *testing.T) {
+	tssServer := &mockFrostTssServer{
+		resp: tssp.FrostKeySignResponse{
+			Status: gotsscommon.Success,
+			MsgID:  strings.Repeat("a", 64),
+		},
+	}
+	c, tx, server, clearHits := newFrostSignTxCleanupFixture(t, tssServer, 0)
+	defer server.Close()
+
+	_, _, _, signErr := c.signTx(tx, 12345)
+	if signErr == nil || !strings.Contains(signErr.Error(), "invalid FROST eventuality") {
+		t.Fatalf("expected invalid eventuality error, got %T %v", signErr, signErr)
+	}
+	var keysignErr bifrosttss.KeysignError
+	if !errors.As(signErr, &keysignErr) || !keysignErr.IsTerminalRound() {
+		t.Fatalf("invalid post-share result must retain terminal FROST semantics: %v", signErr)
+	}
 	if got := atomic.LoadInt32(clearHits); got != 1 {
 		t.Fatalf("expected clear sessions hit once, got %d", got)
 	}
@@ -559,6 +600,10 @@ func TestEnforceXMRMaxGasRejectsOverCapFees(t *testing.T) {
 	if !strings.Contains(err.Error(), tssp.FrostFailReasonXMRMaxGasExceeded) {
 		t.Fatalf("expected stable max gas error prefix, got %v", err)
 	}
+	var keysignErr bifrosttss.KeysignError
+	if !errors.As(err, &keysignErr) || !keysignErr.IsTerminalRound() {
+		t.Fatalf("over-cap result must preserve terminal FROST share semantics: %v", err)
+	}
 }
 
 func TestSignTxPostsKeysignFailureWhenSignFails(t *testing.T) {
@@ -640,7 +685,7 @@ func TestSignTxPostsKeysignFailureWhenSignFails(t *testing.T) {
 	}
 }
 
-func TestSignTxSkipsKeysignFailurePostWhenBlameNodesEmpty(t *testing.T) {
+func TestSignTxKeepsTerminalRoundWithoutPostingEmptyBlame(t *testing.T) {
 	t.Parallel()
 
 	vaultPubKey, vaultAddress := testVaultPubKeyAndAddress(t)
@@ -661,6 +706,7 @@ func TestSignTxSkipsKeysignFailurePostWhenBlameNodesEmpty(t *testing.T) {
 			Status: gotsscommon.Fail,
 			Blame: gotssblame.Blame{
 				FailReason: "xmr keysign failed",
+				Round:      messages.FROSTKEYSIGNSHARE,
 			},
 		},
 	}
@@ -703,6 +749,13 @@ func TestSignTxSkipsKeysignFailurePostWhenBlameNodesEmpty(t *testing.T) {
 	_, _, _, signErr := c.SignTx(tx, 999)
 	if signErr == nil {
 		t.Fatalf("expected SignTx error")
+	}
+	var keysignErr bifrosttss.KeysignError
+	if !errors.As(signErr, &keysignErr) {
+		t.Fatalf("expected round-only failure to remain a keysign error, got %T: %v", signErr, signErr)
+	}
+	if !keysignErr.IsTerminalRound() {
+		t.Fatalf("expected FROST share failure to remain terminal")
 	}
 
 	if bridge.calls != 0 {

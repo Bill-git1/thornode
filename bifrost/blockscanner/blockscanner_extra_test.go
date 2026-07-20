@@ -198,6 +198,7 @@ func (s *StorageConstructorSuite) TestNewBlockScannerStorage(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(store, NotNil)
 	c.Check(store.GetInternalDb(), NotNil)
+	c.Check(store.syncScanPos, Equals, false)
 
 	c.Assert(store.SetScanPos(99), IsNil)
 	pos, err := store.GetScanPos()
@@ -205,6 +206,18 @@ func (s *StorageConstructorSuite) TestNewBlockScannerStorage(c *C) {
 	c.Check(pos, Equals, int64(99))
 
 	store.Close()
+}
+
+func (s *StorageConstructorSuite) TestScanPosSyncIsExplicitlyScoped(c *C) {
+	tmpdir, err := os.MkdirTemp("", "bs-sync-test-*")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(tmpdir)
+
+	store, err := NewBlockScannerStorageWithScanPosSync(tmpdir+"/db", config.LevelDBOptions{})
+	c.Assert(err, IsNil)
+	c.Assert(store, NotNil)
+	c.Check(store.syncScanPos, Equals, true)
+	c.Assert(store.Close(), IsNil)
 }
 
 func (s *StorageConstructorSuite) TestNewBlockScannerStorageSolana(c *C) {

@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )
 
 const (
-	frostTranscriptHashDomain   = "frost_transcript_v1"
+	frostTranscriptHashDomain   = "thorchain-frost-transcript-v2"
 	frostTranscriptHashHexChars = 64
 )
 
@@ -30,19 +32,25 @@ func newFrostTranscriptFailure(reason string, blamePubKeys []string) *frostTrans
 
 type frostTranscriptVerifier struct {
 	round               string
+	expectedVaultPubKey string
+	expectedNetwork     string
 	activeSet           *activeSignerSet
 	participantIndexMap map[string]uint32
 	totalParticipants   int
+	confirmationQuorum  int
 
 	payloadHashByTarget map[string]string
 	votesByTarget       map[string]map[string]string
 	verifiedTargets     map[string]struct{}
+	equivocatingVoters  map[string]struct{}
+	signedByTarget      map[string]messages.FrostSignedEnvelope
 }
 
 func newFrostTranscriptVerifier(
 	round string,
 	activeSet *activeSignerSet,
 	participantIndexMap map[string]uint32,
+	expectedVaultPubKeys ...string,
 ) (*frostTranscriptVerifier, error) {
 	if activeSet == nil || len(activeSet.originalByNormalized) == 0 {
 		return nil, fmt.Errorf("active signer set is empty")
@@ -54,15 +62,78 @@ func newFrostTranscriptVerifier(
 	if round == "" {
 		return nil, fmt.Errorf("round is required")
 	}
+	confirmationQuorum := (len(activeSet.originalByNormalized)*2 + 2) / 3
+	if confirmationQuorum < 1 {
+		confirmationQuorum = 1
+	}
 	return &frostTranscriptVerifier{
 		round:               round,
+		expectedVaultPubKey: firstTrimmed(expectedVaultPubKeys),
+		expectedNetwork:     secondTrimmed(expectedVaultPubKeys),
 		activeSet:           activeSet,
 		participantIndexMap: participantIndexMap,
 		totalParticipants:   len(activeSet.originalByNormalized),
+		confirmationQuorum:  confirmationQuorum,
 		payloadHashByTarget: make(map[string]string, len(activeSet.originalByNormalized)),
 		votesByTarget:       make(map[string]map[string]string, len(activeSet.originalByNormalized)),
 		verifiedTargets:     make(map[string]struct{}, len(activeSet.originalByNormalized)),
+		equivocatingVoters:  make(map[string]struct{}, len(activeSet.originalByNormalized)),
+		signedByTarget:      make(map[string]messages.FrostSignedEnvelope, len(activeSet.originalByNormalized)),
 	}, nil
+}
+
+// recordSignedEnvelope retains one directly verified target statement and
+// returns portable evidence only when the same target signed two different
+// payload hashes for this exact session/round/index.
+func (v *frostTranscriptVerifier) recordSignedEnvelope(envelope messages.FrostSignedEnvelope) (*messages.FrostEquivocationEvidence, error) {
+	if v.expectedVaultPubKey != "" && !strings.EqualFold(strings.TrimSpace(envelope.VaultPubKey), v.expectedVaultPubKey) {
+		return nil, fmt.Errorf("signed envelope vault pubkey mismatch")
+	}
+	if v.expectedNetwork != "" && !strings.EqualFold(strings.TrimSpace(envelope.Network), v.expectedNetwork) {
+		return nil, fmt.Errorf("signed envelope network mismatch")
+	}
+	targetNorm, _, failure := v.validateTarget(envelope.SenderPubKey, envelope.ParticipantIndex)
+	if failure != nil {
+		return nil, failure
+	}
+	if envelope.Round != v.round {
+		return nil, fmt.Errorf("signed envelope round mismatch")
+	}
+	normalizedHash, err := normalizeTranscriptHash(envelope.PayloadHash)
+	if err != nil {
+		return nil, err
+	}
+	envelope.PayloadHash = normalizedHash
+	if existing, ok := v.signedByTarget[targetNorm]; ok {
+		if existing.PayloadHash == normalizedHash {
+			return nil, nil
+		}
+		evidence := messages.FrostEquivocationEvidence{
+			ProtocolVersion: messages.FrostProtocolVersion,
+			First:           existing,
+			Second:          envelope,
+		}
+		if err := evidence.Validate(); err != nil {
+			return nil, err
+		}
+		return &evidence, nil
+	}
+	v.signedByTarget[targetNorm] = envelope
+	return nil, nil
+}
+
+func firstTrimmed(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(values[0])
+}
+
+func secondTrimmed(values []string) string {
+	if len(values) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(values[1])
 }
 
 func (v *frostTranscriptVerifier) isComplete() bool {
@@ -85,7 +156,11 @@ func (v *frostTranscriptVerifier) recordPayload(
 
 	if existing, ok := v.payloadHashByTarget[targetNorm]; ok {
 		if existing != normalizedHash {
-			return false, newFrostTranscriptFailure("sender equivocation detected for round payload", []string{targetOriginal})
+			// Authenticated transport identifies who sent each copy but does not
+			// produce portable slashing evidence. Abort locally without naming a
+			// culprit; FROST v2 evidence validation may attach blame only when two
+			// target-signed envelopes are available.
+			return false, newFrostTranscriptFailure("conflicting round payloads received without portable equivocation proof", nil)
 		}
 		return false, nil
 	}
@@ -122,8 +197,16 @@ func (v *frostTranscriptVerifier) recordVerification(
 	}
 	if existing, exists := votesByAttester[attesterNorm]; exists {
 		if existing != normalizedHash {
-			return false, newFrostTranscriptFailure("verification attester equivocation detected", []string{attesterOriginal})
+			delete(votesByAttester, attesterNorm)
+			v.equivocatingVoters[attesterNorm] = struct{}{}
+			// Keep only a bounded disqualification marker. A conflicting echo
+			// cannot frame the transcript target and is not slashable without an
+			// application-signed statement.
+			return false, nil
 		}
+		return false, nil
+	}
+	if _, disqualified := v.equivocatingVoters[attesterNorm]; disqualified {
 		return false, nil
 	}
 	votesByAttester[attesterNorm] = normalizedHash
@@ -166,22 +249,18 @@ func (v *frostTranscriptVerifier) evaluateTarget(targetNorm string) *frostTransc
 		return nil
 	}
 	votesByAttester, hasVotes := v.votesByTarget[targetNorm]
-	if !hasVotes || len(votesByAttester) < v.totalParticipants {
+	if !hasVotes {
 		return nil
 	}
 
-	hashSet := make(map[string]struct{}, len(votesByAttester))
-	var unanimousHash string
+	matching := 0
 	for _, hash := range votesByAttester {
-		hashSet[hash] = struct{}{}
-		unanimousHash = hash
+		if hash == payloadHash {
+			matching++
+		}
 	}
-	targetPubKey := v.activeSet.originalByNormalized[targetNorm]
-	if len(hashSet) != 1 {
-		return newFrostTranscriptFailure("transcript verification hash disagreement", []string{targetPubKey})
-	}
-	if unanimousHash != payloadHash {
-		return newFrostTranscriptFailure("unanimous transcript hash mismatch for sender payload", []string{targetPubKey})
+	if matching < v.confirmationQuorum {
+		return nil
 	}
 	v.verifiedTargets[targetNorm] = struct{}{}
 	return nil
@@ -202,6 +281,9 @@ func (v *frostTranscriptVerifier) missingPayloadPubKeys() []string {
 func (v *frostTranscriptVerifier) missingVerifierPubKeys() []string {
 	missingByNorm := make(map[string]struct{})
 	for targetNorm := range v.payloadHashByTarget {
+		if _, ok := v.verifiedTargets[targetNorm]; ok {
+			continue
+		}
 		votesByAttester := v.votesByTarget[targetNorm]
 		for attesterNorm := range v.activeSet.originalByNormalized {
 			if votesByAttester != nil {

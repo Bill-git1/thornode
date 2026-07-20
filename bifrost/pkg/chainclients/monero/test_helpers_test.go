@@ -4,15 +4,19 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
 	"filippo.io/edwards25519"
 	cometed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/monero/sidecar"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -81,6 +85,142 @@ func testVaultPubKeyAndAddress(t *testing.T) (common.PubKey, common.Address) {
 	return pubKey, address
 }
 
+func testRegisterVaultResponse(nextHeight uint64) sidecar.RegisterVaultResp {
+	return sidecar.RegisterVaultResp{
+		Registered:         true,
+		ResetEpoch:         0,
+		ExpectedNextHeight: &nextHeight,
+	}
+}
+
+func writeTestScannerState(t *testing.T, w http.ResponseWriter, nextHeight uint64) {
+	t.Helper()
+	if err := json.NewEncoder(w).Encode(sidecar.ScannerState{
+		ResetEpoch:       0,
+		NextHeight:       &nextHeight,
+		StrictAfterReset: false,
+	}); err != nil {
+		t.Errorf("encode scanner state: %v", err)
+	}
+}
+
+type testScannerContinuity struct {
+	mu                   sync.Mutex
+	nextHeight           uint64
+	resetEpoch           uint64
+	lastHeight           *uint64
+	lastBlockHash        string
+	lastParentHash       string
+	lastRewindPrevious   uint64
+	lastRewindTarget     uint64
+	lastRewindResetEpoch uint64
+	rewindCalls          int
+	syncHeights          []int64
+	onRewind             func(sidecar.ScannerRewindReq)
+}
+
+func newTestScannerContinuity(nextHeight uint64) *testScannerContinuity {
+	return &testScannerContinuity{nextHeight: nextHeight}
+}
+
+func (s *testScannerContinuity) handle(t *testing.T, w http.ResponseWriter, r *http.Request) bool {
+	t.Helper()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	switch {
+	case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/scanner/state":
+		_ = json.NewEncoder(w).Encode(sidecar.ScannerState{
+			ResetEpoch:       s.resetEpoch,
+			NextHeight:       &s.nextHeight,
+			LastHeight:       s.lastHeight,
+			LastBlockHash:    s.lastBlockHash,
+			LastParentHash:   s.lastParentHash,
+			StrictAfterReset: s.resetEpoch > 0,
+		})
+		return true
+	case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/rewind":
+		var req sidecar.ScannerRewindReq
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return true
+		}
+		s.rewindCalls++
+		if s.onRewind != nil {
+			s.onRewind(req)
+		}
+		if s.nextHeight == req.TargetNextHeight && s.lastHeight != nil &&
+			*s.lastHeight == req.AnchorHeight && strings.EqualFold(s.lastBlockHash, req.AnchorHash) {
+			_ = json.NewEncoder(w).Encode(sidecar.ScannerRewindResp{
+				Rewound:            false,
+				PreviousNextHeight: s.lastRewindPrevious,
+				NextHeight:         s.nextHeight,
+				ResetEpoch:         s.resetEpoch,
+			})
+			return true
+		}
+		if req.ExpectedResetEpoch != s.resetEpoch || req.ExpectedNextHeight != s.nextHeight ||
+			req.TargetNextHeight == 0 || req.TargetNextHeight >= s.nextHeight ||
+			req.AnchorHeight+1 != req.TargetNextHeight {
+			http.Error(w, "scanner rewind compare-and-set conflict", http.StatusConflict)
+			return true
+		}
+		previous := s.nextHeight
+		s.resetEpoch++
+		s.nextHeight = req.TargetNextHeight
+		anchorHeight := req.AnchorHeight
+		s.lastHeight = &anchorHeight
+		s.lastBlockHash = strings.ToLower(req.AnchorHash)
+		s.lastParentHash = testXMRHash(fmt.Sprintf("anchor-parent-%d", req.AnchorHeight))
+		s.lastRewindPrevious = previous
+		s.lastRewindTarget = req.TargetNextHeight
+		s.lastRewindResetEpoch = s.resetEpoch
+		_ = json.NewEncoder(w).Encode(sidecar.ScannerRewindResp{
+			Rewound:            true,
+			PreviousNextHeight: previous,
+			NextHeight:         s.nextHeight,
+			ResetEpoch:         s.resetEpoch,
+		})
+		return true
+	case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
+		var req sidecar.SyncReq
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return true
+		}
+		if s.lastHeight != nil && uint64(req.Height) == *s.lastHeight &&
+			strings.EqualFold(req.BlockHash, s.lastBlockHash) && strings.EqualFold(req.ParentHash, s.lastParentHash) {
+			_ = json.NewEncoder(w).Encode(sidecar.Transfers{})
+			return true
+		}
+		if req.Height < 0 || uint64(req.Height) != s.nextHeight {
+			http.Error(w, "scanner sync out of order", http.StatusConflict)
+			return true
+		}
+		s.syncHeights = append(s.syncHeights, req.Height)
+		if s.resetEpoch > 0 && (req.ResetEpoch == nil || *req.ResetEpoch != s.resetEpoch ||
+			req.ExpectedNextHeight == nil || *req.ExpectedNextHeight != s.nextHeight) {
+			http.Error(w, "scanner sync continuity mismatch", http.StatusConflict)
+			return true
+		}
+		height := uint64(req.Height)
+		s.lastHeight = &height
+		s.lastBlockHash = strings.ToLower(req.BlockHash)
+		s.lastParentHash = strings.ToLower(req.ParentHash)
+		s.nextHeight = height + 1
+		_ = json.NewEncoder(w).Encode(sidecar.Transfers{})
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *testScannerContinuity) snapshot() (rewindCalls int, syncHeights []int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.rewindCalls, append([]int64(nil), s.syncHeights...)
+}
+
 // expectedXMRVaultAddress is the pure helper behind expectedXMRVaultAddressFromKeygenRequest.
 func expectedXMRVaultAddress(vaultPubKeyFrost common.PubKey) (common.Address, error) {
 	if vaultPubKeyFrost.IsEmpty() {
@@ -109,4 +249,17 @@ func expectedXMRVaultAddressFromKeygenRequest(vaultPubKeyFrost string) (common.A
 		return common.NoAddress, fmt.Errorf("invalid vault pubkey %q: %w", value, err)
 	}
 	return expectedXMRVaultAddress(pubKey)
+}
+
+// testBlockHash builds a deterministic, height-keyed 64-hex block hash. The
+// sidecar client validates block_hash/parent_hash as 32-byte hex, matching what
+// monerod actually returns, so fixtures must look like real hashes.
+func testBlockHash(height int64) string {
+	return fmt.Sprintf("%064x", height)
+}
+
+// testStaleBlockHash is a valid but different 64-hex hash for the same height:
+// the block a reorg discarded.
+func testStaleBlockHash(height int64) string {
+	return fmt.Sprintf("ff%062x", height)
 }

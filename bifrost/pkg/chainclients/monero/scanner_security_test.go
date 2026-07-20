@@ -417,11 +417,14 @@ func TestFetchTxsSkipsDelayedIncomingChangeForPreviouslyObservedOutgoingSameVaul
 	vaultPubKey, vaultAddr := testVaultPubKeyAndAddress(t)
 	vaultAddress := vaultAddr.String()
 	destinationAddress := common.XMRChecksummedDummyAddress('9')
+	scannerNextHeight := atomic.NewUint64(100)
 
 	frostServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/scanner/state":
+			writeTestScannerState(t, w, scannerNextHeight.Load())
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/monero/chain/block/"):
 			rawHeight := strings.TrimPrefix(r.URL.Path, "/v1/monero/chain/block/")
 			height, err := strconv.ParseInt(rawHeight, 10, 64)
@@ -432,8 +435,8 @@ func TestFetchTxsSkipsDelayedIncomingChangeForPreviouslyObservedOutgoingSameVaul
 			_ = json.NewEncoder(w).Encode(sidecar.ChainBlockResp{
 				Height:       height,
 				Reward:       defaultCoinbaseValue + 200000,
-				Hash:         "hash-" + rawHeight,
-				PreviousHash: "hash-" + strconv.FormatInt(height-1, 10),
+				Hash:         testBlockHash(height),
+				PreviousHash: testBlockHash(height - 1),
 				TxHashes:     []string{txID},
 			})
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
@@ -468,11 +471,15 @@ func TestFetchTxsSkipsDelayedIncomingChangeForPreviouslyObservedOutgoingSameVaul
 					},
 				}
 			}
+			scannerNextHeight.Store(uint64(req.Height + 1))
 			_ = json.NewEncoder(w).Encode(resp)
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/monero/addresses/"):
 			_ = json.NewEncoder(w).Encode(sidecar.Addresses{Addresses: []string{vaultAddress}})
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register":
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{
+				Registered:         true,
+				ExpectedNextHeight: uint64Ptr(scannerNextHeight.Load()),
+			})
 		default:
 			http.NotFound(w, r)
 		}
@@ -530,8 +537,8 @@ func TestFetchTxsFailsClosedOnReorgProcessingError(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(sidecar.ChainBlockResp{
 				Height:       101,
 				Reward:       defaultCoinbaseValue,
-				Hash:         "hash-101",
-				PreviousHash: "canonical-100",
+				Hash:         testBlockHash(101),
+				PreviousHash: testBlockHash(100),
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/chain/block/100":
 			http.Error(w, "reorg confirmation failed", http.StatusInternalServerError)
@@ -562,8 +569,8 @@ func TestFetchTxsFailsClosedOnReorgProcessingError(t *testing.T) {
 	reorgStore := NewReorgStore(db)
 	if setErr := reorgStore.Set(&reorgBlockMeta{
 		Height:               100,
-		BlockHash:            "stale-100",
-		PreviousHash:         "hash-99",
+		BlockHash:            testStaleBlockHash(100),
+		PreviousHash:         testBlockHash(99),
 		CustomerTransactions: []string{"tx-drop"},
 	}); setErr != nil {
 		t.Fatalf("set reorg meta: %v", setErr)

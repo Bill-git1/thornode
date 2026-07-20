@@ -50,7 +50,7 @@ func (s *RecoverKeysharesSuite) TestFindKeyshareRecoveryTargetPrefersFrostPubKey
 	c.Check(ok, Equals, false)
 }
 
-func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsResolvesLegacyAndFrostIndependently(c *C) {
+func (s *RecoverKeysharesSuite) TestKeyshareRecoveryTargetsResolvesEveryMembership(c *C) {
 	legacyPubKey := types.GetRandomPubKey()
 	eddsaPubKey := types.GetRandomEd25519PubKey()
 	frostPubKey := types.GetRandomEd25519PubKey()
@@ -63,7 +63,8 @@ func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsResolvesLegacyAndFrostI
 	}
 	membership := common.PubKeys{legacyPubKey, frostPubKey}
 
-	targets := latestRecoveryTargets(membership, vaults)
+	targets, recoveryErrs := keyshareRecoveryTargets(membership, vaults, nil)
+	c.Assert(recoveryErrs, HasLen, 0)
 	c.Assert(targets, HasLen, 2)
 	c.Check(targets[0].kind, Equals, recoveryTargetLegacy)
 	c.Check(targets[0].pubKey.Equals(legacyPubKey), Equals, true)
@@ -72,34 +73,64 @@ func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsResolvesLegacyAndFrostI
 	c.Check(targets[1].pubKey.Equals(frostPubKey), Equals, true)
 }
 
-func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsPrefersHighestBlockHeight(c *C) {
+func (s *RecoverKeysharesSuite) TestKeyshareRecoveryTargetsFiltersRecoveryScope(c *C) {
+	legacyPubKey := types.GetRandomPubKey()
+	frostPubKey := types.GetRandomEd25519PubKey()
+	unknownPubKey := types.GetRandomPubKey()
+	vaults := types.Vaults{
+		{PubKey: legacyPubKey, BlockHeight: 100},
+		{PubKey: frostPubKey, PubKeyFrost: frostPubKey, BlockHeight: 200},
+	}
+	membership := common.PubKeys{unknownPubKey, legacyPubKey, frostPubKey}
+
+	frostKind := recoveryTargetFrost
+	targets, recoveryErrs := keyshareRecoveryTargets(membership, vaults, &frostKind)
+	c.Assert(recoveryErrs, HasLen, 0)
+	c.Assert(targets, HasLen, 1)
+	c.Check(targets[0].kind, Equals, recoveryTargetFrost)
+
+	legacyKind := recoveryTargetLegacy
+	targets, recoveryErrs = keyshareRecoveryTargets(membership, vaults, &legacyKind)
+	c.Assert(recoveryErrs, HasLen, 1)
+	c.Assert(targets, HasLen, 1)
+	c.Check(targets[0].kind, Equals, recoveryTargetLegacy)
+}
+
+func (s *RecoverKeysharesSuite) TestKeyshareRecoveryTargetsRetainsOlderVaults(c *C) {
 	oldPubKey := types.GetRandomPubKey()
 	newPubKey := types.GetRandomPubKey()
 	vaults := types.Vaults{
 		{PubKey: oldPubKey, BlockHeight: 100},
 		{PubKey: newPubKey, BlockHeight: 300},
 	}
-	// Membership order should not matter; the most recent legacy vault wins.
+	// The older vault remains a recovery target because it may still need to
+	// migrate funds or issue refunds while retiring.
 	membership := common.PubKeys{newPubKey, oldPubKey}
 
-	targets := latestRecoveryTargets(membership, vaults)
-	c.Assert(targets, HasLen, 1)
+	targets, recoveryErrs := keyshareRecoveryTargets(membership, vaults, nil)
+	c.Assert(recoveryErrs, HasLen, 0)
+	c.Assert(targets, HasLen, 2)
 	c.Check(targets[0].kind, Equals, recoveryTargetLegacy)
 	c.Check(targets[0].pubKey.Equals(newPubKey), Equals, true)
 	c.Check(targets[0].blockHeight, Equals, int64(300))
+	c.Check(targets[1].pubKey.Equals(oldPubKey), Equals, true)
+	c.Check(targets[1].blockHeight, Equals, int64(100))
 }
 
-func (s *RecoverKeysharesSuite) TestLatestRecoveryTargetsIgnoresUnknownMembership(c *C) {
+func (s *RecoverKeysharesSuite) TestKeyshareRecoveryTargetsReportsUnknownMembership(c *C) {
 	legacyPubKey := types.GetRandomPubKey()
 	vaults := types.Vaults{{PubKey: legacyPubKey, BlockHeight: 100}}
 	membership := common.PubKeys{types.GetRandomPubKey(), legacyPubKey}
 
-	targets := latestRecoveryTargets(membership, vaults)
+	targets, recoveryErrs := keyshareRecoveryTargets(membership, vaults, nil)
 	c.Assert(targets, HasLen, 1)
+	c.Assert(recoveryErrs, HasLen, 1)
 	c.Check(targets[0].pubKey.Equals(legacyPubKey), Equals, true)
 
 	// No membership entry matches a known vault.
-	c.Assert(latestRecoveryTargets(common.PubKeys{types.GetRandomPubKey()}, vaults), HasLen, 0)
+	targets, recoveryErrs = keyshareRecoveryTargets(common.PubKeys{types.GetRandomPubKey()}, vaults, nil)
+	c.Assert(targets, HasLen, 0)
+	c.Assert(recoveryErrs, HasLen, 1)
 }
 
 func (s *RecoverKeysharesSuite) TestMsgMatchesRecoveryTargetRequiresExactKeyType(c *C) {
@@ -307,6 +338,7 @@ func (s *RecoverKeysharesSuite) TestWriteRecoveredDecompressedKeysharesDoesNotLe
 
 func (s *RecoverKeysharesSuite) TestWriteRecoveredRawKeysharesWritesOwnerOnlyFile(c *C) {
 	rawKeyshares := []byte("deadbeefcafebabe")
+	vaultPubKey := types.GetRandomEd25519PubKey()
 	encrypted, err := EncryptRawKeyshares(rawKeyshares, Mnemonic)
 	c.Assert(err, IsNil)
 
@@ -315,7 +347,7 @@ func (s *RecoverKeysharesSuite) TestWriteRecoveredRawKeysharesWritesOwnerOnlyFil
 	defer os.RemoveAll(dir)
 
 	path := filepath.Join(dir, "frost-recovery.hex")
-	err = writeRecoveredRawKeyshares(path, encrypted, Mnemonic)
+	err = writeRecoveredRawKeyshares(path, encrypted, Mnemonic, "mocknet", vaultPubKey)
 	c.Assert(err, IsNil)
 
 	fi, err := os.Stat(path)
@@ -328,9 +360,109 @@ func (s *RecoverKeysharesSuite) TestWriteRecoveredRawKeysharesWritesOwnerOnlyFil
 	// recovered file should be at-rest encrypted
 	c.Assert(storage.IsEncryptedAtRest(recoveredRaw), Equals, true)
 	atRestKey := storage.DeriveAtRestKey(Mnemonic)
-	recovered, err := storage.DecryptAtRest(atRestKey, recoveredRaw)
+	recoveredEnvelope, err := storage.DecryptAtRest(atRestKey, recoveredRaw)
+	c.Assert(err, IsNil)
+	recovered, err := decodeFrostRecoveryEnvelope(recoveredEnvelope, "mocknet", vaultPubKey)
 	c.Assert(err, IsNil)
 	c.Assert(recovered, DeepEquals, rawKeyshares)
+	c.Assert(validateFrostRecoveryFile(path, Mnemonic, "mocknet", vaultPubKey), IsNil)
+	c.Assert(validateFrostRecoveryFile(path, Mnemonic, "chainnet", vaultPubKey), NotNil)
+	c.Assert(validateFrostRecoveryFile(path, Mnemonic, "mocknet", types.GetRandomEd25519PubKey()), NotNil)
+}
+
+func (s *RecoverKeysharesSuite) TestFrostRecoveryEnvelopeRejectsLegacyAndTampering(c *C) {
+	vaultPubKey := types.GetRandomEd25519PubKey()
+	_, err := decodeFrostRecoveryEnvelope([]byte("legacy-raw-keyshare"), "mocknet", vaultPubKey)
+	c.Assert(err, NotNil)
+
+	envelope, err := encodeFrostRecoveryEnvelope([]byte("secret-keyshare"), "mocknet", vaultPubKey)
+	c.Assert(err, IsNil)
+	recovered, err := decodeFrostRecoveryEnvelope(envelope, "mocknet", vaultPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(recovered, DeepEquals, []byte("secret-keyshare"))
+
+	tampered := append([]byte(nil), envelope...)
+	tampered[len(tampered)-1] ^= 1
+	_, err = decodeFrostRecoveryEnvelope(tampered, "mocknet", vaultPubKey)
+	c.Assert(err, NotNil)
+}
+
+func (s *RecoverKeysharesSuite) TestWriteRecoveredBytesDoesNotReplaceExisting(c *C) {
+	dir, err := os.MkdirTemp("", "recover-keyshares-publish-*")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(dir)
+
+	path := filepath.Join(dir, "frost-recovery-test.hex")
+	want := []byte("existing-authenticated-envelope")
+	c.Assert(os.WriteFile(path, want, 0o600), IsNil)
+	c.Assert(writeRecoveredBytes(path, []byte("replacement")), NotNil)
+	got, err := os.ReadFile(path)
+	c.Assert(err, IsNil)
+	c.Assert(got, DeepEquals, want)
+	entries, err := os.ReadDir(dir)
+	c.Assert(err, IsNil)
+	c.Assert(entries, HasLen, 1)
+}
+
+func (s *RecoverKeysharesSuite) TestLegacyRecoveryReplacesEmptyArtifacts(c *C) {
+	_, cleanup := setupRecoveryKeysharesTest(c)
+	defer cleanup()
+
+	legacyPubKey := types.GetRandomPubKey()
+	eddsaPubKey := types.GetRandomEd25519PubKey()
+	signer, err := types.GetRandomPubKey().GetThorAddress()
+	c.Assert(err, IsNil)
+	target := keyshareRecoveryTarget{
+		kind:            recoveryTargetLegacy,
+		pubKey:          legacyPubKey,
+		poolPubKeyEddsa: eddsaPubKey,
+	}
+	vaults := types.Vaults{{PubKey: legacyPubKey, PubKeyEddsa: eddsaPubKey, BlockHeight: 123}}
+	ecdsaPath := localstateKeysharePath(legacyPubKey)
+	eddsaPath := localstateKeysharePath(eddsaPubKey)
+	c.Assert(os.WriteFile(ecdsaPath, nil, 0o600), IsNil)
+	c.Assert(os.WriteFile(eddsaPath, nil, 0o600), IsNil)
+
+	err = recoverLegacyKeySharesFromBackups(signer, target, vaults, recoveryBackups{
+		secp256k1: encryptedLocalStateTestFile(c),
+		eddsa:     encryptedLocalStateTestFile(c),
+	})
+	c.Assert(err, IsNil)
+	original := readLocalStateTestFile(c)
+	assertRecoveredLocalState(c, ecdsaPath, original)
+	assertRecoveredLocalState(c, eddsaPath, original)
+	assertEmptyRecoveryArtifactQuarantined(c, ecdsaPath)
+	assertEmptyRecoveryArtifactQuarantined(c, eddsaPath)
+}
+
+func (s *RecoverKeysharesSuite) TestFrostRecoveryReplacesEmptyArtifact(c *C) {
+	rawKeyshares := []byte("deadbeefcafebabe")
+	vaultPubKey := types.GetRandomEd25519PubKey()
+	encrypted, err := EncryptRawKeyshares(rawKeyshares, Mnemonic)
+	c.Assert(err, IsNil)
+
+	dir, err := os.MkdirTemp("", "recover-keyshares-empty-frost-*")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(dir)
+
+	path := filepath.Join(dir, "frost-recovery.hex")
+	c.Assert(os.WriteFile(path, nil, 0o600), IsNil)
+	exists, err := recoveryFileExists(path)
+	c.Assert(err, IsNil)
+	c.Assert(exists, Equals, false)
+	c.Assert(writeRecoveredRawKeyshares(path, encrypted, Mnemonic, "mocknet", vaultPubKey), IsNil)
+	c.Assert(validateFrostRecoveryFile(path, Mnemonic, "mocknet", vaultPubKey), IsNil)
+	assertEmptyRecoveryArtifactQuarantined(c, path)
+}
+
+func assertEmptyRecoveryArtifactQuarantined(c *C, path string) {
+	matches, err := filepath.Glob(path + ".invalid-*")
+	c.Assert(err, IsNil)
+	c.Assert(matches, HasLen, 1)
+	fi, err := os.Stat(matches[0])
+	c.Assert(err, IsNil)
+	c.Assert(fi.Mode().IsRegular(), Equals, true)
+	c.Assert(fi.Size(), Equals, int64(0))
 }
 
 func setupRecoveryKeysharesTest(c *C) (string, func()) {

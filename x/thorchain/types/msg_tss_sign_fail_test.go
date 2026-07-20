@@ -124,6 +124,28 @@ func (s MsgTssKeysignFailSuite) TestMsgTssKeysignFailRoundNormalization(c *C) {
 	c.Check(err, NotNil)
 	c.Check(errors.Is(err, se.ErrUnknownRequest), Equals, true)
 
+	for _, round := range []string{
+		tssMessages.FROSTKEYSIGNPREPROCESS,
+		tssMessages.FROSTKEYSIGNSHARE,
+		tssMessages.FROSTKEYSIGNRESULT,
+	} {
+		blame.Round = round
+		msgFrost, frostErr := NewMsgTssKeysignFail(1, blame, "hello", coins, signer, pubKey)
+		c.Assert(frostErr, IsNil)
+		c.Check(msgFrost.Blame.Round, Equals, round)
+		c.Check(msgFrost.ValidateBasic(), IsNil)
+	}
+
+	for _, round := range []string{
+		tssMessages.FrostBlameRoundPreprocessEquivocation,
+		tssMessages.FrostBlameRoundShareEquivocation,
+	} {
+		blame.Round = round
+		msgEvidence, evidenceErr := NewMsgTssKeysignFail(1, blame, "hello", coins, signer, pubKey)
+		c.Check(msgEvidence, IsNil)
+		c.Check(evidenceErr, NotNil)
+	}
+
 	// Empty round is allowed (e.g. blame with no specific nodes).
 	msgCanonical.Blame.Round = ""
 	err = msgCanonical.ValidateBasic()

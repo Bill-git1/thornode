@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -19,21 +20,29 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 	tcommon "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 const (
-	frostMsgIDDomain             = "thorchain-frost-keysign-msgid-v4"
+	frostWireProtocolVersion     = messages.FrostProtocolVersion
+	frostMsgIDDomain             = "thorchain-frost-keysign-msgid-v6"
 	frostDecoyContextDomain      = "thorchain-frost-decoy-context-v1"
-	frostPlanHashDomain          = "thorchain-frost-eventuality-plan-v1"
-	frostEventualityIDDomain     = "thorchain-frost-eventuality-id-v1"
-	frostEventualityVersion      = uint8(1)
-	frostRoundPreprocess         = "frost_preprocess"
-	frostRoundShare              = "frost_share"
-	frostRoundResult             = "frost_result"
+	frostPlanHashDomain          = "thorchain-frost-eventuality-plan-v2"
+	frostEventualityIDDomain     = "thorchain-frost-eventuality-id-v2"
+	frostEventualityVersion      = uint8(2)
+	frostRoundPreprocess         = messages.FROSTKEYSIGNPREPROCESS
+	frostRoundShare              = messages.FROSTKEYSIGNSHARE
+	frostRoundResult             = messages.FROSTKEYSIGNRESULT
 	frostEventualityHashHexBytes = 64
 	frostJoinAttemptDomain       = "thorchain-frost-keysign-join-attempt-v1"
 	frostJoinRotationVersion     = "3.20.0"
 	frostMaxJoinLeaderAttempts   = 3
+	frostMaxResultTxHexChars     = 2 * 1024 * 1024
+	frostMaxResultSpentRefs      = 4096
+	frostMaxResultBlameNodes     = 128
+	frostMaxResultReasonBytes    = 512
+	frostMaxResultEvidenceBytes  = 64 * 1024
+	frostEquivocationFailReason  = "frost signed envelope equivocation"
 )
 
 var errFrostResultTimeout = errors.New("timeout waiting for frost result")
@@ -44,9 +53,13 @@ type FrostSignCoordinator struct {
 	sidecar          FrostSidecarClient
 	localPubKey      string
 	msgID            string
+	vaultPubKey      string
+	network          string
 	expectedPlanHash string
 	msgChan          chan *p2p.Message
 	timeout          time.Duration
+	privateKey       tcrypto.PrivKey
+	strictTranscript bool
 }
 
 func NewFrostSignCoordinator(
@@ -57,6 +70,7 @@ func NewFrostSignCoordinator(
 	expectedPlanHash string,
 	msgChan chan *p2p.Message,
 	timeout time.Duration,
+	privateKey tcrypto.PrivKey,
 ) *FrostSignCoordinator {
 	if timeout <= 0 {
 		timeout = 90 * time.Second
@@ -70,6 +84,8 @@ func NewFrostSignCoordinator(
 		expectedPlanHash: strings.TrimSpace(expectedPlanHash),
 		msgChan:          msgChan,
 		timeout:          timeout,
+		privateKey:       privateKey,
+		strictTranscript: privateKey != nil,
 	}
 }
 
@@ -82,6 +98,10 @@ func FrostKeySignMsgID(req FrostKeySignRequest) (string, error) {
 	if toAddr == "" {
 		return "", fmt.Errorf("to address is required")
 	}
+	network := strings.ToLower(strings.TrimSpace(req.Network))
+	if network == "" {
+		network = common.ChainNetworkName(common.CurrentChainNetwork)
+	}
 
 	requiredInputsHash, err := frostRequiredInputsHash(req.RequiredInputs)
 	if err != nil {
@@ -90,13 +110,16 @@ func FrostKeySignMsgID(req FrostKeySignRequest) (string, error) {
 
 	canonical := strings.Join([]string{
 		"domain=" + frostMsgIDDomain,
+		"protocol_version=" + strconv.FormatUint(uint64(frostWireProtocolVersion), 10),
 		"vault_pub_key=" + vault,
+		"network=" + network,
 		"to_address=" + toAddr,
 		"amount_atomic=" + strconv.FormatUint(req.AmountAtomic, 10),
 		"memo=" + req.Memo,
 		"fee_rate=" + strconv.FormatUint(req.FeeRate, 10),
 		"required_inputs_hash=" + requiredInputsHash,
 		"max_inputs=" + strconv.FormatInt(req.MaxInputs, 10),
+		"dust_threshold=" + strconv.FormatUint(req.DustThreshold, 10),
 		"max_selected_input_value_atomic=" + strconv.FormatUint(req.MaxSelectedInputValueAtomic, 10),
 		"max_gas_atomic=" + strconv.FormatUint(req.MaxGasAtomic, 10),
 		"tx_in_hash=" + strings.ToLower(strings.TrimSpace(req.TxInHash)),
@@ -331,6 +354,7 @@ func FrostPlanHash(req FrostKeySignRequest, msgID string) (string, error) {
 	}
 	canonical := strings.Join([]string{
 		"domain=" + frostPlanHashDomain,
+		"protocol_version=" + strconv.FormatUint(uint64(frostWireProtocolVersion), 10),
 		"msg_id=" + msgID,
 		"vault_pub_key=" + vault,
 		"to_address=" + toAddress,
@@ -339,6 +363,7 @@ func FrostPlanHash(req FrostKeySignRequest, msgID string) (string, error) {
 		"fee_rate=" + strconv.FormatUint(req.FeeRate, 10),
 		"required_inputs_hash=" + requiredInputsHash,
 		"max_inputs=" + strconv.FormatInt(req.MaxInputs, 10),
+		"dust_threshold=" + strconv.FormatUint(req.DustThreshold, 10),
 		"max_selected_input_value_atomic=" + strconv.FormatUint(req.MaxSelectedInputValueAtomic, 10),
 		"max_gas_atomic=" + strconv.FormatUint(req.MaxGasAtomic, 10),
 		"signer_set_hash=" + signerSetHash,
@@ -359,10 +384,11 @@ func FrostTxHexHash(txHex string) (string, error) {
 	return tcommon.MsgToHashString(raw)
 }
 
-func FrostEventualityID(planHash, txHash, txHexHash string, feeAtomic uint64) (string, error) {
+func FrostEventualityID(planHash, txHash, txHexHash, txKeyHash string, feeAtomic uint64) (string, error) {
 	planHash = strings.ToLower(strings.TrimSpace(planHash))
 	txHash = strings.ToLower(strings.TrimSpace(txHash))
 	txHexHash = strings.ToLower(strings.TrimSpace(txHexHash))
+	txKeyHash = strings.ToLower(strings.TrimSpace(txKeyHash))
 	if err := validateHashHex("plan_hash", planHash); err != nil {
 		return "", err
 	}
@@ -372,22 +398,30 @@ func FrostEventualityID(planHash, txHash, txHexHash string, feeAtomic uint64) (s
 	if err := validateHashHex("tx_hex_hash", txHexHash); err != nil {
 		return "", err
 	}
+	if err := validateHashHex("tx_key_hash", txKeyHash); err != nil {
+		return "", err
+	}
 	canonical := strings.Join([]string{
 		"domain=" + frostEventualityIDDomain,
 		"plan_hash=" + planHash,
 		"tx_hash=" + txHash,
 		"tx_hex_hash=" + txHexHash,
+		"tx_key_hash=" + txKeyHash,
 		"fee_atomic=" + strconv.FormatUint(feeAtomic, 10),
 	}, "\n")
 	return tcommon.MsgToHashString([]byte(canonical))
 }
 
-func BuildFrostEventuality(planHash, txHash, txHex string, feeAtomic uint64) (FrostEventuality, error) {
+func BuildFrostEventuality(planHash, txHash, txHex, txKey string, feeAtomic uint64) (FrostEventuality, error) {
 	txHexHash, err := FrostTxHexHash(txHex)
 	if err != nil {
 		return FrostEventuality{}, err
 	}
-	eventualityID, err := FrostEventualityID(planHash, txHash, txHexHash, feeAtomic)
+	txKeyHash, err := FrostTxKeyHash(txKey)
+	if err != nil {
+		return FrostEventuality{}, err
+	}
+	eventualityID, err := FrostEventualityID(planHash, txHash, txHexHash, txKeyHash, feeAtomic)
 	if err != nil {
 		return FrostEventuality{}, err
 	}
@@ -395,6 +429,7 @@ func BuildFrostEventuality(planHash, txHash, txHex string, feeAtomic uint64) (Fr
 		Version:       frostEventualityVersion,
 		PlanHash:      strings.ToLower(strings.TrimSpace(planHash)),
 		TxHexHash:     strings.ToLower(strings.TrimSpace(txHexHash)),
+		TxKeyHash:     txKeyHash,
 		EventualityID: strings.ToLower(strings.TrimSpace(eventualityID)),
 	}, nil
 }
@@ -404,6 +439,7 @@ func ValidateFrostEventuality(
 	msgID string,
 	txHash string,
 	txHex string,
+	txKey string,
 	feeAtomic uint64,
 	eventuality FrostEventuality,
 ) error {
@@ -428,7 +464,14 @@ func ValidateFrostEventuality(
 	if !strings.EqualFold(strings.TrimSpace(eventuality.TxHexHash), expectedTxHexHash) {
 		return fmt.Errorf("eventuality tx_hex_hash mismatch")
 	}
-	expectedEventualityID, err := FrostEventualityID(expectedPlanHash, txHash, expectedTxHexHash, feeAtomic)
+	expectedTxKeyHash, err := FrostTxKeyHash(txKey)
+	if err != nil {
+		return fmt.Errorf("fail to derive tx_key_hash: %w", err)
+	}
+	if !strings.EqualFold(strings.TrimSpace(eventuality.TxKeyHash), expectedTxKeyHash) {
+		return fmt.Errorf("eventuality tx_key_hash mismatch")
+	}
+	expectedEventualityID, err := FrostEventualityID(expectedPlanHash, txHash, expectedTxHexHash, expectedTxKeyHash, feeAtomic)
 	if err != nil {
 		return fmt.Errorf("fail to derive eventuality_id: %w", err)
 	}
@@ -436,6 +479,30 @@ func ValidateFrostEventuality(
 		return fmt.Errorf("eventuality_id mismatch")
 	}
 	return nil
+}
+
+// FrostTxKeyHash validates the Rust-returned Monero transaction key as a
+// canonical lowercase 32-byte hex value and commits to its raw bytes without
+// exposing it inside the eventuality identifier.
+func FrostTxKeyHash(txKey string) (string, error) {
+	if txKey != strings.TrimSpace(txKey) || txKey != strings.ToLower(txKey) || len(txKey) != 64 {
+		return "", fmt.Errorf("tx_key must be canonical lowercase 32-byte hex")
+	}
+	raw, err := hex.DecodeString(txKey)
+	if err != nil {
+		return "", fmt.Errorf("tx_key must be canonical lowercase 32-byte hex")
+	}
+	allZero := true
+	for _, b := range raw {
+		if b != 0 {
+			allZero = false
+			break
+		}
+	}
+	if allZero {
+		return "", fmt.Errorf("tx_key must not be zero")
+	}
+	return tcommon.MsgToHashString(raw)
 }
 
 func validateHashHex(label, value string) error {
@@ -448,12 +515,181 @@ func validateHashHex(label, value string) error {
 	return nil
 }
 
+// validateFrostPreparedInputs binds the signed Monero transaction back to the
+// exact vault outputs selected when this local sidecar prepared the ceremony.
+// Ordering is intentionally ignored because Monero may reorder transaction
+// inputs while constructing the final prefix.
+func validateFrostPreparedInputs(selected, spent []FrostSpentOutputRef, txHash string) error {
+	if len(selected) == 0 {
+		return fmt.Errorf("prepare returned no selected inputs")
+	}
+	if len(selected) > frostMaxResultSpentRefs {
+		return fmt.Errorf("prepare returned too many selected inputs: %d", len(selected))
+	}
+	if len(spent) != len(selected) {
+		return fmt.Errorf("signed input count %d does not match prepared input count %d", len(spent), len(selected))
+	}
+
+	normalizeHash := func(label, value string) (string, error) {
+		value = strings.TrimSpace(value)
+		if err := validateHashHex(label, value); err != nil {
+			return "", err
+		}
+		return strings.ToLower(value), nil
+	}
+
+	finalTxHash, err := normalizeHash("tx_hash", txHash)
+	if err != nil {
+		return err
+	}
+
+	selectedByRef := make(map[string]string, len(selected))
+	selectedKeyImages := make(map[string]struct{}, len(selected))
+	for i, ref := range selected {
+		inputHash, err := normalizeHash(fmt.Sprintf("selected_inputs[%d].tx_hash", i), ref.TxHash)
+		if err != nil {
+			return err
+		}
+		inputID := fmt.Sprintf("%s:%d", inputHash, ref.OutputIndex)
+		if _, exists := selectedByRef[inputID]; exists {
+			return fmt.Errorf("prepare returned duplicate selected input %s", inputID)
+		}
+
+		keyImage := ""
+		if strings.TrimSpace(ref.KeyImage) != "" {
+			keyImage, err = normalizeHash(fmt.Sprintf("selected_inputs[%d].key_image", i), ref.KeyImage)
+			if err != nil {
+				return err
+			}
+			if _, exists := selectedKeyImages[keyImage]; exists {
+				return fmt.Errorf("prepare returned duplicate key image %s", keyImage)
+			}
+			selectedKeyImages[keyImage] = struct{}{}
+		}
+		selectedByRef[inputID] = keyImage
+	}
+
+	seenRefs := make(map[string]struct{}, len(spent))
+	seenKeyImages := make(map[string]struct{}, len(spent))
+	for i, ref := range spent {
+		inputHash, err := normalizeHash(fmt.Sprintf("spent_output_refs[%d].tx_hash", i), ref.TxHash)
+		if err != nil {
+			return err
+		}
+		inputID := fmt.Sprintf("%s:%d", inputHash, ref.OutputIndex)
+		preparedKeyImage, exists := selectedByRef[inputID]
+		if !exists {
+			return fmt.Errorf("signed transaction spent unprepared input %s", inputID)
+		}
+		if _, duplicate := seenRefs[inputID]; duplicate {
+			return fmt.Errorf("signed transaction repeated input %s", inputID)
+		}
+		seenRefs[inputID] = struct{}{}
+
+		keyImage, err := normalizeHash(fmt.Sprintf("spent_output_refs[%d].key_image", i), ref.KeyImage)
+		if err != nil {
+			return err
+		}
+		if _, duplicate := seenKeyImages[keyImage]; duplicate {
+			return fmt.Errorf("signed transaction repeated key image %s", keyImage)
+		}
+		seenKeyImages[keyImage] = struct{}{}
+		if preparedKeyImage != "" && keyImage != preparedKeyImage {
+			return fmt.Errorf("signed key image does not match prepared input %s", inputID)
+		}
+
+		spendTxHash, err := normalizeHash(fmt.Sprintf("spent_output_refs[%d].spend_tx_hash", i), ref.SpendTxHash)
+		if err != nil {
+			return err
+		}
+		if spendTxHash != finalTxHash {
+			return fmt.Errorf("spent input %s names a different spend transaction", inputID)
+		}
+	}
+
+	return nil
+}
+
+// normalizeFrostResultSpentRefs validates the portable spent-ref metadata on a
+// quorum-gossiped result. Stand-by nodes did not run prepare locally, so they
+// cannot compare against a selected-input set, but they can still reject
+// malformed, duplicated, or cross-transaction refs before persisting a signed
+// payload and checkpoint.
+func normalizeFrostResultSpentRefs(refs []FrostSpentOutputRef, txHash string) ([]FrostSpentOutputRef, error) {
+	if len(refs) == 0 {
+		return nil, fmt.Errorf("frost success result has no spent refs")
+	}
+	if len(refs) > frostMaxResultSpentRefs {
+		return nil, fmt.Errorf("frost success result spent refs exceeds limit")
+	}
+
+	normalizeHash := func(label, value string) (string, error) {
+		value = strings.TrimSpace(value)
+		if err := validateHashHex(label, value); err != nil {
+			return "", err
+		}
+		return strings.ToLower(value), nil
+	}
+	finalTxHash, err := normalizeHash("tx_hash", txHash)
+	if err != nil {
+		return nil, err
+	}
+
+	normalized := make([]FrostSpentOutputRef, len(refs))
+	seenRefs := make(map[string]struct{}, len(refs))
+	seenKeyImages := make(map[string]struct{}, len(refs))
+	for i, ref := range refs {
+		fundingTxHash, normalizeErr := normalizeHash(fmt.Sprintf("spent_output_refs[%d].tx_hash", i), ref.TxHash)
+		if normalizeErr != nil {
+			return nil, normalizeErr
+		}
+		inputID := fmt.Sprintf("%s:%d", fundingTxHash, ref.OutputIndex)
+		if _, duplicate := seenRefs[inputID]; duplicate {
+			return nil, fmt.Errorf("frost success result repeated input %s", inputID)
+		}
+		seenRefs[inputID] = struct{}{}
+
+		keyImage, normalizeErr := normalizeHash(fmt.Sprintf("spent_output_refs[%d].key_image", i), ref.KeyImage)
+		if normalizeErr != nil {
+			return nil, normalizeErr
+		}
+		if _, duplicate := seenKeyImages[keyImage]; duplicate {
+			return nil, fmt.Errorf("frost success result repeated key image %s", keyImage)
+		}
+		seenKeyImages[keyImage] = struct{}{}
+
+		spendTxHash, normalizeErr := normalizeHash(fmt.Sprintf("spent_output_refs[%d].spend_tx_hash", i), ref.SpendTxHash)
+		if normalizeErr != nil {
+			return nil, normalizeErr
+		}
+		if spendTxHash != finalTxHash {
+			return nil, fmt.Errorf("frost success result input %s names a different spend transaction", inputID)
+		}
+
+		normalized[i] = FrostSpentOutputRef{
+			TxHash:      fundingTxHash,
+			OutputIndex: ref.OutputIndex,
+			KeyImage:    keyImage,
+			SpendTxHash: spendTxHash,
+		}
+	}
+	return normalized, nil
+}
+
 func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarClient) (FrostKeySignResponse, error) {
 	if sidecar == nil {
 		return FrostKeySignResponse{}, fmt.Errorf("frost sidecar client is nil")
 	}
 	if len(req.SignerPubKeys) == 0 {
 		return FrostKeySignResponse{}, fmt.Errorf("signer pub keys are empty")
+	}
+	expectedNetwork := common.ChainNetworkName(common.CurrentChainNetwork)
+	req.Network = strings.ToLower(strings.TrimSpace(req.Network))
+	if req.Network == "" {
+		req.Network = expectedNetwork
+	}
+	if req.Network != expectedNetwork {
+		return FrostKeySignResponse{}, fmt.Errorf("frost deployment network %q does not match current network %q", req.Network, expectedNetwork)
 	}
 	activeSignerPubKeys := frostActiveSignerPubKeys(req)
 	if len(activeSignerPubKeys) == 0 {
@@ -480,13 +716,18 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 		)
 	}
 
-	msgChan := make(chan *p2p.Message, 1024)
+	allowedPeerIDs, err := conversion.GetPeerIDsFromPubKeys(activeSignerPubKeys)
+	if err != nil {
+		return FrostKeySignResponse{}, fmt.Errorf("fail to resolve FROST session peers: %w", err)
+	}
+	msgChan := make(chan *p2p.Message, p2p.FrostSessionQueueSize)
 	sigChan := make(chan string, 2)
+	verificationMessageLimit := p2p.FrostVerificationMessagesPerPeer(len(activeSignerPubKeys), 2)
 
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostPreprocessMsg, msgID, msgChan)
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostShareMsg, msgID, msgChan)
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostVerifyMsg, msgID, msgChan)
-	t.p2pCommunication.SetSubscribe(messages.TSSFrostResultMsg, msgID, msgChan)
+	t.p2pCommunication.SetSubscribeWithPeers(messages.TSSFrostPreprocessMsg, msgID, msgChan, allowedPeerIDs, p2p.FrostMaxSessionPayload, p2p.FrostMaxMessagesPerPeer)
+	t.p2pCommunication.SetSubscribeWithPeers(messages.TSSFrostShareMsg, msgID, msgChan, allowedPeerIDs, p2p.FrostMaxSessionPayload, p2p.FrostMaxMessagesPerPeer)
+	t.p2pCommunication.SetSubscribeWithPeers(messages.TSSFrostVerifyMsg, msgID, msgChan, allowedPeerIDs, p2p.FrostMaxSessionPayload, verificationMessageLimit)
+	t.p2pCommunication.SetSubscribeWithPeers(messages.TSSFrostResultMsg, msgID, msgChan, allowedPeerIDs, p2p.FrostMaxSessionPayload, p2p.FrostMaxMessagesPerPeer)
 	defer func() {
 		t.p2pCommunication.CancelSubscribe(messages.TSSFrostPreprocessMsg, msgID)
 		t.p2pCommunication.CancelSubscribe(messages.TSSFrostShareMsg, msgID)
@@ -505,6 +746,7 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 		planHash,
 		msgChan,
 		t.conf.KeySignTimeout,
+		t.privateKey,
 	)
 
 	// Nodes outside the filtered active set must not join the FROST ceremony,
@@ -552,6 +794,13 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 			Blame:  blame.NewBlame("fail to resolve active participants", nil),
 		}, nil
 	}
+	// The pre-join subscription is restricted to the eligible signer set. Once
+	// the authenticated join response forms a smaller party, narrow all round
+	// traffic to that exact set. Result gossip stays on the eligible set so
+	// stand-by members can adopt a quorum result.
+	t.p2pCommunication.UpdateSubscribePeers(messages.TSSFrostPreprocessMsg, msgID, onlinePeers)
+	t.p2pCommunication.UpdateSubscribePeers(messages.TSSFrostShareMsg, msgID, onlinePeers)
+	t.p2pCommunication.UpdateSubscribePeers(messages.TSSFrostVerifyMsg, msgID, onlinePeers)
 	allPeerIDs, peerErr := conversion.GetPeerIDsFromPubKeys(req.SignerPubKeys)
 	if peerErr != nil {
 		t.logger.Warn().Err(peerErr).Msg("fail to resolve all peer IDs for frost result broadcast, fallback to active peers")
@@ -602,10 +851,22 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 	if err := coordinator.BroadcastResult(resp, allPeerIDs); err != nil {
 		t.logger.Warn().Err(err).Msg("fail to broadcast local frost failure result")
 	}
-	if waitErr == nil && waitResp.Status == tcommon.Fail && len(waitResp.Blame.BlameNodes) > 0 && len(resp.Blame.BlameNodes) == 0 {
+	if waitErr == nil && shouldAdoptFrostFailureResult(resp, waitResp) {
 		return waitResp, nil
 	}
 	return resp, nil
+}
+
+func shouldAdoptFrostFailureResult(local, candidate FrostKeySignResponse) bool {
+	if candidate.Status != tcommon.Fail || len(candidate.Blame.BlameNodes) == 0 || len(local.Blame.BlameNodes) > 0 {
+		return false
+	}
+	// Once the local signature share has escaped, never replace that terminal
+	// state with a failure attributed to an earlier or non-terminal phase. A
+	// share-phase quorum failure is safe to adopt because it preserves the same
+	// vault-stick/checkpoint semantics while adding actionable peer blame.
+	return strings.TrimSpace(local.Blame.Round) != frostRoundShare ||
+		strings.TrimSpace(candidate.Blame.Round) == frostRoundShare
 }
 
 func (c *FrostSignCoordinator) Execute(
@@ -624,6 +885,17 @@ func (c *FrostSignCoordinator) Execute(
 			Status: tcommon.Fail,
 			Blame:  blame.NewBlame("frost msgID is empty", nil),
 		}
+	}
+	c.vaultPubKey = strings.TrimSpace(req.VaultPubKey)
+	if c.vaultPubKey == "" {
+		return FrostKeySignResponse{
+			Status: tcommon.Fail,
+			Blame:  blame.NewBlame("frost vault pubkey is empty", nil),
+		}
+	}
+	c.network = strings.ToLower(strings.TrimSpace(req.Network))
+	if c.network == "" {
+		c.network = common.ChainNetworkName(common.CurrentChainNetwork)
 	}
 	_, participantIndexMap, originalByNormalized, err := buildParticipantIndex(req.SignerPubKeys)
 	if err != nil {
@@ -728,35 +1000,36 @@ func (c *FrostSignCoordinator) Execute(
 		AllShares: shares,
 	})
 	if err != nil {
-		return FrostKeySignResponse{
-			Status: tcommon.Fail,
-			Blame:  blame.NewBlame(fmt.Sprintf("frost combine failed: %v", err), nil),
-		}
+		return c.failForPubKeys(fmt.Sprintf("frost combine failed: %v", err), frostRoundShare, nil)
 	}
 	// The sidecar enforces MaxGas during transaction construction, but keep the
 	// same cap check here so a buggy or mismatched signer cannot return an
 	// over-cap transaction that Bifrost would later observe.
 	if req.MaxGasAtomic > 0 && combineResp.FeeAtomic > req.MaxGasAtomic {
-		return FrostKeySignResponse{
-			FeeAtomic: combineResp.FeeAtomic,
-			Status:    tcommon.Fail,
-			Blame: blame.NewBlame(
-				fmt.Sprintf("%s actual_fee_atomic=%d max_gas_atomic=%d", FrostFailReasonXMRMaxGasExceeded, combineResp.FeeAtomic, req.MaxGasAtomic),
-				nil,
-			),
-		}
+		resp := c.failForPubKeys(
+			fmt.Sprintf("%s actual_fee_atomic=%d max_gas_atomic=%d", FrostFailReasonXMRMaxGasExceeded, combineResp.FeeAtomic, req.MaxGasAtomic),
+			frostRoundShare,
+			nil,
+		)
+		resp.FeeAtomic = combineResp.FeeAtomic
+		return resp
 	}
-	eventuality, err := BuildFrostEventuality(c.expectedPlanHash, combineResp.TxHash, combineResp.TxHex, combineResp.FeeAtomic)
+	if err := validateFrostPreparedInputs(prepareResp.SelectedInputs, combineResp.SpentOutputRefs, combineResp.TxHash); err != nil {
+		return c.failForPubKeys(fmt.Sprintf("frost combine input binding failed: %v", err), frostRoundShare, nil)
+	}
+	txKey := combineResp.TxKey
+	if _, err := FrostTxKeyHash(txKey); err != nil {
+		return c.failForPubKeys(fmt.Sprintf("invalid frost combine tx_key: %v", err), frostRoundShare, nil)
+	}
+	eventuality, err := BuildFrostEventuality(c.expectedPlanHash, combineResp.TxHash, combineResp.TxHex, txKey, combineResp.FeeAtomic)
 	if err != nil {
-		return FrostKeySignResponse{
-			Status: tcommon.Fail,
-			Blame:  blame.NewBlame(fmt.Sprintf("failed to derive eventuality: %v", err), nil),
-		}
+		return c.failForPubKeys(fmt.Sprintf("failed to derive eventuality: %v", err), frostRoundShare, nil)
 	}
 
 	return FrostKeySignResponse{
 		TxHash:          combineResp.TxHash,
 		TxHex:           combineResp.TxHex,
+		TxKey:           txKey,
 		FeeAtomic:       combineResp.FeeAtomic,
 		MsgID:           c.msgID,
 		Eventuality:     eventuality,
@@ -772,6 +1045,21 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 	activePeerIDs []peer.ID,
 	local FrostPreprocessPayload,
 ) (map[string]string, *FrostKeySignResponse) {
+	localHash, err := FrostTranscriptPreprocessHash(c.msgID, local)
+	if err != nil {
+		resp := c.failForPubKeys(fmt.Sprintf("failed to hash local preprocess payload: %v", err), frostRoundPreprocess, nil)
+		return nil, &resp
+	}
+	localEnvelope := frostEnvelopeFromPreprocess(c.msgID, c.vaultPubKey, c.network, local, localHash)
+	if c.strictTranscript {
+		localEnvelope, err = newFrostSignedEnvelope(c.privateKey, c.msgID, c.vaultPubKey, c.network, frostRoundPreprocess, local.SenderPubKey, local.ParticipantIndex, localHash)
+		if err != nil {
+			resp := c.failForPubKeys(err.Error(), frostRoundPreprocess, nil)
+			return nil, &resp
+		}
+		local.ProtocolVersion = localEnvelope.ProtocolVersion
+		local.Signature = localEnvelope.Signature
+	}
 	payload, err := json.Marshal(local)
 	if err != nil {
 		resp := FrostKeySignResponse{
@@ -787,12 +1075,7 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 		}
 		return nil, &resp
 	}
-	localHash, err := FrostTranscriptPreprocessHash(c.msgID, local)
-	if err != nil {
-		resp := c.failForPubKeys(fmt.Sprintf("failed to hash local preprocess payload: %v", err), frostRoundPreprocess, []string{local.SenderPubKey})
-		return nil, &resp
-	}
-	verifier, err := newFrostTranscriptVerifier(frostRoundPreprocess, activeSet, participantIndexMap)
+	verifier, err := newFrostTranscriptVerifier(frostRoundPreprocess, activeSet, participantIndexMap, c.vaultPubKey, c.network)
 	if err != nil {
 		resp := c.failForPubKeys(fmt.Sprintf("failed to initialize preprocess transcript verifier: %v", err), frostRoundPreprocess, nil)
 		return nil, &resp
@@ -801,7 +1084,13 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 		resp := c.failForPubKeys(failure.reason, frostRoundPreprocess, failure.blamePubKey)
 		return nil, &resp
 	}
-	if err := c.broadcastTranscriptVerification(frostRoundPreprocess, local.SenderPubKey, local.ParticipantIndex, localHash, activePeerIDs); err != nil {
+	if c.strictTranscript {
+		if _, err := verifier.recordSignedEnvelope(localEnvelope); err != nil {
+			resp := c.failForPubKeys(err.Error(), frostRoundPreprocess, nil)
+			return nil, &resp
+		}
+	}
+	if err := c.broadcastSignedTranscriptVerification(localEnvelope, activePeerIDs); err != nil {
 		resp := c.failForPubKeys(fmt.Sprintf("failed to broadcast preprocess verification: %v", err), frostRoundPreprocess, nil)
 		return nil, &resp
 	}
@@ -830,35 +1119,43 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 			case messages.TSSFrostPreprocessMsg:
 				var incoming FrostPreprocessPayload
 				if err := json.Unmarshal(wrapped.Payload, &incoming); err != nil {
-					resp := c.failForMalformed(msg.PeerID, "invalid preprocess payload", frostRoundPreprocess)
-					return nil, &resp
+					c.logger.Warn().Err(err).Str("peer", msg.PeerID.String()).Msg("ignoring malformed preprocess payload")
+					continue
 				}
 				senderNorm := normalizePubKey(incoming.SenderPubKey)
 				if senderNorm == "" {
-					resp := c.failForMalformed(msg.PeerID, "empty sender pubkey in preprocess payload", frostRoundPreprocess)
-					return nil, &resp
+					continue
 				}
 				if _, ok := activeSet.originalByNormalized[senderNorm]; !ok {
-					resp := c.failForPubKeys("preprocess sender is not in active participant set", frostRoundPreprocess, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				if err := c.validateSenderPeerBinding(msg.PeerID, incoming.SenderPubKey); err != nil {
-					resp := c.failForPubKeys(err.Error(), frostRoundPreprocess, []string{incoming.SenderPubKey})
-					return nil, &resp
+					c.logger.Warn().Err(err).Str("peer", msg.PeerID.String()).Msg("ignoring spoofed preprocess sender")
+					continue
 				}
 				expectedIndex := participantIndexMap[senderNorm]
 				if incoming.ParticipantIndex != expectedIndex {
-					resp := c.failForPubKeys("participant index mismatch in preprocess payload", frostRoundPreprocess, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				if strings.TrimSpace(incoming.PreprocessHex) == "" {
-					resp := c.failForPubKeys("empty preprocess payload", frostRoundPreprocess, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				payloadHash, err := FrostTranscriptPreprocessHash(c.msgID, incoming)
 				if err != nil {
-					resp := c.failForPubKeys(fmt.Sprintf("failed to hash preprocess payload: %v", err), frostRoundPreprocess, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
+				}
+				incomingEnvelope := frostEnvelopeFromPreprocess(c.msgID, c.vaultPubKey, c.network, incoming, payloadHash)
+				if c.strictTranscript {
+					if err := verifyFrostSignedEnvelope(incomingEnvelope); err != nil {
+						c.logger.Warn().Err(err).Str("peer", msg.PeerID.String()).Msg("ignoring unsigned preprocess payload")
+						continue
+					}
+					if evidence, err := verifier.recordSignedEnvelope(incomingEnvelope); err != nil {
+						continue
+					} else if evidence != nil {
+						resp := c.failForEquivocation(*evidence)
+						return nil, &resp
+					}
 				}
 				isNewPayload, failure := verifier.recordPayload(incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash)
 				if failure != nil {
@@ -869,7 +1166,7 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 					continue
 				}
 				values[strconv.FormatUint(uint64(incoming.ParticipantIndex), 10)] = incoming.PreprocessHex
-				if err := c.broadcastTranscriptVerification(frostRoundPreprocess, incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash, activePeerIDs); err != nil {
+				if err := c.broadcastSignedTranscriptVerification(incomingEnvelope, activePeerIDs); err != nil {
 					resp := c.failForPubKeys(fmt.Sprintf("failed to broadcast preprocess verification: %v", err), frostRoundPreprocess, nil)
 					return nil, &resp
 				}
@@ -880,24 +1177,33 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 			case messages.TSSFrostVerifyMsg:
 				var incoming FrostVerifyPayload
 				if err := json.Unmarshal(wrapped.Payload, &incoming); err != nil {
-					resp := c.failForMalformed(msg.PeerID, "invalid transcript verification payload", frostRoundPreprocess)
-					return nil, &resp
+					continue
 				}
 				if strings.TrimSpace(incoming.Round) != frostRoundPreprocess {
 					continue
 				}
 				attesterNorm := normalizePubKey(incoming.SenderPubKey)
 				if attesterNorm == "" {
-					resp := c.failForMalformed(msg.PeerID, "empty sender pubkey in transcript verification payload", frostRoundPreprocess)
-					return nil, &resp
+					continue
 				}
 				if _, ok := activeSet.originalByNormalized[attesterNorm]; !ok {
-					resp := c.failForPubKeys("verification attester is not in active participant set", frostRoundPreprocess, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				if err := c.validateSenderPeerBinding(msg.PeerID, incoming.SenderPubKey); err != nil {
-					resp := c.failForPubKeys(err.Error(), frostRoundPreprocess, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
+				}
+				if c.strictTranscript {
+					echo := frostEchoFromVerify(c.msgID, c.vaultPubKey, c.network, incoming)
+					if err := verifyFrostSignedEcho(echo); err != nil {
+						c.logger.Warn().Err(err).Str("peer", msg.PeerID.String()).Msg("ignoring invalid signed preprocess echo")
+						continue
+					}
+					if evidence, err := verifier.recordSignedEnvelope(echo.Target); err != nil {
+						continue
+					} else if evidence != nil {
+						resp := c.failForEquivocation(*evidence)
+						return nil, &resp
+					}
 				}
 				if _, failure := verifier.recordVerification(
 					incoming.SenderPubKey,
@@ -905,18 +1211,17 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 					incoming.TargetParticipantIndex,
 					incoming.PayloadHash,
 				); failure != nil {
-					resp := c.failForPubKeys(failure.reason, frostRoundPreprocess, failure.blamePubKey)
-					return nil, &resp
+					c.logger.Warn().Err(failure).Str("peer", msg.PeerID.String()).Msg("ignoring invalid preprocess verification")
+					continue
 				}
 			}
 		case <-timer.C:
 			missingPayloads := verifier.missingPayloadPubKeys()
 			missingVerifiers := verifier.missingVerifierPubKeys()
-			missing := mergePubKeyLists(missingPayloads, missingVerifiers)
 			resp := c.failForPubKeys(
 				transcriptTimeoutReason("preprocess payloads", missingPayloads, missingVerifiers),
 				frostRoundPreprocess,
-				missing,
+				nil,
 			)
 			return nil, &resp
 		}
@@ -931,6 +1236,21 @@ func (c *FrostSignCoordinator) exchangeShares(
 	activePeerIDs []peer.ID,
 	local FrostSharePayload,
 ) (map[string]string, *FrostKeySignResponse) {
+	localHash, err := FrostTranscriptShareHash(c.msgID, local)
+	if err != nil {
+		resp := c.failForPubKeys(fmt.Sprintf("failed to hash local share payload: %v", err), frostRoundShare, nil)
+		return nil, &resp
+	}
+	localEnvelope := frostEnvelopeFromShare(c.msgID, c.vaultPubKey, c.network, local, localHash)
+	if c.strictTranscript {
+		localEnvelope, err = newFrostSignedEnvelope(c.privateKey, c.msgID, c.vaultPubKey, c.network, frostRoundShare, local.SenderPubKey, local.ParticipantIndex, localHash)
+		if err != nil {
+			resp := c.failForPubKeys(err.Error(), frostRoundShare, nil)
+			return nil, &resp
+		}
+		local.ProtocolVersion = localEnvelope.ProtocolVersion
+		local.Signature = localEnvelope.Signature
+	}
 	payload, err := json.Marshal(local)
 	if err != nil {
 		resp := FrostKeySignResponse{
@@ -946,12 +1266,7 @@ func (c *FrostSignCoordinator) exchangeShares(
 		}
 		return nil, &resp
 	}
-	localHash, err := FrostTranscriptShareHash(c.msgID, local)
-	if err != nil {
-		resp := c.failForPubKeys(fmt.Sprintf("failed to hash local share payload: %v", err), frostRoundShare, []string{local.SenderPubKey})
-		return nil, &resp
-	}
-	verifier, err := newFrostTranscriptVerifier(frostRoundShare, activeSet, participantIndexMap)
+	verifier, err := newFrostTranscriptVerifier(frostRoundShare, activeSet, participantIndexMap, c.vaultPubKey, c.network)
 	if err != nil {
 		resp := c.failForPubKeys(fmt.Sprintf("failed to initialize share transcript verifier: %v", err), frostRoundShare, nil)
 		return nil, &resp
@@ -960,7 +1275,13 @@ func (c *FrostSignCoordinator) exchangeShares(
 		resp := c.failForPubKeys(failure.reason, frostRoundShare, failure.blamePubKey)
 		return nil, &resp
 	}
-	if err := c.broadcastTranscriptVerification(frostRoundShare, local.SenderPubKey, local.ParticipantIndex, localHash, activePeerIDs); err != nil {
+	if c.strictTranscript {
+		if _, err := verifier.recordSignedEnvelope(localEnvelope); err != nil {
+			resp := c.failForPubKeys(err.Error(), frostRoundShare, nil)
+			return nil, &resp
+		}
+	}
+	if err := c.broadcastSignedTranscriptVerification(localEnvelope, activePeerIDs); err != nil {
 		resp := c.failForPubKeys(fmt.Sprintf("failed to broadcast share verification: %v", err), frostRoundShare, nil)
 		return nil, &resp
 	}
@@ -989,35 +1310,41 @@ func (c *FrostSignCoordinator) exchangeShares(
 			case messages.TSSFrostShareMsg:
 				var incoming FrostSharePayload
 				if err := json.Unmarshal(wrapped.Payload, &incoming); err != nil {
-					resp := c.failForMalformed(msg.PeerID, "invalid share payload", frostRoundShare)
-					return nil, &resp
+					continue
 				}
 				senderNorm := normalizePubKey(incoming.SenderPubKey)
 				if senderNorm == "" {
-					resp := c.failForMalformed(msg.PeerID, "empty sender pubkey in share payload", frostRoundShare)
-					return nil, &resp
+					continue
 				}
 				if _, ok := activeSet.originalByNormalized[senderNorm]; !ok {
-					resp := c.failForPubKeys("share sender is not in active participant set", frostRoundShare, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				if err := c.validateSenderPeerBinding(msg.PeerID, incoming.SenderPubKey); err != nil {
-					resp := c.failForPubKeys(err.Error(), frostRoundShare, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				expectedIndex := participantIndexMap[senderNorm]
 				if incoming.ParticipantIndex != expectedIndex {
-					resp := c.failForPubKeys("participant index mismatch in share payload", frostRoundShare, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				if strings.TrimSpace(incoming.ShareHex) == "" {
-					resp := c.failForPubKeys("empty share payload", frostRoundShare, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				payloadHash, err := FrostTranscriptShareHash(c.msgID, incoming)
 				if err != nil {
-					resp := c.failForPubKeys(fmt.Sprintf("failed to hash share payload: %v", err), frostRoundShare, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
+				}
+				incomingEnvelope := frostEnvelopeFromShare(c.msgID, c.vaultPubKey, c.network, incoming, payloadHash)
+				if c.strictTranscript {
+					if err := verifyFrostSignedEnvelope(incomingEnvelope); err != nil {
+						c.logger.Warn().Err(err).Str("peer", msg.PeerID.String()).Msg("ignoring unsigned share payload")
+						continue
+					}
+					if evidence, err := verifier.recordSignedEnvelope(incomingEnvelope); err != nil {
+						continue
+					} else if evidence != nil {
+						resp := c.failForEquivocation(*evidence)
+						return nil, &resp
+					}
 				}
 				isNewPayload, failure := verifier.recordPayload(incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash)
 				if failure != nil {
@@ -1028,7 +1355,7 @@ func (c *FrostSignCoordinator) exchangeShares(
 					continue
 				}
 				values[strconv.FormatUint(uint64(incoming.ParticipantIndex), 10)] = incoming.ShareHex
-				if err := c.broadcastTranscriptVerification(frostRoundShare, incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash, activePeerIDs); err != nil {
+				if err := c.broadcastSignedTranscriptVerification(incomingEnvelope, activePeerIDs); err != nil {
 					resp := c.failForPubKeys(fmt.Sprintf("failed to broadcast share verification: %v", err), frostRoundShare, nil)
 					return nil, &resp
 				}
@@ -1039,24 +1366,33 @@ func (c *FrostSignCoordinator) exchangeShares(
 			case messages.TSSFrostVerifyMsg:
 				var incoming FrostVerifyPayload
 				if err := json.Unmarshal(wrapped.Payload, &incoming); err != nil {
-					resp := c.failForMalformed(msg.PeerID, "invalid transcript verification payload", frostRoundShare)
-					return nil, &resp
+					continue
 				}
 				if strings.TrimSpace(incoming.Round) != frostRoundShare {
 					continue
 				}
 				attesterNorm := normalizePubKey(incoming.SenderPubKey)
 				if attesterNorm == "" {
-					resp := c.failForMalformed(msg.PeerID, "empty sender pubkey in transcript verification payload", frostRoundShare)
-					return nil, &resp
+					continue
 				}
 				if _, ok := activeSet.originalByNormalized[attesterNorm]; !ok {
-					resp := c.failForPubKeys("verification attester is not in active participant set", frostRoundShare, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
 				}
 				if err := c.validateSenderPeerBinding(msg.PeerID, incoming.SenderPubKey); err != nil {
-					resp := c.failForPubKeys(err.Error(), frostRoundShare, []string{incoming.SenderPubKey})
-					return nil, &resp
+					continue
+				}
+				if c.strictTranscript {
+					echo := frostEchoFromVerify(c.msgID, c.vaultPubKey, c.network, incoming)
+					if err := verifyFrostSignedEcho(echo); err != nil {
+						c.logger.Warn().Err(err).Str("peer", msg.PeerID.String()).Msg("ignoring invalid signed share echo")
+						continue
+					}
+					if evidence, err := verifier.recordSignedEnvelope(echo.Target); err != nil {
+						continue
+					} else if evidence != nil {
+						resp := c.failForEquivocation(*evidence)
+						return nil, &resp
+					}
 				}
 				if _, failure := verifier.recordVerification(
 					incoming.SenderPubKey,
@@ -1064,18 +1400,17 @@ func (c *FrostSignCoordinator) exchangeShares(
 					incoming.TargetParticipantIndex,
 					incoming.PayloadHash,
 				); failure != nil {
-					resp := c.failForPubKeys(failure.reason, frostRoundShare, failure.blamePubKey)
-					return nil, &resp
+					c.logger.Warn().Err(failure).Str("peer", msg.PeerID.String()).Msg("ignoring invalid share verification")
+					continue
 				}
 			}
 		case <-timer.C:
 			missingPayloads := verifier.missingPayloadPubKeys()
 			missingVerifiers := verifier.missingVerifierPubKeys()
-			missing := mergePubKeyLists(missingPayloads, missingVerifiers)
 			resp := c.failForPubKeys(
 				transcriptTimeoutReason("share payloads", missingPayloads, missingVerifiers),
 				frostRoundShare,
-				missing,
+				nil,
 			)
 			return nil, &resp
 		}
@@ -1110,8 +1445,10 @@ func (c *FrostSignCoordinator) WaitForResult(activeParticipants []string, quorum
 		timeout = c.timeout
 	}
 
-	buckets := make(map[string]*resultVoteBucket)
-	malformedBuckets := make(map[string]*malformedResultVoteBucket)
+	buckets := make(map[string]*resultVoteBucket, len(activeByNormalized))
+	malformedBuckets := make(map[string]*malformedResultVoteBucket, len(activeByNormalized))
+	senderVotes := make(map[string]senderResultVote, len(activeByNormalized))
+	equivocated := make(map[string]struct{}, len(activeByNormalized))
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
@@ -1145,10 +1482,21 @@ func (c *FrostSignCoordinator) WaitForResult(activeParticipants []string, quorum
 
 			normalized, matchKey, err := normalizeResultPayload(payload.Response, c.msgID, c.expectedPlanHash)
 			if err != nil {
-				reason := err.Error()
+				if _, disqualified := equivocated[senderNorm]; disqualified {
+					continue
+				}
+				if _, alreadyVoted := senderVotes[senderNorm]; alreadyVoted {
+					// Retain at most one malformed variant per authenticated
+					// sender. A later valid vote may replace it below.
+					continue
+				}
+				reason := truncateFrostResultReason(err.Error())
 				c.logger.Warn().Err(err).Str("sender", payload.SenderPubKey).Msg("skipping malformed frost result")
 				bucket := malformedBuckets[reason]
 				if bucket == nil {
+					if len(malformedBuckets) >= len(activeByNormalized) {
+						continue
+					}
 					bucket = &malformedResultVoteBucket{
 						reason: reason,
 						voters: make(map[string]string),
@@ -1156,15 +1504,49 @@ func (c *FrostSignCoordinator) WaitForResult(activeParticipants []string, quorum
 					malformedBuckets[reason] = bucket
 				}
 				bucket.voters[senderNorm] = activeByNormalized[senderNorm]
+				senderVotes[senderNorm] = senderResultVote{key: reason, malformed: true}
 				if len(bucket.voters) >= quorum {
 					resp := c.failForPubKeys(reason, frostRoundResult, bucket.pubKeys())
 					return resp, nil
 				}
 				continue
 			}
+			if _, disqualified := equivocated[senderNorm]; disqualified {
+				continue
+			}
+			if existing, alreadyVoted := senderVotes[senderNorm]; alreadyVoted {
+				if existing.malformed {
+					if malformedBucket := malformedBuckets[existing.key]; malformedBucket != nil {
+						delete(malformedBucket.voters, senderNorm)
+						if len(malformedBucket.voters) == 0 {
+							delete(malformedBuckets, existing.key)
+						}
+					}
+					delete(senderVotes, senderNorm)
+				} else if existing.key == matchKey {
+					continue
+				} else {
+					// Two different well-formed results from one authenticated
+					// sender are equivocation. Remove its first vote and retain
+					// only the bounded disqualification marker.
+					if previousBucket := buckets[existing.key]; previousBucket != nil {
+						delete(previousBucket.voters, senderNorm)
+						if len(previousBucket.voters) == 0 {
+							delete(buckets, existing.key)
+						}
+					}
+					delete(senderVotes, senderNorm)
+					equivocated[senderNorm] = struct{}{}
+					c.logger.Warn().Str("sender", payload.SenderPubKey).Msg("disqualifying frost result sender after conflicting valid votes")
+					continue
+				}
+			}
 
 			bucket := buckets[matchKey]
 			if bucket == nil {
+				if len(buckets) >= len(activeByNormalized) {
+					continue
+				}
 				bucket = &resultVoteBucket{
 					response: normalized,
 					voters:   make(map[string]struct{}),
@@ -1172,6 +1554,7 @@ func (c *FrostSignCoordinator) WaitForResult(activeParticipants []string, quorum
 				buckets[matchKey] = bucket
 			}
 			bucket.voters[senderNorm] = struct{}{}
+			senderVotes[senderNorm] = senderResultVote{key: matchKey}
 			if len(bucket.voters) >= quorum {
 				return bucket.response, nil
 			}
@@ -1188,6 +1571,7 @@ func (c *FrostSignCoordinator) BroadcastResult(resp FrostKeySignResponse, peers 
 			MsgID:           resp.MsgID,
 			TxHash:          resp.TxHash,
 			TxHex:           resp.TxHex,
+			TxKey:           resp.TxKey,
 			FeeAtomic:       resp.FeeAtomic,
 			Eventuality:     resp.Eventuality,
 			SpentOutputRefs: resp.SpentOutputRefs,
@@ -1235,6 +1619,40 @@ func (c *FrostSignCoordinator) broadcastTranscriptVerification(
 	return c.broadcast(messages.TSSFrostVerifyMsg, buf, peers)
 }
 
+func (c *FrostSignCoordinator) broadcastSignedTranscriptVerification(
+	target messages.FrostSignedEnvelope,
+	peers []peer.ID,
+) error {
+	if !c.strictTranscript {
+		return c.broadcastTranscriptVerification(
+			target.Round,
+			target.SenderPubKey,
+			target.ParticipantIndex,
+			target.PayloadHash,
+			peers,
+		)
+	}
+	echo, err := newFrostSignedEcho(c.privateKey, c.localPubKey, target)
+	if err != nil {
+		return err
+	}
+	payload := FrostVerifyPayload{
+		ProtocolVersion:        echo.ProtocolVersion,
+		SenderPubKey:           echo.AttesterPubKey,
+		Round:                  echo.Target.Round,
+		TargetSenderPubKey:     echo.Target.SenderPubKey,
+		TargetParticipantIndex: echo.Target.ParticipantIndex,
+		PayloadHash:            echo.Target.PayloadHash,
+		TargetSignature:        echo.Target.Signature,
+		AttesterSignature:      echo.Signature,
+	}
+	buf, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal signed transcript verification payload: %w", err)
+	}
+	return c.broadcast(messages.TSSFrostVerifyMsg, buf, peers)
+}
+
 func (c *FrostSignCoordinator) validateSenderPeerBinding(msgPeer peer.ID, senderPubKey string) error {
 	expectedPeerID, err := conversion.GetPeerIDFromPubKey(senderPubKey)
 	if err != nil {
@@ -1264,6 +1682,27 @@ func (c *FrostSignCoordinator) failForPubKeys(reason, round string, pubKeys []st
 	}
 }
 
+func (c *FrostSignCoordinator) failForEquivocation(evidence messages.FrostEquivocationEvidence) FrostKeySignResponse {
+	// Signed transcript equivocation is sufficient to abort the local ceremony,
+	// but MsgTssKeysignFail has no consensus-side evidence verifier yet. Emitting
+	// a culprit or FROSTV2 round here would either fail message construction or,
+	// if merely allow-listed, make unvalidated evidence slashable. Keep the
+	// diagnostic local until the message ID and handler bind and verify it.
+	// Preserve only the ordinary ceremony phase so the signer can apply its
+	// terminal-share retry guard without making the evidence actionable.
+	c.logger.Error().
+		Str("sender", evidence.First.SenderPubKey).
+		Str("round", evidence.First.Round).
+		Str("first_payload_hash", evidence.First.PayloadHash).
+		Str("second_payload_hash", evidence.Second.PayloadHash).
+		Msg("detected signed FROST equivocation; on-chain evidence reporting is disabled")
+	round := strings.TrimSpace(evidence.First.Round)
+	if round != frostRoundPreprocess && round != frostRoundShare {
+		round = ""
+	}
+	return c.failForPubKeys(frostEquivocationFailReason, round, nil)
+}
+
 func parseWrappedMessage(raw []byte) (messages.WrappedMessage, bool) {
 	var wrapped messages.WrappedMessage
 	if err := json.Unmarshal(raw, &wrapped); err != nil {
@@ -1275,6 +1714,11 @@ func parseWrappedMessage(raw []byte) (messages.WrappedMessage, bool) {
 type resultVoteBucket struct {
 	response FrostKeySignResponse
 	voters   map[string]struct{}
+}
+
+type senderResultVote struct {
+	key       string
+	malformed bool
 }
 
 type malformedResultVoteBucket struct {
@@ -1289,6 +1733,14 @@ func (b *malformedResultVoteBucket) pubKeys() []string {
 	}
 	sort.Strings(pubKeys)
 	return pubKeys
+}
+
+func truncateFrostResultReason(reason string) string {
+	reason = strings.TrimSpace(reason)
+	if len(reason) <= frostMaxResultReasonBytes {
+		return reason
+	}
+	return reason[:frostMaxResultReasonBytes]
 }
 
 func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash string) (FrostKeySignResponse, string, error) {
@@ -1307,6 +1759,12 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 
 	switch status {
 	case tcommon.Success:
+		if len(result.TxHex) > frostMaxResultTxHexChars {
+			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result tx_hex exceeds limit")
+		}
+		if len(result.SpentOutputRefs) > frostMaxResultSpentRefs {
+			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result spent refs exceeds limit")
+		}
 		payloadMsgID := strings.TrimSpace(result.MsgID)
 		if payloadMsgID == "" {
 			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result has empty msg_id")
@@ -1316,11 +1774,16 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 		}
 		txHash := strings.ToLower(strings.TrimSpace(result.TxHash))
 		txHex := strings.ToLower(strings.TrimSpace(result.TxHex))
+		txKey := result.TxKey
 		if txHash == "" {
 			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result has empty tx_hash")
 		}
 		if txHex == "" {
 			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result has empty tx_hex")
+		}
+		expectedTxKeyHash, err := FrostTxKeyHash(txKey)
+		if err != nil {
+			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result has invalid tx_key")
 		}
 		if _, err := hex.DecodeString(txHex); err != nil {
 			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result tx_hex is not valid hex")
@@ -1335,6 +1798,7 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 			Version:       result.Eventuality.Version,
 			PlanHash:      strings.ToLower(strings.TrimSpace(result.Eventuality.PlanHash)),
 			TxHexHash:     strings.ToLower(strings.TrimSpace(result.Eventuality.TxHexHash)),
+			TxKeyHash:     strings.ToLower(strings.TrimSpace(result.Eventuality.TxKeyHash)),
 			EventualityID: strings.ToLower(strings.TrimSpace(result.Eventuality.EventualityID)),
 		}
 		if eventuality.Version != frostEventualityVersion {
@@ -1346,6 +1810,9 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 		if err := validateHashHex("tx_hex_hash", eventuality.TxHexHash); err != nil {
 			return FrostKeySignResponse{}, "", err
 		}
+		if eventuality.TxKeyHash != expectedTxKeyHash {
+			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result tx_key_hash mismatch")
+		}
 		if err := validateHashHex("eventuality_id", eventuality.EventualityID); err != nil {
 			return FrostKeySignResponse{}, "", err
 		}
@@ -1356,28 +1823,27 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 		if eventuality.TxHexHash != strings.ToLower(expectedTxHexHash) {
 			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result tx_hex_hash mismatch")
 		}
-		expectedEventualityID, err := FrostEventualityID(expectedPlanHash, txHash, expectedTxHexHash, result.FeeAtomic)
+		expectedEventualityID, err := FrostEventualityID(expectedPlanHash, txHash, expectedTxHexHash, expectedTxKeyHash, result.FeeAtomic)
 		if err != nil {
 			return FrostKeySignResponse{}, "", err
 		}
 		if eventuality.EventualityID != strings.ToLower(expectedEventualityID) {
 			return FrostKeySignResponse{}, "", fmt.Errorf("frost success result eventuality_id mismatch")
 		}
-		normalizedRefs := make([]FrostSpentOutputRef, len(result.SpentOutputRefs))
-		for i, ref := range result.SpentOutputRefs {
-			normalizedRefs[i] = FrostSpentOutputRef{
-				TxHash:      strings.ToLower(strings.TrimSpace(ref.TxHash)),
-				OutputIndex: ref.OutputIndex,
-				KeyImage:    strings.ToLower(strings.TrimSpace(ref.KeyImage)),
-				SpendTxHash: strings.ToLower(strings.TrimSpace(ref.SpendTxHash)),
-			}
+		normalizedRefs, err := normalizeFrostResultSpentRefs(result.SpentOutputRefs, txHash)
+		if err != nil {
+			return FrostKeySignResponse{}, "", err
 		}
 		normalized.MsgID = payloadMsgID
 		normalized.TxHash = txHash
 		normalized.TxHex = txHex
+		normalized.TxKey = txKey
 		normalized.Eventuality = eventuality
 		normalized.SpentOutputRefs = normalizedRefs
 	case tcommon.Fail:
+		if len(result.Blame.BlameNodes) > frostMaxResultBlameNodes {
+			return FrostKeySignResponse{}, "", fmt.Errorf("frost fail result blame nodes exceeds limit")
+		}
 		payloadMsgID := strings.TrimSpace(result.MsgID)
 		if payloadMsgID != "" && expectedMsgID != "" && payloadMsgID != expectedMsgID {
 			return FrostKeySignResponse{}, "", fmt.Errorf("frost fail result msg_id mismatch")
@@ -1394,6 +1860,7 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 		MsgID           string                `json:"msg_id"`
 		TxHash          string                `json:"tx_hash"`
 		TxHex           string                `json:"tx_hex"`
+		TxKey           string                `json:"tx_key"`
 		FeeAtomic       uint64                `json:"fee_atomic"`
 		Eventuality     FrostEventuality      `json:"eventuality"`
 		SpentOutputRefs []FrostSpentOutputRef `json:"spent_output_refs"`
@@ -1403,6 +1870,7 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 		MsgID:           normalized.MsgID,
 		TxHash:          normalized.TxHash,
 		TxHex:           normalized.TxHex,
+		TxKey:           normalized.TxKey,
 		FeeAtomic:       normalized.FeeAtomic,
 		Eventuality:     normalized.Eventuality,
 		SpentOutputRefs: normalized.SpentOutputRefs,
@@ -1411,14 +1879,24 @@ func normalizeResultPayload(result FrostResult, expectedMsgID, expectedPlanHash 
 	if err != nil {
 		return FrostKeySignResponse{}, "", fmt.Errorf("failed to encode frost result comparison key")
 	}
+	matchKey, err := tcommon.MsgToHashString(keyBytes)
+	if err != nil {
+		return FrostKeySignResponse{}, "", fmt.Errorf("failed to hash frost result comparison key")
+	}
 
-	return normalized, string(keyBytes), nil
+	return normalized, matchKey, nil
 }
 
 func normalizeBlameForResult(in blame.Blame) (blame.Blame, error) {
 	reason := strings.TrimSpace(in.FailReason)
 	if reason == "" {
 		return blame.Blame{}, fmt.Errorf("frost fail result missing blame reason")
+	}
+	if len(reason) > frostMaxResultReasonBytes {
+		return blame.Blame{}, fmt.Errorf("frost fail result reason exceeds limit")
+	}
+	if len(in.BlameNodes) > frostMaxResultBlameNodes {
+		return blame.Blame{}, fmt.Errorf("frost fail result blame nodes exceeds limit")
 	}
 	if len(in.BlameNodes) == 0 {
 		return blame.Blame{}, fmt.Errorf("frost fail result missing blame nodes")
@@ -1427,6 +1905,9 @@ func normalizeBlameForResult(in blame.Blame) (blame.Blame, error) {
 	nodes := make([]blame.Node, 0, len(in.BlameNodes))
 	seen := make(map[string]struct{}, len(in.BlameNodes))
 	for _, node := range in.BlameNodes {
+		if len(node.BlameData)+len(node.BlameSignature) > frostMaxResultEvidenceBytes {
+			return blame.Blame{}, fmt.Errorf("frost fail result evidence exceeds limit")
+		}
 		pubKey := strings.TrimSpace(node.Pubkey)
 		if pubKey == "" {
 			return blame.Blame{}, fmt.Errorf("frost fail result contains empty blame node pubkey")

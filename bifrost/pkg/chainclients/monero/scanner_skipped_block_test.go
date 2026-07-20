@@ -103,7 +103,10 @@ func TestRegistrationFailureSkipsOnlyBadVault(t *testing.T) {
 				)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{Registered: true})
+			_ = json.NewEncoder(w).Encode(sidecar.RegisterVaultResp{
+				Registered:         true,
+				ExpectedNextHeight: uint64Ptr(0),
+			})
 			return
 		}
 		http.Error(w, "not found", http.StatusNotFound)

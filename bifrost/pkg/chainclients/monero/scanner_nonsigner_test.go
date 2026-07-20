@@ -2,7 +2,6 @@ package monero
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -240,6 +239,8 @@ func newMockFrostServer(t *testing.T, blockHeight int64, outgoing []sidecar.Tran
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/scanner/state":
+			writeTestScannerState(t, w, uint64(blockHeight))
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/chain/height":
 			_ = json.NewEncoder(w).Encode(sidecar.ChainHeightResp{Height: blockHeight + 50})
 
@@ -253,8 +254,8 @@ func newMockFrostServer(t *testing.T, blockHeight int64, outgoing []sidecar.Tran
 			_ = json.NewEncoder(w).Encode(sidecar.ChainBlockResp{
 				Height:       height,
 				Reward:       defaultCoinbaseValue + 200000,
-				Hash:         fmt.Sprintf("hash-%d", height),
-				PreviousHash: fmt.Sprintf("hash-%d", height-1),
+				Hash:         testBlockHash(height),
+				PreviousHash: testBlockHash(height - 1),
 				TxHashes:     []string{},
 			})
 

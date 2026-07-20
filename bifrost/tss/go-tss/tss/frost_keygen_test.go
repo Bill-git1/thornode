@@ -372,7 +372,7 @@ func TestFrostKeygenRound3RejectsResultMismatch(t *testing.T) {
 	}
 }
 
-func TestFrostKeygenRound3AcceptsMatchingPayloadsWithoutVerifications(t *testing.T) {
+func TestFrostKeygenRound3RejectsUncertifiedPayloadsOnTimeout(t *testing.T) {
 	ensureBech32Prefix()
 
 	members := []string{testPubKeys[0], testPubKeys[1]}
@@ -401,24 +401,58 @@ func TestFrostKeygenRound3AcceptsMatchingPayloadsWithoutVerifications(t *testing
 	})
 
 	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id", msgChan, 30*time.Millisecond)
-	address, gotGroupKey, birthday, failResp := coord.exchangeRound3(activeSet, participantIndexMap, peerIDs, FrostDKGRound3Payload{
+	_, _, _, failResp := coord.exchangeRound3(activeSet, participantIndexMap, peerIDs, FrostDKGRound3Payload{
 		SenderPubKey:         testPubKeys[0],
 		ParticipantIndex:     participantIndexMap[normalizePubKey(testPubKeys[0])],
 		Address:              groupAddress,
 		GroupKey:             groupKey,
 		ObservedMoneroHeight: 456,
 	})
-	if failResp != nil {
-		t.Fatalf("expected round3 timeout fallback success, got %+v", failResp)
+	if failResp == nil {
+		t.Fatal("expected uncertified round3 payloads to fail on timeout")
 	}
-	if address != groupAddress {
-		t.Fatalf("expected address %s, got %s", groupAddress, address)
+	if failResp.Status != tcommon.Fail || failResp.Blame.Round != frostDKGRound3 {
+		t.Fatalf("expected round3 failure, got %+v", failResp)
 	}
-	if gotGroupKey != groupKey {
-		t.Fatalf("expected group key %s, got %s", groupKey, gotGroupKey)
+}
+
+func TestFrostDKGBirthdayUsesLowerMedianAndMargin(t *testing.T) {
+	height, err := frostDKGBirthdayHeight(map[string]int64{
+		"a": 1_000,
+		"b": 1_001,
+		"c": 1_002,
+		"d": 50_000,
+	}, 4)
+	if err != nil {
+		t.Fatalf("derive birthday: %v", err)
 	}
-	if birthday != 123 {
-		t.Fatalf("expected min birthday 123, got %d", birthday)
+	if height != 991 {
+		t.Fatalf("expected lower median 1001 minus margin 10, got %d", height)
+	}
+
+	height, err = frostDKGBirthdayHeight(map[string]int64{
+		"a": 0,
+		"b": 1_000,
+		"c": 1_001,
+		"d": 1_002,
+	}, 4)
+	if err != nil {
+		t.Fatalf("derive birthday with one abstention: %v", err)
+	}
+	if height != 991 {
+		t.Fatalf("expected positive-height median 1001 minus margin 10, got %d", height)
+	}
+
+	if _, err := frostDKGBirthdayHeight(map[string]int64{
+		"a": 0,
+		"b": 0,
+		"c": 1_000,
+		"d": 1_001,
+	}, 4); err == nil {
+		t.Fatal("expected fewer than quorum positive heights to be rejected")
+	}
+	if _, err := frostDKGBirthdayHeight(map[string]int64{"a": -1}, 1); err == nil {
+		t.Fatal("expected a negative height to be rejected")
 	}
 }
 
@@ -661,8 +695,11 @@ func TestFrostTranscriptVerifierRejectsUnanimousHashMismatch(t *testing.T) {
 	if _, failure := verifier.recordVerification(testPubKeys[0], targetPayload.SenderPubKey, targetPayload.ParticipantIndex, badHash); failure != nil {
 		t.Fatalf("first mismatched verification should not fail before quorum: %v", failure)
 	}
-	if _, failure := verifier.recordVerification(testPubKeys[1], targetPayload.SenderPubKey, targetPayload.ParticipantIndex, badHash); failure == nil {
-		t.Fatalf("expected unanimous hash mismatch failure")
+	if _, failure := verifier.recordVerification(testPubKeys[1], targetPayload.SenderPubKey, targetPayload.ParticipantIndex, badHash); failure != nil {
+		t.Fatalf("unsigned hash mismatch must not assign blame: %v", failure)
+	}
+	if verifier.isComplete() {
+		t.Fatalf("mismatched verification quorum must not complete the transcript")
 	}
 }
 
@@ -786,16 +823,18 @@ func TestFrostKeygenExecuteSuccess(t *testing.T) {
 	}
 
 	localRound3 := FrostDKGRound3Payload{
-		SenderPubKey:     testPubKeys[0],
-		ParticipantIndex: localIndex,
-		Address:          groupAddress,
-		GroupKey:         groupKey,
+		SenderPubKey:         testPubKeys[0],
+		ParticipantIndex:     localIndex,
+		Address:              groupAddress,
+		GroupKey:             groupKey,
+		ObservedMoneroHeight: 456,
 	}
 	remoteRound3 := FrostDKGRound3Payload{
-		SenderPubKey:     testPubKeys[1],
-		ParticipantIndex: remoteIndex,
-		Address:          groupAddress,
-		GroupKey:         groupKey,
+		SenderPubKey:         testPubKeys[1],
+		ParticipantIndex:     remoteIndex,
+		Address:              groupAddress,
+		GroupKey:             groupKey,
+		ObservedMoneroHeight: 455,
 	}
 	localRound3Hash, err := FrostTranscriptDKGRound3Hash("msg-id", localRound3)
 	if err != nil {
@@ -879,6 +918,9 @@ func TestFrostKeygenExecuteSuccess(t *testing.T) {
 	}
 	if resp.Address != groupAddress || resp.GroupKey != groupKey {
 		t.Fatalf("unexpected keygen response: %+v", resp)
+	}
+	if resp.ObservedMoneroHeight != 445 {
+		t.Fatalf("expected lower height 455 minus margin 10, got %d", resp.ObservedMoneroHeight)
 	}
 
 	if len(sidecar.round1Reqs) != 1 {
@@ -1346,6 +1388,9 @@ func TestFrostKeygenExecuteSuccessSingleSigner(t *testing.T) {
 	}
 	if resp.Address != groupAddress || resp.GroupKey != groupKey {
 		t.Fatalf("unexpected single-signer keygen response: %+v", resp)
+	}
+	if resp.ObservedMoneroHeight != sidecar.chainHeight-frostDKGReorgMargin {
+		t.Fatalf("expected single-signer birthday %d, got %d", sidecar.chainHeight-frostDKGReorgMargin, resp.ObservedMoneroHeight)
 	}
 	if len(sidecar.round1Reqs) != 1 {
 		t.Fatalf("expected one round1 call, got %d", len(sidecar.round1Reqs))

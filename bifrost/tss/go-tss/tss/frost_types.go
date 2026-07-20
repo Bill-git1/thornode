@@ -18,6 +18,7 @@ const FrostFailReasonXMRMaxGasExceeded = "xmr_max_gas_exceeded"
 // FrostKeySignRequest is the canonical request context for a FROST signing ceremony.
 type FrostKeySignRequest struct {
 	VaultPubKey   string
+	Network       string
 	ToAddress     string
 	AmountAtomic  uint64
 	Memo          string
@@ -47,6 +48,7 @@ type FrostKeySignRequest struct {
 type FrostKeySignResponse struct {
 	TxHash          string
 	TxHex           string
+	TxKey           string
 	FeeAtomic       uint64
 	MsgID           string
 	Eventuality     FrostEventuality
@@ -61,6 +63,7 @@ type FrostEventuality struct {
 	Version       uint8  `json:"version"`
 	PlanHash      string `json:"plan_hash"`
 	TxHexHash     string `json:"tx_hex_hash"`
+	TxKeyHash     string `json:"tx_key_hash"`
 	EventualityID string `json:"eventuality_id"`
 }
 
@@ -160,8 +163,9 @@ type FrostSidecarPrepareReq struct {
 }
 
 type FrostSidecarPrepareResp struct {
-	SessionID  string `json:"session_id"`
-	Preprocess string `json:"preprocess"`
+	SessionID      string                `json:"session_id"`
+	Preprocess     string                `json:"preprocess"`
+	SelectedInputs []FrostSpentOutputRef `json:"selected_inputs"`
 }
 
 type FrostSidecarPartialReq struct {
@@ -183,6 +187,7 @@ type FrostSidecarCombineReq struct {
 type FrostSidecarCombineResp struct {
 	TxHash          string                `json:"tx_hash"`
 	TxHex           string                `json:"tx_hex"`
+	TxKey           string                `json:"tx_key"`
 	FeeAtomic       uint64                `json:"fee_atomic"`
 	SpentOutputRefs []FrostSpentOutputRef `json:"spent_output_refs,omitempty"`
 }
@@ -195,23 +200,30 @@ type FrostSpentOutputRef struct {
 }
 
 type FrostPreprocessPayload struct {
+	ProtocolVersion  uint16 `json:"protocol_version,omitempty"`
 	SenderPubKey     string `json:"sender_pub_key"`
 	ParticipantIndex uint32 `json:"participant_index"`
 	PreprocessHex    string `json:"preprocess_hex"`
+	Signature        []byte `json:"signature,omitempty"`
 }
 
 type FrostSharePayload struct {
+	ProtocolVersion  uint16 `json:"protocol_version,omitempty"`
 	SenderPubKey     string `json:"sender_pub_key"`
 	ParticipantIndex uint32 `json:"participant_index"`
 	ShareHex         string `json:"share_hex"`
+	Signature        []byte `json:"signature,omitempty"`
 }
 
 type FrostVerifyPayload struct {
+	ProtocolVersion        uint16 `json:"protocol_version,omitempty"`
 	SenderPubKey           string `json:"sender_pub_key"`
 	Round                  string `json:"round"`
 	TargetSenderPubKey     string `json:"target_sender_pub_key"`
 	TargetParticipantIndex uint32 `json:"target_participant_index"`
 	PayloadHash            string `json:"payload_hash"`
+	TargetSignature        []byte `json:"target_signature,omitempty"`
+	AttesterSignature      []byte `json:"attester_signature,omitempty"`
 }
 
 type FrostResultPayload struct {
@@ -223,6 +235,7 @@ type FrostResult struct {
 	MsgID           string                `json:"msg_id"`
 	TxHash          string                `json:"tx_hash,omitempty"`
 	TxHex           string                `json:"tx_hex,omitempty"`
+	TxKey           string                `json:"tx_key,omitempty"`
 	FeeAtomic       uint64                `json:"fee_atomic,omitempty"`
 	Eventuality     FrostEventuality      `json:"eventuality"`
 	SpentOutputRefs []FrostSpentOutputRef `json:"spent_output_refs,omitempty"`
@@ -356,7 +369,7 @@ func FrostTranscriptDKGRound2Hash(msgID string, payload FrostDKGRound2Payload) (
 }
 
 // FrostTranscriptDKGRound3Hash returns the signed transcript hash for the DKG
-// final address and group key announcement.
+// final address, group key, and observed Monero height announcement.
 func FrostTranscriptDKGRound3Hash(msgID string, payload FrostDKGRound3Payload) (string, error) {
 	address := strings.TrimSpace(payload.Address)
 	groupKey := strings.ToLower(strings.TrimSpace(payload.GroupKey))
@@ -366,6 +379,9 @@ func FrostTranscriptDKGRound3Hash(msgID string, payload FrostDKGRound3Payload) (
 	if groupKey == "" {
 		return "", fmt.Errorf("round3 group key is empty")
 	}
+	if payload.ObservedMoneroHeight < 0 {
+		return "", fmt.Errorf("round3 observed monero height cannot be negative")
+	}
 	return frostTranscriptHash(
 		frostDKGRound3,
 		msgID,
@@ -374,6 +390,7 @@ func FrostTranscriptDKGRound3Hash(msgID string, payload FrostDKGRound3Payload) (
 		[]string{
 			"address=" + address,
 			"group_key=" + groupKey,
+			"observed_monero_height=" + strconv.FormatInt(payload.ObservedMoneroHeight, 10),
 		},
 	)
 }
@@ -398,6 +415,7 @@ func frostTranscriptHash(round, msgID, targetSenderPubKey string, participantInd
 	}
 	canonical := []string{
 		"domain=" + frostTranscriptHashDomain,
+		"protocol_version=" + strconv.FormatUint(uint64(frostWireProtocolVersion), 10),
 		"msg_id=" + msgID,
 		"round=" + round,
 		"target_sender_pub_key=" + targetSenderNorm,

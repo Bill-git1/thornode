@@ -31,6 +31,12 @@ const (
 	KEYSIGN7         = "SignRound7Message"
 	KEYSIGN8         = "SignRound8Message"
 	KEYSIGN9         = "SignRound9Message"
+	// FROST keysign failures use these ordinary ceremony rounds. They remain
+	// distinct from the FROSTV2 equivocation-evidence identifiers, which are
+	// not accepted on-chain until their evidence is validated by consensus.
+	FROSTKEYSIGNPREPROCESS = "frost_preprocess"
+	FROSTKEYSIGNSHARE      = "frost_share"
+	FROSTKEYSIGNRESULT     = "frost_result"
 	// TEMP: keyverify — tss-lib keyverify round-message proto names.
 	KEYVERIFY1      = "KVRound1Message"
 	KEYVERIFY2a     = "KVRound2Message1"
@@ -52,17 +58,20 @@ const (
 // alias normalization. Defined here alongside the constants so additions to
 // the round constants are reflected in the validity set.
 var ValidTssKeysignRounds = map[string]bool{
-	KEYSIGN1aUnicast: true,
-	KEYSIGN1b:        true,
-	KEYSIGN2Unicast:  true,
-	KEYSIGN3:         true,
-	KEYSIGN4:         true,
-	KEYSIGN5:         true,
-	KEYSIGN6:         true,
-	KEYSIGN7:         true,
-	KEYSIGN8:         true,
-	KEYSIGN9:         true,
-	EDDSAKEYSIGN1:    true,
-	EDDSAKEYSIGN2:    true,
-	EDDSAKEYSIGN3:    true,
+	KEYSIGN1aUnicast:       true,
+	KEYSIGN1b:              true,
+	KEYSIGN2Unicast:        true,
+	KEYSIGN3:               true,
+	KEYSIGN4:               true,
+	KEYSIGN5:               true,
+	KEYSIGN6:               true,
+	KEYSIGN7:               true,
+	KEYSIGN8:               true,
+	KEYSIGN9:               true,
+	EDDSAKEYSIGN1:          true,
+	EDDSAKEYSIGN2:          true,
+	EDDSAKEYSIGN3:          true,
+	FROSTKEYSIGNPREPROCESS: true,
+	FROSTKEYSIGNSHARE:      true,
+	FROSTKEYSIGNRESULT:     true,
 }

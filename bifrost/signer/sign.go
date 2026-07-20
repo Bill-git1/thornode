@@ -1208,10 +1208,11 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 		// against cases like https://gitlab.com/thorchain/thornode/-/merge_requests/4344.
 		// In tradeoff, we accept a higher likelihood of temporary stuck outbounds.
 		ksErr := tss.KeysignError{}
-		// Terminal-round failure = the keysign died at the round that emits the
+		// Terminal-round failure = the keysign died at the phase that emits the
 		// signature share (secp256k1 KEYSIGN9 under tss-lib v3, EDDSAKEYSIGN3
-		// under ed25519). Round7Retry persists on the item — its name is the
-		// legacy v1 label and is kept stable for on-disk schema compatibility.
+		// under ed25519, or the FROST share exchange). Round7Retry persists on
+		// the item — its name is the legacy v1 label and is kept stable for
+		// on-disk schema compatibility.
 		isTerminalRound := errors.As(err, &ksErr) && ksErr.IsTerminalRound()
 		if checkpoint != nil || isTerminalRound {
 			item.Checkpoint = checkpoint

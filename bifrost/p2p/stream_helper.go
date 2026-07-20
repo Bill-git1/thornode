@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -21,7 +22,16 @@ const (
 	TimeoutReadPayload  = time.Second * 20
 	TimeoutWritePayload = time.Second * 20
 	MaxPayload          = 20000000 // 20M
+	// TSSFramePreflightBytes bounds how much of a framed TSS message is read
+	// before its type, session subscription, and authenticated peer are
+	// authorized. WrappedMessage places message_type/message_id before payload.
+	TSSFramePreflightBytes = 4096
 )
+
+// ErrTSSFramePreflightRejected distinguishes an authorization/size rejection
+// from a transport read failure so callers can reset the hostile stream
+// immediately instead of retaining it for normal session cleanup.
+var ErrTSSFramePreflightRejected = errors.New("TSS frame preflight rejected")
 
 // applyDeadline will be true , and only disable it when we are doing test
 // the reason being the p2p network , mocknet, mock stream doesn't support SetReadDeadline ,SetWriteDeadline feature
@@ -132,6 +142,72 @@ func ReadStreamWithBuffer(stream network.Stream) ([]byte, error) {
 	n, err = io.ReadFull(streamReader, dataBuf)
 	if uint32(n) != length || err != nil {
 		return nil, fmt.Errorf("short read err(%w), we would like to read: %d, however we only read: %d", err, length, n)
+	}
+	return dataBuf, nil
+}
+
+// readStreamWithBufferPreflight reads only a bounded prefix before invoking
+// preflight. The full frame allocation occurs only after preflight authorizes
+// the declared length and parsed session header.
+func readStreamWithBufferPreflight(
+	stream network.Stream,
+	prefixLimit int,
+	preflight func(length uint32, prefix []byte) error,
+) ([]byte, error) {
+	if stream == nil {
+		return nil, fmt.Errorf("stream is nil")
+	}
+	if prefixLimit <= 0 {
+		return nil, fmt.Errorf("invalid TSS frame preflight prefix limit")
+	}
+	if preflight == nil {
+		return nil, fmt.Errorf("TSS frame preflight callback is nil")
+	}
+	if ApplyDeadline.Load() {
+		if err := stream.SetReadDeadline(time.Now().Add(TimeoutReadPayload)); err != nil {
+			if errReset := stream.Reset(); errReset != nil {
+				return nil, errReset
+			}
+			return nil, err
+		}
+	}
+
+	lengthBytes := make([]byte, LengthHeader)
+	n, err := io.ReadFull(stream, lengthBytes)
+	if n != LengthHeader || err != nil {
+		return nil, fmt.Errorf("error in read the message head: %w", err)
+	}
+	length := binary.LittleEndian.Uint32(lengthBytes)
+	if length > MaxPayload {
+		// the global size gate runs before preflight(), so it must carry the same
+		// sentinel: otherwise handleStreamTss parks the stream in StreamUnknown
+		// instead of resetting it, and an oversized header from any gater-passing
+		// peer leaks a stream with no ceremony to release it.
+		return nil, fmt.Errorf("%w: payload length:%d exceed max payload length:%d", ErrTSSFramePreflightRejected, length, MaxPayload)
+	}
+
+	prefixBytes := int(length)
+	if prefixBytes > prefixLimit {
+		prefixBytes = prefixLimit
+	}
+	prefix := make([]byte, prefixBytes)
+	n, err = io.ReadFull(stream, prefix)
+	if n != prefixBytes || err != nil {
+		return nil, fmt.Errorf("short TSS preflight read err(%w), wanted:%d read:%d", err, prefixBytes, n)
+	}
+	if preflightErr := preflight(length, prefix); preflightErr != nil {
+		return nil, fmt.Errorf("%w: %v", ErrTSSFramePreflightRejected, preflightErr)
+	}
+
+	dataBuf := make([]byte, int(length))
+	copy(dataBuf, prefix)
+	remaining := int(length) - prefixBytes
+	if remaining == 0 {
+		return dataBuf, nil
+	}
+	n, err = io.ReadFull(stream, dataBuf[prefixBytes:])
+	if n != remaining || err != nil {
+		return nil, fmt.Errorf("short read err(%w), we would like to read: %d, however we only read: %d", err, remaining, n)
 	}
 	return dataBuf, nil
 }

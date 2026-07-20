@@ -3,6 +3,8 @@ package monero
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -30,6 +32,11 @@ const (
 	typicalVaultOutboundWeight = 10000
 )
 
+// ErrReorgSupersessionUnsafe is a hard operator stop: the durable pending
+// intent was not in a shape that can be safely replaced while preserving all
+// orphan cleanup. The journal is deliberately left untouched for inspection.
+var ErrReorgSupersessionUnsafe = errors.New("xmr pending reorg cannot be safely superseded")
+
 // Scanner adapts monero daemon/wallet RPC to the generic block scanner fetcher interface.
 type Scanner struct {
 	logger          zerolog.Logger
@@ -46,11 +53,18 @@ type Scanner struct {
 	// already halted — meaning vaults can drift indefinitely undetected.
 	solvencyReporter func(int64) error
 
-	currentBlockHeight *atomic.Int64
-	daemonTipHeight    *atomic.Int64
-	lastFee            *atomic.Uint64
-	globalErrataQueue  chan<- stypes.ErrataBlock
-	maxReorgRescan     int64
+	currentBlockHeight   *atomic.Int64
+	daemonTipHeight      *atomic.Int64
+	lastFee              *atomic.Uint64
+	globalErrataQueue    chan<- stypes.ErrataBlock
+	errataAckRequired    bool
+	maxReorgRescan       int64
+	scanMu               sync.Mutex
+	reorgDeliveryPending bool
+
+	// errataDeliveryTimeout bounds both the send to the observer and the wait
+	// for its acknowledgement. Zero means the default; tests shorten it.
+	errataDeliveryTimeout time.Duration
 
 	asgardMu       sync.RWMutex
 	asgardLookup   map[string]common.PubKey
@@ -144,6 +158,15 @@ func (s *Scanner) CurrentHeight() int64 {
 
 func (s *Scanner) SetErrataQueue(globalErrataQueue chan<- stypes.ErrataBlock) {
 	s.globalErrataQueue = globalErrataQueue
+	s.errataAckRequired = false
+}
+
+// SetErrataQueueWithAck requires the observer to durably persist each errata
+// record, complete its local on-deck cleanup, and accept the local errata
+// attestation before reorg replay is considered delivered.
+func (s *Scanner) SetErrataQueueWithAck(globalErrataQueue chan<- stypes.ErrataBlock) {
+	s.globalErrataQueue = globalErrataQueue
+	s.errataAckRequired = true
 }
 
 func (s *Scanner) SetReorgStore(store *ReorgStore) {
@@ -184,7 +207,7 @@ func (s *Scanner) FetchMemPool(height int64) (stypes.TxIn, error) {
 			skipped++
 			continue
 		}
-		_, err = common.NewAddress(to)
+		_, err := common.NewAddress(to)
 		if err != nil {
 			s.logger.Debug().Err(err).Str("txid", transfer.TxID).Str("to", to).Msg("skip mempool outgoing transfer with invalid to address")
 			skipped++
@@ -224,6 +247,15 @@ func (s *Scanner) FetchMemPool(height int64) (stypes.TxIn, error) {
 
 func (s *Scanner) FetchTxs(fetchHeight, chainHeight int64) (stypes.TxIn, error) {
 	txIn := stypes.TxIn{Chain: common.XMRChain}
+	// Avoid remote reads while Observer still owns the previous delivery. Check
+	// again after taking the continuity lock below to close the race with a
+	// delivery becoming pending during ChainBlock or FeeRate.
+	s.scanMu.Lock()
+	deliveryPending := s.reorgDeliveryPending
+	s.scanMu.Unlock()
+	if deliveryPending {
+		return txIn, btypes.ErrUnavailableBlock
+	}
 	if s.sidecar == nil {
 		return txIn, fmt.Errorf("monero scanner requires sidecar for chain queries")
 	}
@@ -248,9 +280,56 @@ func (s *Scanner) FetchTxs(fetchHeight, chainHeight int64) (stypes.TxIn, error) 
 		s.lastFee.Store(feeAtomic)
 	}
 
+	// ChainBlock and FeeRate are independent reads. Serialize only registration,
+	// continuity, reorg, sync, and journal mutations. Keeping FetchTxs free of an
+	// enclosing scanMu lock prevents this narrower lock from becoming recursive
+	// when companion scanner changes are merged.
+	s.scanMu.Lock()
+	locked := true
+	defer func() {
+		if locked {
+			s.scanMu.Unlock()
+		}
+	}()
+	if s.reorgDeliveryPending {
+		return txIn, btypes.ErrUnavailableBlock
+	}
+
+	// Registration may rewind the sidecar to an older vault birthday. Refresh
+	// vaults and non-mutatingly preflight the authenticated sidecar cursor before
+	// touching the reorg journal, emitting errata, or advancing local metadata.
+	// Syncing the current height here would be wrong: processReorg may first need
+	// to drive older canonical heights through SyncAt in order.
+	if s.bridge != nil {
+		if err = s.refreshAsgardLookup(fetchHeight); err != nil {
+			s.logger.Err(err).Msg("fail to refresh asgard lookup, retrying next block")
+			return txIn, btypes.ErrUnavailableBlock
+		}
+	}
+	resumeDiscoveredReorg := false
+	if s.reorgStore != nil {
+		journal, journalErr := s.reorgStore.GetJournal()
+		if journalErr != nil {
+			return txIn, fmt.Errorf("load monero reorg intent before continuity preflight: %w", journalErr)
+		}
+		resumeDiscoveredReorg = journal != nil && journal.Phase == reorgPhaseDiscovered
+	}
+	if !resumeDiscoveredReorg {
+		if err = s.sidecar.PreflightScannerHeight(fetchHeight, block.Hash, block.PreviousHash); err != nil {
+			return txIn, s.mapScannerContinuityError(fetchHeight, err)
+		}
+	}
+
 	if items, reorgErr := s.processReorg(block, chainHeight); reorgErr != nil {
 		if errors.Is(reorgErr, btypes.ErrUnavailableBlock) {
 			return txIn, btypes.ErrUnavailableBlock
+		}
+		if errors.Is(reorgErr, ErrReorgSupersessionUnsafe) {
+			return txIn, &btypes.ScannerRecoveryRequiredError{
+				CurrentHeight: fetchHeight,
+				NextHeight:    fetchHeight,
+				Reason:        reorgErr.Error() + "; journal retained for inspection, do not reset the cursor blindly",
+			}
 		}
 		return txIn, fmt.Errorf("fail to process monero reorg at %d: %w", fetchHeight, reorgErr)
 	} else if len(items) > 0 {
@@ -278,6 +357,9 @@ func (s *Scanner) FetchTxs(fetchHeight, chainHeight int64) (stypes.TxIn, error) 
 	if err = s.saveBlockMeta(block, fetchHeight, currentItems); err != nil {
 		return txIn, err
 	}
+	if err = s.attachReorgCheckpoint(&txIn); err != nil {
+		return txIn, err
+	}
 	s.setCurrentHeight(fetchHeight)
 
 	if s.reorgStore != nil && s.maxReorgRescan > 0 {
@@ -289,10 +371,10 @@ func (s *Scanner) FetchTxs(fetchHeight, chainHeight int64) (stypes.TxIn, error) 
 		}
 	}
 
-	// Report solvency once per scanned block. Without this hook, the chain
-	// client's ReportSolvency only fires from the auto-unhalt runner which
-	// requires the chain to be already halted — leaving normal operation
-	// blind to vault accounting drift. Match the XRP / Solana wiring pattern.
+	// Solvency reporting may register vaults through Client. Run it after the
+	// scan critical section so registration can take scanMu without deadlocking.
+	s.scanMu.Unlock()
+	locked = false
 	if s.solvencyReporter != nil {
 		if solErr := s.solvencyReporter(fetchHeight); solErr != nil {
 			s.logger.Err(solErr).Int64("height", fetchHeight).Msg("fail to report monero solvency")
@@ -302,22 +384,52 @@ func (s *Scanner) FetchTxs(fetchHeight, chainHeight int64) (stypes.TxIn, error) 
 	return txIn, nil
 }
 
+func (s *Scanner) attachReorgCheckpoint(txIn *stypes.TxIn) error {
+	if s.reorgStore == nil || txIn == nil {
+		return nil
+	}
+	journal, err := s.reorgStore.GetJournal()
+	if err != nil {
+		return err
+	}
+	if journal == nil || journal.Phase != reorgPhaseDelivered {
+		return nil
+	}
+	if len(txIn.TxArray) > 0 {
+		txIn.Persisted = make(chan error, 1)
+	}
+	s.reorgDeliveryPending = true
+	txIn.AbortPersistence = func() {
+		s.scanMu.Lock()
+		s.reorgDeliveryPending = false
+		s.scanMu.Unlock()
+	}
+	txIn.FinalizePersistence = func() error {
+		s.scanMu.Lock()
+		defer s.scanMu.Unlock()
+		// The journal is synced and remains retryable if finalization fails.
+		s.reorgDeliveryPending = false
+		current, loadErr := s.reorgStore.GetJournal()
+		if loadErr != nil {
+			return loadErr
+		}
+		if current == nil {
+			return nil
+		}
+		return s.reorgStore.CommitDelivery(current)
+	}
+	return nil
+}
+
 func (s *Scanner) fetchTransfersByHeight(fetchHeight, chainHeight int64, blockHash, parentHash string) ([]*stypes.TxInItem, error) {
-	if s.sidecar == nil || s.bridge == nil {
-		return nil, nil
+	if s.sidecar == nil {
+		return nil, fmt.Errorf("sidecar is unavailable")
 	}
 	s.pruneObservedOutgoing(fetchHeight)
-	if err := s.refreshAsgardLookup(); err != nil {
-		s.logger.Err(err).Msg("fail to refresh asgard lookup, retrying next block")
-		return nil, btypes.ErrUnavailableBlock
-	}
 
 	resp, err := s.sidecar.SyncAt(fetchHeight, chainHeight, blockHash, parentHash, s.maxReorgRescan)
 	if err != nil {
-		if isFrostScannerHashMismatchErr(err) {
-			return nil, btypes.ErrUnavailableBlock
-		}
-		return nil, fmt.Errorf("fail to get monero transfers at %d: %w", fetchHeight, err)
+		return nil, s.mapScannerContinuityError(fetchHeight, err)
 	}
 	if len(resp.Incoming)+len(resp.Outgoing) == 0 {
 		return nil, nil
@@ -331,9 +443,8 @@ func (s *Scanner) fetchTransfersByHeight(fetchHeight, chainHeight int64, blockHa
 		if to == "" {
 			continue
 		}
-		_, err = common.NewAddress(to)
-		if err != nil {
-			s.logger.Debug().Err(err).Str("txid", transfer.TxID).Str("to", to).Msg("skip incoming transfer with invalid to address")
+		if _, addressErr := common.NewAddress(to); addressErr != nil {
+			s.logger.Debug().Err(addressErr).Str("txid", transfer.TxID).Str("to", to).Msg("skip incoming transfer with invalid to address")
 			continue
 		}
 
@@ -384,6 +495,47 @@ func (s *Scanner) fetchTransfersByHeight(fetchHeight, chainHeight int64, blockHa
 	}
 
 	return s.dedupeTxInItemsByTxID(txItems), nil
+}
+
+func (s *Scanner) mapScannerContinuityError(fetchHeight int64, err error) error {
+	var rewind *sidecar.ScannerRewindRequiredError
+	if errors.As(err, &rewind) {
+		distance := fetchHeight - rewind.NextHeight
+		if rewind.NextHeight <= 0 || rewind.NextHeight >= fetchHeight || distance > btypes.MaxCursorRewindBlocks {
+			return &btypes.ScannerRecoveryRequiredError{
+				CurrentHeight: fetchHeight,
+				NextHeight:    rewind.NextHeight,
+				Reason: fmt.Sprintf(
+					"authenticated sidecar cursor discontinuity is outside the automatic 1..%d block recovery window (reset epoch %d); restore compatible sidecar state or deliberately reset the Bifrost cursor",
+					btypes.MaxCursorRewindBlocks,
+					rewind.ResetEpoch,
+				),
+			}
+		}
+		return &btypes.RewindRequiredError{NextHeight: rewind.NextHeight}
+	}
+	// The sidecar has durably scanned PAST this height. Unlike a rewind, no
+	// amount of retrying repairs it, and rewinding forward to meet the sidecar
+	// would skip the intervening blocks without observing them. Map it to the
+	// terminal scanner error so BlockScanner stops for the operator instead of
+	// re-fetching this height forever.
+	var recovery *sidecar.ScannerRecoveryRequiredError
+	if errors.As(err, &recovery) {
+		return &btypes.ScannerRecoveryRequiredError{
+			CurrentHeight: fetchHeight,
+			NextHeight:    recovery.NextHeight,
+			Reason: fmt.Sprintf(
+				"authenticated sidecar cursor is ahead of the requested height (reset epoch %d); "+
+					"the sidecar has already scanned past this block, so retrying cannot recover: "+
+					"restore compatible sidecar state or deliberately reset the Bifrost cursor",
+				recovery.ResetEpoch,
+			),
+		}
+	}
+	if isFrostScannerHashMismatchErr(err) {
+		return btypes.ErrUnavailableBlock
+	}
+	return fmt.Errorf("fail to get monero transfers at %d: %w", fetchHeight, err)
 }
 
 func (s *Scanner) outgoingVaultsByTxID(outgoing []sidecar.Transfer) map[string]map[string]struct{} {
@@ -612,6 +764,42 @@ func (s *Scanner) processReorg(block sidecar.ChainBlock, chainHeight int64) ([]*
 	if s.reorgStore == nil || block.Hash == "" || block.PreviousHash == "" {
 		return nil, nil
 	}
+	journal, err := s.reorgStore.GetJournal()
+	if err != nil {
+		return nil, err
+	}
+	if journal != nil {
+		if journal.Phase == reorgPhaseDiscovered {
+			journal, err = s.refreshDiscoveredReorgJournal(journal, block.Height)
+			if err != nil {
+				return nil, err
+			}
+			if journal == nil {
+				return nil, nil
+			}
+			return s.replayReorgJournal(journal, chainHeight, block)
+		}
+		matches, matchErr := s.reorgJournalMatchesCanonical(journal, block)
+		if matchErr != nil {
+			return nil, matchErr
+		}
+		if !matches {
+			// ReplayedMetas/ReplayedItems may be the only durable description of
+			// an intermediate fork whose observations reached Observer before the
+			// delivery checkpoint committed. Replacing this journal would make a
+			// later fork's errata impossible to construct. Stop with the journal
+			// intact; automatic supersession needs a durable observation-ACK phase
+			// and must also include the current fetch-height metadata.
+			return nil, fmt.Errorf(
+				"%w: %s journal anchored at %d no longer matches canonical before delivery commit",
+				ErrReorgSupersessionUnsafe,
+				journal.Phase,
+				journal.AnchorHeight,
+			)
+		}
+		return s.resumeReorgDelivery(journal)
+	}
+
 	previousHeight := block.Height - 1
 	if block.Height <= 0 {
 		previousHeight = s.CurrentHeight() - 1
@@ -635,23 +823,87 @@ func (s *Scanner) processReorg(block sidecar.ChainBlock, chainHeight int64) ([]*
 		Str("actual_previous_hash", block.PreviousHash).
 		Msg("monero reorg detected")
 
-	reorgHeights, err := s.reConfirmTx(previousHeight + 1)
+	journal, err = s.discoverReorg(previousHeight + 1)
 	if err != nil {
 		return nil, err
 	}
-	if len(reorgHeights) == 0 {
+	if journal == nil {
 		return nil, nil
+	}
+	return s.replayReorgJournal(journal, chainHeight, block)
+}
+
+// refreshDiscoveredReorgJournal rebuilds a persisted intent against the
+// current canonical chain before replay. A crash may leave the journal in the
+// discovered phase while the daemon advances or reorganizes again.
+func (s *Scanner) refreshDiscoveredReorgJournal(journal *reorgJournal, nextHeight int64) (*reorgJournal, error) {
+	if journal == nil || journal.Phase != reorgPhaseDiscovered {
+		return nil, fmt.Errorf("invalid discovered xmr reorg journal")
+	}
+	refreshed, err := s.buildReorgJournal(nextHeight)
+	if err != nil {
+		return nil, err
+	}
+	if refreshed == nil {
+		if err = s.reorgStore.DeleteJournal(); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	if err = s.reorgStore.SetJournal(refreshed); err != nil {
+		return nil, err
+	}
+	return refreshed, nil
+}
+
+func (s *Scanner) replayReorgJournal(journal *reorgJournal, chainHeight int64, nextBlock sidecar.ChainBlock) ([]*stypes.TxInItem, error) {
+	if err := validateReorgReplayRange(journal, nextBlock.Height); err != nil {
+		return nil, err
+	}
+
+	// The durable Discovered record is an intent only. Rewind the authenticated
+	// sidecar cursor before scanning, changing phase, delivering errata, or
+	// replacing metadata. Repeating this on every resume makes partial replay
+	// and the crash window after intent persistence safe.
+	if err := s.prepareSidecarReorgReplay(journal); err != nil {
+		return nil, fmt.Errorf("prepare sidecar for monero reorg replay: %w", err)
 	}
 
 	reScannedItems := make([]*stypes.TxInItem, 0)
-	for _, height := range reorgHeights {
+	metas := make([]*reorgBlockMeta, 0, len(journal.Heights))
+	expectedHeight := journal.AnchorHeight + 1
+	expectedPreviousHash := journal.AnchorHash
+	if expectedHeight < 0 || strings.TrimSpace(expectedPreviousHash) == "" {
+		return nil, fmt.Errorf("invalid xmr reorg journal anchor")
+	}
+	for _, height := range journal.Heights {
+		if height != expectedHeight {
+			return nil, fmt.Errorf("non-contiguous xmr reorg replay height %d, expected %d", height, expectedHeight)
+		}
 		reorgBlock, blockErr := s.sidecar.ChainBlock(height)
 		if blockErr != nil {
 			if errors.Is(blockErr, sidecar.ErrUnavailableBlock) {
 				return nil, btypes.ErrUnavailableBlock
 			}
-			s.logger.Error().Err(blockErr).Int64("height", height).Msg("fail to fetch monero block during reorg rescan")
-			continue
+			return nil, fmt.Errorf("fail to fetch monero block %d during reorg replay: %w", height, blockErr)
+		}
+		if reorgBlock.Height != height {
+			return nil, &btypes.ScannerRecoveryRequiredError{
+				CurrentHeight: nextBlock.Height,
+				NextHeight:    journal.AnchorHeight + 1,
+				Reason: fmt.Sprintf(
+					"monero reorg replay requested height %d but the sidecar returned height %d",
+					height, reorgBlock.Height,
+				),
+			}
+		}
+		if !strings.EqualFold(reorgBlock.PreviousHash, expectedPreviousHash) {
+			s.logger.Warn().
+				Int64("height", height).
+				Str("expected_previous_hash", expectedPreviousHash).
+				Str("actual_previous_hash", reorgBlock.PreviousHash).
+				Msg("monero chain changed during reorg replay; rediscovering")
+			return nil, btypes.ErrUnavailableBlock
 		}
 
 		items, transferErr := s.fetchTransfersByHeight(height, chainHeight, reorgBlock.Hash, reorgBlock.PreviousHash)
@@ -659,25 +911,121 @@ func (s *Scanner) processReorg(block sidecar.ChainBlock, chainHeight int64) ([]*
 			if errors.Is(transferErr, btypes.ErrUnavailableBlock) {
 				return nil, btypes.ErrUnavailableBlock
 			}
-			s.logger.Error().Err(transferErr).Int64("height", height).Msg("fail to fetch monero transfers during reorg rescan")
-			continue
+			return nil, fmt.Errorf("fail to fetch monero transfers at %d during reorg replay: %w", height, transferErr)
 		}
 
 		reScannedItems = append(reScannedItems, items...)
-		if saveErr := s.saveBlockMeta(reorgBlock, height, items); saveErr != nil {
-			return nil, saveErr
+		metas = append(metas, blockMetaFromItems(reorgBlock, height, items))
+		expectedHeight++
+		expectedPreviousHash = reorgBlock.Hash
+	}
+	if nextBlock.Height != expectedHeight {
+		return nil, &btypes.ScannerRecoveryRequiredError{
+			CurrentHeight: nextBlock.Height,
+			NextHeight:    journal.AnchorHeight + 1,
+			Reason: fmt.Sprintf(
+				"monero reorg replay ended at height %d but must join height %d",
+				expectedHeight, nextBlock.Height,
+			),
 		}
 	}
-
-	return reScannedItems, nil
+	if !strings.EqualFold(nextBlock.PreviousHash, expectedPreviousHash) {
+		s.logger.Warn().
+			Int64("height", nextBlock.Height).
+			Str("expected_previous_hash", expectedPreviousHash).
+			Str("actual_previous_hash", nextBlock.PreviousHash).
+			Msg("monero chain changed at the reorg replay join; rediscovering")
+		return nil, btypes.ErrUnavailableBlock
+	}
+	if err := s.reorgStore.CommitReplay(journal, metas, reScannedItems); err != nil {
+		return nil, err
+	}
+	return s.resumeReorgDelivery(journal)
 }
 
-func (s *Scanner) reConfirmTx(height int64) ([]int64, error) {
+// validateReorgReplayRange separates a malformed durable replay intent from a
+// live chain change. The former cannot repair itself by retrying the same scan
+// height and must stop BlockScanner with an operator-recovery error.
+func validateReorgReplayRange(journal *reorgJournal, nextBlockHeight int64) error {
+	if journal == nil || journal.Phase != reorgPhaseDiscovered || len(journal.Heights) == 0 {
+		return nil // prepareSidecarReorgReplay reports the general journal error.
+	}
+
+	targetNextHeight := journal.AnchorHeight + 1
+	expectedHeight := targetNextHeight
+	for _, height := range journal.Heights {
+		if height != expectedHeight {
+			return &btypes.ScannerRecoveryRequiredError{
+				CurrentHeight: nextBlockHeight,
+				NextHeight:    targetNextHeight,
+				Reason: fmt.Sprintf(
+					"stored monero reorg journal is non-contiguous at height %d (expected %d)",
+					height, expectedHeight,
+				),
+			}
+		}
+		expectedHeight++
+	}
+	if expectedHeight != nextBlockHeight {
+		return &btypes.ScannerRecoveryRequiredError{
+			CurrentHeight: nextBlockHeight,
+			NextHeight:    targetNextHeight,
+			Reason: fmt.Sprintf(
+				"stored monero reorg journal ends at height %d and cannot join scan height %d",
+				expectedHeight-1, nextBlockHeight,
+			),
+		}
+	}
+	return nil
+}
+
+func (s *Scanner) prepareSidecarReorgReplay(journal *reorgJournal) error {
+	if s.sidecar == nil {
+		return fmt.Errorf("sidecar is unavailable")
+	}
+	if journal == nil || journal.Phase != reorgPhaseDiscovered || len(journal.Heights) == 0 {
+		return fmt.Errorf("invalid discovered reorg intent")
+	}
+	if journal.AnchorHeight < 0 || strings.TrimSpace(journal.AnchorHash) == "" {
+		return fmt.Errorf("invalid reorg anchor")
+	}
+	targetNextHeight := journal.AnchorHeight + 1
+	if targetNextHeight <= 0 || journal.Heights[0] != targetNextHeight {
+		return fmt.Errorf("reorg intent does not begin immediately after its anchor")
+	}
+	if s.maxReorgRescan <= 0 || int64(len(journal.Heights)) > s.maxReorgRescan {
+		return fmt.Errorf("reorg intent exceeds configured replay window")
+	}
+	for i, height := range journal.Heights {
+		if height != targetNextHeight+int64(i) {
+			return fmt.Errorf("reorg intent has non-contiguous height %d", height)
+		}
+	}
+	_, err := s.sidecar.RewindScannerForReorg(targetNextHeight, journal.AnchorHeight, journal.AnchorHash)
+	return err
+}
+
+func (s *Scanner) discoverReorg(height int64) (*reorgJournal, error) {
+	journal, err := s.buildReorgJournal(height)
+	if err != nil || journal == nil {
+		return journal, err
+	}
+	if err = s.reorgStore.SetJournal(journal); err != nil {
+		return nil, err
+	}
+	return journal, nil
+}
+
+func (s *Scanner) buildReorgJournal(height int64) (*reorgJournal, error) {
 	if s.reorgStore == nil {
 		return nil, nil
 	}
 
 	rescanHeights := make([]int64, 0)
+	errataRecords := make([]reorgErrataRecord, 0)
+	foundCommonAncestor := false
+	anchorHeight := int64(-1)
+	anchorHash := ""
 	earliestHeight := height - s.maxReorgRescan
 	if earliestHeight < 0 {
 		earliestHeight = 0
@@ -689,6 +1037,9 @@ func (s *Scanner) reConfirmTx(height int64) ([]int64, error) {
 			return nil, err
 		}
 		if blockMeta == nil {
+			if len(rescanHeights) > 0 {
+				return nil, fmt.Errorf("missing xmr reorg metadata at height %d before common ancestor", i)
+			}
 			continue
 		}
 
@@ -697,6 +1048,9 @@ func (s *Scanner) reConfirmTx(height int64) ([]int64, error) {
 			return nil, fmt.Errorf("fail to fetch monero block %d during reorg check: %w", i, err)
 		}
 		if strings.EqualFold(blockMeta.BlockHash, block.Hash) {
+			foundCommonAncestor = true
+			anchorHeight = i
+			anchorHash = block.Hash
 			break
 		}
 
@@ -721,23 +1075,145 @@ func (s *Scanner) reConfirmTx(height int64) ([]int64, error) {
 				Chain: s.chain,
 			})
 		}
-		if len(errataTxs) > 0 && s.globalErrataQueue != nil {
-			s.globalErrataQueue <- stypes.ErrataBlock{
-				Height: i,
-				Txs:    errataTxs,
+		if len(errataTxs) > 0 {
+			txIDs := make([]string, 0, len(errataTxs))
+			for _, errataTx := range errataTxs {
+				txIDs = append(txIDs, errataTx.TxID.String())
 			}
+			errataRecords = append(errataRecords, reorgErrataRecord{Height: i, TxIDs: txIDs})
 		}
 
 		rescanHeights = append(rescanHeights, i)
-		blockMeta.BlockHash = block.Hash
-		blockMeta.PreviousHash = block.PreviousHash
-		blockMeta.CustomerTransactions = nil
-		if err = s.reorgStore.Set(blockMeta); err != nil {
-			return nil, err
-		}
+	}
+	if len(rescanHeights) == 0 {
+		return nil, nil
+	}
+	if !foundCommonAncestor {
+		return nil, fmt.Errorf("xmr reorg exceeds configured replay window: no common ancestor found")
+	}
+	sort.Slice(rescanHeights, func(i, j int) bool { return rescanHeights[i] < rescanHeights[j] })
+	sort.Slice(errataRecords, func(i, j int) bool { return errataRecords[i].Height < errataRecords[j].Height })
+
+	// replayReorgJournal requires Heights to be exactly the contiguous range
+	// (anchorHeight, height). A metadata gap ABOVE the anchor is skipped by the
+	// walk above when it is seen before any mismatch, which silently truncates
+	// the range: every subsequent replay then fails the contiguity check in
+	// replayReorgJournal and returns ErrUnavailableBlock, stalling the scanner
+	// on this height indefinitely and silently. Fail closed instead, so the
+	// gap is reported rather than retried forever.
+	if wantLen := height - 1 - anchorHeight; int64(len(rescanHeights)) != wantLen ||
+		rescanHeights[0] != anchorHeight+1 ||
+		rescanHeights[len(rescanHeights)-1] != height-1 {
+		return nil, fmt.Errorf(
+			"xmr reorg replay range is not contiguous: missing reorg metadata between "+
+				"common ancestor %d and height %d, cannot replay safely",
+			anchorHeight, height,
+		)
 	}
 
-	return rescanHeights, nil
+	journal := &reorgJournal{
+		Version:      2,
+		Phase:        reorgPhaseDiscovered,
+		AnchorHeight: anchorHeight,
+		AnchorHash:   anchorHash,
+		Heights:      rescanHeights,
+		Errata:       errataRecords,
+	}
+	return journal, nil
+}
+
+func (s *Scanner) reorgJournalMatchesCanonical(journal *reorgJournal, next sidecar.ChainBlock) (bool, error) {
+	if journal == nil || len(journal.ReplayedMetas) != len(journal.Heights) || len(journal.ReplayedMetas) == 0 {
+		return false, nil
+	}
+	expectedHeight := journal.AnchorHeight + 1
+	expectedPreviousHash := journal.AnchorHash
+	for _, meta := range journal.ReplayedMetas {
+		if meta == nil || meta.Height != expectedHeight || !strings.EqualFold(meta.PreviousHash, expectedPreviousHash) {
+			return false, nil
+		}
+		canonical, err := s.sidecar.ChainBlock(meta.Height)
+		if err != nil {
+			return false, fmt.Errorf("fail to revalidate monero reorg height %d: %w", meta.Height, err)
+		}
+		if !strings.EqualFold(canonical.Hash, meta.BlockHash) ||
+			!strings.EqualFold(canonical.PreviousHash, meta.PreviousHash) {
+			return false, nil
+		}
+		expectedHeight++
+		expectedPreviousHash = meta.BlockHash
+	}
+	return next.Height == expectedHeight && strings.EqualFold(next.PreviousHash, expectedPreviousHash), nil
+}
+
+func (s *Scanner) resumeReorgDelivery(journal *reorgJournal) ([]*stypes.TxInItem, error) {
+	if journal == nil {
+		return nil, nil
+	}
+	items := append([]*stypes.TxInItem(nil), journal.ReplayedItems...)
+	switch journal.Phase {
+	case reorgPhaseReplayed:
+		if err := s.deliverReorgErrata(journal.Errata); err != nil {
+			return nil, err
+		}
+		journal.Phase = reorgPhaseDelivered
+		if err := s.reorgStore.SetJournal(journal); err != nil {
+			return nil, err
+		}
+		return items, nil
+	case reorgPhaseDelivered:
+		return items, nil
+	default:
+		return nil, fmt.Errorf("unsupported xmr reorg journal phase %q", journal.Phase)
+	}
+}
+
+func (s *Scanner) deliverReorgErrata(records []reorgErrataRecord) error {
+	for _, record := range records {
+		txs := make([]stypes.ErrataTx, 0, len(record.TxIDs))
+		for _, txID := range record.TxIDs {
+			txs = append(txs, stypes.ErrataTx{TxID: common.TxID(txID), Chain: s.chain})
+		}
+		if len(txs) == 0 {
+			continue
+		}
+		if s.globalErrataQueue == nil {
+			return fmt.Errorf("monero errata queue is not configured")
+		}
+		block := stypes.ErrataBlock{
+			Height:     record.Height,
+			Txs:        txs,
+			DeliveryID: fmt.Sprintf("xmr-reorg-%d-%s", record.Height, strings.Join(record.TxIDs, ",")),
+		}
+		if s.errataAckRequired {
+			block.Persisted = make(chan error, 1)
+		}
+		// The queue is unbuffered and this runs with scanMu held, so an
+		// observer that has already stopped consuming would otherwise block
+		// the scanner forever and wedge BlockScanner.Stop(). Bound the send
+		// like the acknowledgement below: the replay is redriven on the next
+		// FetchTxs with the same DeliveryID, so a timeout is safe to retry.
+		timeout := s.errataDeliveryTimeout
+		if timeout <= 0 {
+			timeout = 2 * constants.ThorchainBlockTime
+		}
+		select {
+		case s.globalErrataQueue <- block:
+		case <-time.After(timeout):
+			return fmt.Errorf("timed out delivering monero errata to observer at height %d", record.Height)
+		}
+		if block.Persisted != nil {
+			select {
+			case err := <-block.Persisted:
+				if err != nil {
+					return fmt.Errorf("observer failed to durably process monero errata: %w", err)
+				}
+			case <-time.After(timeout):
+				return fmt.Errorf("timed out waiting for observer to durably process monero errata")
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Scanner) saveBlockMeta(block sidecar.ChainBlock, height int64, items []*stypes.TxInItem) error {
@@ -748,6 +1224,10 @@ func (s *Scanner) saveBlockMeta(block sidecar.ChainBlock, height int64, items []
 		s.logger.Debug().Int64("height", height).Msg("skip monero reorg block meta save: missing block hash")
 		return nil
 	}
+	return s.reorgStore.Set(blockMetaFromItems(block, height, items))
+}
+
+func blockMetaFromItems(block sidecar.ChainBlock, height int64, items []*stypes.TxInItem) *reorgBlockMeta {
 	txIDs := make([]string, 0, len(items))
 	seen := make(map[string]struct{}, len(items))
 	for _, item := range items {
@@ -761,15 +1241,15 @@ func (s *Scanner) saveBlockMeta(block sidecar.ChainBlock, height int64, items []
 		txIDs = append(txIDs, item.Tx)
 	}
 
-	return s.reorgStore.Set(&reorgBlockMeta{
+	return &reorgBlockMeta{
 		Height:               height,
 		BlockHash:            block.Hash,
 		PreviousHash:         block.PreviousHash,
 		CustomerTransactions: txIDs,
-	})
+	}
 }
 
-func (s *Scanner) refreshAsgardLookup() error {
+func (s *Scanner) refreshAsgardLookup(nextScanHeight int64) error {
 	s.asgardMu.RLock()
 	if time.Since(s.asgardUpdated) < constants.ThorchainBlockTime && len(s.asgardLookup) > 0 {
 		s.asgardMu.RUnlock()
@@ -785,7 +1265,12 @@ func (s *Scanner) refreshAsgardLookup() error {
 	lookup := make(map[string]common.PubKey)
 	seenVaults := make(map[string]struct{})
 	for _, vault := range vaults {
-		if addErr := s.addFrostVaultToLookup(lookup, seenVaults, vault.PubKeyFrost, vault.VaultCreationHeightXmr); addErr != nil {
+		if addErr := s.addFrostVaultToLookup(
+			lookup,
+			seenVaults,
+			vault.PubKeyFrost,
+			xmrVaultRegistrationBirthday(vault.VaultCreationHeightXmr, nextScanHeight),
+		); addErr != nil {
 			s.logger.Debug().Err(addErr).Str("vault_pubkey", vault.PubKey.String()).Msg("skip xmr vault during asgard lookup refresh")
 			continue
 		}
@@ -804,7 +1289,12 @@ func (s *Scanner) refreshAsgardLookup() error {
 			s.logger.Debug().Err(vaultErr).Str("vault_pubkey", pair.PubKey.String()).Msg("skip xmr pubkey during asgard lookup refresh")
 			continue
 		}
-		if err := s.addFrostVaultToLookup(lookup, seenVaults, vault.PubKeyFrost, vault.VaultCreationHeightXmr); err != nil {
+		if err := s.addFrostVaultToLookup(
+			lookup,
+			seenVaults,
+			vault.PubKeyFrost,
+			xmrVaultRegistrationBirthday(vault.VaultCreationHeightXmr, nextScanHeight),
+		); err != nil {
 			s.logger.Debug().Err(err).Str("vault_pubkey", vault.PubKey.String()).Msg("skip xmr vault during pubkey lookup refresh")
 			continue
 		}
@@ -822,7 +1312,7 @@ func (s *Scanner) addFrostVaultToLookup(
 	lookup map[string]common.PubKey,
 	seenVaults map[string]struct{},
 	observedVault common.PubKey,
-	creationHeight int64,
+	registrationBirthday int64,
 ) error {
 	if observedVault.IsEmpty() {
 		return nil
@@ -840,7 +1330,7 @@ func (s *Scanner) addFrostVaultToLookup(
 		observedVault,
 		s.vaultBootstrap,
 		"bifrost_scanner",
-		creationHeight,
+		registrationBirthday,
 	)
 	if addrErr != nil {
 		return fmt.Errorf("fail to register vault %s: %w", observedVault.String(), addrErr)
@@ -1123,8 +1613,8 @@ func IsUnavailableBlockErr(err error) bool {
 }
 
 func isFrostScannerHashMismatchErr(err error) bool {
-	if err == nil {
-		return false
-	}
-	return strings.Contains(strings.ToLower(err.Error()), "scanner sync hash mismatch")
+	var httpErr *sidecar.HTTPError
+	return errors.As(err, &httpErr) &&
+		httpErr.Status == http.StatusConflict &&
+		httpErr.Code == "scanner_hash_mismatch"
 }

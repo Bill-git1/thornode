@@ -29,3 +29,20 @@ func (net ChainNetwork) SoftEquals(net2 ChainNetwork) bool {
 
 	return false
 }
+
+// ChainNetworkName returns the canonical deployment label used in signed
+// cross-process and cross-node protocol statements.
+func ChainNetworkName(network ChainNetwork) string {
+	switch network {
+	case MainNet:
+		return "mainnet"
+	case MockNet:
+		return "mocknet"
+	case StageNet:
+		return "stagenet"
+	case ChainNet:
+		return "chainnet"
+	default:
+		return "testnet"
+	}
+}

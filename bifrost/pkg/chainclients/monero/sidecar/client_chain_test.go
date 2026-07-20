@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -360,10 +361,10 @@ func TestClientResetScanner(t *testing.T) {
 		receivedVault = req.VaultPubKey
 		receivedBirthday = req.BirthdayHeight
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"vault_pub_key":   req.VaultPubKey,
-			"birthday_height": req.BirthdayHeight,
-			"status":          "reset",
-			"rescan":          true,
+			"reset":                true,
+			"birthday_height":      req.BirthdayHeight,
+			"reset_epoch":          7,
+			"expected_next_height": req.BirthdayHeight,
 		})
 	}))
 	defer server.Close()
@@ -385,13 +386,422 @@ func TestClientResetScanner(t *testing.T) {
 	}
 }
 
+func TestSyncAtRecoversDurableResetEpochAfterClientRestart(t *testing.T) {
+	t.Parallel()
+
+	postCalls := 0
+	nextHeight := uint64(50)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/monero/scanner/state":
+			_ = json.NewEncoder(w).Encode(ScannerState{
+				ResetEpoch: 7, NextHeight: &nextHeight, StrictAfterReset: true,
+			})
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
+			postCalls++
+			var req SyncReq
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if postCalls == 1 {
+				if req.ResetEpoch != nil || req.ExpectedNextHeight != nil {
+					t.Errorf("restart request unexpectedly had continuity fields: %+v", req)
+				}
+				http.Error(w, "reset epoch required", http.StatusConflict)
+				return
+			}
+			if req.ResetEpoch == nil || *req.ResetEpoch != 7 ||
+				req.ExpectedNextHeight == nil || *req.ExpectedNextHeight != 50 {
+				t.Errorf("retry did not bind recovered continuity: %+v", req)
+			}
+			_ = json.NewEncoder(w).Encode(Transfers{})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	if _, err = client.SyncAt(50, 60, strings.Repeat("a", 64), strings.Repeat("b", 64), 10); err != nil {
+		t.Fatalf("SyncAt continuity recovery: %v", err)
+	}
+	if postCalls != 2 {
+		t.Fatalf("expected one failed request and one bound retry, got %d", postCalls)
+	}
+}
+
+func TestSyncAtReturnsTypedRewindForOlderAuthenticatedCursor(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		epoch  uint64
+		strict bool
+	}{
+		{name: "strict reset cursor", epoch: 7, strict: true},
+		{name: "fresh durable baseline", epoch: 0, strict: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var postCalls atomic.Int32
+			nextHeight := uint64(40)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == scannerStatePath:
+					_ = json.NewEncoder(w).Encode(ScannerState{
+						ResetEpoch:       tt.epoch,
+						NextHeight:       &nextHeight,
+						StrictAfterReset: tt.strict,
+					})
+				case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
+					postCalls.Add(1)
+					w.WriteHeader(http.StatusConflict)
+					_, _ = w.Write([]byte(`{"code":"scanner_cursor_conflict"}`))
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+			if err != nil {
+				t.Fatalf("new client: %v", err)
+			}
+			_, err = client.SyncAt(50, 60, strings.Repeat("a", 64), strings.Repeat("b", 64), 10)
+			var rewindErr *ScannerRewindRequiredError
+			if !errors.As(err, &rewindErr) {
+				t.Fatalf("expected typed rewind error, got %v", err)
+			}
+			if rewindErr.RequestedHeight != 50 || rewindErr.NextHeight != 40 || rewindErr.ResetEpoch != tt.epoch {
+				t.Fatalf("unexpected rewind error: %+v", rewindErr)
+			}
+			if got := postCalls.Load(); got != 1 {
+				t.Fatalf("older cursor must not be retried at the wrong height; got %d POSTs", got)
+			}
+		})
+	}
+}
+
+func TestSyncAtRetriesAuthenticatedExactReplayOnce(t *testing.T) {
+	t.Parallel()
+
+	blockHash := strings.Repeat("a", 64)
+	parentHash := strings.Repeat("b", 64)
+	nextHeight := uint64(51)
+	lastHeight := uint64(50)
+	var postCalls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == scannerStatePath:
+			_ = json.NewEncoder(w).Encode(ScannerState{
+				ResetEpoch:     0,
+				NextHeight:     &nextHeight,
+				LastHeight:     &lastHeight,
+				LastBlockHash:  blockHash,
+				LastParentHash: parentHash,
+			})
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
+			call := postCalls.Add(1)
+			var req SyncReq
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if call == 1 {
+				w.WriteHeader(http.StatusConflict)
+				_, _ = w.Write([]byte(`{"code":"scanner_cursor_conflict"}`))
+				return
+			}
+			if req.ResetEpoch == nil || *req.ResetEpoch != 0 ||
+				req.ExpectedNextHeight == nil || *req.ExpectedNextHeight != 50 {
+				t.Errorf("exact replay retry omitted authenticated continuity: %+v", req)
+			}
+			_ = json.NewEncoder(w).Encode(Transfers{})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	if _, err = client.SyncAt(50, 60, blockHash, parentHash, 10); err != nil {
+		t.Fatalf("exact replay recovery: %v", err)
+	}
+	if got := postCalls.Load(); got != 2 {
+		t.Fatalf("expected one conflict and one exact replay, got %d POSTs", got)
+	}
+}
+
+func TestSyncAtCursorAheadNonReplayIsNotTypedOrRetried(t *testing.T) {
+	t.Parallel()
+
+	nextHeight := uint64(60)
+	lastHeight := uint64(59)
+	var postCalls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == scannerStatePath:
+			_ = json.NewEncoder(w).Encode(ScannerState{
+				ResetEpoch:     0,
+				NextHeight:     &nextHeight,
+				LastHeight:     &lastHeight,
+				LastBlockHash:  strings.Repeat("c", 64),
+				LastParentHash: strings.Repeat("d", 64),
+			})
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
+			postCalls.Add(1)
+			w.WriteHeader(http.StatusConflict)
+			_, _ = w.Write([]byte(`{"code":"scanner_cursor_conflict"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	_, err = client.SyncAt(50, 60, strings.Repeat("a", 64), strings.Repeat("b", 64), 10)
+	if err == nil {
+		t.Fatal("expected cursor-ahead conflict")
+	}
+	var rewindErr *ScannerRewindRequiredError
+	if errors.As(err, &rewindErr) {
+		t.Fatalf("cursor ahead must not be reported as a rewind: %+v", rewindErr)
+	}
+	if !IsHTTPStatus(err, http.StatusConflict) {
+		t.Fatalf("expected original cursor-ahead conflict, got %v", err)
+	}
+	if got := postCalls.Load(); got != 1 {
+		t.Fatalf("cursor-ahead request must not be retried, got %d POSTs", got)
+	}
+}
+
+func TestConcurrentStaleRegistrationCannotDowngradeContinuity(t *testing.T) {
+	t.Parallel()
+
+	firstStarted := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	var closeFirst sync.Once
+	var registerCalls atomic.Int32
+	var syncCalls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/vaults/register":
+			call := registerCalls.Add(1)
+			if call == 1 {
+				closeFirst.Do(func() { close(firstStarted) })
+				<-releaseFirst
+				next := uint64(100)
+				_ = json.NewEncoder(w).Encode(RegisterVaultResp{
+					Registered:         true,
+					ResetEpoch:         1,
+					ExpectedNextHeight: &next,
+				})
+				return
+			}
+			next := uint64(40)
+			_ = json.NewEncoder(w).Encode(RegisterVaultResp{
+				Registered:         true,
+				ResetEpoch:         2,
+				ExpectedNextHeight: &next,
+			})
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
+			syncCalls.Add(1)
+			_ = json.NewEncoder(w).Encode(Transfers{})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	firstResult := make(chan error, 1)
+	go func() {
+		_, callErr := client.RegisterVault(RegisterVaultReq{
+			VaultPubKey: "first", VaultCreationHeight: 100,
+		})
+		firstResult <- callErr
+	}()
+	<-firstStarted
+	if _, err = client.RegisterVault(RegisterVaultReq{
+		VaultPubKey: "second", VaultCreationHeight: 40,
+	}); err != nil {
+		t.Fatalf("newer registration: %v", err)
+	}
+	close(releaseFirst)
+	if err = <-firstResult; err != nil {
+		t.Fatalf("stale registration response: %v", err)
+	}
+
+	continuity, ok := client.cachedScannerContinuity()
+	if !ok || continuity.resetEpoch != 2 || continuity.nextHeight != 40 {
+		t.Fatalf("stale response downgraded continuity: cached=%+v present=%t", continuity, ok)
+	}
+	_, err = client.SyncAt(50, 60, strings.Repeat("a", 64), strings.Repeat("b", 64), 10)
+	var rewindErr *ScannerRewindRequiredError
+	if !errors.As(err, &rewindErr) || rewindErr.ResetEpoch != 2 || rewindErr.NextHeight != 40 {
+		t.Fatalf("expected cached epoch-2 rewind, got %v", err)
+	}
+	if got := syncCalls.Load(); got != 0 {
+		t.Fatalf("cached registration rewind should stop the wrong POST, got %d", got)
+	}
+}
+
+func TestPreflightScannerHeightRequiresExactAheadReplay(t *testing.T) {
+	t.Parallel()
+
+	blockHash := strings.Repeat("a", 64)
+	parentHash := strings.Repeat("b", 64)
+	nextHeight := uint64(51)
+	lastHeight := uint64(50)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != scannerStatePath {
+			http.NotFound(w, r)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(ScannerState{
+			ResetEpoch:     0,
+			NextHeight:     &nextHeight,
+			LastHeight:     &lastHeight,
+			LastBlockHash:  blockHash,
+			LastParentHash: parentHash,
+		})
+	}))
+	defer server.Close()
+
+	client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	if err = client.PreflightScannerHeight(50, blockHash, parentHash); err != nil {
+		t.Fatalf("exact replay preflight: %v", err)
+	}
+	if err = client.PreflightScannerHeight(50, strings.Repeat("c", 64), parentHash); err == nil {
+		t.Fatal("expected non-exact cursor-ahead preflight to fail")
+	} else {
+		var rewindErr *ScannerRewindRequiredError
+		if errors.As(err, &rewindErr) {
+			t.Fatalf("cursor ahead must not be typed as a rewind: %+v", rewindErr)
+		}
+	}
+}
+
+func TestSyncAtRejectsMalformedScannerContinuityWithoutRetry(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		stateBody string
+	}{
+		{
+			name:      "nil next height",
+			stateBody: `{"reset_epoch":0,"next_height":null,"strict_after_reset":false}`,
+		},
+		{
+			name:      "next height outside int64 range",
+			stateBody: `{"reset_epoch":0,"next_height":9223372036854775808,"strict_after_reset":false}`,
+		},
+		{
+			name: "non-contiguous last height",
+			stateBody: `{"reset_epoch":0,"next_height":51,"last_height":40,` +
+				`"last_block_hash":"` + strings.Repeat("a", 64) + `",` +
+				`"last_parent_hash":"` + strings.Repeat("b", 64) + `",` +
+				`"strict_after_reset":false}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var postCalls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == scannerStatePath:
+					_, _ = w.Write([]byte(tt.stateBody))
+				case r.Method == http.MethodPost && r.URL.Path == "/v1/monero/scanner/sync":
+					postCalls.Add(1)
+					w.WriteHeader(http.StatusConflict)
+					_, _ = w.Write([]byte(`{"code":"scanner_cursor_conflict"}`))
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+			if err != nil {
+				t.Fatalf("new client: %v", err)
+			}
+			_, err = client.SyncAt(50, 60, strings.Repeat("a", 64), strings.Repeat("b", 64), 10)
+			if err == nil {
+				t.Fatal("expected malformed continuity to fail closed")
+			}
+			var rewindErr *ScannerRewindRequiredError
+			if errors.As(err, &rewindErr) {
+				t.Fatalf("malformed continuity must not become a rewind instruction: %+v", rewindErr)
+			}
+			if got := postCalls.Load(); got != 1 {
+				t.Fatalf("malformed continuity must not be retried, got %d POSTs", got)
+			}
+		})
+	}
+}
+
+func TestRegisterVaultRejectsNilContinuityCursor(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/monero/vaults/register" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"registered":true,"reset_epoch":0}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{}, server.URL)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	if _, err = client.RegisterVault(RegisterVaultReq{VaultPubKey: "vault"}); err == nil {
+		t.Fatal("expected nil registration cursor to fail closed")
+	}
+	if _, ok := client.cachedScannerContinuity(); ok {
+		t.Fatal("invalid registration response must not populate continuity cache")
+	}
+}
+
 func TestNewClientAllowsAuthenticatedMocknetHTTP(t *testing.T) {
 	t.Parallel()
 
 	signer, err := NewClientWithEndpoint(
 		config.BifrostChainConfiguration{
-			ChainNetwork:        "mocknet",
-			AuthorizationBearer: "test-token",
+			ChainNetwork:              "mocknet",
+			SignerAuthorizationBearer: "test-token",
+			SignerExpectedNetwork:     "mocknet",
+			SignerAllowInsecureHTTP:   true,
 		},
 		"http://xmr-frost-signer:8283",
 	)
@@ -408,14 +818,16 @@ func TestNewClientRejectsNonLoopbackWithoutAuth(t *testing.T) {
 
 	_, err := NewClientWithEndpoint(
 		config.BifrostChainConfiguration{
-			ChainNetwork: "mocknet",
+			ChainNetwork:            "mocknet",
+			SignerExpectedNetwork:   "mocknet",
+			SignerAllowInsecureHTTP: true,
 		},
 		"http://xmr-frost-signer:8283",
 	)
 	if err == nil {
 		t.Fatal("expected non-loopback endpoint without explicit auth to be rejected")
 	}
-	if !strings.Contains(err.Error(), "requires authorization_bearer or username/password") {
+	if !strings.Contains(err.Error(), "requires signer_authorization_bearer or signer_username/signer_password") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
