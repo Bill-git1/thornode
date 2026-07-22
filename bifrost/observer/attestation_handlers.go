@@ -181,7 +181,10 @@ func (s *AttestationGossip) AttestErrata(ctx context.Context, errata common.Erra
 
 	// Handle the attestation locally first
 	s.logger.Debug().Msg("handling attestation locally")
-	s.handleErrataAttestation(ctx, msg)
+	// AttestErrata is invoked by the Observer's durable pending-tombstone
+	// outbox. Unlike peer gossip, that retry source may re-arm an identical
+	// uncommitted vote after the configured throttle interval.
+	s.handlePendingErrataAttestation(ctx, msg)
 
 	s.batcher.AddErrataTx(msg)
 

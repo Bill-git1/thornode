@@ -435,12 +435,14 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_accept_standby_node_me
 // TestTssKeysignFailHandler_TerminalRoundIncrementsLastRoundCount asserts the
 // consensus-affecting LastRoundCount++ path: a MsgTssKeysignFail carrying one
 // of the accepted terminal-round names (v3 secp256k1 KEYSIGN9, EdDSA
-// EDDSAKEYSIGN3, FROST share) must increment voter.LastRoundCount for the
-// signer's vault membership. Non-terminal rounds — including KEYSIGN7, which
-// was terminal under tss-lib v1 but is an interior consistency-check round
-// under v3 — must NOT increment. Regressing this would either freeze vaults
-// too eagerly (on mid-protocol round-7 timeouts) or fail to freeze vaults that
-// should be frozen on terminal-round consensus.
+// EDDSAKEYSIGN3, FROST frost_share/frost_result) must increment
+// voter.LastRoundCount for
+// the signer's vault membership. Non-terminal rounds — including KEYSIGN7,
+// which was terminal under tss-lib v1 but is an interior consistency-check
+// round under v3 — must
+// NOT increment. Regressing this would either freeze vaults too eagerly (on
+// mid-protocol round-7 timeouts) or fail to freeze vaults that should be frozen
+// on terminal-round consensus.
 func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_TerminalRoundIncrementsLastRoundCount(c *C) {
 	cases := []struct {
 		name            string
@@ -450,7 +452,16 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_TerminalRoundIncrement
 	}{
 		{"v3 secp terminal round 9 increments", tssMessages.KEYSIGN9, false, true},
 		{"eddsa terminal round 3 increments", tssMessages.EDDSAKEYSIGN3, false, true},
-		{"frost share increments", tssMessages.FROSTKEYSIGNSHARE, false, true},
+		{"frost share exposure boundary increments", tssMessages.FROSTKEYSIGNSHARE, false, true},
+		// frost_result sits PAST the exposure boundary, not before it: the only
+		// blame stamped with this round comes from WaitForResult, which runs
+		// after exchangeShares has already broadcast the local signature share.
+		// A quorum of peers can therefore aggregate and broadcast the original
+		// transaction, so the signer must stick to the same vault. Treating it
+		// as non-terminal would let the outbound reschedule to a different
+		// vault while the share is already out — a double spend.
+		{"frost terminal result increments", tssMessages.FROSTKEYSIGNRESULT, false, true},
+		{"frost preprocess does not increment", tssMessages.FROSTKEYSIGNPREPROCESS, false, false},
 		// KEYSIGN7 was terminal under tss-lib v1 but is an interior round under
 		// v3 (the U_i/T_i consistency-check commitment, before shares reveal at
 		// round 9), so it must NOT increment — otherwise a routine round-7 peer
@@ -459,14 +470,13 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_TerminalRoundIncrement
 		{"v3 secp non-terminal round 8 does not increment", tssMessages.KEYSIGN8, false, false},
 		{"v3 secp non-terminal round 5 does not increment", tssMessages.KEYSIGN5, false, false},
 		{"eddsa non-terminal round 1 does not increment", tssMessages.EDDSAKEYSIGN1, false, false},
-		{"frost preprocess does not increment", tssMessages.FROSTKEYSIGNPREPROCESS, false, false},
-		{"frost result does not increment", tssMessages.FROSTKEYSIGNRESULT, false, false},
 		// Empty-BlameNodes guard: terminal-round reports that blame nobody
 		// must not bump LastRoundCount, otherwise a colluding minority can
 		// freeze a vault by spamming terminal-round reports with no blames.
 		{"v3 secp terminal round 9 with empty BlameNodes does not increment", tssMessages.KEYSIGN9, true, false},
 		{"eddsa terminal round 3 with empty BlameNodes does not increment", tssMessages.EDDSAKEYSIGN3, true, false},
 		{"frost share with empty BlameNodes does not increment", tssMessages.FROSTKEYSIGNSHARE, true, false},
+		{"frost terminal result with empty BlameNodes does not increment", tssMessages.FROSTKEYSIGNRESULT, true, false},
 	}
 
 	for _, tc := range cases {
@@ -534,12 +544,12 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_rejects_legacy_round_i
 // callback receives the registered member accounts and returns the BlameNodes
 // list to use, so positive-path callers can reference real registered pubkeys
 // (the handler resolves blame entries through GetNodeAccountByPubKey).
-func runTerminalRoundFreezeScenario(c *C, round string, blameBuilder func(members NodeAccounts) []Node) Vault {
+func runTerminalRoundFreezeScenario(c *C, round string, coin common.Coin, blameBuilder func(members NodeAccounts) []Node) Vault {
 	helper := newTssKeysignHandlerTestHelper(c)
 	handler := NewTssKeysignHandler(NewDummyMgrWithKeeper(helper.keeper))
-	coins := common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100))}
+	coins := common.Coins{coin}
 
-	vault := NewVault(helper.ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	vault := NewVault(helper.ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{coin.Asset.GetChain()}.Strings(), []ChainContract{})
 	accounts := NodeAccounts{}
 	for i := 0; i < 8; i++ {
 		na := GetRandomValidatorNode(NodeActive)
@@ -574,9 +584,18 @@ func runTerminalRoundFreezeScenario(c *C, round string, blameBuilder func(member
 // lock a vault by reporting terminal-round failures that blame nobody, since
 // FailReason alone satisfies Blame.IsEmpty().
 func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_terminal_round_empty_blamenodes_does_not_freeze(c *C) {
-	for _, round := range []string{tssMessages.KEYSIGN9, tssMessages.EDDSAKEYSIGN3, tssMessages.FROSTKEYSIGNSHARE} {
-		got := runTerminalRoundFreezeScenario(c, round, func(_ NodeAccounts) []Node { return []Node{} })
-		c.Assert(got.Frozen, HasLen, 0, Commentf("round=%s: empty BlameNodes must not freeze", round))
+	cases := []struct {
+		round string
+		coin  common.Coin
+	}{
+		{tssMessages.KEYSIGN9, common.NewCoin(common.ETHAsset, cosmos.NewUint(100))},
+		{tssMessages.EDDSAKEYSIGN3, common.NewCoin(common.ETHAsset, cosmos.NewUint(100))},
+		{tssMessages.FROSTKEYSIGNSHARE, common.NewCoin(common.XMRAsset, cosmos.NewUint(100))},
+		{tssMessages.FROSTKEYSIGNRESULT, common.NewCoin(common.XMRAsset, cosmos.NewUint(100))},
+	}
+	for _, tc := range cases {
+		got := runTerminalRoundFreezeScenario(c, tc.round, tc.coin, func(_ NodeAccounts) []Node { return []Node{} })
+		c.Assert(got.Frozen, HasLen, 0, Commentf("round=%s: empty BlameNodes must not freeze", tc.round))
 	}
 }
 
@@ -586,10 +605,34 @@ func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_terminal_round_empty_b
 // blamed chain. Together with the empty-BlameNodes regression above, this
 // pins down the exact condition the guard enforces.
 func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_terminal_round_with_blamenodes_freezes(c *C) {
-	for _, round := range []string{tssMessages.KEYSIGN9, tssMessages.EDDSAKEYSIGN3, tssMessages.FROSTKEYSIGNSHARE} {
-		got := runTerminalRoundFreezeScenario(c, round, func(members NodeAccounts) []Node {
+	cases := []struct {
+		round string
+		coin  common.Coin
+	}{
+		{tssMessages.KEYSIGN9, common.NewCoin(common.ETHAsset, cosmos.NewUint(100))},
+		{tssMessages.EDDSAKEYSIGN3, common.NewCoin(common.ETHAsset, cosmos.NewUint(100))},
+		{tssMessages.FROSTKEYSIGNSHARE, common.NewCoin(common.XMRAsset, cosmos.NewUint(100))},
+		{tssMessages.FROSTKEYSIGNRESULT, common.NewCoin(common.XMRAsset, cosmos.NewUint(100))},
+	}
+	for _, tc := range cases {
+		got := runTerminalRoundFreezeScenario(c, tc.round, tc.coin, func(members NodeAccounts) []Node {
 			return []Node{{Pubkey: members[7].PubKeySet.Secp256k1.String()}}
 		})
-		c.Assert(got.Frozen, DeepEquals, []string{common.ETHChain.String()}, Commentf("round=%s: non-empty BlameNodes must freeze", round))
+		c.Assert(got.Frozen, DeepEquals, []string{tc.coin.Asset.GetChain().String()}, Commentf("round=%s: non-empty BlameNodes must freeze", tc.round))
 	}
+}
+
+// TestTssKeysignFailHandler_frost_preprocess_does_not_freeze pins the other
+// side of the FROST safety boundary: preprocess failures occur before any
+// signature share is broadcast, so they may be rescheduled to another vault.
+func (h HandlerTssKeysignSuite) TestTssKeysignFailHandler_frost_preprocess_does_not_freeze(c *C) {
+	got := runTerminalRoundFreezeScenario(
+		c,
+		tssMessages.FROSTKEYSIGNPREPROCESS,
+		common.NewCoin(common.XMRAsset, cosmos.NewUint(100)),
+		func(members NodeAccounts) []Node {
+			return []Node{{Pubkey: members[7].PubKeySet.Secp256k1.String()}}
+		},
+	)
+	c.Assert(got.Frozen, HasLen, 0)
 }

@@ -76,6 +76,10 @@ type TestObservedTxOutHandleKeeper struct {
 	hashes      []common.TxID
 }
 
+func (k *TestObservedTxOutHandleKeeper) GetConfigInt64(_ cosmos.Context, key constants.ConstantName) int64 {
+	return k.GetConstants().GetInt64Value(key)
+}
+
 func (k *TestObservedTxOutHandleKeeper) ListActiveValidators(_ cosmos.Context) (NodeAccounts, error) {
 	return k.nas, nil
 }

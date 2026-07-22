@@ -233,6 +233,71 @@ func (s *ThorchainBlockScanSuite) TestFetchTxs_KeygenWithEntries(c *C) {
 	<-done
 }
 
+func (s *ThorchainBlockScanSuite) TestFetchTxs_StaleRegularKeygenSkipped(c *C) {
+	m := GetMetricForTest(c)
+	storage, err := NewSignerStore("", config.LevelDBOptions{}, "")
+	c.Assert(err, IsNil)
+	defer storage.Close()
+
+	bridge := &mockBlockScanBridge{
+		keysign: types.TxOut{},
+		keygenBlock: ttypes.KeygenBlock{
+			Height: 100,
+			Keygens: []ttypes.Keygen{
+				{
+					Type: ttypes.KeygenType_AsgardKeygen,
+				},
+			},
+		},
+	}
+
+	bs, err := NewThorchainBlockScan(config.BifrostBlockScannerConfiguration{}, storage, bridge, m, pubkeymanager.NewMockPoolAddressValidator())
+	c.Assert(err, IsNil)
+
+	_, err = bs.FetchTxs(100, 120)
+	c.Assert(err, IsNil)
+	select {
+	case <-bs.GetKeygenMessages():
+		c.Fatal("stale regular keygen should be skipped")
+	default:
+	}
+}
+
+func (s *ThorchainBlockScanSuite) TestFetchTxs_StaleXMRKeygenDelivered(c *C) {
+	m := GetMetricForTest(c)
+	storage, err := NewSignerStore("", config.LevelDBOptions{}, "")
+	c.Assert(err, IsNil)
+	defer storage.Close()
+
+	bridge := &mockBlockScanBridge{
+		keysign: types.TxOut{},
+		keygenBlock: ttypes.KeygenBlock{
+			Height: 100,
+			Keygens: []ttypes.Keygen{
+				{
+					Type: ttypes.KeygenType_XMRMonovaultKeygen,
+				},
+			},
+		},
+	}
+
+	bs, err := NewThorchainBlockScan(config.BifrostBlockScannerConfiguration{}, storage, bridge, m, pubkeymanager.NewMockPoolAddressValidator())
+	c.Assert(err, IsNil)
+
+	done := make(chan struct{})
+	go func() {
+		kb := <-bs.GetKeygenMessages()
+		c.Assert(kb.Height, Equals, int64(100))
+		c.Assert(len(kb.Keygens), Equals, 1)
+		c.Assert(kb.Keygens[0].Type, Equals, ttypes.KeygenType_XMRMonovaultKeygen)
+		close(done)
+	}()
+
+	_, err = bs.FetchTxs(100, 120)
+	c.Assert(err, IsNil)
+	<-done
+}
+
 func (s *ThorchainBlockScanSuite) TestFetchTxs_TxOutError(c *C) {
 	m := GetMetricForTest(c)
 	storage, err := NewSignerStore("", config.LevelDBOptions{}, "")
@@ -345,7 +410,7 @@ func (s *ThorchainBlockScanSuite) TestProcessKeygenBlock_NoKeygens(c *C) {
 	bs, err := NewThorchainBlockScan(config.BifrostBlockScannerConfiguration{}, storage, bridge, m, pubkeymanager.NewMockPoolAddressValidator())
 	c.Assert(err, IsNil)
 
-	err = bs.processKeygenBlock(100)
+	err = bs.processKeygenBlock(100, 0)
 	c.Assert(err, IsNil)
 }
 

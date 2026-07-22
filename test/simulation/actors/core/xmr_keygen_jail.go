@@ -143,7 +143,7 @@ func (a *XMRKeygenJailActor) startChurn(config *OpConfig) OpResult {
 		value int64
 	}{
 		{"NUMBEROFNEWNODESPERCHURN", xmrPostChurnNewNodesPerChurn},
-		{"CHURNRETRYINTERVAL", xmrPostChurnChurnRetryInterval},
+		{"CHURNRETRYINTERVAL", xmrPostChurnRetryInterval},
 		{"HALTCHURNING", 0},
 	} {
 		msg := thorchain.NewMsgMimir(mimir.key, mimir.value, accAddr)

@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,8 +22,18 @@ import (
 
 // ObserverStorage save the ondeck tx in item to key value store, in case bifrost restart
 type ObserverStorage struct {
-	db       *leveldb.DB
+	db *leveldb.DB
+
+	// errataMu serializes read-modify-write access to the durable errata outbox.
 	errataMu sync.Mutex
+
+	// beforeSyncTxWrite is a deterministic failure hook used only by durable
+	// duplicate-handoff tests. Production leaves it nil.
+	beforeSyncTxWrite func() error
+
+	// beforeErrataWrite is a deterministic failure hook for committed-event
+	// durability tests. Production leaves it nil.
+	beforeErrataWrite func() error
 }
 
 const (
@@ -28,6 +41,7 @@ const (
 	LegacyMigrationHandledKey = "ondeck-migration-handled"
 	OnDeckTxKeyPrefix         = "txs:"
 	PendingErrataKeyPrefix    = "errata:v1:"
+	ErrataTombstoneKeyPrefix  = "errata-tombstone-v1:"
 )
 
 type persistedErrata struct {
@@ -45,13 +59,56 @@ type persistedErrata struct {
 	RetryExhaustedAtUnixNano  int64          `json:"retry_exhausted_at_unix_nano,omitempty"`
 }
 
-// errataDeckMutation is one exact on-deck storage transition performed in the
-// same batch that records local errata cleanup. FinalizeHeight is the original
-// txInKey height, not the orphaned block height.
-type errataDeckMutation struct {
+// errataCleanupMutation is one exact on-deck storage transition performed in
+// the same batch that records local errata cleanup. FinalizeHeight is the
+// original txInKey height, not the orphaned block height.
+type errataCleanupMutation struct {
 	TxIn           *types.TxIn
 	FinalizeHeight int64
 	Delete         bool
+}
+
+type errataTombstone struct {
+	Chain             common.Chain `json:"chain"`
+	TxID              common.TxID  `json:"tx_id"`
+	OrphanHeight      int64        `json:"orphan_height"`
+	OrphanHeights     []int64      `json:"orphan_heights,omitempty"`
+	Generation        uint64       `json:"generation"`
+	Committed         bool         `json:"committed"`
+	VoterReverted     *bool        `json:"voter_reverted,omitempty"`
+	VerifyAfterHeight int64        `json:"verify_after_height,omitempty"`
+}
+
+// isPermanentlyReverted reports the only state which may quarantine a TxID at
+// every height. Older tombstone JSON has no voter_reverted field and therefore
+// decodes to nil rather than being mistaken for an explicit THORChain result.
+func (t errataTombstone) isPermanentlyReverted() bool {
+	return t.Chain.Equals(common.XMRChain) && t.VoterReverted != nil && *t.VoterReverted
+}
+
+// blocksHeight keeps ordinary errata barriers scoped to the exact orphaned
+// location. Only an explicit XMR ObservedTxVoter.Reverted result is a permanent
+// TxID-wide terminal.
+func (t errataTombstone) blocksHeight(height int64) bool {
+	if t.isPermanentlyReverted() {
+		return true
+	}
+	if t.OrphanHeight > 0 && height == t.OrphanHeight {
+		return true
+	}
+	return slices.Contains(t.OrphanHeights, height)
+}
+
+func appendUniqueErrataHeight(heights []int64, height int64) []int64 {
+	if height <= 0 || slices.Contains(heights, height) {
+		return heights
+	}
+	return append(heights, height)
+}
+
+type errataDeckMutation struct {
+	key  txInKey
+	txIn *types.TxIn // nil deletes the exact original deck key
 }
 
 // NewObserverStorage create a new instance of LevelDBScannerStorage
@@ -70,14 +127,283 @@ func (s *ObserverStorage) createTxKey(txIn *types.TxIn, finalizeHeight int64) st
 		finalizeHeight = txIn.TxArray[0].BlockHeight + txIn.ConfirmationRequired
 	}
 
-	key := fmt.Sprintf("%s%s:%d",
-		OnDeckTxKeyPrefix,
-		txIn.Chain.String(),
-		finalizeHeight)
-	if txIn.AllowFutureObservation {
+	return createObserverTxKey(txIn.Chain, finalizeHeight, txIn.AllowFutureObservation)
+}
+
+func createObserverTxKey(chain common.Chain, finalizeHeight int64, allowFutureObservation bool) string {
+	key := fmt.Sprintf("%s%s:%d", OnDeckTxKeyPrefix, chain.String(), finalizeHeight)
+	if allowFutureObservation {
 		key += ":future"
 	}
 	return key
+}
+
+func errataTombstoneKey(chain common.Chain, txID string) string {
+	return fmt.Sprintf("%s%s:%s", ErrataTombstoneKeyPrefix, chain.String(), strings.ToLower(strings.TrimSpace(txID)))
+}
+
+func (s *ObserverStorage) getErrataTombstone(chain common.Chain, txID string) (*errataTombstone, error) {
+	data, err := s.db.Get([]byte(errataTombstoneKey(chain, txID)), nil)
+	if errors.Is(err, leveldb.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read observer errata tombstone: %w", err)
+	}
+	var tombstone errataTombstone
+	if err = json.Unmarshal(data, &tombstone); err != nil {
+		return nil, fmt.Errorf("decode observer errata tombstone: %w", err)
+	}
+	if err = validateErrataTombstone(tombstone); err != nil {
+		return nil, err
+	}
+	if !tombstone.Chain.Equals(chain) ||
+		!strings.EqualFold(strings.TrimSpace(tombstone.TxID.String()), strings.TrimSpace(txID)) {
+		return nil, errors.New("observer errata tombstone key does not match its payload")
+	}
+	return &tombstone, nil
+}
+
+func validateErrataTombstone(tombstone errataTombstone) error {
+	if tombstone.Chain.IsEmpty() || strings.TrimSpace(tombstone.TxID.String()) == "" ||
+		tombstone.OrphanHeight < 0 || tombstone.Generation == 0 || tombstone.VerifyAfterHeight < 0 {
+		return errors.New("observer errata tombstone is invalid")
+	}
+	for _, height := range tombstone.OrphanHeights {
+		if height <= 0 {
+			return errors.New("observer errata tombstone has an invalid orphan height")
+		}
+	}
+	if !tombstone.Committed && (tombstone.VoterReverted != nil || tombstone.VerifyAfterHeight != 0) {
+		return errors.New("uncommitted observer errata tombstone has a voter result")
+	}
+	if tombstone.VerifyAfterHeight != 0 && !tombstone.Chain.Equals(common.XMRChain) {
+		return errors.New("non-XMR observer errata has a verification height")
+	}
+	if tombstone.VoterReverted != nil {
+		if !tombstone.Chain.Equals(common.XMRChain) || tombstone.VerifyAfterHeight != 0 {
+			return errors.New("observer errata voter result is invalid")
+		}
+	}
+	return nil
+}
+
+type errataTombstoneUpdate struct {
+	forceCommitted    bool
+	completeOutbox    bool
+	verifyAfterHeight int64
+	voterReverted     *bool
+	recordDelivery    bool
+}
+
+// applyErrata atomically fsyncs every tombstone and the corresponding exact
+// on-deck mutations. A crash can therefore expose either the old deck without
+// a tombstone or the new deck with tombstones, never a resurrectable orphan.
+func (s *ObserverStorage) applyErrata(
+	block types.ErrataBlock,
+	mutations []errataDeckMutation,
+) error {
+	s.errataMu.Lock()
+	defer s.errataMu.Unlock()
+	return s.applyErrataBatch(block, errataTombstoneUpdate{recordDelivery: true}, mutations)
+}
+
+// applyLegacyErrata writes only the TxID tombstone and deck cleanup. Producers
+// without an acknowledgement callback retain their original one-shot gossip
+// behavior and must not silently enter XMR's durable retry outbox.
+func (s *ObserverStorage) applyLegacyErrata(
+	block types.ErrataBlock,
+	mutations []errataDeckMutation,
+) error {
+	return s.applyErrataBatch(block, errataTombstoneUpdate{}, mutations)
+}
+
+// applyCommittedErrata is retained for focused storage tests. Committed means
+// only that the errata quorum was delivered; it is not evidence that
+// ObservedTxVoter.Reverted was set.
+func (s *ObserverStorage) applyCommittedErrata(
+	errata common.ErrataTx,
+	mutations []errataDeckMutation,
+) error {
+	if errata.Chain.IsEmpty() || errata.Id.IsEmpty() {
+		return errors.New("committed observer errata is invalid")
+	}
+	return s.applyErrataBatch(types.ErrataBlock{
+		Txs: []types.ErrataTx{{Chain: errata.Chain, TxID: errata.Id}},
+	}, errataTombstoneUpdate{forceCommitted: true}, mutations)
+}
+
+func (s *ObserverStorage) applyErrataBatch(
+	block types.ErrataBlock,
+	update errataTombstoneUpdate,
+	mutations []errataDeckMutation,
+) error {
+	if update.completeOutbox && !update.forceCommitted {
+		return errors.New("observer errata outbox completion requires a committed event")
+	}
+	if update.verifyAfterHeight < 0 {
+		return errors.New("observer errata verification height is invalid")
+	}
+	if update.voterReverted != nil && update.verifyAfterHeight != 0 {
+		return errors.New("observer errata voter result update is invalid")
+	}
+	batch := new(leveldb.Batch)
+	seen := make(map[string]struct{}, len(block.Txs))
+	for _, tx := range block.Txs {
+		key := errataTombstoneKey(tx.Chain, tx.TxID.String())
+		if _, duplicate := seen[key]; duplicate {
+			continue
+		}
+		seen[key] = struct{}{}
+		tombstone := errataTombstone{
+			Chain:        tx.Chain,
+			TxID:         tx.TxID,
+			OrphanHeight: block.Height,
+			Generation:   1,
+			Committed:    false,
+		}
+		if block.Height > 0 {
+			tombstone.OrphanHeights = []int64{block.Height}
+		}
+		hadLocalDelivery := false
+		if existing, err := s.getErrataTombstone(tx.Chain, tx.TxID.String()); err != nil {
+			return err
+		} else if existing != nil {
+			hadLocalDelivery = existing.OrphanHeight > 0 || len(existing.OrphanHeights) > 0
+			tombstone = *existing
+			if block.Height <= 0 || tombstone.blocksHeight(block.Height) {
+				// The scanner can crash after this batch is fsynced but before it
+				// consumes OnStored. Its restart replay is the same handoff, not a
+				// new generation: preserve a committed receipt so an already-final
+				// THOR reversal cannot become permanently pending again.
+			} else {
+				if existing.Generation == math.MaxUint64 {
+					return fmt.Errorf("observer errata tombstone generation exhausted for %s", tx.TxID)
+				}
+				tombstone.Generation++
+				tombstone.OrphanHeight = block.Height
+				tombstone.OrphanHeights = appendUniqueErrataHeight(tombstone.OrphanHeights, existing.OrphanHeight)
+				tombstone.OrphanHeights = appendUniqueErrataHeight(tombstone.OrphanHeights, block.Height)
+				// Delivery and an explicit voter result are TxID-scoped. A later
+				// scanner height refines the exact local barrier without reopening
+				// an already-delivered errata outbox entry.
+			}
+		}
+		if update.forceCommitted {
+			tombstone.Committed = true
+			if tombstone.VoterReverted == nil && tombstone.VerifyAfterHeight == 0 {
+				tombstone.VerifyAfterHeight = update.verifyAfterHeight
+			}
+		}
+		if update.voterReverted != nil {
+			if tombstone.VoterReverted != nil && *tombstone.VoterReverted != *update.voterReverted {
+				return fmt.Errorf("observer errata voter result conflicts for %s", tx.TxID)
+			}
+			result := *update.voterReverted
+			tombstone.Committed = true
+			tombstone.VoterReverted = &result
+			tombstone.VerifyAfterHeight = 0
+		}
+		if err := validateErrataTombstone(tombstone); err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(tombstone)
+		if err != nil {
+			return fmt.Errorf("encode observer errata tombstone: %w", err)
+		}
+		batch.Put([]byte(key), encoded)
+
+		// A committed quorum event is useful for the local durable outbox only
+		// when it contains this node's attestation. The gossip layer enforces
+		// that ownership check before calling recordLocalErrataCommitted.
+		// Persist the tombstone and outbox completion in this same sync batch so
+		// a crash cannot leave an acknowledged local vote retrying indefinitely.
+		if update.completeOutbox && errataOutboxChain(tx.Chain) {
+			outboxKey := []byte(pendingErrataKey(tx))
+			record, found, getErr := s.getPersistedErrataLocked(tx)
+			if getErr != nil {
+				return getErr
+			}
+			// Scanner delivery writes its tombstone and outbox record in one
+			// batch. If delivery is already visible but its record is gone, this
+			// is a duplicate committed event after completion; do not resurrect
+			// a commit-only retry record. A commit before scanner handoff has no
+			// delivered height and still needs the placeholder.
+			if !found && !hadLocalDelivery {
+				record = persistedErrata{Tx: tx}
+				found = true
+			}
+			if found {
+				record.Tx = tx
+				record.Committed = true
+				if record.CommittedAtUnixNano == 0 {
+					record.CommittedAtUnixNano = time.Now().UnixNano()
+				}
+				if errataFinished(record) {
+					batch.Delete(outboxKey)
+				} else {
+					outboxData, encodeErr := json.Marshal(record)
+					if encodeErr != nil {
+						return fmt.Errorf("encode committed errata outbox: %w", encodeErr)
+					}
+					batch.Put(outboxKey, outboxData)
+				}
+			}
+		}
+
+		if update.recordDelivery && errataOutboxChain(tx.Chain) {
+			outboxKey := []byte(pendingErrataKey(tx))
+			record, found, getErr := s.getPersistedErrataLocked(tx)
+			if getErr != nil {
+				return getErr
+			}
+			if !found {
+				record = persistedErrata{Tx: tx}
+			}
+			record.Height = block.Height
+			record.DeliveryID = block.DeliveryID
+			record.Tx = tx
+			record.DeliverySeen = true
+			record.Committed = record.Committed || tombstone.Committed
+			// The same synchronous batch contains the TxID tombstone and every
+			// on-deck mutation, so callback delivery is already cleanup-complete.
+			record.CleanupComplete = true
+			if errataFinished(record) {
+				batch.Delete(outboxKey)
+			} else {
+				outboxData, encodeErr := json.Marshal(record)
+				if encodeErr != nil {
+					return fmt.Errorf("encode callback errata outbox: %w", encodeErr)
+				}
+				batch.Put(outboxKey, outboxData)
+			}
+		}
+	}
+	for _, mutation := range mutations {
+		key := []byte(createObserverTxKey(
+			mutation.key.chain,
+			mutation.key.height,
+			mutation.key.allowFutureObservation,
+		))
+		if mutation.txIn == nil {
+			batch.Delete(key)
+			continue
+		}
+		data, err := json.Marshal(mutation.txIn)
+		if err != nil {
+			return fmt.Errorf("encode errata-filtered on-deck transaction: %w", err)
+		}
+		batch.Put(key, data)
+	}
+	if s.beforeErrataWrite != nil {
+		if err := s.beforeErrataWrite(); err != nil {
+			return fmt.Errorf("before observer errata write: %w", err)
+		}
+	}
+	if err := s.db.Write(batch, &opt.WriteOptions{Sync: true}); err != nil {
+		return fmt.Errorf("persist observer errata tombstones and deck mutations: %w", err)
+	}
+	return nil
 }
 
 func (s *ObserverStorage) MigrateLegacy() ([]*types.TxIn, error) {
@@ -130,7 +456,7 @@ func (s *ObserverStorage) GetOnDeckTxs() ([]*types.TxIn, error) {
 
 	// If legacy txs exist, return them
 	if len(legacyTxs) > 0 {
-		return legacyTxs, nil
+		return s.filterTombstonedOnDeck(legacyTxs)
 	}
 
 	// Use a DB iterator to get all keys with the prefix
@@ -150,17 +476,168 @@ func (s *ObserverStorage) GetOnDeckTxs() ([]*types.TxIn, error) {
 		return nil, fmt.Errorf("error iterating through ondeck txs: %w", err)
 	}
 
+	return s.filterTombstonedOnDeck(result)
+}
+
+// filterTombstonedOnDeck is a defensive restart barrier. The normal errata
+// path batches tombstone and deck mutation atomically, but this also prevents
+// stale rows from older versions or interrupted migrations entering memory.
+func (s *ObserverStorage) filterTombstonedOnDeck(txIns []*types.TxIn) ([]*types.TxIn, error) {
+	result := make([]*types.TxIn, 0, len(txIns))
+	for _, txIn := range txIns {
+		if txIn == nil || len(txIn.TxArray) == 0 {
+			continue
+		}
+		finalizeHeight := txIn.TxArray[0].BlockHeight + txIn.ConfirmationRequired
+		kept := make([]*types.TxInItem, 0, len(txIn.TxArray))
+		for _, item := range txIn.TxArray {
+			if item == nil {
+				continue
+			}
+			tombstone, err := s.getErrataTombstone(txIn.Chain, item.Tx)
+			if err != nil {
+				return nil, err
+			}
+			if tombstone != nil && tombstone.blocksHeight(item.BlockHeight) {
+				continue
+			}
+			kept = append(kept, item)
+		}
+		if len(kept) == 0 {
+			continue
+		}
+		copyTxIn := *txIn
+		copyTxIn.TxArray = kept
+		copyTxIn.ConfirmationRequired = finalizeHeight - kept[0].BlockHeight
+		result = append(result, &copyTxIn)
+	}
 	return result, nil
 }
 
 // AddOrUpdateTx adds or updates a single TxIn in storage
 func (s *ObserverStorage) AddOrUpdateTx(txIn *types.TxIn) error {
+	return s.addOrUpdateTx(txIn, observerWriteOptions(txIn))
+}
+
+// addOrUpdateTxSync rewrites an already on-deck transaction with an fsync.
+// This is required when a callback-bearing replay deduplicates against an
+// entry that may originally have been written with ordinary async durability.
+func (s *ObserverStorage) addOrUpdateTxSync(txIn *types.TxIn) error {
+	if s.beforeSyncTxWrite != nil {
+		if err := s.beforeSyncTxWrite(); err != nil {
+			return fmt.Errorf("before synchronous on-deck write: %w", err)
+		}
+	}
+	return s.addOrUpdateTx(txIn, &opt.WriteOptions{Sync: true})
+}
+
+func (s *ObserverStorage) getErrataTombstones() ([]errataTombstone, error) {
+	iter := s.db.NewIterator(util.BytesPrefix([]byte(ErrataTombstoneKeyPrefix)), nil)
+	defer iter.Release()
+	result := make([]errataTombstone, 0)
+	for iter.Next() {
+		var tombstone errataTombstone
+		if err := json.Unmarshal(iter.Value(), &tombstone); err != nil {
+			return nil, fmt.Errorf("decode observer errata tombstone: %w", err)
+		}
+		if err := validateErrataTombstone(tombstone); err != nil {
+			return nil, err
+		}
+		if string(iter.Key()) != errataTombstoneKey(tombstone.Chain, tombstone.TxID.String()) {
+			return nil, errors.New("observer errata tombstone key does not match its payload")
+		}
+		result = append(result, tombstone)
+	}
+	if err := iter.Error(); err != nil {
+		return nil, fmt.Errorf("iterate observer errata tombstones: %w", err)
+	}
+	return result, nil
+}
+
+func (s *ObserverStorage) getPendingErrata() ([]errataTombstone, error) {
+	tombstones, err := s.getErrataTombstones()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]errataTombstone, 0, len(tombstones))
+	for _, tombstone := range tombstones {
+		if !tombstone.Committed {
+			result = append(result, tombstone)
+		}
+	}
+	return result, nil
+}
+
+func (s *ObserverStorage) recordErrataCommitted(errata common.ErrataTx, verifyAfterHeight int64) error {
+	if errata.Chain.IsEmpty() || errata.Id.IsEmpty() {
+		return errors.New("committed observer errata is invalid")
+	}
+	return s.applyErrataBatch(types.ErrataBlock{
+		Txs: []types.ErrataTx{{Chain: errata.Chain, TxID: errata.Id}},
+	}, errataTombstoneUpdate{
+		forceCommitted:    true,
+		verifyAfterHeight: verifyAfterHeight,
+	}, nil)
+}
+
+// recordLocalErrataCommitted atomically records the committed tombstone and
+// completes this node's durable retry. Callers must first prove that the
+// committed quorum event includes this node's attestation.
+func (s *ObserverStorage) recordLocalErrataCommitted(errata common.ErrataTx) error {
+	if errata.Chain.IsEmpty() || errata.Id.IsEmpty() {
+		return errors.New("committed observer errata is invalid")
+	}
+	s.errataMu.Lock()
+	defer s.errataMu.Unlock()
+	return s.applyErrataBatch(types.ErrataBlock{
+		Txs: []types.ErrataTx{{Chain: errata.Chain, TxID: errata.Id}},
+	}, errataTombstoneUpdate{
+		forceCommitted: true,
+		completeOutbox: true,
+	}, nil)
+}
+
+func (s *ObserverStorage) getUnresolvedCommittedXMRErrata() ([]errataTombstone, error) {
+	tombstones, err := s.getErrataTombstones()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]errataTombstone, 0, len(tombstones))
+	for _, tombstone := range tombstones {
+		if tombstone.Chain.Equals(common.XMRChain) && tombstone.Committed && tombstone.VoterReverted == nil {
+			result = append(result, tombstone)
+		}
+	}
+	return result, nil
+}
+
+func (s *ObserverStorage) recordErrataVoterResult(
+	errata common.ErrataTx,
+	reverted bool,
+	mutations []errataDeckMutation,
+) error {
+	if !errata.Chain.Equals(common.XMRChain) || errata.Id.IsEmpty() {
+		return errors.New("observer errata voter result is invalid")
+	}
+	tombstone, err := s.getErrataTombstone(errata.Chain, errata.Id.String())
+	if err != nil {
+		return err
+	}
+	if tombstone == nil || !tombstone.Committed {
+		return errors.New("observer errata voter result has no committed delivery")
+	}
+	return s.applyErrataBatch(types.ErrataBlock{
+		Txs: []types.ErrataTx{{Chain: errata.Chain, TxID: errata.Id}},
+	}, errataTombstoneUpdate{voterReverted: &reverted}, mutations)
+}
+
+func (s *ObserverStorage) addOrUpdateTx(txIn *types.TxIn, writeOptions *opt.WriteOptions) error {
 	key := s.createTxKey(txIn, 0)
 	data, err := json.Marshal(txIn)
 	if err != nil {
 		return fmt.Errorf("fail to marshal ondeck tx to json: %w", err)
 	}
-	return s.db.Put([]byte(key), data, observerWriteOptions(txIn.Chain))
+	return s.db.Put([]byte(key), data, writeOptions)
 }
 
 // AddErrataBlock persists errata before the scanner's reorg journal advances.
@@ -389,7 +866,7 @@ func (s *ObserverStorage) PruneCommittedOnlyErrata(cutoff time.Time) (int, error
 // CompleteErrataCleanup atomically persists every exact on-deck mutation and
 // the cleanup-complete state for the corresponding errata records. In-memory
 // state is changed only after this batch succeeds.
-func (s *ObserverStorage) CompleteErrataCleanup(txs []types.ErrataTx, mutations []errataDeckMutation) error {
+func (s *ObserverStorage) CompleteErrataCleanup(txs []types.ErrataTx, mutations []errataCleanupMutation) error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("observer storage is not configured")
 	}
@@ -467,7 +944,7 @@ func (s *ObserverStorage) getPersistedErrataLocked(tx types.ErrataTx) (persisted
 func (s *ObserverStorage) writePersistedErrataLocked(record persistedErrata) error {
 	key := []byte(pendingErrataKey(record.Tx))
 	if errataFinished(record) {
-		if err := s.db.Delete(key, observerWriteOptions(record.Tx.Chain)); err != nil && !errors.Is(err, leveldb.ErrNotFound) {
+		if err := s.db.Delete(key, chainWriteOptions(record.Tx.Chain)); err != nil && !errors.Is(err, leveldb.ErrNotFound) {
 			return fmt.Errorf("fail to remove completed errata: %w", err)
 		}
 		return nil
@@ -476,7 +953,7 @@ func (s *ObserverStorage) writePersistedErrataLocked(record persistedErrata) err
 	if err != nil {
 		return fmt.Errorf("fail to marshal pending errata: %w", err)
 	}
-	if err = s.db.Put(key, data, observerWriteOptions(record.Tx.Chain)); err != nil {
+	if err = s.db.Put(key, data, chainWriteOptions(record.Tx.Chain)); err != nil {
 		return fmt.Errorf("fail to persist pending errata state: %w", err)
 	}
 	return nil
@@ -501,10 +978,6 @@ func pendingErrataKey(tx types.ErrataTx) string {
 	return fmt.Sprintf("%s%s:%s", PendingErrataKeyPrefix, tx.Chain, tx.TxID)
 }
 
-func observerWriteOptions(chain common.Chain) *opt.WriteOptions {
-	return syncWriteOptions(chain.Equals(common.XMRChain))
-}
-
 func syncWriteOptions(sync bool) *opt.WriteOptions {
 	if sync {
 		return &opt.WriteOptions{Sync: true}
@@ -521,7 +994,7 @@ func errataWriteOptions(txs []types.ErrataTx) *opt.WriteOptions {
 	return nil
 }
 
-func errataCleanupWriteOptions(txs []types.ErrataTx, mutations []errataDeckMutation) *opt.WriteOptions {
+func errataCleanupWriteOptions(txs []types.ErrataTx, mutations []errataCleanupMutation) *opt.WriteOptions {
 	if options := errataWriteOptions(txs); options != nil {
 		return options
 	}
@@ -533,10 +1006,35 @@ func errataCleanupWriteOptions(txs []types.ErrataTx, mutations []errataDeckMutat
 	return nil
 }
 
+// chainWriteOptions requests an fsync for chains whose local observer state
+// must survive an unclean shutdown. Only XMR needs it today.
+func chainWriteOptions(chain common.Chain) *opt.WriteOptions {
+	return syncWriteOptions(chain.Equals(common.XMRChain))
+}
+
+// observerWriteOptions requests an fsync for observations on a chain with
+// durable local state (XMR) and for any observation participating in an
+// explicit durable scanner-to-observer handoff. Ordinary chain traffic retains
+// the existing asynchronous LevelDB write behavior.
+func observerWriteOptions(txIn *types.TxIn) *opt.WriteOptions {
+	if txIn == nil {
+		return nil
+	}
+	if options := chainWriteOptions(txIn.Chain); options != nil {
+		return options
+	}
+	for _, item := range txIn.TxArray {
+		if item != nil && (item.OnObservedTxStored != nil || item.OnObservedTxRejected != nil) {
+			return &opt.WriteOptions{Sync: true}
+		}
+	}
+	return nil
+}
+
 // RemoveTx removes a single TxIn from storage
 func (s *ObserverStorage) RemoveTx(txIn *types.TxIn, finalizeHeight int64) error {
 	key := s.createTxKey(txIn, finalizeHeight)
-	return s.db.Delete([]byte(key), observerWriteOptions(txIn.Chain))
+	return s.db.Delete([]byte(key), observerWriteOptions(txIn))
 }
 
 // RemoveAllTxs removes all TxIn from storage

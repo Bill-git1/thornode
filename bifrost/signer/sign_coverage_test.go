@@ -3,6 +3,7 @@ package signer
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
@@ -203,6 +205,22 @@ func (b *MockSuccessChainClient) SignTx(tai types.TxOutItem, height int64) ([]by
 func (b *MockSuccessChainClient) BroadcastTx(_ types.TxOutItem, tx []byte) (string, error) {
 	b.broadcastTxs++
 	return "TXHASH123", b.broadcastErr
+}
+
+type MockCaptureSignChainClient struct {
+	MockChainClient
+	signedTx    types.TxOutItem
+	observation *types.TxInItem
+}
+
+func (b *MockCaptureSignChainClient) SignTx(tai types.TxOutItem, height int64) ([]byte, []byte, *types.TxInItem, error) {
+	b.signedTx = tai
+	return []byte("signed-tx"), nil, b.observation, nil
+}
+
+func (b *MockCaptureSignChainClient) BroadcastTx(_ types.TxOutItem, tx []byte) (string, error) {
+	b.broadcastCount++
+	return "TXHASH123", nil
 }
 
 // ----- tests -----
@@ -1005,6 +1023,172 @@ func (s *SignCoverageSuite) TestSignAndBroadcast_AlreadySigned(c *C) {
 	c.Assert(obs, IsNil)
 }
 
+func (s *SignCoverageSuite) TestSignAndBroadcast_RefreshesUnsignedGasFromLatestKeysign(c *C) {
+	vaultPubKey, _ := common.NewPubKey(pubkeymanager.MockPubkey)
+	coin := common.NewCoin(common.ETHAsset, cosmos.NewUint(1000))
+	toAddress := common.Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
+	oldMaxGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10))}
+	newMaxGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(25))}
+
+	bridge := &mockSignBridge{
+		blockHeight: 100,
+		constants: map[string]int64{
+			constants.SigningTransactionPeriod.String(): 300,
+			constants.ChurnInterval.String():            43200,
+		},
+		mimirs: map[string]int64{},
+		keysign: types.TxOut{
+			Height: 90,
+			TxArray: []types.TxArrayItem{
+				{
+					Chain:       common.ETHChain,
+					ToAddress:   toAddress,
+					VaultPubKey: vaultPubKey,
+					Coin:        coin,
+					Memo:        "OUT:refresh-gas",
+					MaxGas:      newMaxGas,
+					GasRate:     25,
+				},
+			},
+		},
+	}
+
+	storage, err := NewSignerStore("", config.LevelDBOptions{}, "")
+	c.Assert(err, IsNil)
+	defer storage.Close()
+
+	signedObs := &types.TxInItem{Memo: "signed-observation"}
+	cc := &MockCaptureSignChainClient{observation: signedObs}
+	sign := &Signer{
+		logger:            log.With().Str("module", "test").Logger(),
+		cfg:               config.Bifrost{Signer: config.BifrostSignerConfiguration{RescheduleBufferBlocks: 100}},
+		thorchainBridge:   bridge,
+		constantsProvider: NewConstantsProvider(bridge),
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.ETHChain: cc,
+		},
+		pubkeyMgr:        pubkeymanager.NewMockPoolAddressValidator(),
+		m:                GetMetricForTest(c),
+		storage:          storage,
+		localPubKeyECDSA: vaultPubKey,
+	}
+
+	item := TxOutStoreItem{
+		TxOutItem: types.TxOutItem{
+			Chain:       common.ETHChain,
+			VaultPubKey: vaultPubKey,
+			ToAddress:   toAddress,
+			Coins:       common.Coins{coin},
+			Memo:        "OUT:refresh-gas",
+			MaxGas:      oldMaxGas,
+			GasRate:     10,
+			Height:      90,
+		},
+		Height: 90,
+	}
+	c.Assert(storage.Set(item), IsNil)
+	storedKey := item.Key()
+	item, err = storage.Get(storedKey)
+	c.Assert(err, IsNil)
+
+	checkpoint, obs, err := sign.signAndBroadcast(item)
+	c.Assert(err, IsNil)
+	c.Assert(checkpoint, IsNil)
+	c.Assert(obs, DeepEquals, signedObs)
+	c.Assert(cc.signedTx.GasRate, Equals, int64(25))
+	c.Assert(cc.signedTx.MaxGas.Equals(newMaxGas), Equals, true)
+
+	stored, err := storage.Get(storedKey)
+	c.Assert(err, IsNil)
+	c.Assert(stored.TxOutItem.GasRate, Equals, int64(25))
+	c.Assert(stored.TxOutItem.MaxGas.Equals(newMaxGas), Equals, true)
+	c.Assert(stored.SignedTx, DeepEquals, []byte("signed-tx"))
+	c.Assert(stored.Observation, DeepEquals, signedObs)
+}
+
+func (s *SignCoverageSuite) TestSignAndBroadcast_PreservesGasAfterTerminalRound(c *C) {
+	vaultPubKey, _ := common.NewPubKey(pubkeymanager.MockPubkey)
+	coin := common.NewCoin(common.ETHAsset, cosmos.NewUint(1000))
+	toAddress := common.Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
+	oldMaxGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10))}
+	newMaxGas := common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(25))}
+
+	bridge := &mockSignBridge{
+		blockHeight: 100,
+		constants: map[string]int64{
+			constants.SigningTransactionPeriod.String(): 300,
+			constants.ChurnInterval.String():            43200,
+		},
+		mimirs: map[string]int64{
+			"MAXOUTBOUNDATTEMPTS": 100,
+		},
+		vault: ttypes.Vault{Status: ttypes.VaultStatus_ActiveVault},
+		keysign: types.TxOut{
+			Height: 90,
+			TxArray: []types.TxArrayItem{
+				{
+					Chain:       common.ETHChain,
+					ToAddress:   toAddress,
+					VaultPubKey: vaultPubKey,
+					Coin:        coin,
+					Memo:        "OUT:terminal-gas",
+					MaxGas:      newMaxGas,
+					GasRate:     25,
+				},
+			},
+		},
+	}
+
+	storage, err := NewSignerStore("", config.LevelDBOptions{}, "")
+	c.Assert(err, IsNil)
+	defer storage.Close()
+
+	cc := &MockCaptureSignChainClient{}
+	sign := &Signer{
+		logger:            log.With().Str("module", "test").Logger(),
+		cfg:               config.Bifrost{Signer: config.BifrostSignerConfiguration{RescheduleBufferBlocks: 100}},
+		thorchainBridge:   bridge,
+		constantsProvider: NewConstantsProvider(bridge),
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.ETHChain: cc,
+		},
+		pubkeyMgr:        pubkeymanager.NewMockPoolAddressValidator(),
+		m:                GetMetricForTest(c),
+		storage:          storage,
+		localPubKeyECDSA: vaultPubKey,
+	}
+
+	item := TxOutStoreItem{
+		TxOutItem: types.TxOutItem{
+			Chain:       common.ETHChain,
+			VaultPubKey: vaultPubKey,
+			ToAddress:   toAddress,
+			Coins:       common.Coins{coin},
+			Memo:        "OUT:terminal-gas",
+			MaxGas:      oldMaxGas,
+			GasRate:     10,
+			Height:      90,
+		},
+		Height:      90,
+		Round7Retry: true,
+	}
+	c.Assert(storage.Set(item), IsNil)
+	storedKey := item.Key()
+	item, err = storage.Get(storedKey)
+	c.Assert(err, IsNil)
+
+	_, _, err = sign.signAndBroadcast(item)
+	c.Assert(err, IsNil)
+	c.Assert(cc.signedTx.GasRate, Equals, int64(10))
+	c.Assert(cc.signedTx.MaxGas.Equals(oldMaxGas), Equals, true)
+
+	stored, err := storage.Get(storedKey)
+	c.Assert(err, IsNil)
+	c.Assert(stored.TxOutItem.GasRate, Equals, int64(10))
+	c.Assert(stored.TxOutItem.MaxGas.Equals(oldMaxGas), Equals, true)
+	c.Assert(stored.Round7Retry, Equals, true)
+}
+
 func (s *SignCoverageSuite) TestSignAndBroadcast_KeysignGetError(c *C) {
 	vaultPubKey, _ := common.NewPubKey(pubkeymanager.MockPubkey)
 	bridge := &mockSignBridge{
@@ -1184,6 +1368,113 @@ func (s *SignCoverageSuite) TestSignAndBroadcast_WithExistingSignedTx(c *C) {
 		Height:   90,
 		SignedTx: []byte("previously-signed-tx"),
 	}
+	_, _, err := sign.signAndBroadcast(item)
+	c.Assert(err, IsNil)
+	c.Assert(cc.broadcastTxs, Equals, 1)
+}
+
+func (s *SignCoverageSuite) TestSignAndBroadcast_DropsStaleSignedTxBeforeDifferentVaultReplacement(c *C) {
+	vaultPubKey, _ := common.NewPubKey(pubkeymanager.MockPubkey)
+	replacementVault, err := common.NewPubKey("tthorpub1addwnpepqfup3y8p0egd7ml7vrnlxgl3wvnp89mpn0tjpj0p2nm2gh0n9hlrvrtylay")
+	c.Assert(err, IsNil)
+	bridge := &mockSignBridge{
+		blockHeight: 1000,
+		constants: map[string]int64{
+			constants.SigningTransactionPeriod.String(): 300,
+			constants.ChurnInterval.String():            43200,
+		},
+		mimirs:  map[string]int64{},
+		keysign: types.TxOut{},
+	}
+	storage, err := NewSignerStore("", config.LevelDBOptions{}, "")
+	c.Assert(err, IsNil)
+	defer storage.Close()
+
+	cc := &MockCaptureSignChainClient{}
+
+	sign := &Signer{
+		logger:              log.With().Str("module", "test").Logger(),
+		cfg:                 config.Bifrost{Signer: config.BifrostSignerConfiguration{}},
+		thorchainBridge:     bridge,
+		constantsProvider:   NewConstantsProvider(bridge),
+		chains:              map[common.Chain]chainclients.ChainClient{common.ETHChain: cc},
+		pubkeyMgr:           pubkeymanager.NewMockPoolAddressValidator(),
+		m:                   GetMetricForTest(c),
+		storage:             storage,
+		localPubKeyECDSA:    vaultPubKey,
+		tssKeysignMetricMgr: metrics.NewTssKeysignMetricMgr(),
+	}
+
+	// The item is far outside the normal signing period. Even though it has a
+	// signed payload, it must stop before a replacement from another vault can be
+	// signed and make both transactions independently broadcastable.
+	item := TxOutStoreItem{
+		TxOutItem: types.TxOutItem{
+			Chain:       common.ETHChain,
+			VaultPubKey: vaultPubKey,
+			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
+		},
+		Height:   50,
+		SignedTx: []byte("previously-signed-tx"),
+	}
+
+	_, _, err = sign.signAndBroadcast(item)
+	c.Assert(err, IsNil)
+	c.Assert(cc.broadcastCount, Equals, 0)
+
+	// THORChain can reschedule the same logical outbound from another vault.
+	// The fresh replacement remains signable, but the old signed bytes must no
+	// longer be submitted once the original item reaches the cutoff.
+	replacement := TxOutStoreItem{
+		TxOutItem: types.TxOutItem{
+			Chain:            common.ETHChain,
+			VaultPubKey:      replacementVault,
+			VaultPubKeyFrost: vaultPubKey,
+			ToAddress:        item.TxOutItem.ToAddress,
+		},
+		Height: 900,
+	}
+	_, _, err = sign.signAndBroadcast(replacement)
+	c.Assert(err, IsNil)
+	c.Assert(cc.broadcastCount, Equals, 1)
+	c.Assert(cc.signedTx.VaultPubKey.Equals(replacementVault), Equals, true)
+}
+
+func (s *SignCoverageSuite) TestSignAndBroadcast_RebroadcastsStaleXMRSignedTx(c *C) {
+	vaultPubKey, _ := common.NewPubKey(pubkeymanager.MockPubkey)
+	bridge := &mockSignBridge{
+		blockHeight: 1000,
+		constants: map[string]int64{
+			constants.SigningTransactionPeriod.String(): 300,
+			constants.ChurnInterval.String():            43200,
+		},
+		mimirs:  map[string]int64{},
+		keysign: types.TxOut{},
+	}
+
+	cc := &MockSuccessChainClient{}
+	sign := &Signer{
+		logger:              log.With().Str("module", "test").Logger(),
+		cfg:                 config.Bifrost{Signer: config.BifrostSignerConfiguration{}},
+		thorchainBridge:     bridge,
+		constantsProvider:   NewConstantsProvider(bridge),
+		chains:              map[common.Chain]chainclients.ChainClient{common.XMRChain: cc},
+		pubkeyMgr:           pubkeymanager.NewMockPoolAddressValidator(),
+		m:                   GetMetricForTest(c),
+		localPubKeyECDSA:    vaultPubKey,
+		tssKeysignMetricMgr: metrics.NewTssKeysignMetricMgr(),
+	}
+
+	item := TxOutStoreItem{
+		TxOutItem: types.TxOutItem{
+			Chain:       common.XMRChain,
+			VaultPubKey: vaultPubKey,
+			ToAddress:   "48A1xmr-destination",
+		},
+		Height:   50,
+		SignedTx: []byte("previously-signed-xmr-tx"),
+	}
+
 	_, _, err := sign.signAndBroadcast(item)
 	c.Assert(err, IsNil)
 	c.Assert(cc.broadcastTxs, Equals, 1)
@@ -1829,6 +2120,65 @@ func (s *SignCoverageSuite) TestProcessTransaction_Round7Error(c *C) {
 	c.Assert(items, HasLen, 1)
 	c.Assert(items[0].Round7Retry, Equals, true)
 	c.Assert(items[0].Checkpoint, NotNil)
+}
+
+// TestProcessTransaction_WrappedFrostResultError verifies the production
+// storage path recognizes a terminal FROST boundary even when a chain-specific
+// local error is the primary error. This is the shape returned by the XMR
+// client when validation or durable persistence fails after coordinator
+// success.
+func (s *SignCoverageSuite) TestProcessTransaction_WrappedFrostResultError(c *C) {
+	vaultPubKey, _ := common.NewPubKey(pubkeymanager.MockPubkey)
+	localErr := errors.New("persist validated FROST result")
+	terminalErr := tss.NewKeysignError(ttypes.Blame{
+		FailReason: localErr.Error(),
+		Round:      tssMessages.FROSTKEYSIGNRESULT,
+	})
+	cc := &MockSignErrorChainClient{signErr: errors.Join(localErr, terminalErr)}
+	bridge := &mockSignBridge{
+		blockHeight: 100,
+		constants: map[string]int64{
+			constants.SigningTransactionPeriod.String(): 300,
+			constants.ChurnInterval.String():            43200,
+		},
+		mimirs:  map[string]int64{},
+		keysign: types.TxOut{},
+	}
+	storage, err := NewSignerStore("", config.LevelDBOptions{}, "")
+	c.Assert(err, IsNil)
+	defer storage.Close()
+	sign := &Signer{
+		logger:              log.With().Str("module", "test").Logger(),
+		cfg:                 config.Bifrost{Signer: config.BifrostSignerConfiguration{RescheduleBufferBlocks: 100}},
+		thorchainBridge:     bridge,
+		constantsProvider:   NewConstantsProvider(bridge),
+		chains:              map[common.Chain]chainclients.ChainClient{common.ETHChain: cc},
+		pubkeyMgr:           pubkeymanager.NewMockPoolAddressValidator(),
+		m:                   GetMetricForTest(c),
+		storage:             storage,
+		localPubKeyECDSA:    vaultPubKey,
+		tssKeysignMetricMgr: metrics.NewTssKeysignMetricMgr(),
+	}
+	item := TxOutStoreItem{
+		TxOutItem: types.TxOutItem{
+			Chain:       common.ETHChain,
+			VaultPubKey: vaultPubKey,
+			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
+			Memo:        "test-frost-result",
+			Coins: common.Coins{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+			},
+		},
+		Height: 90,
+	}
+	c.Assert(storage.Set(item), IsNil)
+
+	sign.processTransaction(item)
+
+	items := storage.List()
+	c.Assert(items, HasLen, 1)
+	c.Assert(items[0].Round7Retry, Equals, true)
+	c.Assert(items[0].Checkpoint, IsNil)
 }
 
 func (s *SignCoverageSuite) TestProcessTransaction_AutoObserve(c *C) {

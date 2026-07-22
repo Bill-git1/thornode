@@ -33,6 +33,12 @@ func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
 	return nil, fmt.Errorf("unable to generate payment script for unsupported address type %T", addr)
 }
 
+// PayToPubKeyHashScript creates a transparent Zcash P2PKH script for a
+// 20-byte pubkey hash.
+func PayToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+	return payToPubKeyHashScript(pubKeyHash)
+}
+
 // payToPubKeyHashScript creates a new script to pay a transaction
 // output to a 20-byte pubkey hash. It is expected that the input is a valid
 // hash.

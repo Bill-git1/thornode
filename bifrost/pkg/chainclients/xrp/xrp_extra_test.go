@@ -978,8 +978,10 @@ func (s *XrpTestSuite) TestSignTxFullPath(c *C) {
 	c.Check(txIn, NotNil)
 	c.Check(txIn.Memo, Equals, "OUT:txhash123")
 	c.Assert(txIn.Gas, HasLen, 1)
+	expectedGas := common.XRPChain.NativeGasToThorCoin(cosmos.NewUint(uint64(txOut.GasRate)))
+	c.Check(txIn.Gas[0].Amount.Equal(expectedGas.Amount), Equals, true)
 	c.Check(txIn.Gas[0].Amount.Uint64(), Equals, uint64(75000000))
-	c.Check(txIn.Gas[0].Decimals, Equals, int64(6))
+	c.Check(txIn.Gas[0].Decimals, Equals, expectedGas.Decimals)
 }
 
 // Test SignTx with checkpoint (deserialized metadata)

@@ -215,12 +215,6 @@ func (s *testScannerContinuity) handle(t *testing.T, w http.ResponseWriter, r *h
 	}
 }
 
-func (s *testScannerContinuity) snapshot() (rewindCalls int, syncHeights []int64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.rewindCalls, append([]int64(nil), s.syncHeights...)
-}
-
 // expectedXMRVaultAddress is the pure helper behind expectedXMRVaultAddressFromKeygenRequest.
 func expectedXMRVaultAddress(vaultPubKeyFrost common.PubKey) (common.Address, error) {
 	if vaultPubKeyFrost.IsEmpty() {

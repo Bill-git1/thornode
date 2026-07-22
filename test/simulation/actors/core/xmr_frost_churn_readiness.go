@@ -296,6 +296,9 @@ func readinessEndpointsFromEnv(envName string, defaults []readinessEndpoint) []r
 			url:  part,
 		})
 	}
+	if len(endpoints) == 0 {
+		return defaults
+	}
 	return endpoints
 }
 

@@ -30,6 +30,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	sutxo "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/zecutil"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	btctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/txscript"
@@ -861,6 +862,17 @@ func (s *CoverageBackfillSuite) TestMemoToScripts(c *C) {
 	memoTooLong := strings.Repeat("X", 1000)
 	_, err = MemoToScripts(memoTooLong, 80, btctxscript.NullDataScript, btctxscript.PayToWitnessScript)
 	c.Assert(err, NotNil)
+}
+
+func (s *CoverageBackfillSuite) TestZECMemoContinuationUsesTransparentP2PKH(c *C) {
+	scripts, err := MemoToScripts(strings.Repeat("Z", 100), btctxscript.MaxDataCarrierSize, btctxscript.NullDataScript, zecutil.PayToPubKeyHashScript)
+	c.Assert(err, IsNil)
+	c.Assert(len(scripts), Equals, 3)
+
+	asm, err := btctxscript.DisasmString(scripts[1])
+	c.Assert(err, IsNil)
+	c.Assert(strings.HasPrefix(asm, "OP_DUP OP_HASH160 "), Equals, true)
+	c.Assert(strings.HasSuffix(asm, " OP_EQUALVERIFY OP_CHECKSIG"), Equals, true)
 }
 
 func (s *CoverageBackfillSuite) TestGetSourceScript(c *C) {

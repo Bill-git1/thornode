@@ -19,9 +19,10 @@ import (
 
 var setupBech32PrefixOnce sync.Once
 
-const testExpectedPlanHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-
-var testTxKey = strings.Repeat("1", 64)
+const (
+	testExpectedPlanHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	testTxKey            = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+)
 
 func ensureBech32Prefix() {
 	setupBech32PrefixOnce.Do(func() {
@@ -61,6 +62,162 @@ func mustSuccessResult(
 		}},
 		Status: uint8(tcommon.Success),
 	}
+}
+
+func TestFrostSigningClaimHooksAreLocalAndFailClosed(t *testing.T) {
+	req := FrostKeySignRequest{
+		VaultPubKey:   "vault-a",
+		ToAddress:     "destination-a",
+		AmountAtomic:  10,
+		SignerPubKeys: []string{testPubKeys[0], testPubKeys[1]},
+	}
+	msgIDBefore, err := FrostKeySignMsgID(req)
+	if err != nil {
+		t.Fatalf("derive msg id: %v", err)
+	}
+	calls := 0
+	req.ReserveSigningClaim = func() error { calls++; return nil }
+	if err = reserveFrostSigningClaim(req); err != nil || calls != 1 {
+		t.Fatalf("reserve hook calls=%d err=%v", calls, err)
+	}
+	msgIDAfter, err := FrostKeySignMsgID(req)
+	if err != nil || msgIDAfter != msgIDBefore {
+		t.Fatalf("local hook changed canonical request: before=%s after=%s err=%v", msgIDBefore, msgIDAfter, err)
+	}
+	reserveErr := errors.New("claim store unavailable")
+	req.ReserveSigningClaim = func() error { return reserveErr }
+	if err = reserveFrostSigningClaim(req); !errors.Is(err, reserveErr) {
+		t.Fatalf("expected reserve failure to propagate, got %v", err)
+	}
+}
+
+func TestFrostTxKeyCanonicalValidation(t *testing.T) {
+	valid := strings.Repeat("ab", 32)
+	if _, err := FrostTxKeyHash(valid); err != nil {
+		t.Fatalf("valid tx key rejected: %v", err)
+	}
+	for _, invalid := range []string{
+		strings.ToUpper(valid),
+		" " + valid,
+		valid + " ",
+		strings.Repeat("0", 64),
+		valid[:62],
+	} {
+		if _, err := FrostTxKeyHash(invalid); err == nil {
+			t.Fatalf("invalid tx key accepted: %q", invalid)
+		}
+	}
+}
+
+func TestFrostSignCoordinatorReleasesClaimOnlyBeforeShareRPC(t *testing.T) {
+	ensureBech32Prefix()
+
+	members := []string{testPubKeys[0]}
+	peerIDs, err := conversion.GetPeerIDsFromPubKeys(members)
+	if err != nil {
+		t.Fatalf("peer ids: %v", err)
+	}
+	req := FrostKeySignRequest{
+		VaultPubKey:   "thorpub-vault-1",
+		ToAddress:     "48abc",
+		AmountAtomic:  1,
+		SignerPubKeys: members,
+	}
+	newCoordinator := func(sidecar FrostSidecarClient) *FrostSignCoordinator {
+		return &FrostSignCoordinator{
+			p2pCommunication: &p2p.Communication{BroadcastMsgChan: make(chan *messages.BroadcastMsgChan, 16)},
+			sidecar:          sidecar,
+			localPubKey:      members[0],
+			msgID:            strings.Repeat("a", 64),
+			msgChan:          make(chan *p2p.Message, 1),
+			timeout:          time.Second,
+			logger:           zerolog.Nop(),
+		}
+	}
+	beforeShare := newCoordinator(&mockFrostSidecarSign{prepareErr: errors.New("prepare unavailable")}).Execute(req, members, peerIDs)
+	if beforeShare.Status != tcommon.Fail || !beforeShare.releaseSigningClaim {
+		t.Fatalf("pre-share failure must release exact reservation: %+v", beforeShare)
+	}
+	afterShareStarted := newCoordinator(&mockFrostSidecarSign{
+		prepareResp: FrostSidecarPrepareResp{SessionID: "session", Preprocess: "aa"},
+		partialErr:  errors.New("ambiguous partial response"),
+	}).Execute(req, members, peerIDs)
+	if afterShareStarted.Status != tcommon.Fail || afterShareStarted.releaseSigningClaim {
+		t.Fatalf("partial RPC ambiguity must retain reservation: %+v", afterShareStarted)
+	}
+	if afterShareStarted.Blame.Round != messages.FROSTKEYSIGNSHARE {
+		t.Fatalf("partial RPC ambiguity must be terminal at %s, got %q", messages.FROSTKEYSIGNSHARE, afterShareStarted.Blame.Round)
+	}
+	afterSharesExchanged := newCoordinator(&mockFrostSidecarSign{
+		prepareResp: FrostSidecarPrepareResp{SessionID: "session", Preprocess: "aa"},
+		partialResp: FrostSidecarPartialResp{SignatureShare: "cc"},
+		combineErr:  errors.New("combine response lost"),
+	}).Execute(req, members, peerIDs)
+	if afterSharesExchanged.Status != tcommon.Fail || afterSharesExchanged.releaseSigningClaim {
+		t.Fatalf("combine RPC ambiguity must retain reservation: %+v", afterSharesExchanged)
+	}
+	if afterSharesExchanged.Blame.Round != messages.FROSTKEYSIGNRESULT {
+		t.Fatalf("combine RPC ambiguity must be terminal at %s, got %q", messages.FROSTKEYSIGNRESULT, afterSharesExchanged.Blame.Round)
+	}
+}
+
+// preserveFrostExposureRound expresses the pre-rename helper's contract in terms
+// of the current shouldAdoptFrostFailureResult predicate: adopt the quorum
+// candidate only when it does not erase a local signature-exposure round.
+func preserveFrostExposureRound(local, candidate FrostKeySignResponse) FrostKeySignResponse {
+	if shouldAdoptFrostFailureResult(local, candidate) {
+		return candidate
+	}
+	return local
+}
+
+func TestPreserveFrostExposureRoundAcrossQuorumFailure(t *testing.T) {
+	local := FrostKeySignResponse{
+		Status: tcommon.Fail,
+		Blame:  buildBlame("partial response lost", messages.FROSTKEYSIGNSHARE, nil),
+	}
+	peerAttributed := FrostKeySignResponse{
+		Status: tcommon.Fail,
+		Blame:  buildBlame("peer failed earlier", messages.FROSTKEYSIGNPREPROCESS, []string{testPubKeys[1]}),
+	}
+	got := preserveFrostExposureRound(local, peerAttributed)
+	if got.Blame.Round != messages.FROSTKEYSIGNSHARE {
+		t.Fatalf("quorum failure erased local share exposure: got %q", got.Blame.Round)
+	}
+	if len(got.Blame.BlameNodes) != 0 {
+		t.Fatalf("must not graft preprocess blame onto a local terminal round, got %+v", got.Blame.BlameNodes)
+	}
+	if got.Blame.FailReason != local.Blame.FailReason {
+		t.Fatalf("expected local terminal failure reason, got %q", got.Blame.FailReason)
+	}
+
+	peerResult := peerAttributed
+	peerResult.Blame.Round = messages.FROSTKEYSIGNRESULT
+	got = preserveFrostExposureRound(local, peerResult)
+	if got.Blame.Round != messages.FROSTKEYSIGNRESULT {
+		t.Fatalf("must preserve an existing terminal quorum result round, got %q", got.Blame.Round)
+	}
+}
+
+type mockFrostSidecarSign struct {
+	prepareResp FrostSidecarPrepareResp
+	partialResp FrostSidecarPartialResp
+	combineResp FrostSidecarCombineResp
+	prepareErr  error
+	partialErr  error
+	combineErr  error
+}
+
+func (m *mockFrostSidecarSign) FrostSignPrepare(req FrostSidecarPrepareReq) (FrostSidecarPrepareResp, error) {
+	return m.prepareResp, m.prepareErr
+}
+
+func (m *mockFrostSidecarSign) FrostSignPartial(req FrostSidecarPartialReq) (FrostSidecarPartialResp, error) {
+	return m.partialResp, m.partialErr
+}
+
+func (m *mockFrostSidecarSign) FrostSignCombine(req FrostSidecarCombineReq) (FrostSidecarCombineResp, error) {
+	return m.combineResp, m.combineErr
 }
 
 func TestFrostKeySignMsgIDDeterministic(t *testing.T) {
@@ -196,7 +353,7 @@ func TestFrostKeySignIdentityIncludesSpendConstraints(t *testing.T) {
 	// MaxGas must be part of the request identity because it changes the fee
 	// ceiling and migration sweep amount the sidecar is allowed to construct.
 	changedMaxGas := base
-	changedMaxGas.MaxGasAtomic = 100
+	changedMaxGas.MaxGasAtomic = 123
 	maxGasID, err := FrostKeySignMsgID(changedMaxGas)
 	if err != nil {
 		t.Fatalf("max gas msg id: %v", err)
@@ -464,6 +621,76 @@ func TestFrostKeySignMsgIDIncludesTxInHashRequestIDAndHeight(t *testing.T) {
 	}
 }
 
+func TestFrostSignCoordinatorRejectsMaxGasExceeded(t *testing.T) {
+	ensureBech32Prefix()
+
+	members := []string{testPubKeys[0], testPubKeys[1]}
+	req := FrostKeySignRequest{
+		VaultPubKey:   "thorpub-vault-1",
+		ToAddress:     "48abc",
+		AmountAtomic:  12345,
+		Memo:          "MIGRATE:100",
+		SignerPubKeys: members,
+		BlockHeight:   101,
+		MaxGasAtomic:  100,
+	}
+	msgID, err := FrostKeySignMsgID(req)
+	if err != nil {
+		t.Fatalf("msg id: %v", err)
+	}
+	planHash, err := FrostPlanHash(req, msgID)
+	if err != nil {
+		t.Fatalf("plan hash: %v", err)
+	}
+	peerIDs, err := conversion.GetPeerIDsFromPubKeys(members)
+	if err != nil {
+		t.Fatalf("peer ids: %v", err)
+	}
+
+	msgChan := make(chan *p2p.Message, 8)
+	enqueueFrostExecuteTranscriptMessages(t, msgChan, msgID, members, "aa", "bb", "cc", "dd")
+	coord := &FrostSignCoordinator{
+		p2pCommunication: &p2p.Communication{BroadcastMsgChan: make(chan *messages.BroadcastMsgChan, 64)},
+		sidecar: &mockFrostSidecarSign{
+			prepareResp: FrostSidecarPrepareResp{
+				SessionID:  "session-1",
+				Preprocess: "aa",
+			},
+			partialResp: FrostSidecarPartialResp{
+				SignatureShare: "cc",
+			},
+			combineResp: FrostSidecarCombineResp{
+				FeeAtomic: 101,
+			},
+		},
+		localPubKey:      members[0],
+		msgID:            msgID,
+		expectedPlanHash: planHash,
+		msgChan:          msgChan,
+		timeout:          time.Second,
+		logger:           zerolog.Nop(),
+	}
+
+	resp := coord.Execute(req, members, peerIDs)
+	if resp.Status != tcommon.Fail {
+		t.Fatalf("expected fail status, got %d", resp.Status)
+	}
+	if resp.FeeAtomic != 101 {
+		t.Fatalf("expected actual fee to be propagated, got %d", resp.FeeAtomic)
+	}
+	if !strings.Contains(resp.Blame.FailReason, FrostFailReasonXMRMaxGasExceeded) ||
+		!strings.Contains(resp.Blame.FailReason, "actual_fee_atomic=101") ||
+		!strings.Contains(resp.Blame.FailReason, "max_gas_atomic=100") {
+		t.Fatalf("unexpected fail reason: %q", resp.Blame.FailReason)
+	}
+	if len(resp.Blame.BlameNodes) != 0 {
+		t.Fatalf("expected no blamed nodes for local max gas cap, got %+v", resp.Blame.BlameNodes)
+	}
+	if resp.Blame.Round != messages.FROSTKEYSIGNRESULT {
+		t.Fatalf("max gas rejection after combine must be terminal at %s, got %q", messages.FROSTKEYSIGNRESULT, resp.Blame.Round)
+	}
+}
+
 func TestFrostDecoyContextDeterministic(t *testing.T) {
 	ctxA, err := FrostDecoyContext("msg-a")
 	if err != nil {
@@ -558,14 +785,14 @@ func TestFrostExchangePreprocessAcceptsTranscriptVerification(t *testing.T) {
 	enqueueKeySignMessage(t, msgChan, messages.TSSFrostPreprocessMsg, "msg-id", testPubKeys[1], remotePayload)
 	enqueueKeySignMessage(t, msgChan, messages.TSSFrostVerifyMsg, "msg-id", testPubKeys[1], FrostVerifyPayload{
 		SenderPubKey:           testPubKeys[1],
-		Round:                  frostRoundPreprocess,
+		Round:                  messages.FROSTKEYSIGNPREPROCESS,
 		TargetSenderPubKey:     testPubKeys[1],
 		TargetParticipantIndex: remotePayload.ParticipantIndex,
 		PayloadHash:            remoteHash,
 	})
 	enqueueKeySignMessage(t, msgChan, messages.TSSFrostVerifyMsg, "msg-id", testPubKeys[1], FrostVerifyPayload{
 		SenderPubKey:           testPubKeys[1],
-		Round:                  frostRoundPreprocess,
+		Round:                  messages.FROSTKEYSIGNPREPROCESS,
 		TargetSenderPubKey:     testPubKeys[0],
 		TargetParticipantIndex: localPayload.ParticipantIndex,
 		PayloadHash:            localHash,
@@ -718,7 +945,10 @@ func TestFrostWaitForResultAcceptsThresholdIdenticalSuccess(t *testing.T) {
 	}
 }
 
-func TestFrostWaitForResultRejectsSingleSuccessWithoutQuorum(t *testing.T) {
+// TestFrostWaitForResultRejectsSingleVerifiedSuccess confirms that one
+// self-consistent success result cannot satisfy the durable FROST proof bundle
+// requirement.
+func TestFrostWaitForResultRejectsSingleVerifiedSuccess(t *testing.T) {
 	ensureBech32Prefix()
 
 	msgChan := make(chan *p2p.Message, 1)
@@ -730,6 +960,8 @@ func TestFrostWaitForResultRejectsSingleSuccessWithoutQuorum(t *testing.T) {
 		timeout:          time.Second,
 	}
 
+	// The payload validates locally, but without a matching quorum it must not
+	// become the accepted signed transaction for retry suppression.
 	result := mustSuccessResult(t, "msg-id", testExpectedPlanHash, testHashOf('1'), "deadbeef", 10)
 	enqueueResultMessage(t, msgChan, "msg-id", testPubKeys[1], testPubKeys[1], FrostResultPayload{
 		SenderPubKey: testPubKeys[1],
@@ -737,7 +969,7 @@ func TestFrostWaitForResultRejectsSingleSuccessWithoutQuorum(t *testing.T) {
 	})
 
 	if _, err := coord.WaitForResult([]string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}, 2, 150*time.Millisecond); err == nil {
-		t.Fatalf("expected timeout waiting for success quorum, got nil error")
+		t.Fatalf("expected timeout waiting for matching success quorum")
 	}
 }
 
@@ -809,7 +1041,10 @@ func TestFrostWaitForResultContinuesAfterSingleMalformedResult(t *testing.T) {
 	}
 }
 
-func TestFrostWaitForResultRejectsConflictingSuccessPayloads(t *testing.T) {
+// TestFrostWaitForResultRejectsDivergentSuccessPayloads verifies that active
+// signers must agree on the exact same XMR transaction payload, not merely
+// report successful FROST completion.
+func TestFrostWaitForResultRejectsDivergentSuccessPayloads(t *testing.T) {
 	ensureBech32Prefix()
 
 	msgChan := make(chan *p2p.Message, 2)
@@ -821,6 +1056,8 @@ func TestFrostWaitForResultRejectsConflictingSuccessPayloads(t *testing.T) {
 		timeout:          100 * time.Millisecond,
 	}
 
+	// Both messages are individually well-formed successes, but they disagree
+	// on tx hash and therefore cannot form a single proof bundle.
 	enqueueResultMessage(t, msgChan, "msg-id", testPubKeys[1], testPubKeys[1], FrostResultPayload{
 		SenderPubKey: testPubKeys[1],
 		Response:     mustSuccessResult(t, "msg-id", testExpectedPlanHash, testHashOf('c'), "deadbeef", 10),
@@ -831,7 +1068,7 @@ func TestFrostWaitForResultRejectsConflictingSuccessPayloads(t *testing.T) {
 	})
 
 	if _, err := coord.WaitForResult([]string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}, 2, 150*time.Millisecond); err == nil {
-		t.Fatalf("expected quorum timeout for conflicting results, got nil error")
+		t.Fatalf("expected timeout waiting for matching success quorum")
 	}
 }
 
@@ -885,24 +1122,6 @@ func TestFrostWaitForResultDisqualifiesConflictingSender(t *testing.T) {
 
 	if _, err := coord.WaitForResult([]string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}, 2, 100*time.Millisecond); !errors.Is(err, errFrostResultTimeout) {
 		t.Fatalf("equivocating sender must not remain counted in first bucket: %v", err)
-	}
-}
-
-func TestFrostTxKeyCanonicalValidation(t *testing.T) {
-	valid := strings.Repeat("ab", 32)
-	if _, err := FrostTxKeyHash(valid); err != nil {
-		t.Fatalf("valid tx key rejected: %v", err)
-	}
-	for _, invalid := range []string{
-		strings.ToUpper(valid),
-		" " + valid,
-		valid + " ",
-		strings.Repeat("0", 64),
-		valid[:62],
-	} {
-		if _, err := FrostTxKeyHash(invalid); err == nil {
-			t.Fatalf("invalid tx key accepted: %q", invalid)
-		}
 	}
 }
 
@@ -1093,6 +1312,96 @@ func enqueueResultMessage(
 		PeerID:  peerID,
 		Payload: wrappedBytes,
 	}
+}
+
+func enqueueFrostExecuteTranscriptMessages(
+	t *testing.T,
+	msgChan chan<- *p2p.Message,
+	msgID string,
+	members []string,
+	localPreprocess string,
+	remotePreprocess string,
+	localShare string,
+	remoteShare string,
+) {
+	t.Helper()
+	if len(members) != 2 {
+		t.Fatalf("expected two members, got %d", len(members))
+	}
+	_, participantIndexMap, _, err := buildParticipantIndex(members)
+	if err != nil {
+		t.Fatalf("participant index map: %v", err)
+	}
+	localPubKey := members[0]
+	remotePubKey := members[1]
+
+	localPreprocessPayload := FrostPreprocessPayload{
+		SenderPubKey:     localPubKey,
+		ParticipantIndex: participantIndexMap[normalizePubKey(localPubKey)],
+		PreprocessHex:    localPreprocess,
+	}
+	remotePreprocessPayload := FrostPreprocessPayload{
+		SenderPubKey:     remotePubKey,
+		ParticipantIndex: participantIndexMap[normalizePubKey(remotePubKey)],
+		PreprocessHex:    remotePreprocess,
+	}
+	localPreprocessHash, err := FrostTranscriptPreprocessHash(msgID, localPreprocessPayload)
+	if err != nil {
+		t.Fatalf("local preprocess hash: %v", err)
+	}
+	remotePreprocessHash, err := FrostTranscriptPreprocessHash(msgID, remotePreprocessPayload)
+	if err != nil {
+		t.Fatalf("remote preprocess hash: %v", err)
+	}
+	enqueueKeySignMessage(t, msgChan, messages.TSSFrostPreprocessMsg, msgID, remotePubKey, remotePreprocessPayload)
+	enqueueKeySignMessage(t, msgChan, messages.TSSFrostVerifyMsg, msgID, remotePubKey, FrostVerifyPayload{
+		SenderPubKey:           remotePubKey,
+		Round:                  messages.FROSTKEYSIGNPREPROCESS,
+		TargetSenderPubKey:     remotePubKey,
+		TargetParticipantIndex: remotePreprocessPayload.ParticipantIndex,
+		PayloadHash:            remotePreprocessHash,
+	})
+	enqueueKeySignMessage(t, msgChan, messages.TSSFrostVerifyMsg, msgID, remotePubKey, FrostVerifyPayload{
+		SenderPubKey:           remotePubKey,
+		Round:                  messages.FROSTKEYSIGNPREPROCESS,
+		TargetSenderPubKey:     localPubKey,
+		TargetParticipantIndex: localPreprocessPayload.ParticipantIndex,
+		PayloadHash:            localPreprocessHash,
+	})
+
+	localSharePayload := FrostSharePayload{
+		SenderPubKey:     localPubKey,
+		ParticipantIndex: participantIndexMap[normalizePubKey(localPubKey)],
+		ShareHex:         localShare,
+	}
+	remoteSharePayload := FrostSharePayload{
+		SenderPubKey:     remotePubKey,
+		ParticipantIndex: participantIndexMap[normalizePubKey(remotePubKey)],
+		ShareHex:         remoteShare,
+	}
+	localShareHash, err := FrostTranscriptShareHash(msgID, localSharePayload)
+	if err != nil {
+		t.Fatalf("local share hash: %v", err)
+	}
+	remoteShareHash, err := FrostTranscriptShareHash(msgID, remoteSharePayload)
+	if err != nil {
+		t.Fatalf("remote share hash: %v", err)
+	}
+	enqueueKeySignMessage(t, msgChan, messages.TSSFrostShareMsg, msgID, remotePubKey, remoteSharePayload)
+	enqueueKeySignMessage(t, msgChan, messages.TSSFrostVerifyMsg, msgID, remotePubKey, FrostVerifyPayload{
+		SenderPubKey:           remotePubKey,
+		Round:                  messages.FROSTKEYSIGNSHARE,
+		TargetSenderPubKey:     remotePubKey,
+		TargetParticipantIndex: remoteSharePayload.ParticipantIndex,
+		PayloadHash:            remoteShareHash,
+	})
+	enqueueKeySignMessage(t, msgChan, messages.TSSFrostVerifyMsg, msgID, remotePubKey, FrostVerifyPayload{
+		SenderPubKey:           remotePubKey,
+		Round:                  messages.FROSTKEYSIGNSHARE,
+		TargetSenderPubKey:     localPubKey,
+		TargetParticipantIndex: localSharePayload.ParticipantIndex,
+		PayloadHash:            localShareHash,
+	})
 }
 
 func newTestFrostSignCoordinator(localPubKey, msgID string, msgChan chan *p2p.Message, timeout time.Duration) *FrostSignCoordinator {

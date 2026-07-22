@@ -79,7 +79,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	}
 
 	shouldSlash := true
-	signingTransPeriod := h.mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	signingTransPeriod := h.mgr.Keeper().GetConfigInt64(ctx, constants.SigningTransactionPeriod)
 	// every Signing Transaction Period , THORNode will check whether a
 	// TxOutItem had been sent by signer or not
 	// if a txout item that is older than SigningTransactionPeriod, but has not
@@ -91,17 +91,18 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	// to the current height starting from inbound consensus height
 	// or one signingTransPeriod ago, whichever is later.
 	//
-	// XMR outbounds use FROST threshold signing whose sign + confirmation +
-	// observation round-trip exceeds the standard SigningTransactionPeriod
-	// window. The slasher processes XMR items at xmrSigningPeriodMultiplier
-	// times the normal period (see x/thorchain/manager_slasher_current.go),
-	// so an XMR observation can legitimately reference a TxOutItem up to
-	// that many blocks old. Mirror that lookback here so the match loop can
-	// find the original TxOutItem instead of falsely slashing the signer
-	// for a "missing tx out".
+	// XMR and EVM aggregator outbounds can legitimately observe after the
+	// standard SigningTransactionPeriod. Mirror the LackSigning timing here
+	// so the match loop can find the original TxOutItem instead of falsely
+	// slashing the signer for a "missing tx out".
 	searchPeriod := signingTransPeriod
-	if tx.Tx.Chain.Equals(common.XMRChain) {
+	switch {
+	case tx.Tx.Chain.Equals(common.XMRChain):
 		searchPeriod = signingTransPeriod * xmrSigningPeriodMultiplier
+	case isObservedEVMAggregatorOutbound(tx):
+		searchPeriod = signingTransPeriod * evmAggregatorSigningPeriodMultiplier
+	case isObservedEVMTokenOutbound(tx):
+		searchPeriod = signingTransPeriod * evmTokenSigningPeriodMultiplier
 	}
 	earliestHeight := ctx.BlockHeight() - searchPeriod
 	if voter.Height > earliestHeight {
@@ -203,7 +204,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 				}
 				if txOutItem.Chain.IsEVM() {
 					gasAsset := txOutItem.Chain.GetGasAsset()
-					maxGasAmount := txOutItem.MaxGas.ToCoins().GetCoin(gasAsset).Amount
 					gasAmount := tx.Tx.Gas.ToCoins().GetCoin(gasAsset).Amount
 					maxGasCap, known := maxEVMGasForChain(ctx, h.mgr.Keeper(), txOutItem.Chain)
 					if !known {
@@ -213,7 +213,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 							"max_gas_cap", maxGasCap.String(),
 						)
 					}
-					if gasAmount.GTE(maxGasCap) && maxGasAmount.LT(maxGasCap) {
+					if evmOutboundGasShouldSlash(txOutItem, gasAmount, maxGasCap) {
 						ctx.Logger().Info("EVM chain transaction spent more than max gas cap, should be slashed", "chain", txOutItem.Chain, "gas", gasAmount.String(), "max gas cap", maxGasCap)
 						matchCoin = false
 					}
@@ -338,6 +338,30 @@ func calcReclaim(reclaimable1, reclaimable2, spent cosmos.Uint) (reclaim1, recla
 
 	// Otherwise, split the spent clout equally
 	return halfSpent, spent.Sub(halfSpent)
+}
+
+func evmOutboundGasShouldSlash(txOutItem TxOutItem, gasAmount, maxGasCap cosmos.Uint) bool {
+	if gasAmount.LT(maxGasCap) {
+		return false
+	}
+
+	gasAsset := txOutItem.Chain.GetGasAsset()
+	maxGasAmount := txOutItem.MaxGas.ToCoins().GetCoin(gasAsset).Amount
+	if !maxGasAmount.LT(maxGasCap) {
+		return false
+	}
+
+	allowance := maxGasAmount
+	if txOutItem.Aggregator != "" {
+		allowance = allowance.MulUint64(uint64(constants.EVMAggregatorMaxGasMultiplier))
+	} else if !txOutItem.Coin.Asset.IsGasAsset() {
+		allowance = allowance.MulUint64(uint64(constants.EVMTokenMaxGasMultiplier))
+	}
+
+	if !allowance.LT(maxGasCap) && !gasAmount.GT(allowance) {
+		return false
+	}
+	return true
 }
 
 // maxEVMGasForChain returns the absolute max gas cap for the given EVM chain.

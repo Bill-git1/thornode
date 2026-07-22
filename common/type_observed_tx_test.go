@@ -18,6 +18,8 @@ const (
 	testRefTxHashB   = "ef01000000000000000000000000000000000000000000000000000000000002"
 	testKeyImageA    = "ki01000000000000000000000000000000000000000000000000000000000001"
 	testKeyImageB    = "ki02000000000000000000000000000000000000000000000000000000000001"
+	testXMRTxKey     = "aa01000000000000000000000000000000000000000000000000000000000001"
+	testXMRTxKey2    = "aa02000000000000000000000000000000000000000000000000000000000001"
 	testPubKey       = PubKey("thorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4")
 )
 
@@ -99,6 +101,66 @@ func (s ObservedTxSuite) TestValidateSpentOutputRefs_HappyPath(c *C) {
 	c.Assert(ValidateSpentOutputRefs(XMRChain, TxID(testSpendTxHash), refs), IsNil)
 }
 
+func (s ObservedTxSuite) TestValidateXMRTxKey(c *C) {
+	c.Assert(ValidateXMRTxKey(XMRChain, ""), IsNil)
+	c.Assert(ValidateXMRTxKey(XMRChain, testXMRTxKey), IsNil)
+	c.Assert(ValidateXMRTxKey(XMRChain, strings.ToUpper(testXMRTxKey)), IsNil)
+
+	err := ValidateXMRTxKey(BTCChain, testXMRTxKey)
+	c.Assert(err, ErrorMatches, "xmr tx key is only valid for XMR observed txs")
+
+	err = ValidateXMRTxKey(XMRChain, "abc")
+	c.Assert(err, ErrorMatches, "xmr tx key must be 64 hex characters")
+
+	err = ValidateXMRTxKey(XMRChain, strings.Repeat("z", 64))
+	c.Assert(err, ErrorMatches, "xmr tx key must be hex")
+}
+
+func (s ObservedTxSuite) TestGetSignablePayloadXMRTxKeyMetadata(c *C) {
+	txKeyUpper := strings.ToUpper(testXMRTxKey)
+	txKeyLower := strings.ToLower(testXMRTxKey)
+
+	withUpperKey := makeXMRObservedTx(c, nil)
+	withUpperKey.XmrTxKey = txKeyUpper
+	upperPayload, err := withUpperKey.GetSignablePayloadWithInbound(false)
+	c.Assert(err, IsNil)
+
+	withLowerKey := makeXMRObservedTx(c, nil)
+	withLowerKey.XmrTxKey = txKeyLower
+	lowerPayload, err := withLowerKey.GetSignablePayloadWithInbound(false)
+	c.Assert(err, IsNil)
+
+	emptyTx := makeXMRObservedTx(c, nil)
+	emptyPayload, err := emptyTx.GetSignablePayloadWithInbound(false)
+	c.Assert(err, IsNil)
+
+	c.Assert(string(upperPayload), Equals, string(lowerPayload))
+	c.Assert(string(lowerPayload) == string(emptyPayload), Equals, false)
+}
+
+func (s ObservedTxSuite) TestGetSignablePayloadXMRMetadataDeterministicAcrossRefOrder(c *C) {
+	a := makeRef(testRefTxHashA, 0, testKeyImageA, testSpendTxHash)
+	b := makeRef(testRefTxHashB, 1, testKeyImageB, testSpendTxHash)
+
+	tx1 := makeXMRObservedTx(c, []OutputRef{a, b})
+	tx1.XmrTxKey = testXMRTxKey
+	payload1, err := tx1.GetSignablePayloadWithInbound(false)
+	c.Assert(err, IsNil)
+
+	tx2 := makeXMRObservedTx(c, []OutputRef{b, a})
+	tx2.XmrTxKey = strings.ToUpper(testXMRTxKey)
+	payload2, err := tx2.GetSignablePayloadWithInbound(false)
+	c.Assert(err, IsNil)
+
+	txNoRefs := makeXMRObservedTx(c, nil)
+	txNoRefs.XmrTxKey = testXMRTxKey
+	payloadNoRefs, err := txNoRefs.GetSignablePayloadWithInbound(false)
+	c.Assert(err, IsNil)
+
+	c.Assert(string(payload1), Equals, string(payload2))
+	c.Assert(string(payload1) == string(payloadNoRefs), Equals, false)
+}
+
 // helpers for consensus-equality tests
 
 func makeXMRObservedTx(c *C, refs []OutputRef) ObservedTx {
@@ -130,6 +192,19 @@ func (s ObservedTxSuite) TestEqualsConsensus_SameRefsDifferentOrder(c *C) {
 	c.Assert(tx1.HasEquivalentSpentOutputRefs(tx2), Equals, true)
 }
 
+func (s ObservedTxSuite) TestEqualsConsensus_XMRAddressCaseVariantsDoNotCoalesce(c *C) {
+	exact := makeXMRObservedTx(c, nil)
+	fromVariant := makeXMRObservedTx(c, nil)
+	fromVariant.Tx.FromAddress = Address(strings.ToUpper(fromVariant.Tx.FromAddress.String()))
+	toVariant := makeXMRObservedTx(c, nil)
+	toVariant.Tx.ToAddress = Address(strings.ToUpper(toVariant.Tx.ToAddress.String()))
+
+	c.Assert(exact.EqualsConsensus(fromVariant), Equals, false)
+	c.Assert(exact.EqualsConsensusIgnoreGas(fromVariant), Equals, false)
+	c.Assert(exact.EqualsConsensus(toVariant), Equals, false)
+	c.Assert(exact.EqualsConsensusIgnoreGas(toVariant), Equals, false)
+}
+
 func (s ObservedTxSuite) TestEqualsConsensus_OneRefDiffers(c *C) {
 	a := makeRef(testRefTxHashA, 0, testKeyImageA, testSpendTxHash)
 	b := makeRef(testRefTxHashB, 1, testKeyImageB, testSpendTxHash)
@@ -138,6 +213,29 @@ func (s ObservedTxSuite) TestEqualsConsensus_OneRefDiffers(c *C) {
 	tx2 := makeXMRObservedTx(c, []OutputRef{a, other})
 	c.Assert(tx1.EqualsConsensus(tx2), Equals, false)
 	c.Assert(tx1.HasEquivalentSpentOutputRefs(tx2), Equals, false)
+}
+
+func (s ObservedTxSuite) TestEqualsConsensus_MissingRefsDoesNotSplitConsensus(c *C) {
+	ref := makeRef(testRefTxHashA, 0, testKeyImageA, testSpendTxHash)
+	txWithRefs := makeXMRObservedTx(c, []OutputRef{ref})
+	txWithoutRefs := makeXMRObservedTx(c, nil)
+	txWithRefs.XmrTxKey = testXMRTxKey
+	txWithoutRefs.XmrTxKey = testXMRTxKey
+
+	c.Assert(txWithRefs.Equals(txWithoutRefs), Equals, false)
+	c.Assert(txWithRefs.EqualsConsensus(txWithoutRefs), Equals, true)
+	c.Assert(txWithRefs.EqualsConsensusIgnoreGas(txWithoutRefs), Equals, true)
+	c.Assert(txWithRefs.HasEquivalentSpentOutputRefs(txWithoutRefs), Equals, true)
+}
+
+func (s ObservedTxSuite) TestEqualsConsensus_OneXMRTxKeyDiffers(c *C) {
+	tx1 := makeXMRObservedTx(c, nil)
+	tx2 := makeXMRObservedTx(c, nil)
+	tx1.XmrTxKey = testXMRTxKey
+	tx2.XmrTxKey = testXMRTxKey2
+	c.Assert(tx1.EqualsConsensus(tx2), Equals, false)
+	c.Assert(tx1.EqualsConsensusIgnoreGas(tx2), Equals, false)
+	c.Assert(tx1.HasEquivalentXMRTxKey(tx2), Equals, false)
 }
 
 func (s ObservedTxSuite) TestEqualsConsensus_BothNonXMREmpty(c *C) {
@@ -181,6 +279,12 @@ func (s ObservedTxSuite) TestAttestationUniqueHash_XMREmptyRefsEqualsBase(c *C) 
 func (s ObservedTxSuite) TestAttestationUniqueHash_XMRWithRefsDiffersFromBase(c *C) {
 	a := makeRef(testRefTxHashA, 0, testKeyImageA, testSpendTxHash)
 	otx := makeXMRObservedTx(c, []OutputRef{a})
+	c.Assert(otx.AttestationUniqueHash() != otx.Tx.Hash(otx.BlockHeight), Equals, true)
+}
+
+func (s ObservedTxSuite) TestAttestationUniqueHash_XMRWithTxKeyDiffersFromBase(c *C) {
+	otx := makeXMRObservedTx(c, nil)
+	otx.XmrTxKey = testXMRTxKey
 	c.Assert(otx.AttestationUniqueHash() != otx.Tx.Hash(otx.BlockHeight), Equals, true)
 }
 

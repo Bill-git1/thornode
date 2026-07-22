@@ -263,7 +263,7 @@
             "secp256k1": "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5"
           },
           "signer_membership": [
-            "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v"
+            "tthorpub1addwnpepqtrqglu5g8kh6mfsg4qxa9wq0nv9cauwfwxw70984wkqnw2uwz0w2vxmngk"
           ],
           "status": "Active",
           "status_since": "11",
@@ -280,7 +280,7 @@
             "secp256k1": "tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu"
           },
           "signer_membership": [
-            "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v"
+            "tthorpub1addwnpepqtrqglu5g8kh6mfsg4qxa9wq0nv9cauwfwxw70984wkqnw2uwz0w2vxmngk"
           ],
           "status": "Active",
           "status_since": "11",
@@ -298,7 +298,7 @@
             "secp256k1": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
           },
           "signer_membership": [
-            "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v"
+            "tthorpub1addwnpepqtrqglu5g8kh6mfsg4qxa9wq0nv9cauwfwxw70984wkqnw2uwz0w2vxmngk"
           ],
           "status": "Active",
           "validator_cons_pub_key": "tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz"
@@ -341,7 +341,7 @@
             "tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5",
             "tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu"
           ],
-          "pub_key": "tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v",
+          "pub_key": "tthorpub1addwnpepqtrqglu5g8kh6mfsg4qxa9wq0nv9cauwfwxw70984wkqnw2uwz0w2vxmngk",
           "routers": null,
           "status": "ActiveVault",
           "status_since": "11",

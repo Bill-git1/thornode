@@ -422,7 +422,7 @@ func (a *ForcedToLeaveKeygenActor) triggerChurn(config *OpConfig) OpResult {
 		value int64
 	}{
 		{key: "NUMBEROFNEWNODESPERCHURN", value: int64(len(nodes))},
-		{key: "CHURNRETRYINTERVAL", value: xmrPostChurnChurnRetryInterval},
+		{key: "CHURNRETRYINTERVAL", value: xmrPostChurnRetryInterval},
 		{key: "HALTCHURNING", value: 0},
 	} {
 		mimir := thorchain.NewMsgMimir(item.key, item.value, accAddr)

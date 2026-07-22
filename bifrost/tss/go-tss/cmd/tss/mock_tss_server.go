@@ -70,6 +70,7 @@ func (mts *MockTssServer) FrostKeySign(req tss.FrostKeySignRequest, _ tss.FrostS
 	return tss.FrostKeySignResponse{
 		TxHash:    "mock-tx-hash",
 		TxHex:     "mock-tx-hex",
+		TxKey:     "1111111111111111111111111111111111111111111111111111111111111111",
 		FeeAtomic: 1,
 		Status:    common.Success,
 		Blame:     blame.Blame{},

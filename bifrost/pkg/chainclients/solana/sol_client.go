@@ -560,7 +560,7 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	txIn := stypes.NewTxInItem(
 		height,
 		base58.Encode(signedTx.Signatures[0]),
-		tx.Memo,
+		memoForParsing,
 		fromAddr.String(),
 		tx.ToAddress.String(),
 		tx.Coins,

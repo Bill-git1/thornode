@@ -1,6 +1,7 @@
 package monero
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	tssp "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
@@ -55,6 +57,30 @@ func TestThorchainAmountToAtomicNil(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "is nil") {
 		t.Fatalf("expected nil amount error, got %v", err)
+	}
+}
+
+func TestEnforceXMRMaxGas(t *testing.T) {
+	t.Parallel()
+
+	if err := enforceXMRMaxGas(101, 100); err == nil {
+		t.Fatal("expected over-cap fee to be rejected")
+	} else if !strings.Contains(err.Error(), tssp.FrostFailReasonXMRMaxGasExceeded) {
+		t.Fatalf("unexpected error: %v", err)
+	} else {
+		var maxGasErr xmrMaxGasExceededError
+		if !errors.As(err, &maxGasErr) {
+			t.Fatalf("expected typed max gas error, got %T", err)
+		}
+		if maxGasErr.actualFeeAtomic != 101 || maxGasErr.maxGasAtomic != 100 {
+			t.Fatalf("unexpected max gas fields: %+v", maxGasErr)
+		}
+	}
+	if err := enforceXMRMaxGas(100, 100); err != nil {
+		t.Fatalf("expected fee equal to cap to pass: %v", err)
+	}
+	if err := enforceXMRMaxGas(101, 0); err != nil {
+		t.Fatalf("expected zero cap to preserve legacy behavior: %v", err)
 	}
 }
 
@@ -167,9 +193,40 @@ func TestGetConfirmationCountAppliesMaxConfirmationCap(t *testing.T) {
 		// Mocknet hard-codes confirmation multiplier and cap to 1 in the shared UTXO helpers.
 		expected = 1
 	}
+	if expected < int64(xmrSpendableConfirmations) {
+		expected = int64(xmrSpendableConfirmations)
+	}
 
 	if got := c.GetConfirmationCount(txIn); got != expected {
 		t.Fatalf("expected max confirmation cap %d, got %d", expected, got)
+	}
+}
+
+func TestGetConfirmationCountAppliesSpendableFloor(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey, _ := testVaultPubKeyAndAddress(t)
+	bridge := &confirmationBridge{
+		asgards:          ttypes.Vaults{{PubKey: vaultPubKey, PubKeyEddsa: vaultPubKey, PubKeyFrost: vaultPubKey}},
+		confMultiplier:   int64(constants.MaxBasisPts),
+		maxConfirmations: 0,
+	}
+	c := &Client{
+		chain:           common.XMRChain,
+		cfg:             config.BifrostChainConfiguration{},
+		thorchainBridge: bridge,
+		vaultAddressMap: make(map[string]common.Address),
+	}
+
+	txIn := stypes.TxIn{
+		TxArray: []*stypes.TxInItem{{
+			Sender: testOutboundXMRDestination().String(),
+			Coins:  common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(coinbaseThorchain()-1))),
+		}},
+	}
+
+	if got := c.GetConfirmationCount(txIn); got != int64(xmrSpendableConfirmations) {
+		t.Fatalf("expected xmr spendability floor %d, got %d", xmrSpendableConfirmations, got)
 	}
 }
 
@@ -184,7 +241,7 @@ func TestGetConfirmationCountHonorsMinimumFloor(t *testing.T) {
 	}
 	c := &Client{
 		chain:           common.XMRChain,
-		cfg:             config.BifrostChainConfiguration{MinConfirmations: 7},
+		cfg:             config.BifrostChainConfiguration{MinConfirmations: xmrSpendableConfirmations + 2},
 		thorchainBridge: bridge,
 		vaultAddressMap: make(map[string]common.Address),
 	}
@@ -196,8 +253,9 @@ func TestGetConfirmationCountHonorsMinimumFloor(t *testing.T) {
 		}},
 	}
 
-	if got := c.GetConfirmationCount(txIn); got != 7 {
-		t.Fatalf("expected min confirmation floor 7, got %d", got)
+	expected := int64(xmrSpendableConfirmations + 2)
+	if got := c.GetConfirmationCount(txIn); got != expected {
+		t.Fatalf("expected min confirmation floor %d, got %d", expected, got)
 	}
 }
 
@@ -233,6 +291,7 @@ func TestBuildOutboundObservationUsesOriginalMemo(t *testing.T) {
 			VaultPubKeyFrost: vaultPubKey,
 		},
 		txHash,
+		strings.Repeat("1", 64),
 		0,
 		nil,
 	)
@@ -271,6 +330,7 @@ func TestBuildOutboundObservationConvertsFallbackNetworkFeeToThorchainUnits(t *t
 			VaultPubKeyFrost: vaultPubKey,
 		},
 		strings.Repeat("b", 64),
+		strings.Repeat("2", 64),
 		0,
 		nil,
 	)
@@ -296,7 +356,6 @@ func TestBuildOutboundObservationAddsUnusedMaxGasForMigration(t *testing.T) {
 		chain: common.XMRChain,
 		scanner: &Scanner{
 			currentBlockHeight: atomic.NewInt64(123),
-			lastFee:            atomic.NewUint64(77),
 		},
 		vaultAddressMap: map[string]common.Address{
 			vaultPubKey.String(): vaultAddr,
@@ -310,25 +369,59 @@ func TestBuildOutboundObservationAddsUnusedMaxGasForMigration(t *testing.T) {
 		stypes.TxOutItem{
 			Chain:            common.XMRChain,
 			ToAddress:        common.Address(common.XMRChecksummedDummyAddress('8')),
-			Coins:            common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(100))),
+			Coins:            common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(1_000))),
+			MaxGas:           common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(50))},
 			Memo:             "MIGRATE:123",
-			MaxGas:           common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(10))},
 			VaultPubKeyFrost: vaultPubKey,
 		},
 		strings.Repeat("c", 64),
-		3*moneroAtomicToThorchain,
+		strings.Repeat("3", 64),
+		10*moneroAtomicToThorchain,
 		nil,
 	)
 	if observation == nil {
 		t.Fatal("expected outbound observation")
 	}
-
-	expectedAmount := uint64(107)
-	if observation.Coins.GetCoin(common.XMRAsset).Amount.Uint64() != expectedAmount {
-		t.Fatalf("expected migration amount %d including unused max gas, got %d", expectedAmount, observation.Coins.GetCoin(common.XMRAsset).Amount.Uint64())
+	if got := observation.Coins.GetCoin(common.XMRAsset).Amount.Uint64(); got != 1_040 {
+		t.Fatalf("expected migration observation amount 1040 after unused MaxGas sweep, got %d", got)
 	}
-	expectedFee := uint64(3)
-	if observation.Gas.ToCoins().GetCoin(common.XMRAsset).Amount.Uint64() != expectedFee {
-		t.Fatalf("expected actual fee %d, got %d", expectedFee, observation.Gas.ToCoins().GetCoin(common.XMRAsset).Amount.Uint64())
+	if got := observation.Gas.ToCoins().GetCoin(common.XMRAsset).Amount.Uint64(); got != 10 {
+		t.Fatalf("expected actual gas 10, got %d", got)
+	}
+}
+
+func TestBuildOutboundObservationDoesNotSweepUnusedMaxGasForNormalOutbound(t *testing.T) {
+	t.Parallel()
+
+	vaultPubKey, vaultAddr := testVaultPubKeyAndAddress(t)
+	client := &Client{
+		chain: common.XMRChain,
+		scanner: &Scanner{
+			currentBlockHeight: atomic.NewInt64(123),
+		},
+		vaultAddressMap: map[string]common.Address{
+			vaultPubKey.String(): vaultAddr,
+		},
+	}
+
+	observation := client.buildOutboundObservation(
+		stypes.TxOutItem{
+			Chain:            common.XMRChain,
+			ToAddress:        common.Address(common.XMRChecksummedDummyAddress('8')),
+			Coins:            common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(1_000))),
+			MaxGas:           common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(50))},
+			Memo:             "OUT:" + strings.Repeat("C", 64),
+			VaultPubKeyFrost: vaultPubKey,
+		},
+		strings.Repeat("d", 64),
+		strings.Repeat("4", 64),
+		10*moneroAtomicToThorchain,
+		nil,
+	)
+	if observation == nil {
+		t.Fatal("expected outbound observation")
+	}
+	if got := observation.Coins.GetCoin(common.XMRAsset).Amount.Uint64(); got != 1_000 {
+		t.Fatalf("expected normal outbound amount to remain 1000, got %d", got)
 	}
 }

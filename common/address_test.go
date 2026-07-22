@@ -18,6 +18,7 @@ func (s *AddressSuite) TestAddressEqualsXMRIsCaseSensitive(c *C) {
 
 	c.Check(AddressEquals(XMRChain, original, original), Equals, true)
 	c.Check(AddressEquals(XMRChain, original, caseVariant), Equals, false)
+	c.Check(AddressEquals(XMRChain, original, Address(" "+original.String())), Equals, false)
 }
 
 // TestAddressEqualsNonXMRPreservesLegacyBehavior protects the case-insensitive

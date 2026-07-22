@@ -755,8 +755,16 @@ func (c *Communication) Start(priKeyBytes []byte) error {
 	if err == nil {
 		c.wg.Add(1)
 		go c.ProcessBroadcast()
-	} else if c.nodeGater != nil {
-		c.nodeGater.Stop()
+	} else {
+		if c.host != nil {
+			if closeErr := c.host.Close(); closeErr != nil {
+				c.logger.Err(closeErr).Msg("fail to close partially started host")
+			}
+			c.host = nil
+		}
+		if c.nodeGater != nil {
+			c.nodeGater.Stop()
+		}
 	}
 	return err
 }
@@ -769,8 +777,11 @@ func (c *Communication) Stop() error {
 	}
 
 	// we need to stop the handler and the p2p services firstly, then terminate the our communication threads
-	if err := c.host.Close(); err != nil {
-		c.logger.Err(err).Msg("fail to close host network")
+	// host is nil when Start failed and already tore it down
+	if c.host != nil {
+		if err := c.host.Close(); err != nil {
+			c.logger.Err(err).Msg("fail to close host network")
+		}
 	}
 
 	close(c.stopChan)

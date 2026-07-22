@@ -123,9 +123,14 @@ x-frost-env: &frost-env
   XMR_FROST_RATE_LIMIT_GLOBAL_BURST: "5000"
   XMR_FROST_RATE_LIMIT_PER_IP_RPS: "500"
   XMR_FROST_RATE_LIMIT_PER_IP_BURST: "5000"
+  XMR_FROST_ADMIN_ALLOW_NON_LOOPBACK: "true"
 
 x-frost-healthcheck: &frost-healthcheck
-  test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8283'"]
+  test:
+    [
+      "CMD-SHELL",
+      'curl -fsS -H "Authorization: Bearer $${XMR_FROST_AUTH_BEARER}" http://127.0.0.1:8283/v1/monero/chain/height >/dev/null',
+    ]
   interval: 5s
   timeout: 5s
   retries: 30

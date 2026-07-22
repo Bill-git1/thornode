@@ -2,10 +2,12 @@ package tron
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"strings"
 	"sync"
@@ -48,7 +50,123 @@ const (
 
 	ConfirmationBlocks int64 = 1
 	FinalityBlocks     int64 = 19
+
+	tronSignCheckpointVersion = 1
+	maxTronCheckpointSize     = 256 * 1024
 )
+
+// tronSignCheckpoint pins the exact unsigned transaction after all
+// deterministic TRON fields have been applied. A terminal TSS failure may
+// expose a usable signature to another participant, so retries must never
+// reconstruct or mutate the transaction being signed.
+type tronSignCheckpoint struct {
+	Version     int             `json:"version"`
+	TxOutDigest string          `json:"tx_out_digest"`
+	UnsignedTx  api.Transaction `json:"unsigned_tx"`
+	Checksum    string          `json:"checksum"`
+}
+
+func tronJSONDigest(value any) (string, error) {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func validateUnsignedTronTransaction(tx api.Transaction) error {
+	if len(tx.Signature) != 0 || tx.Err != "" || len(tx.Ret) != 0 {
+		return fmt.Errorf("TRON checkpoint transaction is not unsigned")
+	}
+	if strings.TrimSpace(tx.TxId) == "" || strings.TrimSpace(tx.RawDataHex) == "" {
+		return fmt.Errorf("TRON checkpoint transaction is incomplete")
+	}
+	rawData, err := hex.DecodeString(tx.RawDataHex)
+	if err != nil {
+		return fmt.Errorf("fail to decode TRON checkpoint raw_data_hex: %w", err)
+	}
+	wantTxID := sha256.Sum256(rawData)
+	if !strings.EqualFold(tx.TxId, hex.EncodeToString(wantTxID[:])) {
+		return fmt.Errorf("TRON checkpoint txid does not match raw_data_hex")
+	}
+
+	// Rehash only a copy. Equality proves the structured deterministic fields
+	// used by Rehash still describe the exact persisted signing preimage.
+	validated := tx
+	if err := validated.Rehash(); err != nil {
+		return fmt.Errorf("fail to validate TRON checkpoint transaction: %w", err)
+	}
+	if !strings.EqualFold(validated.TxId, tx.TxId) ||
+		!strings.EqualFold(validated.RawDataHex, tx.RawDataHex) {
+		return fmt.Errorf("TRON checkpoint transaction fields do not match raw_data_hex")
+	}
+	return nil
+}
+
+func encodeTronSignCheckpoint(tx api.Transaction, txOutItem types.TxOutItem) ([]byte, error) {
+	if err := validateUnsignedTronTransaction(tx); err != nil {
+		return nil, err
+	}
+	txOutDigest, err := tronJSONDigest(txOutItem)
+	if err != nil {
+		return nil, fmt.Errorf("fail to bind TRON checkpoint to txout: %w", err)
+	}
+	checksum, err := tronJSONDigest(tx)
+	if err != nil {
+		return nil, fmt.Errorf("fail to checksum TRON checkpoint transaction: %w", err)
+	}
+	checkpoint := tronSignCheckpoint{
+		Version:     tronSignCheckpointVersion,
+		TxOutDigest: txOutDigest,
+		UnsignedTx:  tx,
+		Checksum:    checksum,
+	}
+	b, err := json.Marshal(checkpoint)
+	if err != nil {
+		return nil, fmt.Errorf("fail to encode TRON sign checkpoint: %w", err)
+	}
+	if len(b) > maxTronCheckpointSize {
+		return nil, fmt.Errorf("TRON sign checkpoint exceeds %d bytes", maxTronCheckpointSize)
+	}
+	return b, nil
+}
+
+func decodeTronSignCheckpoint(b []byte, txOutItem types.TxOutItem) (api.Transaction, error) {
+	if len(b) == 0 || len(b) > maxTronCheckpointSize {
+		return api.Transaction{}, fmt.Errorf("invalid TRON sign checkpoint size: %d", len(b))
+	}
+	decoder := json.NewDecoder(bytes.NewReader(b))
+	decoder.DisallowUnknownFields()
+	var checkpoint tronSignCheckpoint
+	if err := decoder.Decode(&checkpoint); err != nil {
+		return api.Transaction{}, fmt.Errorf("fail to decode TRON sign checkpoint: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return api.Transaction{}, fmt.Errorf("TRON sign checkpoint contains trailing data")
+	}
+	if checkpoint.Version != tronSignCheckpointVersion {
+		return api.Transaction{}, fmt.Errorf("unsupported TRON sign checkpoint version: %d", checkpoint.Version)
+	}
+	txOutDigest, err := tronJSONDigest(txOutItem)
+	if err != nil {
+		return api.Transaction{}, fmt.Errorf("fail to validate TRON checkpoint txout: %w", err)
+	}
+	if checkpoint.TxOutDigest != txOutDigest {
+		return api.Transaction{}, fmt.Errorf("TRON sign checkpoint does not match txout")
+	}
+	if validateErr := validateUnsignedTronTransaction(checkpoint.UnsignedTx); validateErr != nil {
+		return api.Transaction{}, validateErr
+	}
+	checksum, err := tronJSONDigest(checkpoint.UnsignedTx)
+	if err != nil {
+		return api.Transaction{}, fmt.Errorf("fail to validate TRON checkpoint checksum: %w", err)
+	}
+	if checkpoint.Checksum != checksum {
+		return api.Transaction{}, fmt.Errorf("TRON sign checkpoint checksum mismatch")
+	}
+	return checkpoint.UnsignedTx, nil
+}
 
 //go:embed abi/trc20.json
 var trc20ContractABI []byte
@@ -400,15 +518,6 @@ func (c *TronClient) SignTx(
 		return nil, nil, nil, nil
 	}
 
-	refBlocks := c.tronScanner.refBlockSnapshot()
-	if len(refBlocks) == 0 {
-		err := fmt.Errorf("no ref blocks found")
-		c.logger.Err(err).Msg("")
-		return nil, nil, nil, err
-	}
-
-	// TODO: Discuss checkpoint
-
 	if len(txOutItem.Coins) != 1 {
 		err := fmt.Errorf("multiple or no coins found")
 		c.logger.Err(err).Msg("")
@@ -427,6 +536,22 @@ func (c *TronClient) SignTx(
 	memo := txOutItem.GetMemo()
 
 	fromAddress := c.GetAddress(txOutItem.VaultPubKey)
+	if len(txOutItem.Checkpoint) != 0 {
+		tronTx, err = decodeTronSignCheckpoint(txOutItem.Checkpoint, txOutItem)
+		if err != nil {
+			c.logger.Err(err).Msg("failed to restore unsigned TRON transaction")
+			return nil, nil, nil, err
+		}
+		c.logger.Info().Str("txid", tronTx.TxId).Msg("using checkpointed unsigned TRON transaction")
+		return c.signTronTransaction(txOutItem, thorchainHeight, tronTx, txOutItem.Checkpoint, c.sign)
+	}
+
+	refBlocks := c.tronScanner.refBlockSnapshot()
+	if len(refBlocks) == 0 {
+		err = fmt.Errorf("no ref blocks found")
+		c.logger.Err(err).Msg("")
+		return nil, nil, nil, err
+	}
 
 	if coin.Asset == common.TRXAsset {
 		// do trx transfer
@@ -528,44 +653,55 @@ func (c *TronClient) SignTx(
 		return nil, nil, nil, err
 	}
 
-	// ---------------------------------------------------------------------------
+	checkpoint, err := encodeTronSignCheckpoint(tronTx, txOutItem)
+	if err != nil {
+		c.logger.Err(err).Msg("failed to checkpoint unsigned TRON transaction")
+		return nil, nil, nil, err
+	}
+	return c.signTronTransaction(txOutItem, thorchainHeight, tronTx, checkpoint, c.sign)
+}
 
+func (c *TronClient) signTronTransaction(
+	txOutItem types.TxOutItem,
+	thorchainHeight int64,
+	tronTx api.Transaction,
+	checkpoint []byte,
+	sign func([]byte, types.TxOutItem, int64) ([]byte, error),
+) ([]byte, []byte, *types.TxInItem, error) {
 	hash, err := hex.DecodeString(tronTx.TxId)
 	if err != nil {
 		c.logger.Err(err).Msg("failed to decode tx hash")
-		return nil, nil, nil, err
+		return nil, checkpoint, nil, err
 	}
 
-	signature, err := c.sign(hash, txOutItem, thorchainHeight)
+	signature, err := sign(hash, txOutItem, thorchainHeight)
 	if err != nil {
 		if errors.Is(err, tss.ErrNotSelectedForKeysign) {
 			return nil, nil, nil, nil
 		}
 		c.logger.Err(err).Msg("failed to sign tx")
-		return nil, nil, nil, err
+		return nil, checkpoint, nil, err
 	}
 
 	tronTx.Signature = append(tronTx.Signature, hex.EncodeToString(signature))
-
 	txBytes, err := json.Marshal(tronTx)
 	if err != nil {
 		c.logger.Err(err).Msg("failed to marshal tx")
-		return nil, nil, nil, err
+		return nil, checkpoint, nil, err
 	}
 
 	currentHeight, err := c.tronScanner.GetHeight()
 	if err != nil {
 		c.logger.Err(err).Msg("failed to get latest block")
-		return nil, nil, nil, err
+		return nil, checkpoint, nil, err
 	}
 
 	gasCoin := c.config.ChainID.NativeGasToThorCoin(cosmos.NewUint(uint64(txOutItem.GasRate)))
-
 	txIn := types.NewTxInItem(
 		currentHeight,
 		tronTx.TxId,
-		memo,
-		fromAddress,
+		txOutItem.GetMemo(),
+		c.GetAddress(txOutItem.VaultPubKey),
 		txOutItem.ToAddress.String(),
 		txOutItem.Coins,
 		[]common.Coin{gasCoin},

@@ -59,6 +59,11 @@ const (
 
 	// DefaultMaxEVMGas is a conservative default for EVM chains not explicitly listed above.
 	DefaultMaxEVMGas = 50000000
+
+	// EVM gas multipliers are part of the signer/consensus contract. Bifrost
+	// must not sign with different values from those accepted by Thornode.
+	EVMTokenMaxGasMultiplier      = int64(3)
+	EVMAggregatorMaxGasMultiplier = int64(10)
 )
 
 // max amount of data that can be provided with OP_RETURN (bytes)

@@ -1,6 +1,7 @@
 package tss
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -19,6 +20,27 @@ func (s *RecoverKeysharesSuite) TestRecoverScanLowerBound(c *C) {
 	c.Assert(recoverScanLowerBound(0, 100), Equals, int64(0))
 	c.Assert(recoverScanLowerBound(50, 100), Equals, int64(0))
 	c.Assert(recoverScanLowerBound(500, 100), Equals, int64(400))
+}
+
+func (s *RecoverKeysharesSuite) TestRecoverScanBoundsIncludesBoundedForwardWindow(c *C) {
+	lower, upper := recoverScanBounds(648, 680, 100)
+	c.Check(lower, Equals, int64(548))
+	c.Check(upper, Equals, int64(680))
+
+	lower, upper = recoverScanBounds(648, 900, 100)
+	c.Check(lower, Equals, int64(548))
+	c.Check(upper, Equals, int64(748))
+
+	lower, upper = recoverScanBounds(648, 600, 100)
+	c.Check(lower, Equals, int64(548))
+	c.Check(upper, Equals, int64(648))
+}
+
+func (s *RecoverKeysharesSuite) TestFrostRecoveryBackupMissingIsSkippable(c *C) {
+	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{}, fmt.Errorf("wrapped: %w", errRecoveryBackupNotFound)), Equals, true)
+	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{}, nil), Equals, true)
+	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{frost: []byte("backup")}, nil), Equals, false)
+	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{}, fmt.Errorf("decode failed")), Equals, false)
 }
 
 func (s *RecoverKeysharesSuite) TestFindKeyshareRecoveryTargetPrefersFrostPubKey(c *C) {
@@ -336,8 +358,8 @@ func (s *RecoverKeysharesSuite) TestWriteRecoveredDecompressedKeysharesDoesNotLe
 	c.Assert(entries, HasLen, 0)
 }
 
-func (s *RecoverKeysharesSuite) TestWriteRecoveredRawKeysharesWritesOwnerOnlyFile(c *C) {
-	rawKeyshares := []byte("deadbeefcafebabe")
+func (s *RecoverKeysharesSuite) TestWriteRecoveredRawKeysharesWritesEncryptedOwnerOnlyFile(c *C) {
+	rawKeyshares := []byte{0x07, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe}
 	vaultPubKey := types.GetRandomEd25519PubKey()
 	encrypted, err := EncryptRawKeyshares(rawKeyshares, Mnemonic)
 	c.Assert(err, IsNil)
@@ -474,9 +496,8 @@ func setupRecoveryKeysharesTest(c *C) (string, func()) {
 	originalSeedPhraseFile, hadOriginalSeedPhraseFile := os.LookupEnv("SIGNER_SEED_PHRASE_FILE")
 
 	keyshareRecoveryNodeHome = dir
-	seedPhraseFile := filepath.Join(dir, "seed-phrase")
-	c.Assert(os.WriteFile(seedPhraseFile, []byte(Mnemonic), 0o600), IsNil)
-	c.Assert(os.Setenv("SIGNER_SEED_PHRASE_FILE", seedPhraseFile), IsNil)
+	c.Assert(os.Unsetenv("SIGNER_SEED_PHRASE"), IsNil)
+	c.Assert(os.Setenv("SIGNER_SEED_PHRASE_FILE", writeRecoverySeedPhraseFile(c, dir, Mnemonic)), IsNil)
 
 	return dir, func() {
 		keyshareRecoveryNodeHome = originalHome
@@ -492,6 +513,12 @@ func setupRecoveryKeysharesTest(c *C) (string, func()) {
 		}
 		_ = os.RemoveAll(dir)
 	}
+}
+
+func writeRecoverySeedPhraseFile(c *C, dir, seedPhrase string) string {
+	path := filepath.Join(dir, "signer-seed-phrase")
+	c.Assert(os.WriteFile(path, []byte(seedPhrase), 0o600), IsNil)
+	return path
 }
 
 func encryptedLocalStateTestFile(c *C) []byte {

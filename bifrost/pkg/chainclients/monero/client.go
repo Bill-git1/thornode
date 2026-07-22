@@ -32,7 +32,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/app"
 	"gitlab.com/thorchain/thornode/v3/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
-	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/monero/sidecar"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/runners"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
@@ -82,6 +82,7 @@ const (
 	defaultXMRSpentRefsRetryMaxAttempts        = 60                 // bounded peer-import retry window after the first failed attempt
 	defaultXMRRecoveryRetryMaxAttempts         = 0                  // zero means retry for the process lifetime
 	maxXMRRecoveryFileBytes                    = int64(1024 * 1024) // encrypted keyshare envelopes are expected to be far smaller
+	xmrSpendableConfirmations                  = uint64(10)
 
 	// xmrSolvencyDeferralEscalationRounds is the number of consecutive deferred
 	// solvency rounds (one per SolvencyBlocks interval) after which the deferral
@@ -96,18 +97,41 @@ var (
 )
 
 type signedTxPayload struct {
-	TxHash          string                `json:"tx_hash"`
-	TxMetadata      string                `json:"tx_metadata"`
-	TxKey           string                `json:"tx_key"`
-	FeeAtomic       uint64                `json:"fee_atomic"`
-	MsgID           string                `json:"msg_id,omitempty"`
-	Eventuality     tssp.FrostEventuality `json:"eventuality,omitempty"`
-	Broadcasted     bool                  `json:"broadcasted,omitempty"`
-	SpentOutputRefs []sidecar.SpentRef    `json:"spent_output_refs,omitempty"`
+	TxHash           string                `json:"tx_hash"`
+	TxMetadata       string                `json:"tx_metadata"`
+	TxKey            string                `json:"tx_key"`
+	FeeAtomic        uint64                `json:"fee_atomic"`
+	MsgID            string                `json:"msg_id,omitempty"`
+	Eventuality      tssp.FrostEventuality `json:"eventuality,omitempty"`
+	Broadcasted      bool                  `json:"broadcasted,omitempty"`
+	SpentOutputRefs  []sidecar.SpentRef    `json:"spent_output_refs,omitempty"`
+	Observation      *stypes.TxInItem      `json:"observation,omitempty"`
+	ClaimCacheVault  string                `json:"claim_cache_vault,omitempty"`
+	ClaimCacheHash   string                `json:"claim_cache_hash,omitempty"`
+	ClaimLogicalHash string                `json:"claim_logical_hash,omitempty"`
+	ClaimOwnerVault  string                `json:"claim_owner_vault,omitempty"`
 }
 
 type signCheckpoint struct {
 	SpentOutputRefs []sidecar.SpentRef `json:"spent_output_refs"`
+}
+
+// durableXMRClaimTxOut preserves fields intentionally omitted by TxOutItem's
+// normal JSON representation. SigningID is part of consolidation identity and
+// Checkpoint binds an exact-input retry, so recovery must never substitute a
+// later rescheduled item for either field.
+type durableXMRClaimTxOut struct {
+	TxOut      stypes.TxOutItem `json:"tx_out"`
+	SigningID  string           `json:"signing_id"`
+	Checkpoint []byte           `json:"checkpoint,omitempty"`
+}
+
+func encodeDurableXMRClaimTxOut(tx stypes.TxOutItem) ([]byte, error) {
+	return json.Marshal(durableXMRClaimTxOut{
+		TxOut:      tx,
+		SigningID:  tx.SigningID,
+		Checkpoint: append([]byte(nil), tx.Checkpoint...),
+	})
 }
 
 type validatedSignRequest struct {
@@ -145,20 +169,22 @@ type Client struct {
 	cfg    config.BifrostChainConfiguration
 	chain  common.Chain
 
-	thorchainBridge     thorclient.ThorchainBridge
-	localNodePubKey     common.PubKey
-	vaultBootstrap      *vaultBootstrap
-	storage             *blockscanner.BlockScannerStorage
-	blockScanner        *blockscanner.BlockScanner
-	scanner             *Scanner
-	sidecar             *sidecar.Client
-	tssServer           tssp.Server
-	signerCacheManager  *signercache.CacheManager
-	vaultAddressStore   *VaultAddressStore
-	vaultAddressMap     map[string]common.Address
-	vaultAddrToKey      map[string]string
-	vaultAddressMu      sync.RWMutex
-	globalSolvencyQueue chan stypes.Solvency
+	thorchainBridge       thorclient.ThorchainBridge
+	localNodePubKey       common.PubKey
+	vaultBootstrap        *vaultBootstrap
+	storage               *blockscanner.BlockScannerStorage
+	blockScanner          *blockscanner.BlockScanner
+	scanner               *Scanner
+	sidecar               *sidecar.Client
+	tssServer             tssp.Server
+	signerCacheManager    *signercache.CacheManager
+	signedTxPayloadStore  *signedTxPayloadStore
+	vaultAddressStore     *VaultAddressStore
+	vaultAddressMap       map[string]common.Address
+	vaultAddrToKey        map[string]string
+	vaultAddressMu        sync.RWMutex
+	globalSolvencyQueue   chan stypes.Solvency
+	globalNetworkFeeQueue chan common.NetworkFee
 
 	asgardMu                sync.RWMutex
 	asgardAddresses         []common.Address
@@ -190,6 +216,11 @@ type Client struct {
 	recoveryRetryInterval    time.Duration
 	recoveryRetryMaxAttempts int
 }
+
+// Keep the production Monero client and the signer durability contract from
+// drifting independently. A missing final-outcome hook must be a build error,
+// not a runtime assertion miss which lets the signer discard the outbound.
+var _ types.SpentOutputRefsApplier = (*Client)(nil)
 
 // NewClient creates a monero chain client backed by the shared block scanner.
 func NewClient(
@@ -322,8 +353,16 @@ func NewClient(
 	if err != nil {
 		return nil, fmt.Errorf("fail to create signer cache manager: %w", err)
 	}
+	c.signedTxPayloadStore = newSignedTxPayloadStore(c.storage.GetInternalDb())
 	c.vaultAddressStore = NewVaultAddressStore(c.storage.GetInternalDb())
 	c.scanner.SetReorgStore(NewReorgStore(c.storage.GetInternalDb()))
+	internalReplayStore := newAuthenticatedInternalInboundReplayStore(c.storage.GetInternalDb())
+	if err = internalReplayStore.ResetClaims(); err != nil {
+		return nil, fmt.Errorf("reset authenticated xmr migration replay claims: %w", err)
+	}
+	c.scanner.SetAuthenticatedInternalInboundReplayStore(internalReplayStore)
+	c.scanner.SetClaimQuarantineHandler(c.signedTxPayloadStore.QuarantineReverted)
+	c.scanner.SetLocalSignedTxHandler(c.signedTxPayloadStore.IsLocallySignedTx)
 	// Wire solvency reporting to the per-block scan loop. Without this, the
 	// chain client's ReportSolvency only fires from the auto-unhalt
 	// SolvencyCheckRunner — which itself is gated on the chain being already
@@ -346,7 +385,7 @@ func (c *Client) Start(
 ) {
 	c.ensureConsolidationState()
 	c.globalSolvencyQueue = globalSolvencyQueue
-	c.scanner.SetErrataQueueWithAck(globalErrataQueue)
+	c.scanner.SetErrataQueue(globalErrataQueue)
 	c.blockScanner.Start(globalTxsQueue, globalNetworkFeeQueue)
 	c.wg.Add(1)
 	go runners.SolvencyCheckRunner(c.GetChain(), c, c.thorchainBridge, c.stopchan, c.wg, constants.ThorchainBlockTime)
@@ -359,6 +398,36 @@ func (c *Client) Start(
 		defer c.wg.Done()
 		c.restoreKeysharesFromRecoveryFiles()
 	}()
+}
+
+// QuarantinePermanentErrata closes the event-first gap where THORChain can
+// commit a Reverted voter before this node's Scanner has produced a receipt
+// callback. The exact signed artifact is blocked first, then the scanner's
+// permanent TxID filter is fsynced. Both writes are idempotent, so Observer can
+// safely replay every tombstone during startup or after a partial failure.
+func (c *Client) QuarantinePermanentErrata(errata common.ErrataTx, orphanHeight int64) error {
+	if !errata.Chain.Equals(common.XMRChain) || errata.Id.IsEmpty() {
+		return errors.New("invalid XMR permanent errata quarantine request")
+	}
+	if orphanHeight < 0 {
+		return errors.New("invalid XMR permanent errata height")
+	}
+	if c.signedTxPayloadStore == nil {
+		return errors.New("XMR signed transaction quarantine is unavailable")
+	}
+	if err := c.signedTxPayloadStore.QuarantineReverted(errata.Id.String()); err != nil {
+		return fmt.Errorf("quarantine permanently reverted XMR signed transaction: %w", err)
+	}
+	if c.scanner == nil || c.scanner.reorgStore == nil {
+		return errors.New("XMR scanner reverted transaction quarantine is unavailable")
+	}
+	if err := c.scanner.reorgStore.QuarantineRevertedTxs(orphanHeight, []stypes.ErrataTx{{
+		Chain: common.XMRChain,
+		TxID:  errata.Id,
+	}}); err != nil {
+		return fmt.Errorf("quarantine permanently reverted XMR scanner transaction: %w", err)
+	}
+	return nil
 }
 
 func (c *Client) restoreKeysharesFromRecoveryFiles() {
@@ -731,6 +800,26 @@ func (c *Client) catchupSpentOutputRefs() {
 				Int("marked", result.Marked).
 				Int("not_found", result.NotFound).
 				Msg("xmr catchup: applied spent output refs from thorchain")
+			if !verifiedXMRMarkSpentResult(result, len(refs)) {
+				c.logger.Warn().
+					Str("tx_hash", obsTx.Tx.ID.String()).
+					Int("marked", result.Marked).
+					Int("not_found", result.NotFound).
+					Msg("xmr catchup: mark-spent did not verify every referenced output")
+				continue
+			}
+			if markSignedErr := c.markImportedXMROutboundSigned(obsTx); markSignedErr != nil {
+				c.logger.Error().Err(markSignedErr).
+					Str("tx_hash", obsTx.Tx.ID.String()).
+					Msg("xmr catchup: failed to update signer cache")
+			}
+			if c.scanner != nil {
+				if _, replayErr := c.scanner.EnqueueAuthenticatedInternalInboundReplay(obsTx); replayErr != nil {
+					c.logger.Error().Err(replayErr).
+						Str("tx_hash", obsTx.Tx.ID.String()).
+						Msg("xmr catchup: failed to queue authenticated migration replay")
+				}
+			}
 		}
 	}
 }
@@ -766,7 +855,7 @@ func (c *Client) observedXMROutboundForSpentRefs(txHash string, vaultPubKey comm
 			Msg("xmr catchup: skipping invalid spent output refs")
 		return common.ObservedTx{}, nil, false
 	}
-	outbound := xmrOutboundMeta(observed.Tx)
+	outbound := xmrOutboundMeta(observed.Tx, observed.XmrTxKey)
 	outbound.Origin = sidecar.OutgoingOriginChainCommitted
 	return observed, outbound, true
 }
@@ -791,12 +880,13 @@ func queryObservedXMRTx(voter *ttypes.QueryObservedTxVoter, txID common.TxID) (c
 			AggregatorTarget:      candidate.GetAggregatorTarget(),
 			AggregatorTargetLimit: candidate.AggregatorTargetLimit,
 			SpentOutputRefs:       xmrOutputRefsFromPointers(candidate.GetSpentOutputRefs()),
+			XmrTxKey:              candidate.GetXmrTxKey(),
 		}, true
 	}
 	return common.ObservedTx{}, false
 }
 
-func xmrOutboundMeta(tx common.Tx) *sidecar.OutboundMeta {
+func xmrOutboundMeta(tx common.Tx, txKey string) *sidecar.OutboundMeta {
 	var amount, fee uint64
 	xmrCoin := tx.Coins.GetCoin(common.XMRAsset)
 	if !xmrCoin.IsEmpty() {
@@ -809,10 +899,18 @@ func xmrOutboundMeta(tx common.Tx) *sidecar.OutboundMeta {
 	return &sidecar.OutboundMeta{
 		FromAddress: tx.FromAddress.String(),
 		ToAddress:   tx.ToAddress.String(),
+		TxKey:       txKey,
 		Amount:      amount,
 		Fee:         fee,
 		Memo:        tx.Memo,
 	}
+}
+
+// A successful idempotent MarkSpent may report Marked=0 when every output was
+// already imported. NotFound is the authoritative proof that all requested
+// refs were located; impossible counters still fail closed.
+func verifiedXMRMarkSpentResult(result sidecar.MarkSpentResp, requested int) bool {
+	return requested > 0 && result.NotFound == 0 && result.Marked >= 0 && result.Marked <= requested
 }
 
 func (c *Client) getSpentOutputCatchupVaultKeys() (common.PubKeys, error) {
@@ -1229,6 +1327,7 @@ func (c *Client) applySpentOutputRefsFromTxInItem(obs *stypes.TxInItem) {
 		obs.BlockHeight,
 	)
 	obsTx.SpentOutputRefs = xmrOutputRefsFromPointers(obs.SpentOutputRefs)
+	obsTx.XmrTxKey = obs.TxKey
 	c.ApplySpentOutputRefs(obsTx)
 }
 
@@ -1500,6 +1599,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 	signedTx, checkpoint, observation, err := c.signTx(tx, height)
 	if err != nil {
+		c.reportXMRMaxGasExceeded(err)
 		err = c.postKeysignFailure(tx, height, err)
 	}
 	return signedTx, checkpoint, observation, err
@@ -1514,6 +1614,7 @@ func (c *Client) BroadcastTx(tx stypes.TxOutItem, txBytes []byte) (string, error
 }
 
 func (c *Client) broadcastTx(tx stypes.TxOutItem, payload signedTxPayload) (string, error) {
+	payload.TxHash = strings.ToLower(strings.TrimSpace(payload.TxHash))
 	if payload.TxHash == "" {
 		return "", fmt.Errorf("FROST signed tx payload missing tx hash")
 	}
@@ -1527,70 +1628,102 @@ func (c *Client) broadcastTx(tx stypes.TxOutItem, payload signedTxPayload) (stri
 	if !strings.EqualFold(txKeyHash, strings.TrimSpace(payload.Eventuality.TxKeyHash)) {
 		return "", fmt.Errorf("FROST signed tx payload tx_key does not match eventuality")
 	}
+	expectedEventuality, err := tssp.BuildFrostEventuality(
+		payload.Eventuality.PlanHash,
+		payload.TxHash,
+		payload.TxMetadata,
+		payload.TxKey,
+		payload.FeeAtomic,
+	)
+	if err != nil {
+		return "", fmt.Errorf("FROST signed tx payload has invalid eventuality: %w", err)
+	}
+	if expectedEventuality != payload.Eventuality {
+		return "", fmt.Errorf("FROST signed tx payload does not match eventuality commitment")
+	}
 	msgID := strings.TrimSpace(payload.MsgID)
 	if msgID == "" {
 		return "", fmt.Errorf("FROST signed tx payload missing msg_id")
 	}
-	vaultPubKey := strings.TrimSpace(txVaultPubKey(tx).String())
-	if vaultPubKey == "" {
+	currentVaultPubKey := strings.TrimSpace(txVaultPubKey(tx).String())
+	if currentVaultPubKey == "" {
 		return "", fmt.Errorf("FROST signed tx payload missing vault_pub_key_frost")
+	}
+	cacheVault := strings.TrimSpace(payload.ClaimCacheVault)
+	cacheHash := strings.TrimSpace(payload.ClaimCacheHash)
+	logicalHash := strings.TrimSpace(payload.ClaimLogicalHash)
+	claimOwnerVault := strings.TrimSpace(payload.ClaimOwnerVault)
+	vaultPubKey := currentVaultPubKey
+	if cacheVault == "" || cacheHash == "" || logicalHash == "" || claimOwnerVault == "" {
+		if c.signedTxPayloadStore != nil {
+			return "", errors.New("FROST signed tx payload is missing durable claim identity")
+		}
+		identity, identityErr := xmrSigningCacheIdentity(tx)
+		if identityErr != nil {
+			return "", identityErr
+		}
+		cacheVault = txCacheVault(tx, c.GetChain())
+		cacheHash = identity.CacheHash
+		logicalHash = identity.LogicalHash
+		claimOwnerVault = currentVaultPubKey
+	} else {
+		// A later THORChain reschedule may hand this node the same logical
+		// outbound under a different vault. The signed bytes still belong to the
+		// vault recorded before FROST, so broadcast against that durable owner.
+		vaultPubKey = claimOwnerVault
 	}
 
 	if c.sidecar == nil {
 		return "", fmt.Errorf("%w: sidecar is not initialized", ErrSidecarNotConfigured)
 	}
 
-	resp, err := c.sidecar.Broadcast(sidecar.BroadcastReq{
-		TxHex:       payload.TxMetadata,
-		TxHash:      payload.TxHash,
-		TxKey:       payload.TxKey,
-		VaultPubKey: vaultPubKey,
-		MsgID:       msgID,
-	})
+	broadcast := func() (string, error) {
+		resp, broadcastErr := c.sidecar.Broadcast(sidecar.BroadcastReq{
+			TxHex:       payload.TxMetadata,
+			TxHash:      payload.TxHash,
+			TxKey:       payload.TxKey,
+			VaultPubKey: vaultPubKey,
+			MsgID:       msgID,
+		})
+		if broadcastErr != nil {
+			return "", fmt.Errorf("fail to broadcast FROST tx: %w", broadcastErr)
+		}
+		if strings.TrimSpace(resp.TxKey) != payload.TxKey {
+			return "", fmt.Errorf("sidecar broadcast returned tx_key that differs from FROST quorum result")
+		}
+		if sidecarHash := strings.TrimSpace(resp.TxHash); sidecarHash != "" && !strings.EqualFold(sidecarHash, payload.TxHash) {
+			c.logger.Warn().Str("frost_hash", payload.TxHash).Str("sidecar_hash", sidecarHash).
+				Msg("sidecar broadcast returned different tx hash than FROST-validated hash; using FROST hash")
+		}
+		return payload.TxHash, nil
+	}
+	txHash := ""
+	if c.signedTxPayloadStore != nil {
+		txHash, err = c.signedTxPayloadStore.WithBroadcastAuthorization(
+			cacheVault,
+			cacheHash,
+			logicalHash,
+			claimOwnerVault,
+			payload.TxHash,
+			payload.MsgID,
+			payload.Eventuality.PlanHash,
+			broadcast,
+		)
+	} else {
+		txHash, err = broadcast()
+	}
 	if err != nil {
-		return "", fmt.Errorf("fail to broadcast FROST tx: %w", err)
-	}
-	if !strings.EqualFold(strings.TrimSpace(resp.TxKey), strings.TrimSpace(payload.TxKey)) {
-		return "", fmt.Errorf("sidecar broadcast returned tx_key that differs from FROST quorum result")
+		return "", err
 	}
 
-	// Use the FROST-validated tx hash; never allow the sidecar to override it.
-	txHash := payload.TxHash
-	if sidecarHash := strings.TrimSpace(resp.TxHash); sidecarHash != "" && sidecarHash != txHash {
-		c.logger.Warn().Str("frost_hash", txHash).Str("sidecar_hash", sidecarHash).
-			Msg("sidecar broadcast returned different tx hash than FROST-validated hash; using FROST hash")
-	}
-
-	if err := c.signerCacheManager.SetSigned(tx.CacheHash(), txCacheVault(tx, c.GetChain()), txHash); err != nil {
+	// The signer cache means a chain tx hash has been accepted for broadcast.
+	// The pre-broadcast duplicate-FROST guard is the signed payload store, so do
+	// not delete that payload here; spent-ref import or committed observation is
+	// the durable point where the proof bundle can be cleaned up.
+	if err := c.signerCacheManager.SetSigned(cacheHash, cacheVault, txHash); err != nil {
 		c.logger.Err(err).Msg("fail to set signer cache after FROST broadcast")
 	}
 	return txHash, nil
-}
-
-// clearSidecarSessionsAfterFrostFailure releases sidecar-held signing sessions
-// after Bifrost has decided the FROST result is unusable. The sidecar reserves
-// XMR inputs during prepare, so failed or abandoned rounds must be cleared
-// before the next txout retry or the vault can appear to have zero spendable
-// balance even though its outputs are unlocked.
-func (c *Client) clearSidecarSessionsAfterFrostFailure(reason string, err error) {
-	if c.sidecar == nil {
-		return
-	}
-	cleared, clearErr := c.sidecar.ClearSessions()
-	if clearErr != nil {
-		c.logger.Warn().
-			Err(clearErr).
-			Str("reason", reason).
-			AnErr("sign_error", err).
-			Msg("fail to clear sidecar sessions after failed XMR FROST signing")
-		return
-	}
-	if cleared > 0 {
-		c.logger.Info().
-			Int("cleared", cleared).
-			Str("reason", reason).
-			Msg("cleared sidecar sessions after failed XMR FROST signing")
-	}
 }
 
 func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error) {
@@ -1603,7 +1736,33 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	if tx.Coins.IsEmpty() {
 		return nil, nil, nil, nil
 	}
-	if c.signerCacheManager.HasSigned(tx.CacheHash()) {
+	identity, err := xmrSigningCacheIdentity(tx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if isConsolidationTx(tx) {
+		active, found, activeErr := c.signedTxPayloadStore.ActiveClaim(identity.ObserveKeys, txVaultPubKey(tx).String())
+		if activeErr != nil {
+			return nil, nil, nil, activeErr
+		}
+		if found {
+			identity.CacheHash = active.CacheHash
+			identity.LogicalHash = active.LogicalHash
+		}
+	}
+	// The signed payload store is the XMR-specific pre-broadcast retry guard.
+	// If FROST already produced a payload, reuse that exact transaction instead
+	// of starting another ceremony with a potentially different input set. This
+	// must run before signer-cache suppression: BroadcastTx marks signer cache
+	// immediately after a broadcast attempt, while the signed payload remains
+	// the only durable artifact that can actually rebroadcast the same XMR tx
+	// until spent-ref import or committed observation takes over.
+	if signedTx, checkpoint, observation, ok, recoverErr := c.recoverSignedXMRTxPayload(tx, identity); recoverErr != nil {
+		return nil, nil, nil, recoverErr
+	} else if ok {
+		return signedTx, checkpoint, observation, nil
+	}
+	if c.signerCacheManager.HasSigned(identity.CacheHash) {
 		c.logger.Info().Interface("tx", tx).Msg("transaction already signed, ignoring")
 		return nil, nil, nil, nil
 	}
@@ -1724,10 +1883,88 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	// active on this sidecar while Bifrost may need to clean up a failed round.
 	c.sidecarSignMu.Lock()
 	defer c.sidecarSignMu.Unlock()
-
+	if isConsolidationTx(tx) {
+		active, found, activeErr := c.signedTxPayloadStore.ActiveClaim(identity.ObserveKeys, txVaultPubKey(tx).String())
+		if activeErr != nil {
+			return nil, nil, nil, activeErr
+		}
+		if found {
+			identity.CacheHash = active.CacheHash
+			identity.LogicalHash = active.LogicalHash
+		}
+	}
+	// Recovery is checked again under the sidecar-global signing lock. Two
+	// concurrent reschedules can otherwise both miss the ownership record
+	// before the first FROST result is durably persisted, then serialize only
+	// the ceremonies and produce signed transactions from different vaults.
+	if signedTx, checkpoint, observation, ok, recoverErr := c.recoverSignedXMRTxPayload(tx, identity); recoverErr != nil {
+		return nil, nil, nil, recoverErr
+	} else if ok {
+		return signedTx, checkpoint, observation, nil
+	}
+	if c.signerCacheManager.HasSigned(identity.CacheHash) {
+		c.logger.Info().Interface("tx", tx).Msg("transaction already signed, ignoring")
+		return nil, nil, nil, nil
+	}
+	if existingClaim, found, claimErr := c.signedTxPayloadStore.Claim(identity.LogicalHash); claimErr != nil {
+		return nil, nil, nil, claimErr
+	} else if found && existingClaim.State == signedTxClaimReserved {
+		// A durable Go reservation means a ceremony may already have produced a
+		// transaction at another party. Never enter FROST a second time; only a
+		// committed fulfillment or an explicit operator recovery may resolve it.
+		return nil, nil, nil, fmt.Errorf(
+			"%w: reserved xmr signing attempt has no persisted payload; refusing a second ceremony",
+			errXMRSigningClaimConflict,
+		)
+	}
+	expectedMsgID, err := tssp.FrostKeySignMsgID(frostReq)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("derive xmr FROST message id before reservation: %w", err)
+	}
+	planHash, err := tssp.FrostPlanHash(frostReq, expectedMsgID)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("derive xmr FROST plan hash before reservation: %w", err)
+	}
+	observeEpoch, err := c.signedTxPayloadStore.SnapshotObserveEpochs(identity.ObserveKeys)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("snapshot xmr observation aliases before reservation: %w", err)
+	}
+	txOutJSON, err := encodeDurableXMRClaimTxOut(tx)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("encode xmr txout for durable recovery: %w", err)
+	}
+	cacheVault := txCacheVault(tx, c.GetChain())
+	claimPlan := signedTxPayloadClaimPlan{
+		CacheVault:   cacheVault,
+		CacheHash:    identity.CacheHash,
+		LogicalHash:  identity.LogicalHash,
+		OwnerVault:   txVaultPubKey(tx).String(),
+		MsgID:        expectedMsgID,
+		PlanHash:     planHash,
+		ObserveKeys:  identity.ObserveKeys,
+		ObserveEpoch: observeEpoch,
+		TxOutJSON:    txOutJSON,
+	}
+	// Delay reservation until go-tss has selected this node into the actual
+	// signing party. Stand-by nodes that time out waiting for result gossip must
+	// not leave an unresolvable reserved-only claim. go-tss still invokes this
+	// barrier before an active node can call the sidecar, and invokes it for a
+	// stand-by node only after accepting a quorum-verified successful result.
+	frostReq.ReserveSigningClaim = func() error {
+		if reserveErr := c.signedTxPayloadStore.Reserve(claimPlan); reserveErr != nil {
+			return fmt.Errorf("reserve logical xmr outbound before FROST: %w", reserveErr)
+		}
+		return nil
+	}
+	frostReq.ReleaseSigningClaim = func() error {
+		return c.signedTxPayloadStore.ReleaseReserved(claimPlan)
+	}
 	resp, err := c.tssServer.FrostKeySign(frostReq, sidecar.NewFrostAdapterWithStop(c.sidecar, c.stopchan))
 	if err != nil {
-		c.clearSidecarSessionsAfterFrostFailure("frost_keysign_error", err)
+		if errors.Is(err, errXMRSigningClaimObserved) || errors.Is(err, errXMRSigningClaimCommitted) {
+			c.logger.Info().Interface("tx", tx).Msg("xmr signing claim already committed, ignoring")
+			return nil, nil, nil, nil
+		}
 		return nil, nil, nil, fmt.Errorf("fail to execute FROST keysign: %w", err)
 	}
 	if resp.Status == gotsscommon.NA && strings.TrimSpace(resp.TxHex) == "" && strings.TrimSpace(resp.Blame.FailReason) == "" && len(resp.Blame.BlameNodes) == 0 {
@@ -1736,45 +1973,63 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 	if resp.Status != gotsscommon.Success {
 		signErr := fmt.Errorf("FROST keysign returned status %d: %s", resp.Status, resp.Blame.FailReason)
-		c.clearSidecarSessionsAfterFrostFailure("frost_non_success_status", signErr)
 		// MaxGas overages are deterministic local policy failures, not signer
-		// misbehavior, so return them directly instead of submitting blame.
+		// misbehavior. They are still terminal because the fee is only known
+		// after the signature-share boundary, but carry no peer blame.
 		if maxGasErr, ok := xmrMaxGasExceededFromFrostResponse(resp, signReqCtx.maxGasAtomic); ok {
-			return nil, nil, nil, maxGasErr
+			return nil, nil, nil, newTerminalFrostResultError(maxGasErr)
 		}
-		// Preserve an ordinary FROST phase even when no peer is blameable. The
-		// signer uses frost_share to keep the vault/checkpoint once a signature
-		// share may have escaped; postKeysignFailure independently refuses to
-		// submit empty-node blame on-chain.
-		if len(resp.Blame.BlameNodes) > 0 || strings.TrimSpace(resp.Blame.Round) != "" {
-			return nil, nil, nil, bifrosttss.NewKeysignError(frostBlameToThorchainBlame(resp.Blame))
+		thorchainBlame := frostBlameToThorchainBlame(resp.Blame)
+		if len(resp.Blame.BlameNodes) > 0 {
+			return nil, nil, nil, bifrosttss.NewKeysignError(thorchainBlame)
 		}
-		return nil, nil, nil, fmt.Errorf("FROST keysign failed: %s", resp.Blame.FailReason)
+		// Preserve a recognized phase even when the failure cannot attribute a
+		// culprit. In particular, frost_share is locally safety-terminal because
+		// a usable share may already have escaped. postKeysignFailure still
+		// suppresses the on-chain report when BlameNodes is empty.
+		if round, roundErr := ttypes.NormalizeTssKeysignRound(thorchainBlame.Round); roundErr == nil && round != "" {
+			thorchainBlame.Round = round
+			return nil, nil, nil, bifrosttss.NewKeysignError(thorchainBlame)
+		}
+		return nil, nil, nil, signErr
+	}
+	// Production go-tss reserves after party selection and before any sidecar
+	// share RPC. Keep the client boundary fail-safe for alternate implementations
+	// and tests: a successful result must still acquire the exact claim before
+	// the signed bytes are committed.
+	if err = c.signedTxPayloadStore.Reserve(claimPlan); err != nil {
+		if errors.Is(err, errXMRSigningClaimObserved) || errors.Is(err, errXMRSigningClaimCommitted) {
+			return nil, nil, nil, nil
+		}
+		return nil, nil, nil, newTerminalFrostResultError(fmt.Errorf("reserve successful xmr FROST result before persistence: %w", err))
 	}
 	msgID := strings.TrimSpace(resp.MsgID)
 	if msgID == "" {
-		signErr := fmt.Errorf("FROST keysign returned empty msg_id")
-		c.clearSidecarSessionsAfterFrostFailure("frost_empty_msg_id", signErr)
-		return nil, nil, nil, terminalFrostShareError(signErr)
+		return nil, nil, nil, newTerminalFrostResultError(errors.New("FROST keysign returned empty msg_id"))
+	}
+	if !strings.EqualFold(msgID, expectedMsgID) {
+		return nil, nil, nil, newTerminalFrostResultError(errors.New("FROST keysign returned msg_id for a different reserved plan"))
 	}
 	// Treat the TSS response as untrusted until Bifrost independently verifies
 	// the actual fee against the scheduled cap. This is the local guard for
 	// signers that predate sidecar-side MaxGas enforcement.
 	if maxGasErr := enforceXMRMaxGas(resp.FeeAtomic, signReqCtx.maxGasAtomic); maxGasErr != nil {
-		return nil, nil, nil, maxGasErr
+		return nil, nil, nil, newTerminalFrostResultError(maxGasErr)
 	}
+	txKey := strings.ToLower(strings.TrimSpace(resp.TxKey))
 	if validateErr := tssp.ValidateFrostEventuality(
 		frostReq,
 		msgID,
 		resp.TxHash,
 		resp.TxHex,
-		resp.TxKey,
+		txKey,
 		resp.FeeAtomic,
 		resp.Eventuality,
 	); validateErr != nil {
-		signErr := fmt.Errorf("invalid FROST eventuality: %w", validateErr)
-		c.clearSidecarSessionsAfterFrostFailure("frost_invalid_eventuality", signErr)
-		return nil, nil, nil, terminalFrostShareError(signErr)
+		return nil, nil, nil, newTerminalFrostResultError(fmt.Errorf("invalid FROST eventuality: %w", validateErr))
+	}
+	if validateErr := validateFixedHex(txKey, 32, "xmr tx key"); validateErr != nil {
+		return nil, nil, nil, newTerminalFrostResultError(validateErr)
 	}
 	var localSpentRefs []sidecar.SpentRef
 	for _, ref := range resp.SpentOutputRefs {
@@ -1785,26 +2040,145 @@ func (c *Client) signTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 			SpendTxHash: ref.SpendTxHash,
 		})
 	}
+
+	observation := c.buildOutboundObservation(tx, resp.TxHash, txKey, resp.FeeAtomic, localSpentRefs)
 	payload := signedTxPayload{
-		TxHash:          resp.TxHash,
-		TxMetadata:      resp.TxHex,
-		TxKey:           resp.TxKey,
-		FeeAtomic:       resp.FeeAtomic,
-		MsgID:           msgID,
-		Eventuality:     resp.Eventuality,
-		Broadcasted:     false,
-		SpentOutputRefs: localSpentRefs,
+		TxHash:           resp.TxHash,
+		TxMetadata:       resp.TxHex,
+		TxKey:            txKey,
+		FeeAtomic:        resp.FeeAtomic,
+		MsgID:            msgID,
+		Eventuality:      resp.Eventuality,
+		Broadcasted:      false,
+		SpentOutputRefs:  localSpentRefs,
+		Observation:      observation,
+		ClaimCacheVault:  cacheVault,
+		ClaimCacheHash:   identity.CacheHash,
+		ClaimLogicalHash: identity.LogicalHash,
+		ClaimOwnerVault:  txVaultPubKey(tx).String(),
 	}
 	signedTx, err := json.Marshal(payload)
 	if err != nil {
-		return nil, nil, nil, terminalFrostShareError(fmt.Errorf("fail to encode FROST signed tx payload: %w", err))
+		return nil, nil, nil, newTerminalFrostResultError(fmt.Errorf("fail to encode FROST signed tx payload: %w", err))
 	}
 	ckptBytes, ckptErr := json.Marshal(signCheckpoint{SpentOutputRefs: localSpentRefs})
 	if ckptErr != nil {
 		c.logger.Error().Err(ckptErr).Msg("fail to marshal xmr sign checkpoint")
 	}
-	observation := c.buildOutboundObservation(tx, resp.TxHash, resp.FeeAtomic, localSpentRefs)
+	// Persist the complete signed artifact as the pre-broadcast retry guard.
+	if err := c.signedTxPayloadStore.Set(claimPlan, payload.TxHash, signedTx); err != nil {
+		if errors.Is(err, errXMRSigningClaimObserved) || errors.Is(err, errXMRSigningClaimCommitted) {
+			c.logger.Warn().
+				Str("tx_hash", payload.TxHash).
+				Msg("retaining late xmr FROST result only in the sidecar because the logical outbound is already committed")
+			return nil, nil, nil, nil
+		}
+		return nil, nil, nil, newTerminalFrostResultError(fmt.Errorf("fail to persist xmr FROST signed payload: %w", err))
+	}
 	return signedTx, ckptBytes, observation, nil
+}
+
+// recoverSignedXMRTxPayload returns a previously persisted FROST result for the
+// same outbound. This closes the retry/restart gap between a successful FROST
+// response and local broadcast without allowing a second FROST ceremony.
+func (c *Client) recoverSignedXMRTxPayload(
+	tx stypes.TxOutItem,
+	identity xmrSigningIdentity,
+) ([]byte, []byte, *stypes.TxInItem, bool, error) {
+	cacheVault := txCacheVault(tx, c.GetChain())
+	signedTx, ok, err := c.signedTxPayloadStore.GetOwned(cacheVault, identity.CacheHash, identity.LogicalHash)
+	if errors.Is(err, errXMRSigningClaimConflict) {
+		// TxOut rescheduling may move the same semantic outbound to a new vault.
+		// If the old vault already has a complete signed artifact, recover that
+		// exact transaction instead of authorizing the replacement vault to sign.
+		claim, found, claimErr := c.signedTxPayloadStore.Claim(identity.LogicalHash)
+		if claimErr != nil {
+			return nil, nil, nil, false, claimErr
+		}
+		if found && claim.State == signedTxClaimSigned && strings.EqualFold(claim.CacheHash, identity.CacheHash) {
+			signedTx, ok, err = c.signedTxPayloadStore.GetOwned(claim.CacheVault, claim.CacheHash, claim.LogicalHash)
+		}
+	}
+	if err != nil {
+		if errors.Is(err, errXMRSigningClaimObserved) || errors.Is(err, errXMRSigningClaimCommitted) {
+			c.logger.Info().Interface("tx", tx).Msg("logical xmr outbound is already committed, suppressing retry")
+			return nil, nil, nil, true, nil
+		}
+		return nil, nil, nil, false, err
+	}
+	if !ok {
+		return nil, nil, nil, false, nil
+	}
+
+	payload, err := decodeStoredSignedXMRTxPayload(signedTx)
+	if err != nil {
+		return nil, nil, nil, false, err
+	}
+	ckptBytes, ckptErr := json.Marshal(signCheckpoint{SpentOutputRefs: payload.SpentOutputRefs})
+	if ckptErr != nil {
+		return nil, nil, nil, false, fmt.Errorf("fail to marshal cached xmr sign checkpoint: %w", ckptErr)
+	}
+	observation := payload.Observation
+	if observation == nil {
+		observation = c.buildOutboundObservation(tx, payload.TxHash, payload.TxKey, payload.FeeAtomic, payload.SpentOutputRefs)
+	} else {
+		observation = cloneXMRObservation(observation)
+		if !strings.EqualFold(strings.TrimSpace(observation.Tx), payload.TxHash) {
+			return nil, nil, nil, false, fmt.Errorf("cached xmr observation transaction hash does not match payload")
+		}
+	}
+	c.logger.Info().Str("tx_hash", payload.TxHash).Interface("tx", tx).Msg("reusing cached xmr FROST signed payload")
+	return signedTx, ckptBytes, observation, true, nil
+}
+
+func cloneXMRObservation(in *stypes.TxInItem) *stypes.TxInItem {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	out.Coins = append(common.Coins(nil), in.Coins...)
+	out.Gas = append(common.Gas(nil), in.Gas...)
+	out.SpentOutputRefs = make([]*common.OutputRef, 0, len(in.SpentOutputRefs))
+	for _, ref := range in.SpentOutputRefs {
+		if ref == nil {
+			continue
+		}
+		copyRef := *ref
+		out.SpentOutputRefs = append(out.SpentOutputRefs, &copyRef)
+	}
+	return &out
+}
+
+// decodeStoredSignedXMRTxPayload validates the fields needed to rebroadcast and
+// observe a cached signed transaction. Corrupt cache data fails closed instead
+// of falling through to a new FROST signing attempt.
+func decodeStoredSignedXMRTxPayload(signedTx []byte) (signedTxPayload, error) {
+	var payload signedTxPayload
+	if err := json.Unmarshal(signedTx, &payload); err != nil {
+		return signedTxPayload{}, fmt.Errorf("fail to decode cached xmr signed tx payload: %w", err)
+	}
+	if strings.TrimSpace(payload.TxHash) == "" {
+		return signedTxPayload{}, fmt.Errorf("cached xmr signed tx payload missing tx hash")
+	}
+	payload.TxHash = strings.ToLower(strings.TrimSpace(payload.TxHash))
+	if err := validateFixedHex(payload.TxHash, 32, "cached xmr tx hash"); err != nil {
+		return signedTxPayload{}, err
+	}
+	payload.TxMetadata = strings.ToLower(strings.TrimSpace(payload.TxMetadata))
+	if payload.TxMetadata == "" {
+		return signedTxPayload{}, fmt.Errorf("cached xmr signed tx payload missing tx_hex")
+	}
+	if _, err := hex.DecodeString(payload.TxMetadata); err != nil {
+		return signedTxPayload{}, fmt.Errorf("cached xmr signed tx payload tx_hex is not valid hex")
+	}
+	if strings.TrimSpace(payload.MsgID) == "" {
+		return signedTxPayload{}, fmt.Errorf("cached xmr signed tx payload missing msg_id")
+	}
+	payload.TxKey = strings.ToLower(strings.TrimSpace(payload.TxKey))
+	if err := validateFixedHex(payload.TxKey, 32, "cached xmr tx key"); err != nil {
+		return signedTxPayload{}, err
+	}
+	return payload, nil
 }
 
 func (c *Client) validateSignTx(tx stypes.TxOutItem, thorchainHeight int64, requireThorchainHeight bool) (validatedSignRequest, error) {
@@ -1976,16 +2350,6 @@ type xmrMaxGasExceededError struct {
 	maxGasAtomic    uint64
 }
 
-func terminalFrostShareError(err error) error {
-	if err == nil {
-		return nil
-	}
-	return errors.Join(err, bifrosttss.NewKeysignError(ttypes.Blame{
-		FailReason: err.Error(),
-		Round:      messages.FROSTKEYSIGNSHARE,
-	}))
-}
-
 func (e xmrMaxGasExceededError) Error() string {
 	return fmt.Sprintf(
 		"%s actual_fee_atomic=%d max_gas_atomic=%d",
@@ -1995,14 +2359,47 @@ func (e xmrMaxGasExceededError) Error() string {
 	)
 }
 
-// Unwrap preserves the terminal FROST share phase for signer retry safety.
-// The embedded blame has no nodes, so it cannot produce an on-chain failure
-// vote or slash; it only prevents rescheduling after signature shares exist.
+// Unwrap preserves a terminal FROST phase for signer retry safety even when the
+// fee error is returned bare (for example straight out of enforceXMRMaxGas).
+// The fee is only known after the signature-share boundary, so rescheduling to
+// another vault is unsafe. The embedded blame has no nodes, so it cannot produce
+// an on-chain failure vote or slash; it only prevents rescheduling.
 func (e xmrMaxGasExceededError) Unwrap() error {
 	return bifrosttss.NewKeysignError(ttypes.Blame{
 		FailReason: e.Error(),
-		Round:      messages.FROSTKEYSIGNSHARE,
+		Round:      tssMessages.FROSTKEYSIGNRESULT,
 	})
+}
+
+// terminalFrostResultError keeps the original local failure discoverable while
+// also exposing the signature-exposure boundary to the generic signer retry
+// policy. Its synthesized KeysignError intentionally has no blame nodes: local
+// validation, durability, and fee-policy failures are not evidence of peer
+// misbehavior and must never produce an on-chain blame transaction.
+type terminalFrostResultError struct {
+	cause   error
+	keysign bifrosttss.KeysignError
+}
+
+func newTerminalFrostResultError(cause error) error {
+	if cause == nil {
+		return nil
+	}
+	return terminalFrostResultError{
+		cause: cause,
+		keysign: bifrosttss.NewKeysignError(ttypes.Blame{
+			FailReason: cause.Error(),
+			Round:      tssMessages.FROSTKEYSIGNRESULT,
+		}),
+	}
+}
+
+func (e terminalFrostResultError) Error() string {
+	return e.cause.Error()
+}
+
+func (e terminalFrostResultError) Unwrap() []error {
+	return []error{e.cause, e.keysign}
 }
 
 // enforceXMRMaxGas is the Bifrost-side safety check for older or mismatched
@@ -2080,7 +2477,7 @@ func fallbackOutboundObservationFee(scanner *Scanner) uint64 {
 	return fee
 }
 
-func (c *Client) buildOutboundObservation(tx stypes.TxOutItem, txHash string, feeAtomic uint64, spentRefs []sidecar.SpentRef) *stypes.TxInItem {
+func (c *Client) buildOutboundObservation(tx stypes.TxOutItem, txHash, txKey string, feeAtomic uint64, spentRefs []sidecar.SpentRef) *stypes.TxInItem {
 	vaultPubKey := txVaultPubKey(tx)
 	from := c.deriveVaultAddress(vaultPubKey)
 	height := int64(0)
@@ -2120,6 +2517,9 @@ func (c *Client) buildOutboundObservation(tx stypes.TxOutItem, txHash string, fe
 			}
 		}
 		item.SpentOutputRefs = refs
+	}
+	if item != nil {
+		item.TxKey = txKey
 	}
 	return item
 }
@@ -2251,6 +2651,13 @@ func (c *Client) applySpentOutputRefs(tx common.ObservedTx, onOutcome func(appli
 // stopping, it reports a failed outcome immediately so observer latches are
 // not left pending forever.
 func (c *Client) queueSpentOutputRefsRetry(tx common.ObservedTx, interval time.Duration, maxAttempts int, onOutcome func(applied bool)) {
+	if c.wg == nil || c.stopchan == nil {
+		c.logger.Warn().Str("tx_hash", tx.Tx.ID.String()).Msg("skip xmr spent output refs retry: client lifecycle is not initialized")
+		if onOutcome != nil {
+			onOutcome(false)
+		}
+		return
+	}
 	c.lifecycleMu.Lock()
 	defer c.lifecycleMu.Unlock()
 
@@ -2289,6 +2696,10 @@ func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) (bool, bool) {
 	}
 	vaultPubKey := tx.ObservedPubKey.String()
 	txHash := tx.Tx.ID.String()
+	if c.sidecar == nil {
+		c.logger.Warn().Str("tx_hash", txHash).Str("vault", vaultPubKey).Msg("skip xmr spent output refs: sidecar is not initialized")
+		return false, false
+	}
 
 	refs := xmrSpentRefsToSidecar(tx.SpentOutputRefs)
 	certificateHash, hashErr := xmrSpentRefsCertificateHash(tx)
@@ -2296,7 +2707,7 @@ func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) (bool, bool) {
 		c.logger.Warn().Err(hashErr).Str("tx_hash", txHash).Msg("skip xmr spent refs with unhashable source-vault certificate")
 		return false, false
 	}
-	outbound := xmrOutboundMeta(tx.Tx)
+	outbound := xmrOutboundMeta(tx.Tx, tx.XmrTxKey)
 	outbound.Origin = sidecar.OutgoingOriginVaultCertified
 	outbound.CertificateHash = certificateHash
 	result, err := c.sidecar.MarkSpent(vaultPubKey, txHash, refs, false, outbound)
@@ -2333,7 +2744,215 @@ func (c *Client) applySpentOutputRefsOnce(tx common.ObservedTx) (bool, bool) {
 	// sidecar validates all refs before mutation and treats identical
 	// key-image bindings as idempotent; sending only missing refs would fail its
 	// exact transaction-input coverage check.
-	return result.NotFound == 0, result.NotFound > 0
+	if result.NotFound > 0 {
+		return false, true
+	}
+	if !verifiedXMRMarkSpentResult(result, len(refs)) {
+		return false, false
+	}
+	if err = c.markImportedXMROutboundSigned(tx); err != nil {
+		c.logger.Warn().Err(err).Str("tx_hash", txHash).Msg("refuse to commit unauthenticated xmr spent-ref import")
+		return false, false
+	}
+	if c.scanner != nil {
+		queued, replayErr := c.scanner.EnqueueAuthenticatedInternalInboundReplay(tx)
+		if replayErr != nil {
+			c.logger.Error().Err(replayErr).Str("tx_hash", txHash).
+				Msg("failed to queue authenticated xmr migration replay")
+			// MarkSpent is idempotent. Retry the complete import so a transient
+			// canonical lookup or durable outbox failure cannot strand a
+			// migration destination credit.
+			return false, true
+		}
+		if queued {
+			c.logger.Info().Str("tx_hash", txHash).
+				Msg("authenticated xmr migration destination queued for scanner replay")
+		}
+	}
+	return true, false
+}
+
+func (c *Client) markImportedXMROutboundSigned(tx common.ObservedTx) error {
+	vaultAddress := common.Address(c.deriveVaultAddress(tx.ObservedPubKey))
+	if vaultAddress.String() == "" {
+		return errors.New("cannot authenticate imported xmr fulfillment without a derived vault address")
+	}
+	if tx.Tx.FromAddress.String() != vaultAddress.String() {
+		return errors.New("refusing imported xmr fulfillment that is not vault-origin")
+	}
+	if c.signedTxPayloadStore == nil {
+		return nil
+	}
+	finalized := tx.BlockHeight > 0 && tx.FinaliseHeight > 0 && tx.IsFinal()
+	recordExact := func(observeKey, ownerVault, txHash string) error {
+		var recordErr error
+		if finalized {
+			_, _, recordErr = c.signedTxPayloadStore.CompleteObservedExact(observeKey, ownerVault, txHash)
+		} else {
+			_, _, recordErr = c.signedTxPayloadStore.CommitUnfinalizedExact(observeKey, ownerVault, txHash)
+		}
+		return recordErr
+	}
+	recordLogical := func(logicalHash string, observeKeys []string, txHash string) error {
+		var recordErr error
+		if finalized {
+			_, _, recordErr = c.signedTxPayloadStore.CompleteObservedLogical(logicalHash, observeKeys, txHash)
+		} else {
+			_, _, recordErr = c.signedTxPayloadStore.CommitUnfinalizedLogical(logicalHash, observeKeys, txHash)
+		}
+		return recordErr
+	}
+	m, err := memo.ParseMemo(common.LatestVersion, tx.Tx.Memo)
+	if err != nil {
+		// A wire-memoless observation is ambiguous without its resolved original
+		// memo. Record only an exact same-vault hash event; signer-created and
+		// quorum-certified spent-ref observations carry the semantic memo and use
+		// the vault-independent path below.
+		return recordExact(
+			xmrScheduledObserveKey(tx.ObservedPubKey, tx.Tx.ToAddress.String(), tx.Tx.Coins, tx.Tx.Memo),
+			tx.ObservedPubKey.String(),
+			tx.Tx.ID.String(),
+		)
+	}
+
+	var cacheHash string
+	switch {
+	case m.IsType(memo.TxMigrate):
+		logicalHash := xmrMigrationObserveKey(tx.ObservedPubKey, tx.Tx.ToAddress.String(), tx.Tx.Memo)
+		if err = recordLogical(
+			logicalHash,
+			[]string{logicalHash},
+			tx.Tx.ID.String(),
+		); err != nil {
+			return err
+		}
+		cacheHash = logicalHash
+	case m.IsType(memo.TxConsolidate):
+		if err = recordExact(
+			xmrConsolidationObserveKey(tx.ObservedPubKey),
+			tx.ObservedPubKey.String(),
+			tx.Tx.ID.String(),
+		); err != nil {
+			return err
+		}
+		cacheHash = tx.Tx.ID.String()
+	case m.IsOutbound():
+		logicalHash := xmrScheduledLogicalHash(c.GetChain(), tx.Tx.ToAddress.String(), tx.Tx.Coins, tx.Tx.Memo)
+		observeKey := xmrScheduledObserveKey(tx.ObservedPubKey, tx.Tx.ToAddress.String(), tx.Tx.Coins, tx.Tx.Memo)
+		if err = recordLogical(
+			logicalHash,
+			[]string{observeKey},
+			tx.Tx.ID.String(),
+		); err != nil {
+			return err
+		}
+		item := &stypes.TxInItem{
+			To:                  tx.Tx.ToAddress.String(),
+			Coins:               tx.Tx.Coins,
+			Memo:                tx.Tx.Memo,
+			ObservedVaultPubKey: tx.ObservedPubKey,
+		}
+		cacheHash = item.CacheHash(c.GetChain(), m.GetTxID().String())
+	default:
+		return nil
+	}
+
+	if c.signerCacheManager == nil {
+		return nil
+	}
+
+	signerCacheVault := stypes.InboundCacheKey(tx.ObservedPubKey.String(), c.GetChain().String())
+	if err := c.signerCacheManager.SetSigned(cacheHash, signerCacheVault, tx.Tx.ID.String()); err != nil {
+		c.logger.Err(err).
+			Str("tx_hash", tx.Tx.ID.String()).
+			Str("cache_hash", cacheHash).
+			Msg("fail to set signer cache from imported xmr outbound")
+		return nil
+	}
+	return nil
+}
+
+func (c *Client) recordObservedXMRExactClaim(
+	finalized bool,
+	observeKeys []string,
+	ownerVault,
+	txHash,
+	reason string,
+) (bool, error) {
+	recorded := false
+	for _, observeKey := range observeKeys {
+		var (
+			claim     signedTxPayloadClaim
+			completed bool
+			err       error
+		)
+		if finalized {
+			claim, completed, err = c.signedTxPayloadStore.CompleteObservedExact(observeKey, ownerVault, txHash)
+		} else {
+			claim, completed, err = c.signedTxPayloadStore.CommitUnfinalizedExact(observeKey, ownerVault, txHash)
+		}
+		if err != nil {
+			c.logger.Err(err).
+				Str("tx_hash", txHash).
+				Str("reason", reason).
+				Msg("fail to persist observed xmr signing claim state")
+			return false, err
+		}
+		recorded = true
+		if !completed {
+			continue
+		}
+		if claim.SignedTxHash != "" && !strings.EqualFold(claim.SignedTxHash, txHash) {
+			c.logger.Error().
+				Str("signed_tx_hash", claim.SignedTxHash).
+				Str("observed_tx_hash", txHash).
+				Str("reason", reason).
+				Msg("committed xmr observation differs from reserved signed payload; retained incident evidence")
+		} else {
+			c.logger.Debug().
+				Str("tx_hash", txHash).
+				Str("reason", reason).
+				Bool("finalized", finalized).
+				Msg("persisted observed xmr signing claim state")
+		}
+		return true, nil
+	}
+	return recorded, nil
+}
+
+func (c *Client) recordObservedXMRLogicalClaim(
+	finalized bool,
+	logicalHash string,
+	observeKeys []string,
+	txHash,
+	reason string,
+) (bool, error) {
+	var (
+		claim     signedTxPayloadClaim
+		completed bool
+		err       error
+	)
+	if finalized {
+		claim, completed, err = c.signedTxPayloadStore.CompleteObservedLogical(logicalHash, observeKeys, txHash)
+	} else {
+		claim, completed, err = c.signedTxPayloadStore.CommitUnfinalizedLogical(logicalHash, observeKeys, txHash)
+	}
+	if err != nil {
+		c.logger.Err(err).Str("tx_hash", txHash).Str("reason", reason).
+			Msg("fail to persist logical xmr observation state")
+		return false, err
+	}
+	if !completed {
+		return true, nil
+	}
+	if claim.SignedTxHash != "" && !strings.EqualFold(claim.SignedTxHash, txHash) {
+		c.logger.Error().
+			Str("signed_tx_hash", claim.SignedTxHash).
+			Str("observed_tx_hash", txHash).
+			Str("reason", reason).
+			Msg("different committed xmr transaction fulfilled the logical outbound; local payload quarantined")
+	}
+	return true, nil
 }
 
 func xmrSpentRefsCertificateHash(tx common.ObservedTx) (string, error) {
@@ -2444,6 +3063,12 @@ func validateXMRSpentRefsForSidecar(tx common.ObservedTx) error {
 	if err := validateFixedHex(tx.Tx.ID.String(), 32, "spend tx hash"); err != nil {
 		return err
 	}
+	if strings.TrimSpace(tx.XmrTxKey) == "" {
+		return fmt.Errorf("xmr spent refs require outbound tx key")
+	}
+	if err := validateFixedHex(tx.XmrTxKey, 32, "xmr tx key"); err != nil {
+		return err
+	}
 	if !common.XMRChain.IsValidAddress(tx.Tx.ToAddress) {
 		return fmt.Errorf("xmr spent refs require a valid xmr destination address")
 	}
@@ -2451,7 +3076,7 @@ func validateXMRSpentRefsForSidecar(tx common.ObservedTx) error {
 	if err != nil {
 		return fmt.Errorf("derive xmr vault address from observed pubkey: %w", err)
 	}
-	if !tx.Tx.FromAddress.Equals(vaultAddress) {
+	if !common.AddressEquals(common.XMRChain, tx.Tx.FromAddress, vaultAddress) {
 		return fmt.Errorf("xmr spent refs require outbound from observed vault")
 	}
 	seenKeyImages := make(map[string]struct{}, len(tx.SpentOutputRefs))
@@ -2462,14 +3087,14 @@ func validateXMRSpentRefsForSidecar(tx common.ObservedTx) error {
 		if err := validateFixedHex(ref.KeyImage, 32, "key image"); err != nil {
 			return err
 		}
+		keyImage := strings.ToLower(strings.TrimSpace(ref.KeyImage))
+		if _, duplicate := seenKeyImages[keyImage]; duplicate {
+			return fmt.Errorf("duplicate xmr spent ref key image")
+		}
+		seenKeyImages[keyImage] = struct{}{}
 		if err := validateFixedHex(ref.SpendTxHash, 32, "spend tx hash"); err != nil {
 			return err
 		}
-		keyImage := strings.ToLower(strings.TrimSpace(ref.KeyImage))
-		if _, ok := seenKeyImages[keyImage]; ok {
-			return fmt.Errorf("duplicate xmr spent ref key image: %s", keyImage)
-		}
-		seenKeyImages[keyImage] = struct{}{}
 	}
 	return nil
 }
@@ -2516,6 +3141,79 @@ func (c *Client) postKeysignFailure(tx stypes.TxOutItem, height int64, signErr e
 
 	c.logger.Info().Str("tx_id", txID.String()).Msg("post keysign failure to thorchain")
 	return signErr
+}
+
+func (c *Client) reportXMRMaxGasExceeded(signErr error) {
+	if signErr == nil || c.globalNetworkFeeQueue == nil {
+		return
+	}
+	var maxGasErr xmrMaxGasExceededError
+	if !errors.As(signErr, &maxGasErr) {
+		return
+	}
+	if c.scanner == nil {
+		c.logger.Warn().
+			Err(signErr).
+			Msg("skip xmr max gas exceeded network fee report: scanner is unavailable")
+		return
+	}
+	processedHeight := c.scanner.CurrentHeight()
+	height := canonicalXMRNetworkFeeReportHeight(processedHeight)
+	if height <= 0 {
+		c.logger.Warn().
+			Err(signErr).
+			Msg("skip xmr max gas exceeded network fee report: invalid processed xmr height")
+		return
+	}
+	feeRate := feeRateFromTotalAtomic(maxGasErr.actualFeeAtomic)
+	if feeRate == 0 {
+		c.logger.Warn().
+			Uint64("actual_fee_atomic", maxGasErr.actualFeeAtomic).
+			Uint64("max_gas_atomic", maxGasErr.maxGasAtomic).
+			Msg("skip xmr max gas exceeded network fee report: fee rate is zero")
+		return
+	}
+
+	networkFee := common.NetworkFee{
+		Chain:           c.chain,
+		Height:          height,
+		TransactionSize: typicalVaultOutboundWeight,
+		TransactionRate: feeRate,
+	}
+	select {
+	case c.globalNetworkFeeQueue <- networkFee:
+		c.logger.Info().
+			Int64("xmr_height", height).
+			Int64("processed_xmr_height", processedHeight).
+			Uint64("tx_size", networkFee.TransactionSize).
+			Uint64("fee_rate", networkFee.TransactionRate).
+			Uint64("actual_fee_atomic", maxGasErr.actualFeeAtomic).
+			Uint64("max_gas_atomic", maxGasErr.maxGasAtomic).
+			Msg("reported xmr max gas exceeded network fee")
+	default:
+		c.logger.Warn().
+			Int64("xmr_height", height).
+			Int64("processed_xmr_height", processedHeight).
+			Uint64("tx_size", networkFee.TransactionSize).
+			Uint64("fee_rate", networkFee.TransactionRate).
+			Uint64("actual_fee_atomic", maxGasErr.actualFeeAtomic).
+			Uint64("max_gas_atomic", maxGasErr.maxGasAtomic).
+			Msg("drop xmr max gas exceeded network fee report: queue full")
+	}
+}
+
+const xmrNetworkFeeReportHeightBucket int64 = 10
+
+// canonicalXMRNetworkFeeReportHeight keeps the attested height on the Monero
+// chain while allowing validators whose scanners differ by a few blocks to
+// sign the same one-shot max-gas correction. NetworkFee voters include Height
+// in their identity, so using each node's exact asynchronous scanner cursor
+// would fragment an otherwise identical fee report and prevent quorum.
+func canonicalXMRNetworkFeeReportHeight(processedHeight int64) int64 {
+	if processedHeight <= 0 {
+		return 0
+	}
+	return processedHeight - processedHeight%xmrNetworkFeeReportHeightBucket
 }
 
 func (c *Client) GetHeight() (int64, error) {
@@ -2914,24 +3612,115 @@ func frostBlameToThorchainBlame(in gotssblame.Blame) ttypes.Blame {
 	return out
 }
 
-func (c *Client) OnObservedTxIn(txIn stypes.TxInItem, _ int64) {
+func isAuthenticatedXMRVaultOrigin(item *stypes.TxInItem) bool {
+	if item == nil {
+		return false
+	}
+	sender := common.ResolveObservedSender(common.XMRChain, common.Address(item.Sender))
+	if !sender.Known || !common.XMRChain.IsValidAddress(sender.Address) || item.ObservedVaultPubKey.IsEmpty() {
+		return false
+	}
+	vaultAddress, err := item.ObservedVaultPubKey.GetAddress(common.XMRChain)
+	if err != nil || vaultAddress.IsEmpty() {
+		return false
+	}
+	return common.AddressEquals(common.XMRChain, sender.Address, vaultAddress)
+}
+
+func (c *Client) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
+	if err := c.OnObservedTxInDurable(txIn, blockHeight); err != nil {
+		c.logger.Error().Err(err).Str("tx_hash", txIn.Tx).Msg("fail to persist xmr observation authorization state")
+	}
+}
+
+// OnObservedTxInDurable lets Observer acknowledge an XMR commit only after its
+// local duplicate-payment guard is synced to disk. A committed-unfinalized
+// observation suspends broadcasting reversibly; finality terminalizes it.
+func (c *Client) OnObservedTxInDurable(txIn stypes.TxInItem, _ int64) error {
+	finalized := !txIn.CommittedUnFinalised
+	ownerVault := txIn.ObservedVaultPubKey.String()
+	if !isAuthenticatedXMRVaultOrigin(&txIn) {
+		c.logger.Warn().
+			Str("tx_hash", txIn.Tx).
+			Str("sender", txIn.Sender).
+			Str("vault_pubkey", ownerVault).
+			Msg("ignoring xmr claim transition not authenticated as a vault-origin transaction")
+		return nil
+	}
 	m, err := memo.ParseMemo(common.LatestVersion, txIn.Memo)
 	if err != nil {
-		// ParseMemo errors are expected for non-outbound memos and THORName inbounds.
+		// A memoless wire observation cannot reveal its inbound/reference ID.
+		// Treat its vault/to/amount alias as a race epoch, but terminalize only
+		// an exact locally signed transaction hash so two identical legitimate
+		// memoless outbounds cannot consume one another.
+		if _, recordErr := c.recordObservedXMRExactClaim(
+			finalized,
+			[]string{xmrScheduledObserveKey(txIn.ObservedVaultPubKey, txIn.To, txIn.Coins, txIn.Memo)},
+			ownerVault,
+			txIn.Tx,
+			"observed_unparsed",
+		); recordErr != nil {
+			return recordErr
+		}
 		c.logger.Debug().Err(err).Str("memo", txIn.Memo).Msg("fail to parse memo")
-		return
+		return nil
 	}
-	if !m.IsOutbound() || m.GetTxID().IsEmpty() {
-		return
+	if m.IsInternal() {
+		if strings.TrimSpace(txIn.Tx) == "" {
+			return nil
+		}
+		observationRecorded := false
+		switch {
+		case m.IsType(memo.TxMigrate):
+			observeKey := xmrMigrationObserveKey(
+				txIn.ObservedVaultPubKey,
+				txIn.To,
+				txIn.Memo,
+			)
+			observationRecorded, err = c.recordObservedXMRLogicalClaim(finalized, observeKey, []string{observeKey}, txIn.Tx, "observed_migration")
+		case m.IsType(memo.TxConsolidate):
+			observationRecorded, err = c.recordObservedXMRExactClaim(
+				finalized,
+				[]string{xmrConsolidationObserveKey(txIn.ObservedVaultPubKey)},
+				ownerVault,
+				txIn.Tx,
+				"observed_consolidation",
+			)
+		}
+		if err != nil {
+			return err
+		}
+		if finalized && observationRecorded && c.signerCacheManager != nil {
+			c.signerCacheManager.RemoveSigned(txIn.Tx)
+		}
+		return nil
+	}
+	if !m.IsOutbound() {
+		return nil
 	}
 
-	if err = c.signerCacheManager.SetSigned(
-		txIn.CacheHash(c.GetChain(), m.GetTxID().String()),
-		txIn.CacheVault(c.GetChain()),
-		txIn.Tx,
-	); err != nil {
+	// A committed outbound observation is the durable post-broadcast duplicate
+	// guard. Rebuild the same cache key used by signing from the observed
+	// outbound and its original inbound hash, then let signer cache suppress
+	// future retries for this outbound.
+	//
+	// The claim tombstone is the synchronous duplicate guard. Signer-cache
+	// seeding remains useful for the shared observer/signer paths, but failure
+	// there must not prevent terminalizing an already committed chain result.
+	cacheHash := txIn.CacheHash(c.GetChain(), m.GetTxID().String())
+	logicalHash := xmrScheduledLogicalHash(c.GetChain(), txIn.To, txIn.Coins, txIn.Memo)
+	observeKeys := []string{xmrScheduledObserveKey(txIn.ObservedVaultPubKey, txIn.To, txIn.Coins, txIn.Memo)}
+	if _, err = c.recordObservedXMRLogicalClaim(finalized, logicalHash, observeKeys, txIn.Tx, "observed_outbound"); err != nil {
+		return err
+	}
+	if !finalized || c.signerCacheManager == nil {
+		return nil
+	}
+	signerCacheVault := txIn.CacheVault(c.GetChain())
+	if err = c.signerCacheManager.SetSigned(cacheHash, signerCacheVault, txIn.Tx); err != nil {
 		c.logger.Err(err).Msg("fail to update signer cache")
 	}
+	return nil
 }
 
 func (c *Client) GetConfirmationCount(txIn stypes.TxIn) int64 {
@@ -2969,6 +3758,14 @@ func (c *Client) GetConfirmationCount(txIn stypes.TxIn) int64 {
 		c.logger.Debug().Err(err).Msg("fail to get xmr max conf adjustment")
 	}
 
+	// Monero wallet outputs are not spendable until the network unlock period
+	// has elapsed. Do not let the value-based confirmation calculation or
+	// max-confirmation cap observe vault funds before they can be migrated or
+	// spent by the signer.
+	if confirm < xmrSpendableConfirmations {
+		confirm = xmrSpendableConfirmations
+	}
+
 	// Apply configured minimum floor (always wins over max cap).
 	if confirm < c.cfg.MinConfirmations {
 		confirm = c.cfg.MinConfirmations
@@ -2980,6 +3777,7 @@ func (c *Client) GetConfirmationCount(txIn stypes.TxIn) int64 {
 		Uint64("coinbase_thorchain", coinbaseThorchain).
 		Str("conf_multiplier", confMul.String()).
 		Str("conf_value", confValue.String()).
+		Uint64("spendable_confirmations", xmrSpendableConfirmations).
 		Uint64("min_confirmations", c.cfg.MinConfirmations).
 		Uint64("confirmations", confirm).
 		Msg("calculated xmr confirmation requirement")
@@ -3333,6 +4131,136 @@ func txVaultPubKey(tx stypes.TxOutItem) common.PubKey {
 
 func txCacheVault(tx stypes.TxOutItem, chain common.Chain) string {
 	return stypes.BroadcastCacheKey(txVaultPubKey(tx).String(), chain.String())
+}
+
+type xmrSigningIdentity struct {
+	CacheHash   string
+	LogicalHash string
+	ObserveKeys []string
+}
+
+// xmrSigningCacheIdentity separates local consolidation attempts while
+// preserving the vault-independent identity used for scheduled outbounds and
+// migrations. The latter must retain one global ownership claim across vault
+// reschedules; otherwise two vaults can each produce a valid payment for the
+// same logical outbound before either transaction is observed.
+func xmrSigningCacheIdentity(tx stypes.TxOutItem) (xmrSigningIdentity, error) {
+	baseHash := tx.CacheHash()
+	parsedMemo, err := memo.ParseMemo(common.LatestVersion, tx.Memo)
+	if err != nil || !parsedMemo.IsType(memo.TxConsolidate) {
+		observeKeys := xmrScheduledObserveKeys(tx)
+		logicalHash := xmrScheduledLogicalHash(
+			tx.Chain,
+			tx.ToAddress.String(),
+			tx.Coins,
+			tx.GetMemo(),
+		)
+		if err == nil && parsedMemo.IsType(memo.TxMigrate) {
+			logicalHash = xmrMigrationObserveKey(
+				txVaultPubKey(tx),
+				tx.ToAddress.String(),
+				tx.Memo,
+			)
+			observeKeys = []string{logicalHash}
+		}
+		return xmrSigningIdentity{
+			CacheHash:   baseHash,
+			LogicalHash: logicalHash,
+			ObserveKeys: observeKeys,
+		}, nil
+	}
+
+	signingID := strings.TrimSpace(tx.SigningID)
+	if signingID == "" {
+		return xmrSigningIdentity{}, errors.New("xmr consolidation requires a stable signing id")
+	}
+	digest := sha256.Sum256([]byte(strings.Join([]string{
+		"thorchain-xmr-consolidation-signing-v1",
+		baseHash,
+		signingID,
+	}, "\n")))
+	operationHash := fmt.Sprintf("%X", digest)
+	if txVaultPubKey(tx).IsEmpty() {
+		return xmrSigningIdentity{}, errors.New("xmr consolidation requires a FROST vault pubkey")
+	}
+	return xmrSigningIdentity{
+		CacheHash:   operationHash,
+		LogicalHash: operationHash,
+		ObserveKeys: []string{xmrConsolidationObserveKey(txVaultPubKey(tx))},
+	}, nil
+}
+
+func xmrScheduledObserveKeys(tx stypes.TxOutItem) []string {
+	memos := []string{tx.Memo, tx.GetMemo()}
+	keys := make([]string, 0, len(memos))
+	seen := make(map[string]struct{}, len(memos))
+	for _, observedMemo := range memos {
+		key := xmrScheduledObserveKey(
+			txVaultPubKey(tx),
+			tx.ToAddress.String(),
+			tx.Coins,
+			observedMemo,
+		)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+// xmrScheduledLogicalHash is the vault-independent semantic identity of a
+// scheduled outbound. Keep the legacy CacheHash separate: memoless TxOutItems
+// intentionally have an empty wire Memo, while their OriginalMemo carries the
+// OUT/REFUND identity used by THORChain and by signer-created observations.
+// Binding GetMemo here makes both forms select one durable claim across vault
+// reschedules. RAGNAROK is covered by its full height-bearing memo even though
+// it has no inbound transaction ID.
+func xmrScheduledLogicalHash(chain common.Chain, toAddress string, coins common.Coins, semanticMemo string) string {
+	return xmrObserveKey(
+		"scheduled-logical-v2",
+		chain.String(),
+		toAddress,
+		coins.String(),
+		semanticMemo,
+	)
+}
+
+func xmrScheduledObserveKey(
+	vaultPubKey common.PubKey,
+	toAddress string,
+	coins common.Coins,
+	observedMemo string,
+) string {
+	return xmrObserveKey(
+		"scheduled",
+		vaultPubKey.String(),
+		toAddress,
+		coins.String(),
+		observedMemo,
+	)
+}
+
+func xmrMigrationObserveKey(vaultPubKey common.PubKey, toAddress, observedMemo string) string {
+	return xmrObserveKey("migrate", vaultPubKey.String(), toAddress, observedMemo)
+}
+
+func xmrConsolidationObserveKey(vaultPubKey common.PubKey) string {
+	return xmrObserveKey("consolidate", vaultPubKey.String())
+}
+
+func xmrObserveKey(parts ...string) string {
+	canonical := make([]string, 0, len(parts)+1)
+	canonical = append(canonical, "thorchain-xmr-observation-claim-v1")
+	for _, part := range parts {
+		// Monero addresses and memo payloads are case-sensitive. Callers supply
+		// canonical vault/type fields; preserve every wire field byte-for-byte
+		// apart from surrounding transport whitespace.
+		canonical = append(canonical, strings.TrimSpace(part))
+	}
+	digest := sha256.Sum256([]byte(strings.Join(canonical, "\n")))
+	return fmt.Sprintf("%X", digest)
 }
 
 func coinbaseThorchain() uint64 {

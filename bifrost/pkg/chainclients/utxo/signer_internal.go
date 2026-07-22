@@ -517,7 +517,7 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
-		nullDataScripts, err = MemoToScripts(tx.Memo, btctxscript.MaxDataCarrierSize, btctxscript.NullDataScript, btctxscript.PayToWitnessScript)
+		nullDataScripts, err = MemoToScripts(tx.Memo, btctxscript.MaxDataCarrierSize, btctxscript.NullDataScript, zecutil.PayToPubKeyHashScript)
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
 		}
@@ -633,8 +633,8 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 
 // MemoToScripts converts a memo to UTXO scripts.
 // Up to 80 bytes in a single OP_RETURN output; for longer memos, 79 bytes plus '^' marker in OP_RETURN,
-// with remaining data in P2WPKH outputs (20 bytes each).
-func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToWitnessKeyHashScript func([]byte) ([]byte, error)) ([][]byte, error) {
+// with remaining data in chain-specific continuation outputs (20 bytes each).
+func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToContinuationScript func([]byte) ([]byte, error)) ([][]byte, error) {
 	if len(memo) == 0 {
 		return nil, nil
 	}
@@ -645,14 +645,14 @@ func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToWit
 
 	data := []byte(memo)
 
-	// Calculate number of scripts: 1 OP_RETURN + ceil(remaining_data / 20) P2WPKH outputs
+	// Calculate number of scripts: 1 OP_RETURN + ceil(remaining_data / 20) continuation outputs
 	remainingDataSize := len(data)
 	if remainingDataSize > maxDataCarrierSize {
 		remainingDataSize -= (maxDataCarrierSize - 1) // Reserve 1 byte for '^'
 	} else {
 		remainingDataSize = 0
 	}
-	numScripts := 1 + (remainingDataSize+19)/20 // 1 for OP_RETURN, plus P2WPKH outputs (20 bytes each)
+	numScripts := 1 + (remainingDataSize+19)/20 // 1 for OP_RETURN, plus continuation outputs (20 bytes each)
 	scripts := make([][]byte, 0, numScripts)
 
 	// First chunk OP_RETURN: up to 80 bytes; if > 80 bytes, 79 bytes + '^' marker
@@ -673,11 +673,11 @@ func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToWit
 	}
 	scripts = append(scripts, script)
 
-	// Remaining data (if any) goes into P2WPKH outputs, 20 bytes each
+	// Remaining data (if any) goes into continuation outputs, 20 bytes each
 	if continuation {
 		remainingData := data[firstChunkSize:]
 		for i := 0; len(remainingData) > 0; i++ {
-			// Take up to 20 bytes for this P2WPKH output
+			// Take up to 20 bytes for this continuation output
 			chunkSize := len(remainingData)
 			if chunkSize > 20 {
 				chunkSize = 20
@@ -686,11 +686,11 @@ func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToWit
 			copy(hash, remainingData[:chunkSize])
 			// Remaining bytes (if < 20) are padded with zeros, signaling the end
 			// (getMemo stops at a hash ending with "00")
-			p2wpkhScript, err := payToWitnessKeyHashScript(hash)
+			continuationScript, err := payToContinuationScript(hash)
 			if err != nil {
-				return nil, fmt.Errorf("fail to create P2WPKH script at index %d: %w", i, err)
+				return nil, fmt.Errorf("fail to create memo continuation script at index %d: %w", i, err)
 			}
-			scripts = append(scripts, p2wpkhScript)
+			scripts = append(scripts, continuationScript)
 			// Move to the next chunk
 			remainingData = remainingData[chunkSize:]
 		}

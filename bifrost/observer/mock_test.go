@@ -225,11 +225,14 @@ func (m *MockGRPCClient) SendQuorumPriceFeedBatch(ctx context.Context, batch *co
 
 type MockThorchainBridge struct {
 	thorclient.ThorchainBridge
-	getKeysignPartyFunc    func(common.PubKey, int64) (common.PubKeys, error)
-	getKeysignPolicyFunc   func(common.PubKey, int64) (thorclient.KeysignPolicy, error)
-	getVaultFunc           func(string) (stypes.Vault, error)
-	getKeysignFunc         func(int64, string) (tctypes.TxOut, error)
-	getObservedTxVoterFunc func(string) (*stypes.QueryObservedTxVoter, error)
+	getKeysignPartyFunc         func(common.PubKey, int64) (common.PubKeys, error)
+	getKeysignPolicyFunc        func(common.PubKey, int64) (thorclient.KeysignPolicy, error)
+	getVaultFunc                func(string) (stypes.Vault, error)
+	getKeysignFunc              func(int64, string) (tctypes.TxOut, error)
+	getBlockHeightFunc          func() (int64, error)
+	getBlockHeightFreshFunc     func() (int64, error)
+	getObservedTxVoterFunc      func(string) (*stypes.QueryObservedTxVoter, error)
+	getObservedTxVoterFreshFunc func(string) (*stypes.QueryObservedTxVoter, bool, error)
 }
 
 func (m *MockThorchainBridge) GetMimir(key string) (int64, error) {
@@ -239,7 +242,17 @@ func (m *MockThorchainBridge) GetMimir(key string) (int64, error) {
 // GetBlockHeight returns a stable height for observer tests that need a
 // ThorchainBridge implementation but do not care about chain progress.
 func (m *MockThorchainBridge) GetBlockHeight() (int64, error) {
+	if m.getBlockHeightFunc != nil {
+		return m.getBlockHeightFunc()
+	}
 	return 100, nil
+}
+
+func (m *MockThorchainBridge) GetBlockHeightUncached() (int64, error) {
+	if m.getBlockHeightFreshFunc != nil {
+		return m.getBlockHeightFreshFunc()
+	}
+	return m.GetBlockHeight()
 }
 
 // GetKeysignParty lets observer tests inject the legacy signer-only response.
@@ -286,6 +299,14 @@ func (m *MockThorchainBridge) GetObservedTxVoter(txID string) (*stypes.QueryObse
 		return m.getObservedTxVoterFunc(txID)
 	}
 	return nil, nil
+}
+
+func (m *MockThorchainBridge) GetObservedTxVoterUncached(txID string) (*stypes.QueryObservedTxVoter, bool, error) {
+	if m.getObservedTxVoterFreshFunc != nil {
+		return m.getObservedTxVoterFreshFunc(txID)
+	}
+	voter, err := m.GetObservedTxVoter(txID)
+	return voter, voter != nil, err
 }
 
 type MockStream struct {
@@ -386,14 +407,16 @@ func NewMockEventClient() *MockEventClient {
 // MockThorchainBridge2 implements a broader set of ThorchainBridge methods for observer tests
 type MockThorchainBridge2 struct {
 	thorclient.ThorchainBridge
-	nodeStatus             stypes.NodeStatus
-	activeNodes            common.PubKeys
-	getMimirFunc           func(key string) (int64, error)
-	getKeysignPartyFunc    func(common.PubKey, int64) (common.PubKeys, error)
-	getKeysignPolicyFunc   func(common.PubKey, int64) (thorclient.KeysignPolicy, error)
-	getVaultFunc           func(string) (stypes.Vault, error)
-	getKeysignFunc         func(int64, string) (tctypes.TxOut, error)
-	getObservedTxVoterFunc func(string) (*stypes.QueryObservedTxVoter, error)
+	nodeStatus                  stypes.NodeStatus
+	activeNodes                 common.PubKeys
+	getMimirFunc                func(key string) (int64, error)
+	getKeysignPartyFunc         func(common.PubKey, int64) (common.PubKeys, error)
+	getKeysignPolicyFunc        func(common.PubKey, int64) (thorclient.KeysignPolicy, error)
+	getVaultFunc                func(string) (stypes.Vault, error)
+	getKeysignFunc              func(int64, string) (tctypes.TxOut, error)
+	getBlockHeightFreshFunc     func() (int64, error)
+	getObservedTxVoterFunc      func(string) (*stypes.QueryObservedTxVoter, error)
+	getObservedTxVoterFreshFunc func(string) (*stypes.QueryObservedTxVoter, bool, error)
 }
 
 func (m *MockThorchainBridge2) FetchNodeStatus() (stypes.NodeStatus, error) {
@@ -414,6 +437,13 @@ func (m *MockThorchainBridge2) GetMimir(key string) (int64, error) {
 // GetBlockHeight returns a stable height for broader observer bridge tests.
 func (m *MockThorchainBridge2) GetBlockHeight() (int64, error) {
 	return 100, nil
+}
+
+func (m *MockThorchainBridge2) GetBlockHeightUncached() (int64, error) {
+	if m.getBlockHeightFreshFunc != nil {
+		return m.getBlockHeightFreshFunc()
+	}
+	return m.GetBlockHeight()
 }
 
 // GetKeysignParty lets tests inject the legacy signer-only bridge response.
@@ -460,6 +490,14 @@ func (m *MockThorchainBridge2) GetObservedTxVoter(txID string) (*stypes.QueryObs
 		return m.getObservedTxVoterFunc(txID)
 	}
 	return nil, nil
+}
+
+func (m *MockThorchainBridge2) GetObservedTxVoterUncached(txID string) (*stypes.QueryObservedTxVoter, bool, error) {
+	if m.getObservedTxVoterFreshFunc != nil {
+		return m.getObservedTxVoterFreshFunc(txID)
+	}
+	voter, err := m.GetObservedTxVoter(txID)
+	return voter, voter != nil, err
 }
 
 // Define a custom pipe that implements the stream interface

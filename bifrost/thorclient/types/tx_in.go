@@ -2,12 +2,30 @@ package types
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"strings"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	mem "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
+)
+
+var (
+	// ErrObservedTxOrphaned identifies the exact observation location removed by
+	// an errata handoff. Durable scanners may acknowledge that location, but must
+	// allow the same transaction ID to be observed at a new canonical location.
+	ErrObservedTxOrphaned = errors.New("observed transaction location is orphaned")
+
+	// ErrObservedTxPermanentlyReverted distinguishes THORChain's permanent
+	// TxID-level Reverted barrier from transient Observer rejection. Durable chain
+	// scanners must quarantine the exact TxID before acknowledging this rejection.
+	ErrObservedTxPermanentlyReverted = errors.New("observed transaction is permanently reverted")
+
+	// ErrObservedTxNotApplicable identifies a durable observation which is valid
+	// but this node is not authorized to attest. Scanners may acknowledge it
+	// without quarantining the transaction or retaining it for futile replay.
+	ErrObservedTxNotApplicable = errors.New("observed transaction is not applicable to this node")
 )
 
 type TxIn struct {
@@ -47,7 +65,15 @@ type TxInItem struct {
 	AggregatorTarget      string              `json:"aggregator_target"`
 	AggregatorTargetLimit *cosmos.Uint        `json:"aggregator_target_limit"`
 	SpentOutputRefs       []*common.OutputRef `json:"spent_output_refs,omitempty"`
+	TxKey                 string              `json:"tx_key,omitempty"`
 	CommittedUnFinalised  bool                `json:"committed_pre_final"`
+
+	// OnObservedTxStored and OnObservedTxRejected are local-only handoff
+	// callbacks used by scanners which retain a durable replay record until the
+	// observer has durably accepted (or explicitly rejected) the observation.
+	// They must never be serialized into observer storage or sent over the wire.
+	OnObservedTxStored   func()      `json:"-"`
+	OnObservedTxRejected func(error) `json:"-"`
 }
 type TxInStatus byte
 
@@ -110,6 +136,9 @@ func (t *TxInItem) Equals(other *TxInItem) bool {
 	if !t.ObservedVaultPubKey.Equals(other.ObservedVaultPubKey) {
 		return false
 	}
+	if normalizeString(t.TxKey) != normalizeString(other.TxKey) {
+		return false
+	}
 	return true
 }
 
@@ -142,6 +171,9 @@ func (t *TxInItem) EqualsObservedTx(other common.ObservedTx) bool {
 	if !t.ObservedVaultPubKey.Equals(other.ObservedPubKey) {
 		return false
 	}
+	if normalizeString(t.TxKey) != normalizeString(other.XmrTxKey) {
+		return false
+	}
 	return true
 }
 
@@ -167,7 +199,10 @@ func (t *TxInItem) Copy() *TxInItem {
 		AggregatorTarget:      t.AggregatorTarget,
 		AggregatorTargetLimit: t.AggregatorTargetLimit,
 		SpentOutputRefs:       refs,
+		TxKey:                 t.TxKey,
 		CommittedUnFinalised:  t.CommittedUnFinalised,
+		OnObservedTxStored:    t.OnObservedTxStored,
+		OnObservedTxRejected:  t.OnObservedTxRejected,
 	}
 }
 
@@ -180,7 +215,12 @@ func (t *TxInItem) IsEmpty() bool {
 		t.To == "" &&
 		t.Coins.IsEmpty() &&
 		t.Gas.IsEmpty() &&
-		t.ObservedVaultPubKey.IsEmpty()
+		t.ObservedVaultPubKey.IsEmpty() &&
+		t.TxKey == ""
+}
+
+func normalizeString(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 // CacheHash calculate the has used for signer cache

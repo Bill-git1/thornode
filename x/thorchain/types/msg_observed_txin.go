@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -44,11 +45,14 @@ func (m *MsgObservedTxIn) ValidateBasic() error {
 		if len(tx.SpentOutputRefs) > 0 {
 			return cosmos.ErrUnknownRequest("spent output refs are only valid for outbound observed transactions")
 		}
+		if strings.TrimSpace(tx.XmrTxKey) != "" {
+			return cosmos.ErrUnknownRequest("xmr tx key is only valid for outbound observed transactions")
+		}
 		obAddr, err := tx.ObservedPubKey.GetAddress(tx.Tx.Coins[0].Asset.GetChain())
 		if err != nil {
 			return cosmos.ErrUnknownRequest(err.Error())
 		}
-		if !tx.Tx.ToAddress.Equals(obAddr) {
+		if !common.AddressEquals(tx.Tx.Chain, tx.Tx.ToAddress, obAddr) {
 			return cosmos.ErrUnknownRequest("request is not an inbound observed transaction")
 		}
 		if len(tx.Signers) > 0 {

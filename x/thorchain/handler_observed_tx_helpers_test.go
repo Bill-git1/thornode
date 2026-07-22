@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"strings"
+
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -766,6 +768,127 @@ func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundSingleMat
 	c.Assert(result, Equals, item.OriginalMemo)
 }
 
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundMatchesCurrentOutHash(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	mgr.Keeper().SetMimir(ctx, constants.SigningTransactionPeriod.String(), 300)
+
+	vaultPubKey := GetRandomPubKey()
+	observedTxID := GetRandomTxHash()
+	inHash := GetRandomTxHash()
+
+	item := TxOutItem{
+		Chain:        common.ETHChain,
+		ToAddress:    GetRandomETHAddress(),
+		VaultPubKey:  vaultPubKey,
+		Coin:         common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
+		Memo:         "",
+		OriginalMemo: "OUT:" + inHash.String(),
+		InHash:       inHash,
+		GasRate:      100,
+		MaxGas:       common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))},
+		OutHash:      observedTxID,
+	}
+
+	ctx = ctx.WithBlockHeight(100)
+	txOut := NewTxOut(100)
+	txOut.TxArray = append(txOut.TxArray, item)
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			ID:        observedTxID,
+			Chain:     common.ETHChain,
+			ToAddress: item.ToAddress,
+			Coins:     common.Coins{item.Coin},
+			Memo:      "",
+		},
+		ObservedPubKey: vaultPubKey,
+	}
+
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, item.OriginalMemo)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestDuplicateCompletedOutboundDoesNotReenterHandler(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(k.SetNodeAccount(ctx, na), IsNil)
+
+	observed := GetRandomObservedTx()
+	stored := observed
+	stored.Signers = []string{na.NodeAddress.String()}
+	voter := NewObservedTxVoter(observed.Tx.ID, ObservedTxs{stored})
+	voter.Tx = stored
+	voter.Height = ctx.BlockHeight()
+	voter.FinalisedHeight = ctx.BlockHeight()
+
+	voter, isQuorum := processTxOutAttestation(
+		ctx,
+		mgr,
+		voter,
+		NodeAccounts{na},
+		observed,
+		na.NodeAddress,
+		true,
+	)
+	c.Assert(isQuorum, Equals, false)
+
+	called := false
+	handler := func(cosmos.Context, cosmos.Msg) (*cosmos.Result, error) {
+		called = true
+		return &cosmos.Result{}, nil
+	}
+	c.Assert(handleObservedTxOutQuorum(
+		ctx,
+		mgr,
+		na.NodeAddress,
+		NodeAccounts{na},
+		handler,
+		observed,
+		voter,
+		[]cosmos.AccAddress{na.NodeAddress},
+		isQuorum,
+	), IsNil)
+	c.Assert(called, Equals, false)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestXMRMigrateMatchUsesCaseSensitiveAddresses(c *C) {
+	sourcePubKey := GetRandomEd25519PubKey()
+	sourceAddress, err := sourcePubKey.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	targetPubKey := GetRandomEd25519PubKey()
+	targetAddress, err := targetPubKey.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	item := TxOutItem{
+		Chain:            common.XMRChain,
+		InHash:           common.BlankTxID,
+		ToAddress:        targetAddress,
+		VaultPubKeyFrost: sourcePubKey,
+		Coin:             common.NewCoin(common.XMRAsset, cosmos.NewUint(1_000_000)),
+		MaxGas:           common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(10_000))},
+	}
+	tx := common.Tx{
+		Chain:       common.XMRChain,
+		FromAddress: sourceAddress,
+		ToAddress:   targetAddress,
+		Coins:       common.NewCoins(item.Coin),
+	}
+	c.Assert(xmrMigrateInboundMatchesTxOut(tx, item), Equals, true)
+
+	wrongSourceCase := tx
+	wrongSourceCase.FromAddress = common.Address(strings.ToUpper(sourceAddress.String()))
+	c.Assert(sourceAddress.Equals(wrongSourceCase.FromAddress), Equals, true)
+	c.Assert(xmrMigrateInboundMatchesTxOut(wrongSourceCase, item), Equals, false)
+
+	wrongTargetCase := tx
+	wrongTargetCase.ToAddress = common.Address(strings.ToUpper(targetAddress.String()))
+	c.Assert(targetAddress.Equals(wrongTargetCase.ToAddress), Equals, true)
+	c.Assert(xmrMigrateInboundMatchesTxOut(wrongTargetCase, item), Equals, false)
+}
+
 func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundUsesExtendedXMRWindow(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
@@ -803,6 +926,47 @@ func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundUsesExten
 			Memo:      "",
 		},
 		ObservedPubKey: vaultPubKeyFrost,
+	}
+
+	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)
+	c.Assert(result, Equals, item.OriginalMemo)
+}
+
+func (s *HandlerObservedTxHelpersSuite) TestFindOriginalMemoForOutboundUsesExtendedEVMTokenWindow(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	mgr.Keeper().SetMimir(ctx, constants.SigningTransactionPeriod.String(), 10)
+
+	vaultPubKey := GetRandomPubKey()
+	inHash, _ := common.NewTxID("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+	tokenAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
+	c.Assert(err, IsNil)
+
+	item := TxOutItem{
+		Chain:        common.ETHChain,
+		ToAddress:    GetRandomETHAddress(),
+		VaultPubKey:  vaultPubKey,
+		Coin:         common.NewCoin(tokenAsset, cosmos.NewUint(1000000)),
+		Memo:         "OUT:" + inHash.String(),
+		OriginalMemo: "SWAP:" + tokenAsset.String() + ":0x1234567890123456789012345678901234567890",
+		InHash:       inHash,
+		GasRate:      100,
+		MaxGas:       common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))},
+	}
+
+	ctx = ctx.WithBlockHeight(100)
+	txOut := NewTxOut(75)
+	txOut.TxArray = append(txOut.TxArray, item)
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	observedTx := common.ObservedTx{
+		Tx: common.Tx{
+			Chain:     common.ETHChain,
+			ToAddress: item.ToAddress,
+			Coins:     common.Coins{item.Coin},
+			Memo:      "",
+		},
+		ObservedPubKey: vaultPubKey,
 	}
 
 	result := findOriginalMemoForOutbound(ctx, mgr, observedTx)

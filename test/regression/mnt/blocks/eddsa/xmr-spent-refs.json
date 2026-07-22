@@ -702,7 +702,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "03233D6ACA9411DD64B4EE7B9357BB1E92ACF5ECEF9F87EFD5D4DF838476A353",
+      "data_hash": "D0611B033C66B44DEA2A9BA3112266844ED3525180973E73AFF46176AE9DFFEF",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -801,7 +801,7 @@
     ],
     "txs": [
       {
-        "hash": "A0121BD8CC19A90370B69B4555EC84C7281A722813ADDAEB2AE9290FD6552D04",
+        "hash": "99D06341D21C53D39A83F83E6BDFFA30DCE58406B1EE0ADDD8F28D0B02ADB04E",
         "tx": {
           "auth_info": {
             "fee": {
@@ -879,7 +879,8 @@
                       "id": "0000000000000000000000000000000000000000000000000000000000000001",
                       "memo": "OUT:C4F1DC7636E39B56271D90687A4C20AD753F466F4EB432ABD26B842876FE247F",
                       "to_address": "46QDeeLcyrEGkn7NyaJCsD3NJbDgjJk1BXiopzvU6aejKB4XKtcf1e86oAXAxDJXbPbGME2xWBgFdSUzrxhiKLiqGdtinVR"
-                    }
+                    },
+                    "xmr_tx_key": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
                   }
                 ]
               }
@@ -890,7 +891,7 @@
             "unordered": false
           },
           "signatures": [
-            "Bt1ij+4AoQMDF37r+jsfESOTDEKWdU9ptKNr1/vAPbAjgTOvBOcXk7u6Yt8gxS3ygi7r3g5j/mBFgPJDq6vf8A=="
+            "OGO9u6TAnXEx+SPSNjX9zqwDDizVg6jmYYBVoOauPYM9V1brdQmEm84SyKO7tEg4FyPcwFmGJ08uFJC3ywQHEA=="
           ]
         },
         "result": {
@@ -903,7 +904,7 @@
               "type": "tx"
             },
             {
-              "signature": "Bt1ij+4AoQMDF37r+jsfESOTDEKWdU9ptKNr1/vAPbAjgTOvBOcXk7u6Yt8gxS3ygi7r3g5j/mBFgPJDq6vf8A==",
+              "signature": "OGO9u6TAnXEx+SPSNjX9zqwDDizVg6jmYYBVoOauPYM9V1brdQmEm84SyKO7tEg4FyPcwFmGJ08uFJC3ywQHEA==",
               "type": "tx"
             },
             {

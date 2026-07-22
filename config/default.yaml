@@ -493,6 +493,7 @@ bifrost:
       <<: *default-chain
       disabled: true
       chain_id: XMR
+      min_confirmations: 10
       signer_backend: "tss" # monero signer backend
       signer_endpoint: "http://127.0.0.1:8283" # this node's xmr tss signer endpoint
       signer_authorization_bearer: "" # xmr-frost-signer bearer only; never sent to monerod

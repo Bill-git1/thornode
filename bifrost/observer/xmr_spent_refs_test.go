@@ -417,9 +417,14 @@ func TestPeerXMRSpentRefsFailedImportDoesNotBlockAuthorizedRetry(t *testing.T) {
 		t.Fatal("timed out waiting for first spent-ref import attempt")
 	}
 
+	// Wait for the failed outcome to release both the conflict reservation and
+	// the bounded import slot. spentRefsApplied starts false, so polling only
+	// that latch can race the async callback and submit the retry too early.
 	require.Eventually(t, func() bool {
-		return !observerTestSpentRefsApplied(t, ag, obsTx)
+		state, ok := observerTestConflictState(ag, obsTx)
+		return ok && state == xmrSpentRefsImportFailed && len(ag.applySpentRefsSem) == 0
 	}, time.Second, 10*time.Millisecond)
+	require.False(t, observerTestSpentRefsApplied(t, ag, obsTx))
 
 	ag.handleObservedTxAttestation(context.Background(), observerTestAttestTx(obsTx, third))
 	select {

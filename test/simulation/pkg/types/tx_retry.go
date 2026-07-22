@@ -12,6 +12,8 @@ var (
 	tronSimTxBroadcastRetryDelay    = 2 * time.Second
 	solanaSimTxMaxBroadcastAttempts = 4
 	solanaSimTxBroadcastRetryDelay  = 2 * time.Second
+	zecSimTxMaxBroadcastAttempts    = 4
+	zecSimTxBroadcastRetryDelay     = 2 * time.Second
 )
 
 // SignAndBroadcastTx signs a fresh transaction payload for each attempt so
@@ -62,6 +64,8 @@ func simTxRetryConfig(chain common.Chain) (int, time.Duration) {
 		return tronSimTxMaxBroadcastAttempts, tronSimTxBroadcastRetryDelay
 	case chain.Equals(common.SOLChain):
 		return solanaSimTxMaxBroadcastAttempts, solanaSimTxBroadcastRetryDelay
+	case chain.Equals(common.ZECChain):
+		return zecSimTxMaxBroadcastAttempts, zecSimTxBroadcastRetryDelay
 	default:
 		return 1, 0
 	}
@@ -82,6 +86,8 @@ func shouldRetrySimTxBroadcast(chain common.Chain, err error) bool {
 		return shouldRetryTronSimTxBroadcast(err)
 	case chain.Equals(common.SOLChain):
 		return shouldRetrySolanaSimTxBroadcast(err)
+	case chain.Equals(common.ZECChain):
+		return shouldRetryZecSimTxBroadcast(err)
 	default:
 		return false
 	}
@@ -95,11 +101,13 @@ func isSubmittedButUnconfirmedSimTxBroadcast(chain common.Chain, err error) bool
 	message := strings.ToLower(err.Error())
 	switch {
 	case chain.Equals(common.TRONChain):
-		// TRON simulation broadcasts are only useful once they are mined and
-		// observable by Bifrost. The TRON client waits for expiration before
-		// returning "not confirmed", so retry with a fresh tx instead of
-		// letting the actor wait on an unobservable txid.
-		return false
+		// TRON "not confirmed" means the fullnode could query the tx but it
+		// did not mine it before the local wait expired. Keep that txid to
+		// avoid replacing a possibly-valid inbound with another transfer.
+		// "Not observed" is different: the fullnode never returned the tx, so
+		// reporting it as broadcasted leaves the swap actor waiting on a txid
+		// Bifrost cannot observe.
+		return strings.Contains(message, "not confirmed on tron node")
 	case chain.Equals(common.SOLChain):
 		return strings.Contains(message, "not confirmed on solana node")
 	default:
@@ -138,10 +146,21 @@ func shouldRetrySolanaSimTxBroadcast(err error) bool {
 		isTransientSimTxRPCError(message)
 }
 
+func shouldRetryZecSimTxBroadcast(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "already queued for download") ||
+		isTransientSimTxRPCError(message)
+}
+
 func isTransientSimTxRPCError(message string) bool {
 	return strings.Contains(message, "connect: connection refused") ||
 		strings.Contains(message, "context deadline exceeded") ||
 		strings.Contains(message, "connection reset by peer") ||
 		strings.Contains(message, "i/o timeout") ||
+		strings.Contains(message, "channel closed") ||
 		strings.Contains(message, "eof")
 }

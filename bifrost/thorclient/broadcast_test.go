@@ -77,3 +77,14 @@ func (s *BroadcastSuite) TestBroadcast(c *C) {
 	c.Check(s.bridge.accountNumber, Equals, uint64(3))
 	c.Check(s.bridge.seqNumber, Equals, uint64(6))
 }
+
+func (s *BroadcastSuite) TestBroadcastStrictRejectsCodeSixWhileGenericRetainsLegacyBehavior(c *C) {
+	s.fixture = "../../test/fixtures/endpoints/txs/unknown_request.json"
+	msg := types.NewMsgNetworkFee(1, common.ETHChain, 1, 37500, types.GetRandomBech32Addr())
+
+	_, err := s.bridge.Broadcast(msg)
+	c.Assert(err, IsNil)
+
+	_, err = s.bridge.BroadcastStrict(msg)
+	c.Assert(err, ErrorMatches, ".*code:6.*")
+}

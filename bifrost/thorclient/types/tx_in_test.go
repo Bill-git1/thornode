@@ -1,6 +1,8 @@
 package types
 
 import (
+	"strings"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	. "gopkg.in/check.v1"
@@ -69,6 +71,12 @@ func (s *TxInTestSuite) TestTxInItemEquals(c *C) {
 	// Equal items
 	c.Check(item1.Equals(item2), Equals, true)
 
+	item1.TxKey = strings.Repeat("A", 64)
+	item2.TxKey = strings.Repeat("a", 64)
+	c.Check(item1.Equals(item2), Equals, true)
+	item1.TxKey = ""
+	item2.TxKey = ""
+
 	// Different BlockHeight
 	item2.BlockHeight = 200
 	c.Check(item1.Equals(item2), Equals, false)
@@ -113,6 +121,8 @@ func (s *TxInTestSuite) TestTxInItemCopy(c *C) {
 	limit := cosmos.NewUint(500)
 	coins := common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(100))}
 	gas := common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10))}
+	stored := func() {}
+	rejected := func(error) {}
 	item := &TxInItem{
 		BlockHeight:           100,
 		Tx:                    "txhash",
@@ -126,6 +136,8 @@ func (s *TxInTestSuite) TestTxInItemCopy(c *C) {
 		AggregatorTarget:      "target",
 		AggregatorTargetLimit: &limit,
 		CommittedUnFinalised:  true,
+		OnObservedTxStored:    stored,
+		OnObservedTxRejected:  rejected,
 	}
 
 	copied := item.Copy()
@@ -140,6 +152,8 @@ func (s *TxInTestSuite) TestTxInItemCopy(c *C) {
 	c.Check(copied.AggregatorTarget, Equals, item.AggregatorTarget)
 	c.Check(copied.AggregatorTargetLimit.Equal(*item.AggregatorTargetLimit), Equals, true)
 	c.Check(copied.CommittedUnFinalised, Equals, true)
+	c.Check(copied.OnObservedTxStored, NotNil)
+	c.Check(copied.OnObservedTxRejected, NotNil)
 
 	// Verify it's a deep copy (modifying original coins doesn't affect copy)
 	c.Check(copied.Equals(item), Equals, true)
@@ -357,6 +371,12 @@ func (s *TxInTestSuite) TestTxInItemEqualsObservedTx(c *C) {
 
 	// Equal items
 	c.Check(item.EqualsObservedTx(observedTx), Equals, true)
+
+	item.TxKey = strings.Repeat("A", 64)
+	observedTx.XmrTxKey = strings.Repeat("a", 64)
+	c.Check(item.EqualsObservedTx(observedTx), Equals, true)
+	item.TxKey = ""
+	observedTx.XmrTxKey = ""
 
 	// Invalid tx ID
 	item2 := item.Copy()

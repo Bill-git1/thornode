@@ -61,6 +61,99 @@ func (k *TestObservedTxInValidateKeeper) SetNodeAccount(_ cosmos.Context, na Nod
 
 var _ = Suite(&HandlerObservedTxInSuite{})
 
+// TestCommittedXMRErrataIsAppliedWhenInboundLaterReachesQuorum covers the
+// ordering where errata consensus arrives while the original inbound has only
+// partial observations. The later inbound quorum must become Reverted before
+// any normal inbound accounting can execute.
+func (s *HandlerObservedTxInSuite) TestCommittedXMRErrataIsAppliedWhenInboundLaterReachesQuorum(c *C) {
+	w := getHandlerTestWrapper(c, 20, true, false)
+	tx := NewObservedTx(GetRandomTx(), 10, GetRandomPubKey(), 10)
+	tx.Tx.Chain = common.XMRChain
+	tx.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(common.One)))
+
+	// Partial inbound state exists when the errata reaches consensus, so the
+	// errata handler cannot mark the selected transaction yet.
+	voter := NewObservedTxVoter(tx.Tx.ID, ObservedTxs{tx})
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+	errataVoter := NewErrataTxVoter(tx.Tx.ID, common.XMRChain)
+	err := processErrataTxAttestation(
+		w.ctx,
+		w.mgr,
+		&errataVoter,
+		w.activeNodeAccount.NodeAddress,
+		NodeAccounts{w.activeNodeAccount},
+		&common.ErrataTx{Id: tx.Tx.ID, Chain: common.XMRChain},
+		true,
+	)
+	c.Assert(err, IsNil)
+	c.Check(errataVoter.BlockHeight, Equals, w.ctx.BlockHeight())
+	pending, err := w.keeper.GetObservedTxInVoter(w.ctx, tx.Tx.ID)
+	c.Assert(err, IsNil)
+	c.Check(pending.Tx.IsEmpty(), Equals, true)
+	c.Check(pending.Reverted, Equals, false)
+	w.keeper.SetErrataTxVoter(w.ctx, errataVoter)
+
+	// Model processTxInAttestation selecting and persisting the transaction at
+	// the later quorum before the shared quorum handler runs.
+	voter.Tx = tx
+	voter.Height = w.ctx.BlockHeight()
+	voter.FinalisedHeight = w.ctx.BlockHeight()
+	w.keeper.SetObservedTxInVoter(w.ctx, voter)
+
+	err = handleObservedTxInQuorum(
+		w.ctx,
+		w.mgr,
+		w.activeNodeAccount.NodeAddress,
+		NodeAccounts{w.activeNodeAccount},
+		nil,
+		tx,
+		voter,
+		nil,
+		true,
+	)
+	c.Assert(err, IsNil)
+
+	stored, err := w.keeper.GetObservedTxInVoter(w.ctx, tx.Tx.ID)
+	c.Assert(err, IsNil)
+	c.Check(stored.Reverted, Equals, true)
+	c.Check(stored.UpdatedVault, Equals, false)
+	c.Assert(stored.Actions, HasLen, 0)
+
+	// Late/final observations are idempotent once the monotonic state is set.
+	err = applyCommittedXMRErrataToInboundConsensus(w.ctx, w.keeper, &stored)
+	c.Assert(err, IsNil)
+	c.Check(stored.Reverted, Equals, true)
+}
+
+func (s *HandlerObservedTxInSuite) TestUncommittedOrForeignErrataDoesNotRevertXMRInbound(c *C) {
+	for _, tc := range []struct {
+		name   string
+		chain  common.Chain
+		height int64
+	}{
+		{name: "uncommitted", chain: common.XMRChain, height: 0},
+		{name: "different chain", chain: common.BTCChain, height: 19},
+	} {
+		c.Log(tc.name)
+		w := getHandlerTestWrapper(c, 20, true, false)
+		tx := NewObservedTx(GetRandomTx(), 10, GetRandomPubKey(), 10)
+		tx.Tx.Chain = common.XMRChain
+		tx.Tx.Coins = common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(common.One)))
+		voter := NewObservedTxVoter(tx.Tx.ID, ObservedTxs{tx})
+		voter.Tx = tx
+		voter.Height = w.ctx.BlockHeight()
+		voter.FinalisedHeight = w.ctx.BlockHeight()
+		w.keeper.SetObservedTxInVoter(w.ctx, voter)
+		errataVoter := NewErrataTxVoter(tx.Tx.ID, tc.chain)
+		errataVoter.BlockHeight = tc.height
+		w.keeper.SetErrataTxVoter(w.ctx, errataVoter)
+
+		err := applyCommittedXMRErrataToInboundConsensus(w.ctx, w.keeper, &voter)
+		c.Assert(err, IsNil)
+		c.Check(voter.Reverted, Equals, false)
+	}
+}
+
 func (s *HandlerObservedTxInSuite) TestValidate(c *C) {
 	var err error
 	ctx, _ := setupKeeperForTest(c)
@@ -672,6 +765,10 @@ func (k *TestObservedTxInHandleKeeper) ListActiveValidators(_ cosmos.Context) (N
 	return k.nas, nil
 }
 
+func (k *TestObservedTxInHandleKeeper) GetErrataTxVoter(_ cosmos.Context, txID common.TxID, chain common.Chain) (ErrataTxVoter, error) {
+	return NewErrataTxVoter(txID, chain), nil
+}
+
 func (k *TestObservedTxInHandleKeeper) GetObservedTxInVoter(_ cosmos.Context, _ common.TxID) (ObservedTxVoter, error) {
 	return k.voter, nil
 }
@@ -1105,6 +1202,121 @@ func (s *HandlerObservedTxInSuite) TestMigrateMemo(c *C) {
 	msg := NewMsgObservedTxIn(txs, keeper.nas[0].NodeAddress)
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
+}
+
+type xmrMigrateInboundTestCase struct {
+	unknownSource   bool
+	scheduledAmount cosmos.Uint
+	maxGas          cosmos.Uint
+	receivedAmount  cosmos.Uint
+	observedGas     cosmos.Uint
+}
+
+func defaultXMRMigrateInboundTestCase() xmrMigrateInboundTestCase {
+	return xmrMigrateInboundTestCase{
+		scheduledAmount: cosmos.NewUint(1024),
+		maxGas:          cosmos.NewUint(100),
+		receivedAmount:  cosmos.NewUint(1024),
+		observedGas:     cosmos.NewUint(1),
+	}
+}
+
+func (s *HandlerObservedTxInSuite) TestXMRMigrateInboundRequiresScheduledSource(c *C) {
+	unknownCase := defaultXMRMigrateInboundTestCase()
+	unknownCase.unknownSource = true
+	unknownVault, unknownVoter := s.runXMRMigrateInbound(c, unknownCase)
+	c.Check(unknownVault.Coins.GetCoin(common.XMRAsset).IsEmpty(), Equals, true)
+	c.Check(unknownVault.InboundTxCount, Equals, int64(0))
+	c.Check(unknownVoter.UpdatedVault, Equals, false)
+
+	validCase := defaultXMRMigrateInboundTestCase()
+	validVault, validVoter := s.runXMRMigrateInbound(c, validCase)
+	c.Check(validVault.Coins.GetCoin(common.XMRAsset).Amount.Equal(cosmos.NewUint(1024)), Equals, true)
+	c.Check(validVault.InboundTxCount, Equals, int64(1))
+	c.Check(validVoter.UpdatedVault, Equals, true)
+
+	leftoverMaxGasCase := xmrMigrateInboundTestCase{
+		scheduledAmount: cosmos.NewUint(12076340400),
+		maxGas:          cosmos.NewUint(1800000),
+		receivedAmount:  cosmos.NewUint(12077865900),
+		observedGas:     cosmos.NewUint(1200000),
+	}
+	leftoverMaxGasVault, leftoverMaxGasVoter := s.runXMRMigrateInbound(c, leftoverMaxGasCase)
+	c.Check(leftoverMaxGasVault.Coins.GetCoin(common.XMRAsset).Amount.Equal(leftoverMaxGasCase.receivedAmount), Equals, true)
+	c.Check(leftoverMaxGasVault.InboundTxCount, Equals, int64(1))
+	c.Check(leftoverMaxGasVoter.UpdatedVault, Equals, true)
+
+	overMaxCase := leftoverMaxGasCase
+	overMaxCase.receivedAmount = overMaxCase.scheduledAmount.Add(overMaxCase.maxGas).Add(cosmos.NewUint(1))
+	overMaxVault, overMaxVoter := s.runXMRMigrateInbound(c, overMaxCase)
+	c.Check(overMaxVault.Coins.GetCoin(common.XMRAsset).IsEmpty(), Equals, true)
+	c.Check(overMaxVault.InboundTxCount, Equals, int64(0))
+	c.Check(overMaxVoter.UpdatedVault, Equals, false)
+}
+
+func (s *HandlerObservedTxInSuite) runXMRMigrateInbound(c *C, testCase xmrMigrateInboundTestCase) (Vault, ObservedTxVoter) {
+	ctx, _ := setupKeeperForTest(c)
+
+	sourcePubKey := GetRandomEd25519PubKey()
+	sourceAddr, err := sourcePubKey.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	targetPubKey := GetRandomEd25519PubKey()
+	targetAddr, err := targetPubKey.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	targetVault := NewVaultV2(
+		1,
+		ActiveVault,
+		AsgardVault,
+		targetPubKey,
+		common.Chains{common.XMRChain}.Strings(),
+		nil,
+		GetRandomEd25519PubKey(),
+	)
+	targetVault.PubKeyFrost = targetPubKey
+
+	txout := NewTxOut(12)
+	txout.TxArray = append(txout.TxArray, TxOutItem{
+		Chain:            common.XMRChain,
+		InHash:           common.BlankTxID,
+		ToAddress:        targetAddr,
+		VaultPubKeyFrost: sourcePubKey,
+		Coin:             common.NewCoin(common.XMRAsset, testCase.scheduledAmount),
+		MaxGas:           common.Gas{common.NewCoin(common.XMRAsset, testCase.maxGas)},
+		Memo:             NewMigrateMemo(12).String(),
+	})
+
+	txID := GetRandomTxHash()
+	fromAddr := sourceAddr
+	if testCase.unknownSource {
+		fromAddr, err = common.NewAddress(common.XMRUnknownSenderAddress(txID.String(), targetAddr.String()))
+		c.Assert(err, IsNil)
+	}
+	tx := NewObservedTx(common.Tx{
+		ID:          txID,
+		Chain:       common.XMRChain,
+		Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, testCase.receivedAmount)),
+		Memo:        NewMigrateMemo(12).String(),
+		FromAddress: fromAddr,
+		ToAddress:   targetAddr,
+		Gas:         common.Gas{common.NewCoin(common.XMRAsset, testCase.observedGas)},
+	}, 13, targetPubKey, 13)
+
+	keeper := &TestObservedTxInHandleKeeper{
+		nas:         NodeAccounts{GetRandomValidatorNode(NodeActive)},
+		voter:       NewObservedTxVoter(tx.Tx.ID, make(ObservedTxs, 0)),
+		vault:       targetVault,
+		vaultExists: true,
+		txOut:       txout,
+	}
+	handler := NewObservedTxInHandler(NewDummyMgrWithKeeper(keeper))
+	msg := NewMsgObservedTxIn(ObservedTxs{tx}, keeper.nas[0].NodeAddress)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+
+	voter, err := keeper.GetObservedTxInVoter(ctx, tx.Tx.ID)
+	c.Assert(err, IsNil)
+	return keeper.vault, voter
 }
 
 type ObservedTxInHandlerTestHelper struct {

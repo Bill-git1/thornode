@@ -59,6 +59,48 @@ func TestTransferToTxInItemUsesFeeFallback(t *testing.T) {
 	}
 }
 
+func TestTransferToTxInItemNormalizesTxKey(t *testing.T) {
+	pk := common.PubKey("thorpub1testvault")
+	txKey := strings.Repeat("A", 64)
+
+	s := &Scanner{
+		logger:             log.Logger,
+		currentBlockHeight: atomic.NewInt64(0),
+		lastFee:            atomic.NewUint64(0),
+	}
+	item, ok := s.transferToTxInItem(sidecar.Transfer{
+		TxID:   strings.Repeat("A", 64),
+		Amount: 10000,
+		Fee:    0,
+		TxKey:  " \t" + txKey + "\n",
+	}, unknownSenderAddress("sender", "8abc"), unknownSenderAddress("receiver", "8def"), pk, "", 100)
+	if !ok {
+		t.Fatal("expected transfer to convert to tx in item")
+	}
+	if item.TxKey != strings.ToLower(txKey) {
+		t.Fatalf("expected normalized tx key %q, got %q", strings.ToLower(txKey), item.TxKey)
+	}
+}
+
+func TestTransferToTxInItemRejectsInvalidTxKey(t *testing.T) {
+	pk := common.PubKey("thorpub1testvault")
+
+	s := &Scanner{
+		logger:             log.Logger,
+		currentBlockHeight: atomic.NewInt64(0),
+		lastFee:            atomic.NewUint64(0),
+	}
+	item, ok := s.transferToTxInItem(sidecar.Transfer{
+		TxID:   strings.Repeat("A", 64),
+		Amount: 10000,
+		Fee:    0,
+		TxKey:  "not-a-64-byte-hex-key",
+	}, unknownSenderAddress("sender", "8abc"), unknownSenderAddress("receiver", "8def"), pk, "", 100)
+	if ok || item != nil {
+		t.Fatalf("expected invalid tx key transfer to be rejected, got item=%v ok=%v", item, ok)
+	}
+}
+
 // TestTransferToTxInItemEchoesSpentOutputRefs verifies a non-signing observer
 // mirrors the sidecar-verified refs of an outgoing transfer into its
 // observation, in sidecar order with SpendTxHash set to the observed tx, so

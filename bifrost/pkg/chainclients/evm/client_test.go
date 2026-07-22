@@ -349,6 +349,12 @@ func (s *EVMSuite) TestNewClient(c *C) {
 	e, err = NewEVMClient(nil, config.BifrostChainConfiguration{}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(e, IsNil)
 	c.Assert(err, NotNil)
+
+	divergent := config.BifrostChainConfiguration{ChainID: common.AVAXChain}
+	divergent.EVM.AggregatorMaxGasMultiplier = constants.EVMAggregatorMaxGasMultiplier + 1
+	e, err = NewEVMClient(s.thorKeys, divergent, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(e, IsNil)
+	c.Assert(err, ErrorMatches, ".*diverges from Thornode protocol value.*")
 }
 
 func (s *EVMSuite) TestConvertSigningAmount(c *C) {

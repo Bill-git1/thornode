@@ -132,16 +132,6 @@ func filterVaultsByKeygenType(vaults Vaults, keygenBlock KeygenBlock, keygenType
 	return filtered
 }
 
-func hasActiveNonXMRAsgardFamily(vaults Vaults) bool {
-	for _, vault := range vaults {
-		if vault.HasChain(common.XMRChain) {
-			continue
-		}
-		return true
-	}
-	return false
-}
-
 func selectActiveVaultForChain(ctx cosmos.Context, k keeper.Keeper, active Vaults, chain common.Chain, signingTransactionPeriod int64) (Vault, error) {
 	filtered := preferredActiveVaultsForChain(active, chain)
 	if chain == common.THORChain {

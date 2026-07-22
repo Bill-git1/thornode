@@ -766,6 +766,9 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 			}, nil
 		}
 		if waitResp.Status == tcommon.Success {
+			if err := reserveFrostSigningClaim(req); err != nil {
+				return FrostKeySignResponse{}, err
+			}
 			t.persistPeerAddressBook()
 		}
 		return waitResp, nil
@@ -827,11 +830,19 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 			}, nil
 		}
 		if waitResp.Status == tcommon.Success {
+			if err := reserveFrostSigningClaim(req); err != nil {
+				return FrostKeySignResponse{}, err
+			}
 			t.persistPeerAddressBook()
 		}
 		return waitResp, nil
 	}
 
+	// Persist local ownership after party selection and before any sidecar call
+	// can reserve inputs or release a signature share.
+	if err := reserveFrostSigningClaim(req); err != nil {
+		return FrostKeySignResponse{}, err
+	}
 	resp := coordinator.Execute(req, activeParticipants, onlinePeers)
 	if resp.Status == tcommon.Success {
 		t.persistPeerAddressBook()
@@ -851,29 +862,93 @@ func (t *TssServer) FrostKeySign(req FrostKeySignRequest, sidecar FrostSidecarCl
 	if err := coordinator.BroadcastResult(resp, allPeerIDs); err != nil {
 		t.logger.Warn().Err(err).Msg("fail to broadcast local frost failure result")
 	}
+	if resp.releaseSigningClaim {
+		if err := releaseFrostSigningClaim(req); err != nil {
+			return FrostKeySignResponse{}, err
+		}
+	}
 	if waitErr == nil && shouldAdoptFrostFailureResult(resp, waitResp) {
 		return waitResp, nil
 	}
 	return resp, nil
 }
 
+// shouldAdoptFrostFailureResult reports whether a quorum-reported failure may
+// replace the local failure result. A quorum result only adds value when it
+// carries actionable blame the local node could not attribute itself.
+//
+// It must never erase a stronger local safety boundary: blame proven for an
+// earlier phase must not be grafted onto a local share/result phase failure,
+// because that would both manufacture a terminal accusation no participant
+// actually observed and drop the vault-stick retry semantics. Nodes which
+// genuinely observed the earlier peer failure report it at its real round.
 func shouldAdoptFrostFailureResult(local, candidate FrostKeySignResponse) bool {
 	if candidate.Status != tcommon.Fail || len(candidate.Blame.BlameNodes) == 0 || len(local.Blame.BlameNodes) > 0 {
 		return false
 	}
 	// Once the local signature share has escaped, never replace that terminal
 	// state with a failure attributed to an earlier or non-terminal phase. A
-	// share-phase quorum failure is safe to adopt because it preserves the same
-	// vault-stick/checkpoint semantics while adding actionable peer blame.
-	return strings.TrimSpace(local.Blame.Round) != frostRoundShare ||
-		strings.TrimSpace(candidate.Blame.Round) == frostRoundShare
+	// terminal-phase quorum failure is safe to adopt because it preserves the
+	// same vault-stick/checkpoint semantics while adding actionable peer blame.
+	return !isFrostExposureRound(local.Blame.Round) || isFrostExposureRound(candidate.Blame.Round)
+}
+
+// isFrostExposureRound reports whether a FROST blame round sits past the point
+// where the local signature share has been broadcast. exchangeShares emits the
+// local share before it can report a frost_share failure, and frost_result is
+// strictly later in the ceremony, so both rounds must retain the terminal
+// vault-stick semantics. frost_preprocess is not an exposure round — no
+// signature share has escaped yet.
+func isFrostExposureRound(round string) bool {
+	switch strings.TrimSpace(round) {
+	case frostRoundShare, frostRoundResult:
+		return true
+	default:
+		return false
+	}
+}
+
+func reserveFrostSigningClaim(req FrostKeySignRequest) error {
+	if req.ReserveSigningClaim == nil {
+		return nil
+	}
+	if err := req.ReserveSigningClaim(); err != nil {
+		return fmt.Errorf("reserve FROST signing claim before local participation: %w", err)
+	}
+	return nil
+}
+
+func releaseFrostSigningClaim(req FrostKeySignRequest) error {
+	if req.ReleaseSigningClaim == nil {
+		return nil
+	}
+	if err := req.ReleaseSigningClaim(); err != nil {
+		return fmt.Errorf("release unused FROST signing claim: %w", err)
+	}
+	return nil
 }
 
 func (c *FrostSignCoordinator) Execute(
 	req FrostKeySignRequest,
 	activeParticipants []string,
 	activePeerIDs []peer.ID,
-) FrostKeySignResponse {
+) (result FrostKeySignResponse) {
+	shareMayHaveEscaped := false
+	localShareWasRequired := false
+	postExposureRound := ""
+	defer func() {
+		// FrostSignPartial may release a usable signature share even when its
+		// local response is lost. Every failure from that call onward must carry
+		// a terminal FROST phase so Bifrost keeps this outbound sticky instead of
+		// authorizing a fresh ceremony. Once all shares have been exchanged, use
+		// frost_result for combine and result-validation failures.
+		if result.Status != tcommon.Success && postExposureRound != "" {
+			result.Blame.Round = postExposureRound
+		}
+		if result.Status != tcommon.Success && localShareWasRequired && !shareMayHaveEscaped {
+			result.releaseSigningClaim = true
+		}
+	}()
 	if c.sidecar == nil {
 		return FrostKeySignResponse{
 			Status: tcommon.Fail,
@@ -911,6 +986,13 @@ func (c *FrostSignCoordinator) Execute(
 			Blame:  blame.NewBlame(err.Error(), nil),
 		}
 	}
+	threshold, err := conversion.GetThreshold(len(req.SignerPubKeys))
+	if err != nil {
+		return FrostKeySignResponse{Status: tcommon.Fail, Blame: blame.NewBlame(err.Error(), nil)}
+	}
+	// With spare party members, another threshold may have completed without
+	// this node, so a local pre-share failure cannot safely release ownership.
+	localShareWasRequired = len(activeSet.originalByNormalized) == threshold+1
 	localNorm := normalizePubKey(c.localPubKey)
 	localIndex, ok := participantIndexMap[localNorm]
 	if !ok {
@@ -968,6 +1050,10 @@ func (c *FrostSignCoordinator) Execute(
 		return *failResp
 	}
 
+	// Once the partial RPC starts, a usable share may escape even if the local
+	// response is lost. Keep the claim fail closed from this point onward.
+	shareMayHaveEscaped = true
+	postExposureRound = messages.FROSTKEYSIGNSHARE
 	partialResp, err := c.sidecar.FrostSignPartial(FrostSidecarPartialReq{
 		MsgID:           c.msgID,
 		SessionID:       prepareResp.SessionID,
@@ -994,6 +1080,7 @@ func (c *FrostSignCoordinator) Execute(
 		return *failResp
 	}
 
+	postExposureRound = messages.FROSTKEYSIGNRESULT
 	combineResp, err := c.sidecar.FrostSignCombine(FrostSidecarCombineReq{
 		MsgID:     c.msgID,
 		SessionID: prepareResp.SessionID,
@@ -1077,11 +1164,11 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 	}
 	verifier, err := newFrostTranscriptVerifier(frostRoundPreprocess, activeSet, participantIndexMap, c.vaultPubKey, c.network)
 	if err != nil {
-		resp := c.failForPubKeys(fmt.Sprintf("failed to initialize preprocess transcript verifier: %v", err), frostRoundPreprocess, nil)
+		resp := c.failForPubKeys(fmt.Sprintf("failed to initialize preprocess transcript verifier: %v", err), messages.FROSTKEYSIGNPREPROCESS, nil)
 		return nil, &resp
 	}
 	if _, failure := verifier.recordPayload(local.SenderPubKey, local.ParticipantIndex, localHash); failure != nil {
-		resp := c.failForPubKeys(failure.reason, frostRoundPreprocess, failure.blamePubKey)
+		resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNPREPROCESS, failure.blamePubKey)
 		return nil, &resp
 	}
 	if c.strictTranscript {
@@ -1095,7 +1182,7 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 		return nil, &resp
 	}
 	if _, failure := verifier.recordVerification(c.localPubKey, local.SenderPubKey, local.ParticipantIndex, localHash); failure != nil {
-		resp := c.failForPubKeys(failure.reason, frostRoundPreprocess, failure.blamePubKey)
+		resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNPREPROCESS, failure.blamePubKey)
 		return nil, &resp
 	}
 
@@ -1159,7 +1246,7 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 				}
 				isNewPayload, failure := verifier.recordPayload(incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash)
 				if failure != nil {
-					resp := c.failForPubKeys(failure.reason, frostRoundPreprocess, failure.blamePubKey)
+					resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNPREPROCESS, failure.blamePubKey)
 					return nil, &resp
 				}
 				if !isNewPayload {
@@ -1171,7 +1258,7 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 					return nil, &resp
 				}
 				if _, failure := verifier.recordVerification(c.localPubKey, incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash); failure != nil {
-					resp := c.failForPubKeys(failure.reason, frostRoundPreprocess, failure.blamePubKey)
+					resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNPREPROCESS, failure.blamePubKey)
 					return nil, &resp
 				}
 			case messages.TSSFrostVerifyMsg:
@@ -1179,7 +1266,7 @@ func (c *FrostSignCoordinator) exchangePreprocess(
 				if err := json.Unmarshal(wrapped.Payload, &incoming); err != nil {
 					continue
 				}
-				if strings.TrimSpace(incoming.Round) != frostRoundPreprocess {
+				if strings.TrimSpace(incoming.Round) != messages.FROSTKEYSIGNPREPROCESS {
 					continue
 				}
 				attesterNorm := normalizePubKey(incoming.SenderPubKey)
@@ -1268,11 +1355,11 @@ func (c *FrostSignCoordinator) exchangeShares(
 	}
 	verifier, err := newFrostTranscriptVerifier(frostRoundShare, activeSet, participantIndexMap, c.vaultPubKey, c.network)
 	if err != nil {
-		resp := c.failForPubKeys(fmt.Sprintf("failed to initialize share transcript verifier: %v", err), frostRoundShare, nil)
+		resp := c.failForPubKeys(fmt.Sprintf("failed to initialize share transcript verifier: %v", err), messages.FROSTKEYSIGNSHARE, nil)
 		return nil, &resp
 	}
 	if _, failure := verifier.recordPayload(local.SenderPubKey, local.ParticipantIndex, localHash); failure != nil {
-		resp := c.failForPubKeys(failure.reason, frostRoundShare, failure.blamePubKey)
+		resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNSHARE, failure.blamePubKey)
 		return nil, &resp
 	}
 	if c.strictTranscript {
@@ -1286,7 +1373,7 @@ func (c *FrostSignCoordinator) exchangeShares(
 		return nil, &resp
 	}
 	if _, failure := verifier.recordVerification(c.localPubKey, local.SenderPubKey, local.ParticipantIndex, localHash); failure != nil {
-		resp := c.failForPubKeys(failure.reason, frostRoundShare, failure.blamePubKey)
+		resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNSHARE, failure.blamePubKey)
 		return nil, &resp
 	}
 
@@ -1348,7 +1435,7 @@ func (c *FrostSignCoordinator) exchangeShares(
 				}
 				isNewPayload, failure := verifier.recordPayload(incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash)
 				if failure != nil {
-					resp := c.failForPubKeys(failure.reason, frostRoundShare, failure.blamePubKey)
+					resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNSHARE, failure.blamePubKey)
 					return nil, &resp
 				}
 				if !isNewPayload {
@@ -1360,7 +1447,7 @@ func (c *FrostSignCoordinator) exchangeShares(
 					return nil, &resp
 				}
 				if _, failure := verifier.recordVerification(c.localPubKey, incoming.SenderPubKey, incoming.ParticipantIndex, payloadHash); failure != nil {
-					resp := c.failForPubKeys(failure.reason, frostRoundShare, failure.blamePubKey)
+					resp := c.failForPubKeys(failure.reason, messages.FROSTKEYSIGNSHARE, failure.blamePubKey)
 					return nil, &resp
 				}
 			case messages.TSSFrostVerifyMsg:
@@ -1368,7 +1455,7 @@ func (c *FrostSignCoordinator) exchangeShares(
 				if err := json.Unmarshal(wrapped.Payload, &incoming); err != nil {
 					continue
 				}
-				if strings.TrimSpace(incoming.Round) != frostRoundShare {
+				if strings.TrimSpace(incoming.Round) != messages.FROSTKEYSIGNSHARE {
 					continue
 				}
 				attesterNorm := normalizePubKey(incoming.SenderPubKey)
@@ -1506,7 +1593,7 @@ func (c *FrostSignCoordinator) WaitForResult(activeParticipants []string, quorum
 				bucket.voters[senderNorm] = activeByNormalized[senderNorm]
 				senderVotes[senderNorm] = senderResultVote{key: reason, malformed: true}
 				if len(bucket.voters) >= quorum {
-					resp := c.failForPubKeys(reason, frostRoundResult, bucket.pubKeys())
+					resp := c.failForPubKeys(reason, messages.FROSTKEYSIGNRESULT, bucket.pubKeys())
 					return resp, nil
 				}
 				continue
@@ -1542,6 +1629,10 @@ func (c *FrostSignCoordinator) WaitForResult(activeParticipants []string, quorum
 				}
 			}
 
+			// Success and failure results both need a matching active-signer
+			// quorum. The eventuality proves plan/hash consistency, but it is not
+			// a full local Monero transaction verifier, so one active success is
+			// not enough to seed a durable retry guard on non-active nodes.
 			bucket := buckets[matchKey]
 			if bucket == nil {
 				if len(buckets) >= len(activeByNormalized) {

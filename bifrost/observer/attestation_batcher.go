@@ -1,6 +1,7 @@
 package observer
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"time"
@@ -341,6 +342,19 @@ func (b *AttestationBatcher) AddErrataTx(errata common.AttestErrataTx) {
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	for _, queued := range b.errataTxBatch {
+		if queued == nil || queued.ErrataTx == nil || errata.ErrataTx == nil ||
+			queued.Attestation == nil || errata.Attestation == nil {
+			continue
+		}
+		if queued.ErrataTx.Equals(errata.ErrataTx) &&
+			bytes.Equal(queued.Attestation.PubKey, errata.Attestation.PubKey) {
+			// Durable outbox retries may call AttestErrata every second while
+			// waiting for the committed-quorum event. Keep at most one copy of
+			// this node's identical vote in the current batch.
+			return
+		}
+	}
 
 	b.errataTxBatch = append(b.errataTxBatch, &errata)
 

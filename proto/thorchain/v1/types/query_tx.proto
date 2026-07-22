@@ -87,6 +87,7 @@ message QueryObservedTx {
     (gogoproto.nullable) = true
   ];
   repeated common.OutputRef spent_output_refs = 12;
+  string xmr_tx_key = 13;
 }
 
 // Same as ObservedTxVoter, but changes height (openapi spec)

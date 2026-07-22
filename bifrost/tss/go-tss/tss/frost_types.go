@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 	tcommon "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 )
@@ -42,6 +43,12 @@ type FrostKeySignRequest struct {
 	// atomic units. The sidecar uses it to bound the fee and, for migrations,
 	// sweep unused gas into the destination vault.
 	MaxGasAtomic uint64
+	// ReserveSigningClaim is a local durability barrier excluded from canonical
+	// request hashing. It runs after party selection and before sidecar signing.
+	ReserveSigningClaim func() error `json:"-"`
+	// ReleaseSigningClaim removes the exact reservation only when local signing
+	// failed before a signature share could have escaped.
+	ReleaseSigningClaim func() error `json:"-"`
 }
 
 // FrostKeySignResponse is the result of a FROST signing ceremony.
@@ -55,6 +62,8 @@ type FrostKeySignResponse struct {
 	SpentOutputRefs []FrostSpentOutputRef
 	Status          tcommon.Status
 	Blame           blame.Blame
+	// releaseSigningClaim is local coordinator state, never result gossip.
+	releaseSigningClaim bool
 }
 
 // FrostEventuality is the sidecar-verified commitment used to prove the same
@@ -284,7 +293,7 @@ func FrostTranscriptPreprocessHash(msgID string, payload FrostPreprocessPayload)
 		return "", fmt.Errorf("preprocess payload is empty")
 	}
 	return frostTranscriptHash(
-		frostRoundPreprocess,
+		messages.FROSTKEYSIGNPREPROCESS,
 		msgID,
 		payload.SenderPubKey,
 		payload.ParticipantIndex,
@@ -300,7 +309,7 @@ func FrostTranscriptShareHash(msgID string, payload FrostSharePayload) (string, 
 		return "", fmt.Errorf("share payload is empty")
 	}
 	return frostTranscriptHash(
-		frostRoundShare,
+		messages.FROSTKEYSIGNSHARE,
 		msgID,
 		payload.SenderPubKey,
 		payload.ParticipantIndex,

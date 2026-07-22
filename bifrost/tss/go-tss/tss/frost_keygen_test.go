@@ -203,6 +203,36 @@ func TestFrostKeygenRejectsIncompleteParticipantSet(t *testing.T) {
 	}
 }
 
+func TestFrostKeygenExecuteRejectsPartialActiveSet(t *testing.T) {
+	members := []string{testPubKeys[0], testPubKeys[1], testPubKeys[2]}
+	_, _, signerByNormalized, err := buildParticipantIndex(members)
+	if err != nil {
+		t.Fatalf("build participant index: %v", err)
+	}
+	activeSet, err := buildActiveSet([]string{testPubKeys[0], testPubKeys[1]}, signerByNormalized)
+	if err != nil {
+		t.Fatalf("build active set: %v", err)
+	}
+
+	sidecar := &mockFrostSidecarKeygen{}
+	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id", make(chan *p2p.Message, 1), time.Second)
+	coord.sidecar = sidecar
+	resp := coord.Execute(FrostKeygenRequest{
+		VaultPubKey:   "vault",
+		SignerPubKeys: members,
+	}, activeSet, nil)
+
+	if resp.Status != tcommon.Fail {
+		t.Fatalf("expected failure for partial active set, got %+v", resp)
+	}
+	if !strings.Contains(resp.Blame.FailReason, "requires all signers online") {
+		t.Fatalf("unexpected failure reason: %q", resp.Blame.FailReason)
+	}
+	if len(sidecar.round1Reqs) != 0 {
+		t.Fatalf("sidecar should not be called for partial active set")
+	}
+}
+
 func TestFrostKeygenJoinThresholdRequiresFullParticipation(t *testing.T) {
 	if got := frostKeygenJoinThreshold(4); got != 3 {
 		t.Fatalf("expected full participation threshold for 4 signers to be 3, got %d", got)
@@ -1362,6 +1392,7 @@ func TestFrostKeygenExecuteSuccessSingleSigner(t *testing.T) {
 	}
 
 	localIndex := participantIndexMap[normalizePubKey(testPubKeys[0])]
+	localIndexKey := strconv.FormatUint(uint64(localIndex), 10)
 	groupAddress := "48xmrsinglesigner"
 	groupKey := strings.Repeat("cd", 32)
 
@@ -1376,7 +1407,14 @@ func TestFrostKeygenExecuteSuccessSingleSigner(t *testing.T) {
 		chainHeight:  123,
 	}
 
-	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id-single", make(chan *p2p.Message, 4), time.Second)
+	msgChan := make(chan *p2p.Message, 4)
+	enqueueRoundMessage(t, msgChan, messages.TSSFrostDKGRound1Msg, "msg-id-single", testPubKeys[0], FrostDKGRound1Payload{
+		SenderPubKey:     testPubKeys[0],
+		ParticipantIndex: localIndex,
+		Commitments:      "stale-self-commitment",
+	})
+
+	coord := newTestFrostKeygenCoordinator(testPubKeys[0], "msg-id-single", msgChan, time.Second)
 	coord.sidecar = sidecar
 	resp := coord.Execute(FrostKeygenRequest{
 		VaultPubKey:   "thorpub-single",
@@ -1404,8 +1442,14 @@ func TestFrostKeygenExecuteSuccessSingleSigner(t *testing.T) {
 	if len(sidecar.round2Reqs) != 1 {
 		t.Fatalf("expected one round2 call, got %d", len(sidecar.round2Reqs))
 	}
-	if len(sidecar.round2Reqs[0].AllCommitments) != 1 {
+	if len(sidecar.round2Reqs[0].AllCommitments) != 1 || sidecar.round2Reqs[0].AllCommitments[localIndexKey] != "single-commitment" {
 		t.Fatalf("expected only local commitment in single-signer round2, got %+v", sidecar.round2Reqs[0].AllCommitments)
+	}
+	if len(coord.p2pCommunication.BroadcastMsgChan) != 0 {
+		t.Fatalf("expected single-signer keygen to skip p2p transcript exchange, broadcast %d messages", len(coord.p2pCommunication.BroadcastMsgChan))
+	}
+	if len(msgChan) != 1 {
+		t.Fatalf("expected queued p2p noise to remain unread for single-signer keygen, got %d queued messages", len(msgChan))
 	}
 	if len(sidecar.round3Reqs) != 1 {
 		t.Fatalf("expected one round3 call, got %d", len(sidecar.round3Reqs))

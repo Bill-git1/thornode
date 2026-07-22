@@ -397,6 +397,88 @@ func TestRewindScannerForReorgRejectsNonHexAnchor(t *testing.T) {
 	}
 }
 
+// RewindScanner seeds the epoch-ordered continuity cache directly, so a
+// response that did not advance the reset epoch would be silently discarded by
+// mergeScannerContinuity while the call still reported success. It must be
+// rejected loudly instead, and it must not seed the cache.
+func TestRewindScannerRejectsResponseWithoutEpochAdvance(t *testing.T) {
+	t.Parallel()
+
+	anchorHash := strings.Repeat("a", 64)
+	newRewindServer := func(t *testing.T, resp ScannerRewindResp) *httptest.Server {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if r.Method != http.MethodPost || r.URL.Path != scannerRewindPath {
+				http.NotFound(w, r)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		t.Cleanup(server.Close)
+		return server
+	}
+
+	resp := ScannerRewindResp{
+		Rewound:            true,
+		PreviousNextHeight: 100,
+		NextHeight:         90,
+		ResetEpoch:         4,
+	}
+	server := newRewindServer(t, resp)
+
+	req := ScannerRewindReq{
+		ExpectedResetEpoch: 3,
+		ExpectedNextHeight: 100,
+		TargetNextHeight:   90,
+		AnchorHeight:       89,
+		AnchorHash:         anchorHash,
+	}
+
+	client := newScannerRewindTestClient(t, server.URL)
+	got, err := client.RewindScanner(req)
+	if err != nil {
+		t.Fatalf("rewind scanner: %v", err)
+	}
+	if got != resp {
+		t.Fatalf("unexpected rewind response: %+v", got)
+	}
+	continuity, ok := client.cachedScannerContinuity()
+	if !ok || continuity.resetEpoch != 4 || continuity.nextHeight != 90 ||
+		!continuity.strictAfterReset || !continuity.hasLastHeight ||
+		continuity.lastHeight != 89 || continuity.lastBlockHash != anchorHash {
+		t.Fatalf("rewind continuity was not cached: %+v present=%t", continuity, ok)
+	}
+
+	for _, tc := range []struct {
+		name string
+		resp ScannerRewindResp
+	}{
+		{
+			name: "stale epoch",
+			resp: ScannerRewindResp{Rewound: true, PreviousNextHeight: 100, NextHeight: 90, ResetEpoch: 3},
+		},
+		{
+			name: "previous cursor mismatch",
+			resp: ScannerRewindResp{Rewound: true, PreviousNextHeight: 99, NextHeight: 90, ResetEpoch: 4},
+		},
+		{
+			name: "wrong target",
+			resp: ScannerRewindResp{Rewound: true, PreviousNextHeight: 100, NextHeight: 95, ResetEpoch: 4},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			staleServer := newRewindServer(t, tc.resp)
+			stale := newScannerRewindTestClient(t, staleServer.URL)
+			if _, staleErr := stale.RewindScanner(req); staleErr == nil {
+				t.Fatalf("expected invalid rewind continuity error")
+			}
+			if staleContinuity, cached := stale.cachedScannerContinuity(); cached {
+				t.Fatalf("invalid rewind response seeded the cursor: %+v", staleContinuity)
+			}
+		})
+	}
+}
+
 func newScannerRewindTestClient(t *testing.T, endpoint string) *Client {
 	t.Helper()
 	client, err := NewClientWithEndpoint(config.BifrostChainConfiguration{

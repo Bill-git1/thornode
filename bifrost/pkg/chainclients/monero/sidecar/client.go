@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
 )
 
@@ -71,7 +72,10 @@ type Client struct {
 	scannerSyncPath   string
 	addressesPath     string
 	outputsPath       string
+	markObservedPath  string
 	registerPath      string
+	scannerStatePath  string
+	scannerRewindPath string
 	feeRatePath       string
 	chainHeightPath   string
 	chainBlockPath    string
@@ -86,6 +90,10 @@ type Client struct {
 	daemonUsername  string
 	daemonPassword  string
 	expectedNetwork string
+	// chainNetwork is the Monero network this Bifrost is configured for. It is
+	// the compare-and-set token sent on a scanner rewind and is distinct from
+	// expectedNetwork, which is what the signer must prove it is running.
+	chainNetwork string
 
 	// Sync calls remain serialized, while registration/reset responses may
 	// update the continuity cache as soon as they arrive. Keeping those locks
@@ -150,6 +158,7 @@ func NewClientWithEndpoint(cfg config.BifrostChainConfiguration, endpoint string
 	}
 
 	endpoint = strings.TrimSuffix(parsedEndpoint.String(), "/")
+	chainNetwork := normalizeChainNetwork(cfg.ChainNetwork)
 
 	daemonEndpoint := ""
 	if strings.TrimSpace(cfg.RPCHost) != "" {
@@ -187,7 +196,10 @@ func NewClientWithEndpoint(cfg config.BifrostChainConfiguration, endpoint string
 		scannerSyncPath:   "/v1/monero/scanner/sync",
 		addressesPath:     "/v1/monero/addresses",
 		outputsPath:       "/v1/monero/outputs",
+		markObservedPath:  "/v1/monero/outputs/mark-observed",
 		registerPath:      "/v1/monero/vaults/register",
+		scannerStatePath:  "/v1/monero/scanner/state",
+		scannerRewindPath: "/v1/monero/scanner/rewind",
 		feeRatePath:       "/v1/monero/fee-rate",
 		chainHeightPath:   "/v1/monero/chain/height",
 		chainBlockPath:    "/v1/monero/chain/block",
@@ -202,11 +214,28 @@ func NewClientWithEndpoint(cfg config.BifrostChainConfiguration, endpoint string
 		daemonUsername:  daemonUsername,
 		daemonPassword:  daemonPassword,
 		expectedNetwork: strings.TrimSpace(cfg.SignerExpectedNetwork),
+		chainNetwork:    chainNetwork,
 
 		signCombineMaxAttempts:    defaultSignCombineMaxAttempts,
 		signCombineInitialBackoff: defaultSignCombineInitialBackoff,
 		signCombineMaxBackoff:     defaultSignCombineMaxBackoff,
 	}, nil
+}
+
+func normalizeChainNetwork(configured string) string {
+	if network := strings.ToLower(strings.TrimSpace(configured)); network != "" {
+		return network
+	}
+	switch common.CurrentChainNetwork {
+	case common.MainNet:
+		return "mainnet"
+	case common.ChainNet:
+		return "chainnet"
+	case common.StageNet:
+		return "stagenet"
+	default:
+		return "mocknet"
+	}
 }
 
 func parseSidecarEndpointURL(endpoint string) (*url.URL, error) {
@@ -485,9 +514,20 @@ func (c *Client) ClearSessions() (int, error) {
 }
 
 func (c *Client) Broadcast(req BroadcastReq) (BroadcastResp, error) {
+	req.TxKey = strings.ToLower(strings.TrimSpace(req.TxKey))
+	if len(req.TxKey) != 64 {
+		return BroadcastResp{}, fmt.Errorf("broadcast tx_key must be canonical 32-byte hex")
+	}
+	if _, err := hex.DecodeString(req.TxKey); err != nil {
+		return BroadcastResp{}, fmt.Errorf("broadcast tx_key must be canonical 32-byte hex")
+	}
 	var out BroadcastResp
 	if err := c.call(http.MethodPost, c.broadcastPath, req, &out); err != nil {
 		return BroadcastResp{}, fmt.Errorf("fail to call broadcast endpoint: %w", err)
+	}
+	out.TxKey = strings.ToLower(strings.TrimSpace(out.TxKey))
+	if out.TxKey != req.TxKey {
+		return BroadcastResp{}, fmt.Errorf("broadcast endpoint returned mismatched tx_key")
 	}
 	return out, nil
 }
@@ -515,11 +555,109 @@ func (c *Client) RegisterVaultContext(ctx context.Context, req RegisterVaultReq)
 	if err := c.callContext(ctx, http.MethodPost, c.registerPath, req, &out); err != nil {
 		return RegisterVaultResp{}, fmt.Errorf("fail to call register vault endpoint: %w", err)
 	}
+	// New sidecars return their cursor on every registration, including the
+	// idempotent already-registered case. A newly discovered older vault may
+	// have rewound it, so publish that result to the scanner immediately.
 	continuity, err := scannerContinuityFromRegistration(out)
 	if err != nil {
 		return RegisterVaultResp{}, fmt.Errorf("register vault endpoint returned invalid scanner continuity: %w", err)
 	}
 	c.mergeScannerContinuity(continuity)
+	return out, nil
+}
+
+// setScannerCursor publishes a cursor observed in a sidecar response into the
+// single continuity cache. It is deliberately lenient about optional fields;
+// the epoch-then-height ordering inside mergeScannerContinuity is what stops a
+// delayed response from lowering the cursor.
+func (c *Client) setScannerCursor(state ScannerState) {
+	candidate := scannerContinuityCache{
+		resetEpoch:       state.ResetEpoch,
+		strictAfterReset: state.StrictAfterReset,
+	}
+	if state.NextHeight != nil {
+		candidate.nextHeight = *state.NextHeight
+	}
+	if state.LastHeight != nil {
+		candidate.hasStateDetails = true
+		candidate.hasLastHeight = true
+		candidate.lastHeight = *state.LastHeight
+		// Stored lowercased because every continuity comparison is made against
+		// hashes normalized by normalizeScannerHash.
+		candidate.lastBlockHash = strings.ToLower(strings.TrimSpace(state.LastBlockHash))
+		candidate.lastParentHash = strings.ToLower(strings.TrimSpace(state.LastParentHash))
+	}
+	c.mergeScannerContinuity(candidate)
+}
+
+// CachedScannerState returns the last cursor authenticated by a sidecar
+// response. It is a hint only; ScannerState should be fetched before a CAS
+// rewind.
+func (c *Client) CachedScannerState() (ScannerState, bool) {
+	continuity, ok := c.cachedScannerContinuity()
+	if !ok {
+		return ScannerState{}, false
+	}
+	nextHeight := continuity.nextHeight
+	state := ScannerState{
+		ResetEpoch:       continuity.resetEpoch,
+		NextHeight:       &nextHeight,
+		StrictAfterReset: continuity.strictAfterReset,
+	}
+	if continuity.hasLastHeight {
+		lastHeight := continuity.lastHeight
+		state.LastHeight = &lastHeight
+		state.LastBlockHash = continuity.lastBlockHash
+		state.LastParentHash = continuity.lastParentHash
+	}
+	return state, true
+}
+
+// ScannerState fetches the sidecar's authoritative durable scanner cursor. The
+// response is validated before it is allowed to seed the continuity cache, so
+// a malformed or non-contiguous state can never become a scan-binding cursor.
+func (c *Client) ScannerState() (ScannerState, error) {
+	var out ScannerState
+	if err := c.callGet(c.scannerStatePath, &out); err != nil {
+		return ScannerState{}, fmt.Errorf("fail to call scanner state endpoint: %w", err)
+	}
+	continuity, err := scannerContinuityFromState(out)
+	if err != nil {
+		return ScannerState{}, fmt.Errorf("scanner state endpoint returned invalid continuity: %w", err)
+	}
+	c.mergeScannerContinuity(continuity)
+	return out, nil
+}
+
+// RewindScanner atomically rolls the sidecar back to a daemon-authenticated
+// common ancestor. The epoch/cursor pair is a compare-and-set guard and the
+// endpoint is idempotent for one lost response.
+func (c *Client) RewindScanner(req ScannerRewindReq) (ScannerRewindResp, error) {
+	c.scannerSyncMu.Lock()
+	defer c.scannerSyncMu.Unlock()
+	if strings.TrimSpace(req.Network) == "" {
+		req.Network = c.chainNetwork
+	}
+	var out ScannerRewindResp
+	if err := c.call(http.MethodPost, c.scannerRewindPath, req, &out); err != nil {
+		return ScannerRewindResp{}, fmt.Errorf("fail to call scanner rewind endpoint: %w", err)
+	}
+	// Without this the response is fed straight into the epoch-ordered cache, so
+	// a stale epoch or a cursor that never moved is silently dropped by
+	// mergeScannerContinuity while this call still reports success. Hold the
+	// rewind response to the same compare-and-set contract as the reorg path.
+	if err := validateScannerRewindResponse(req, out); err != nil {
+		return ScannerRewindResp{}, fmt.Errorf("scanner rewind returned invalid continuity: %w", err)
+	}
+	nextHeight := out.NextHeight
+	lastHeight := req.AnchorHeight
+	c.setScannerCursor(ScannerState{
+		ResetEpoch:       out.ResetEpoch,
+		NextHeight:       &nextHeight,
+		LastHeight:       &lastHeight,
+		LastBlockHash:    req.AnchorHash,
+		StrictAfterReset: true,
+	})
 	return out, nil
 }
 
@@ -1202,6 +1340,52 @@ func (c *Client) TxExists(txHash string) (bool, error) {
 	return out.Exists, nil
 }
 
+// CanonicalTxLocation asks the authenticated sidecar to locate one mined
+// transaction and bind it to a daemon-verified canonical block. It is used to
+// recover from a stale observation height after a Monero reorg without a
+// caller-selected historical scan.
+func (c *Client) CanonicalTxLocation(txHash string) (CanonicalTxLocationResp, error) {
+	normalized := strings.ToLower(strings.TrimSpace(txHash))
+	if len(normalized) != 64 {
+		return CanonicalTxLocationResp{}, fmt.Errorf("canonical tx location hash must be 32-byte hex")
+	}
+	if _, err := hex.DecodeString(normalized); err != nil {
+		return CanonicalTxLocationResp{}, fmt.Errorf("canonical tx location hash must be 32-byte hex")
+	}
+
+	var out CanonicalTxLocationResp
+	path := fmt.Sprintf("%s/%s/location", c.chainTxPath, url.PathEscape(normalized))
+	if err := c.callGet(path, &out); err != nil {
+		return CanonicalTxLocationResp{}, fmt.Errorf("fail to locate canonical monero transaction: %w", err)
+	}
+	if normalizeHex := strings.ToLower(strings.TrimSpace(out.TxHash)); normalizeHex != normalized {
+		return CanonicalTxLocationResp{}, fmt.Errorf("canonical tx location returned a different transaction")
+	}
+	if out.Height <= 0 {
+		return CanonicalTxLocationResp{}, fmt.Errorf("canonical tx location returned a non-positive height")
+	}
+	for label, value := range map[string]string{
+		"block hash":  out.BlockHash,
+		"parent hash": out.PreviousHash,
+	} {
+		value = strings.ToLower(strings.TrimSpace(value))
+		if len(value) != 64 {
+			return CanonicalTxLocationResp{}, fmt.Errorf("canonical tx location returned invalid %s", label)
+		}
+		if _, err := hex.DecodeString(value); err != nil {
+			return CanonicalTxLocationResp{}, fmt.Errorf("canonical tx location returned invalid %s", label)
+		}
+		switch label {
+		case "block hash":
+			out.BlockHash = value
+		case "parent hash":
+			out.PreviousHash = value
+		}
+	}
+	out.TxHash = normalized
+	return out, nil
+}
+
 // MarkSpent records that outputs were consumed by a particular spend tx.
 func (c *Client) MarkSpent(vaultPubKey, txHash string, refs []SpentRef, skipVerification bool, outbound *OutboundMeta) (MarkSpentResp, error) {
 	var out MarkSpentResp
@@ -1210,10 +1394,14 @@ func (c *Client) MarkSpent(vaultPubKey, txHash string, refs []SpentRef, skipVeri
 		TxHash:           txHash,
 		SpentRefs:        refs,
 		SkipVerification: skipVerification,
+		// Imported records remain accounting-only until scanner observation or
+		// the canonical mark-observed endpoint independently proves them mined.
+		Origin: OutgoingOriginChainCommitted,
 	}
 	if outbound != nil {
 		req.FromAddress = outbound.FromAddress
 		req.ToAddress = outbound.ToAddress
+		req.TxKey = outbound.TxKey
 		req.Amount = outbound.Amount
 		req.Fee = outbound.Fee
 		req.Memo = outbound.Memo
@@ -1223,6 +1411,47 @@ func (c *Client) MarkSpent(vaultPubKey, txHash string, refs []SpentRef, skipVeri
 	}
 	if err := c.call(http.MethodPost, "/v1/monero/outputs/mark-spent", req, &out); err != nil {
 		return out, fmt.Errorf("fail to call mark-spent endpoint: %w", err)
+	}
+	return out, nil
+}
+
+// MarkObserved reconciles an existing MarkSpent-authenticated outgoing against
+// an exact canonical Monero block and returns the durable outgoing proof. The
+// endpoint is idempotent only for the same height and independently checks the
+// supplied block hash and transaction membership on every call. Deployment of
+// this Thornode path therefore requires a sidecar image advertising
+// canonical-outgoing-observation-v1 (introduced with the sidecar !62 follow-up).
+func (c *Client) MarkObserved(vaultPubKey, txHash string, height int64, blockHash string) (Transfer, error) {
+	if strings.TrimSpace(vaultPubKey) == "" {
+		return Transfer{}, fmt.Errorf("mark-observed vault pubkey is empty")
+	}
+	txHash = strings.ToLower(strings.TrimSpace(txHash))
+	blockHash = strings.ToLower(strings.TrimSpace(blockHash))
+	if height <= 0 {
+		return Transfer{}, fmt.Errorf("mark-observed height must be positive")
+	}
+	if len(txHash) != 64 {
+		return Transfer{}, fmt.Errorf("mark-observed tx hash must be canonical 32-byte hex")
+	}
+	if _, err := hex.DecodeString(txHash); err != nil {
+		return Transfer{}, fmt.Errorf("mark-observed tx hash must be canonical 32-byte hex")
+	}
+	if len(blockHash) != 64 {
+		return Transfer{}, fmt.Errorf("mark-observed block hash must be canonical 32-byte hex")
+	}
+	if _, err := hex.DecodeString(blockHash); err != nil {
+		return Transfer{}, fmt.Errorf("mark-observed block hash must be canonical 32-byte hex")
+	}
+
+	var out Transfer
+	req := MarkObservedReq{
+		VaultPubKey: strings.TrimSpace(vaultPubKey),
+		TxHash:      txHash,
+		Height:      uint64(height),
+		BlockHash:   blockHash,
+	}
+	if err := c.call(http.MethodPost, c.markObservedPath, req, &out); err != nil {
+		return Transfer{}, fmt.Errorf("fail to call mark-observed endpoint: %w", err)
 	}
 	return out, nil
 }

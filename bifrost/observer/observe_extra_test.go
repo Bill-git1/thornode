@@ -477,7 +477,7 @@ func (s *ObserveExtraSuite) TestRestoreDeck(c *C) {
 		deckDumpFile: "",
 	}
 
-	obs.restoreDeck()
+	c.Assert(obs.restoreDeck(), IsNil)
 
 	obs.lock.Lock()
 	c.Assert(len(obs.onDeck), Equals, 1)
@@ -516,7 +516,7 @@ func (s *ObserveExtraSuite) TestRestoreDeckWithDumpFile(c *C) {
 		deckDumpFile: dumpFile,
 	}
 
-	obs.restoreDeck()
+	c.Assert(obs.restoreDeck(), IsNil)
 
 	// Check dump file was created
 	_, err = os.Stat(dumpFile)

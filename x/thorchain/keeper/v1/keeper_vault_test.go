@@ -236,6 +236,79 @@ func (s *KeeperVaultSuite) TestGetPendingOutboundsSkipsExpiredDurableMigrateHeig
 	c.Assert(outbounds, HasLen, 0)
 }
 
+func (s *KeeperVaultSuite) TestGetPendingOutboundsRetainsExtendedClasses(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	defaultSigningPeriod := k.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	overrideSigningPeriod := defaultSigningPeriod * 2
+	k.SetMimir(ctx, constants.SigningTransactionPeriod.String(), overrideSigningPeriod)
+	signingPeriod := k.GetConfigInt64(ctx, constants.SigningTransactionPeriod)
+	c.Assert(signingPeriod, Equals, overrideSigningPeriod)
+	c.Assert(signingPeriod > 0, Equals, true)
+	ctx = ctx.WithBlockHeight(signingPeriod*4 + 10)
+	usdc, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	c.Assert(err, IsNil)
+	tradeUSDC := usdc.GetTradeAsset()
+	vaultPubKey := GetRandomPubKey()
+
+	addTxOut := func(height int64, items ...TxOutItem) {
+		txOut := NewTxOut(height)
+		txOut.TxArray = items
+		c.Assert(k.SetTxOut(ctx, txOut), IsNil)
+	}
+	extendedItem := func(height int64, token bool) TxOutItem {
+		item := TxOutItem{
+			Chain:       common.ETHChain,
+			VaultPubKey: vaultPubKey,
+			Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(uint64(height))),
+		}
+		if token {
+			item.Coin = common.NewCoin(usdc, cosmos.NewUint(uint64(height)))
+		} else {
+			item.Aggregator = "0xaggregator"
+		}
+		return item
+	}
+
+	justPastStandard := ctx.BlockHeight() - signingPeriod - 1
+	justInsideExtended := ctx.BlockHeight() - signingPeriod*3 + 1
+	atExtendedBoundary := ctx.BlockHeight() - signingPeriod*3
+	justPastExtended := ctx.BlockHeight() - signingPeriod*3 - 1
+	addTxOut(justPastStandard,
+		extendedItem(justPastStandard, false),
+		extendedItem(justPastStandard, true),
+		TxOutItem{Chain: common.ETHChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(tradeUSDC, cosmos.NewUint(uint64(justPastStandard)))},
+		TxOutItem{Chain: common.XMRChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(common.XMRAsset, cosmos.NewUint(uint64(justPastStandard)))},
+		TxOutItem{Chain: common.ETHChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(common.ETHAsset, cosmos.OneUint())},
+	)
+	addTxOut(justInsideExtended,
+		extendedItem(justInsideExtended, false),
+		extendedItem(justInsideExtended, true),
+		TxOutItem{Chain: common.ETHChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(tradeUSDC, cosmos.NewUint(uint64(justInsideExtended)))},
+		TxOutItem{Chain: common.XMRChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(common.XMRAsset, cosmos.NewUint(uint64(justInsideExtended)))},
+	)
+	addTxOut(atExtendedBoundary,
+		extendedItem(atExtendedBoundary, false),
+		extendedItem(atExtendedBoundary, true),
+		TxOutItem{Chain: common.ETHChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(tradeUSDC, cosmos.NewUint(uint64(atExtendedBoundary)))},
+		TxOutItem{Chain: common.XMRChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(common.XMRAsset, cosmos.NewUint(uint64(atExtendedBoundary)))},
+	)
+	addTxOut(justPastExtended,
+		extendedItem(justPastExtended, false),
+		extendedItem(justPastExtended, true),
+		TxOutItem{Chain: common.ETHChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(tradeUSDC, cosmos.NewUint(uint64(justPastExtended)))},
+		TxOutItem{Chain: common.XMRChain, VaultPubKey: vaultPubKey, Coin: common.NewCoin(common.XMRAsset, cosmos.NewUint(uint64(justPastExtended)))},
+	)
+
+	ethOutbounds := k.GetPendingOutbounds(ctx, common.ETHAsset)
+	c.Assert(ethOutbounds, HasLen, 3)
+	for _, outbound := range ethOutbounds {
+		c.Assert(outbound.Aggregator, Equals, "0xaggregator")
+	}
+	c.Assert(k.GetPendingOutbounds(ctx, usdc), HasLen, 3)
+	c.Assert(k.GetPendingOutbounds(ctx, tradeUSDC), HasLen, 3)
+	c.Assert(k.GetPendingOutbounds(ctx, common.XMRAsset), HasLen, 3)
+}
+
 func (s *KeeperVaultSuite) TestVaultSorBySecurity(c *C) {
 	ctx, k := setupKeeperForTest(c)
 

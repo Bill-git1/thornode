@@ -403,6 +403,16 @@ func TestSimulationWaitsForZecInitialBlocksBeforeCreatingUsers(t *testing.T) {
 	}
 }
 
+func TestMocknetZecFundingUsesCumulativeTargets(t *testing.T) {
+	mocknetGo := readRepoFile(t, "test/simulation/cmd/mocknet.go")
+	if !strings.Contains(mocknetGo, "cumulativeAmount := amount.MulUint64(uint64(i + 1))") {
+		t.Fatal("ZEC mocknet seeding should use cumulative balance targets so split funding txs actually add up")
+	}
+	if !strings.Contains(mocknetGo, "fundUserChainAccount(master, user, common.ZECChain, cumulativeAmount)") {
+		t.Fatal("ZEC mocknet seeding should fund users toward the cumulative target each iteration")
+	}
+}
+
 func TestWaitForTronRPCReadinessRecoversAfterStableAdvances(t *testing.T) {
 	now := time.Unix(0, 0)
 	heights := []int64{10, 20, 20, 21, 21, 22}
@@ -743,6 +753,12 @@ func TestSimulationTargetsUseExplicitStageDefaults(t *testing.T) {
 	}
 	if strings.Count(makefile, "-e PARALLELISM=$(PARALLELISM)") < 3 {
 		t.Fatal("simulation docker targets should pass the explicit make PARALLELISM value into the sim container")
+	}
+	if strings.Count(makefile, "-e RANDOM_SEED_HEX") < 2 {
+		t.Fatal("simulation docker targets should pass RANDOM_SEED_HEX into the sim container for reproducible failures")
+	}
+	if strings.Count(makefile, "-e SIMULATION_PPROF_ADDRESS") < 2 {
+		t.Fatal("simulation docker targets should pass SIMULATION_PPROF_ADDRESS into the sim container so local reruns can avoid stale pprof ports")
 	}
 	if strings.Count(makefile, "@docker stop docker-midgard-1 docker-midgard-db-1 >/dev/null 2>&1 || true") < 2 {
 		t.Fatal("make test-simulation and make test-simulation-cluster should both stop midgard services before running simulation workloads")

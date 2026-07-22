@@ -623,6 +623,26 @@ func (s *CoverageSuite) TestGetThorchainVersion_Non200(c *C) {
 	c.Assert(err, NotNil)
 }
 
+func (s *CoverageSuite) TestGetThorchainVersionRejectsMalformedOrEmptyCurrent(c *C) {
+	for _, current := range []string{"", "not-semver"} {
+		versionServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			_ = json.NewEncoder(rw).Encode(map[string]any{
+				"current": current,
+				"next":    "3.20.0",
+				"querier": "3.20.0",
+			})
+		}))
+
+		s.bridge.cfg.ChainHost = versionServer.Listener.Addr().String()
+		s.bridge.httpClient.RetryMax = 0
+		_, err := s.bridge.GetThorchainVersion()
+		versionServer.Close()
+
+		c.Assert(err, NotNil, Commentf("current=%q", current))
+		c.Assert(strings.Contains(err.Error(), "invalid THORChain current version"), Equals, true)
+	}
+}
+
 // ---- GetMimir error on non-200 ----
 
 func (s *CoverageSuite) TestGetMimir_Non200(c *C) {

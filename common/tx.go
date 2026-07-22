@@ -171,10 +171,10 @@ func (tx Tx) EqualsEx(tx2 Tx) bool {
 	if !tx.Chain.Equals(tx2.Chain) {
 		return false
 	}
-	if !tx.FromAddress.Equals(tx2.FromAddress) {
+	if !AddressEquals(tx.Chain, tx.FromAddress, tx2.FromAddress) {
 		return false
 	}
-	if !tx.ToAddress.Equals(tx2.ToAddress) {
+	if !AddressEquals(tx.Chain, tx.ToAddress, tx2.ToAddress) {
 		return false
 	}
 	if !tx.Coins.EqualsEx(tx2.Coins) {
@@ -199,10 +199,10 @@ func (tx Tx) EqualsExIgnoreGas(tx2 Tx) bool {
 	if !tx.Chain.Equals(tx2.Chain) {
 		return false
 	}
-	if !tx.FromAddress.Equals(tx2.FromAddress) {
+	if !AddressEquals(tx.Chain, tx.FromAddress, tx2.FromAddress) {
 		return false
 	}
-	if !tx.ToAddress.Equals(tx2.ToAddress) {
+	if !AddressEquals(tx.Chain, tx.ToAddress, tx2.ToAddress) {
 		return false
 	}
 	if !tx.Coins.EqualsEx(tx2.Coins) {

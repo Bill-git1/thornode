@@ -20,13 +20,16 @@ func TestDeliverReorgErrataTimesOutWhenObserverIsGone(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name        string
-		ackRequired bool
+		name string
+		// drain consumes the send without ever acknowledging, isolating the
+		// acknowledgement wait from the send itself. Acknowledgement is always
+		// required, so both paths must be independently bounded.
+		drain bool
 	}{
 		// Nobody ever receives: the send itself must time out.
-		{name: "observer not consuming", ackRequired: false},
+		{name: "observer not consuming", drain: false},
 		// Received but never acknowledged: the ack wait must time out.
-		{name: "observer never acknowledges", ackRequired: true},
+		{name: "observer never acknowledges", drain: true},
 	}
 
 	for _, tc := range cases {
@@ -37,18 +40,16 @@ func TestDeliverReorgErrataTimesOutWhenObserverIsGone(t *testing.T) {
 			scanner.errataDeliveryTimeout = 50 * time.Millisecond
 
 			queue := make(chan stypes.ErrataBlock)
-			if tc.ackRequired {
-				scanner.SetErrataQueueWithAck(queue)
-				// Drain the send but never write to block.Persisted.
+			scanner.SetErrataQueue(queue)
+			if tc.drain {
+				// Take the block but never invoke OnStored/OnRejected.
 				go func() { <-queue }()
-			} else {
-				scanner.SetErrataQueue(queue)
 			}
 
 			done := make(chan error, 1)
 			go func() {
-				done <- scanner.deliverReorgErrata([]reorgErrataRecord{
-					{Height: 100, TxIDs: []string{testXMRHash("stranded-tx")}},
+				done <- scanner.deliverReorgErrata(100, []stypes.ErrataTx{
+					{TxID: common.TxID(testXMRHash("stranded-tx"))},
 				})
 			}()
 

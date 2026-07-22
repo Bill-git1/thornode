@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **ToAddress** | **string** |  | 
 **VaultPubKey** | Pointer to **string** |  | [optional] 
 **VaultPubKeyEddsa** | Pointer to **string** |  | [optional] 
+**VaultPubKeyFrost** | Pointer to **string** |  | [optional] 
 **Coin** | [**Coin**](Coin.md) |  | 
 **MaxGas** | [**[]Coin**](Coin.md) |  | 
 **GasRate** | Pointer to **int64** |  | [optional] 
@@ -204,6 +205,31 @@ SetVaultPubKeyEddsa sets VaultPubKeyEddsa field to given value.
 `func (o *TxOutItem) HasVaultPubKeyEddsa() bool`
 
 HasVaultPubKeyEddsa returns a boolean if a field has been set.
+
+### GetVaultPubKeyFrost
+
+`func (o *TxOutItem) GetVaultPubKeyFrost() string`
+
+GetVaultPubKeyFrost returns the VaultPubKeyFrost field if non-nil, zero value otherwise.
+
+### GetVaultPubKeyFrostOk
+
+`func (o *TxOutItem) GetVaultPubKeyFrostOk() (*string, bool)`
+
+GetVaultPubKeyFrostOk returns a tuple with the VaultPubKeyFrost field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVaultPubKeyFrost
+
+`func (o *TxOutItem) SetVaultPubKeyFrost(v string)`
+
+SetVaultPubKeyFrost sets VaultPubKeyFrost field to given value.
+
+### HasVaultPubKeyFrost
+
+`func (o *TxOutItem) HasVaultPubKeyFrost() bool`
+
+HasVaultPubKeyFrost returns a boolean if a field has been set.
 
 ### GetCoin
 

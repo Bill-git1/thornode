@@ -387,6 +387,12 @@ func (c *FrostKeygenCoordinator) Execute(
 			Blame:  blame.NewBlame("local signer is not in active signer set", nil),
 		}
 	}
+	if missing := missingSignersForFullParticipation(activeSet, originalByNormalized); len(missing) > 0 {
+		return FrostKeygenResponse{
+			Status: tcommon.Fail,
+			Blame:  buildBlame("frost keygen requires all signers online", frostDKGRound1, missing),
+		}
+	}
 
 	threshold, err := conversion.GetThreshold(len(activeSet.originalByNormalized))
 	if err != nil {
@@ -418,18 +424,28 @@ func (c *FrostKeygenCoordinator) Execute(
 		}
 	}
 
-	commitments, failResp := c.exchangeRound1(
-		activeSet,
-		participantIndexMap,
-		activePeerIDs,
-		FrostDKGRound1Payload{
-			SenderPubKey:     c.localPubKey,
-			ParticipantIndex: localIndex,
-			Commitments:      round1Resp.Commitments,
-		},
-	)
-	if failResp != nil {
-		return *failResp
+	localIndexStr := strconv.FormatUint(uint64(localIndex), 10)
+	singleParticipant := len(activeSet.originalByNormalized) == 1
+	localRound1 := FrostDKGRound1Payload{
+		SenderPubKey:     c.localPubKey,
+		ParticipantIndex: localIndex,
+		Commitments:      round1Resp.Commitments,
+	}
+
+	commitments := map[string]string{
+		localIndexStr: strings.TrimSpace(localRound1.Commitments),
+	}
+	if !singleParticipant {
+		var failResp *FrostKeygenResponse
+		commitments, failResp = c.exchangeRound1(
+			activeSet,
+			participantIndexMap,
+			activePeerIDs,
+			localRound1,
+		)
+		if failResp != nil {
+			return *failResp
+		}
 	}
 
 	round2Resp, err := c.sidecar.FrostDKGRound2(FrostSidecarDKGRound2Req{
@@ -443,21 +459,26 @@ func (c *FrostKeygenCoordinator) Execute(
 		}
 	}
 
-	encryptedSharesBySigner, failResp := c.exchangeRound2(
-		activeSet,
-		participantIndexMap,
-		activePeerIDs,
-		FrostDKGRound2Payload{
-			SenderPubKey:     c.localPubKey,
-			ParticipantIndex: localIndex,
-			EncryptedShares:  round2Resp.EncryptedShares,
-		},
-	)
-	if failResp != nil {
-		return *failResp
+	encryptedSharesBySigner := map[string]map[string]string{
+		localIndexStr: round2Resp.EncryptedShares,
+	}
+	if !singleParticipant {
+		var failResp *FrostKeygenResponse
+		encryptedSharesBySigner, failResp = c.exchangeRound2(
+			activeSet,
+			participantIndexMap,
+			activePeerIDs,
+			FrostDKGRound2Payload{
+				SenderPubKey:     c.localPubKey,
+				ParticipantIndex: localIndex,
+				EncryptedShares:  round2Resp.EncryptedShares,
+			},
+		)
+		if failResp != nil {
+			return *failResp
+		}
 	}
 
-	localIndexStr := strconv.FormatUint(uint64(localIndex), 10)
 	allShares := make(map[string]string, len(encryptedSharesBySigner))
 	for senderIndex, senderShares := range encryptedSharesBySigner {
 		if senderIndex == localIndexStr {
@@ -495,20 +516,33 @@ func (c *FrostKeygenCoordinator) Execute(
 		localMoneroHeight = h
 	}
 
-	address, groupKey, birthdayHeight, failResp := c.exchangeRound3(
-		activeSet,
-		participantIndexMap,
-		activePeerIDs,
-		FrostDKGRound3Payload{
-			SenderPubKey:         c.localPubKey,
-			ParticipantIndex:     localIndex,
-			Address:              round3Resp.Address,
-			GroupKey:             round3Resp.GroupKey,
-			ObservedMoneroHeight: localMoneroHeight,
-		},
-	)
-	if failResp != nil {
-		return *failResp
+	address := strings.TrimSpace(round3Resp.Address)
+	groupKey := strings.TrimSpace(round3Resp.GroupKey)
+	// A single signer has no peers to derive a quorum median from, but the
+	// birthday still has to clear the reorg margin the multi-party path applies
+	// in deriveFrostDKGBirthday — otherwise a reorg can orphan the birthday
+	// block and the vault scans from a height that no longer exists.
+	birthdayHeight := localMoneroHeight - frostDKGReorgMargin
+	if address == "" || groupKey == "" {
+		return c.failForPubKeys("empty frost keygen result", frostDKGRound3, []string{c.localPubKey})
+	}
+	if !singleParticipant {
+		var failResp *FrostKeygenResponse
+		address, groupKey, birthdayHeight, failResp = c.exchangeRound3(
+			activeSet,
+			participantIndexMap,
+			activePeerIDs,
+			FrostDKGRound3Payload{
+				SenderPubKey:         c.localPubKey,
+				ParticipantIndex:     localIndex,
+				Address:              round3Resp.Address,
+				GroupKey:             round3Resp.GroupKey,
+				ObservedMoneroHeight: localMoneroHeight,
+			},
+		)
+		if failResp != nil {
+			return *failResp
+		}
 	}
 	if birthdayHeight <= 0 {
 		return FrostKeygenResponse{

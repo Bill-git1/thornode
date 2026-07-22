@@ -166,6 +166,20 @@ type SpentRef struct {
 	SpendTxHash string `json:"spend_tx_hash,omitempty"`
 }
 
+// OutgoingOrigin is the provenance of an outgoing transfer as recorded by the
+// sidecar. Fields carrying it are typed so an arbitrary string cannot be
+// smuggled into a mark-spent request.
+type OutgoingOrigin string
+
+// The origins are declared as untyped string constants on purpose: they are
+// both assigned to OutgoingOrigin-typed request fields and compared against
+// the plain-string Origin the sidecar reports on a Transfer.
+const (
+	OutgoingOriginLocalCombined  = "local_combined"
+	OutgoingOriginVaultCertified = "vault_certified"
+	OutgoingOriginChainCommitted = "chain_committed"
+)
+
 type MarkSpentReq struct {
 	VaultPubKey      string         `json:"vault_pub_key"`
 	TxHash           string         `json:"tx_hash"`
@@ -180,13 +194,6 @@ type MarkSpentReq struct {
 	Origin           OutgoingOrigin `json:"origin"`
 	CertificateHash  string         `json:"certificate_hash,omitempty"`
 }
-
-type OutgoingOrigin string
-
-const (
-	OutgoingOriginVaultCertified OutgoingOrigin = "vault_certified"
-	OutgoingOriginChainCommitted OutgoingOrigin = "chain_committed"
-)
 
 type MarkSpentResp struct {
 	Marked   int `json:"marked"`
@@ -290,20 +297,20 @@ func (r *RegisterVaultResp) UnmarshalJSON(data []byte) error {
 }
 
 type Transfer struct {
-	TxID          string `json:"txid"`
-	Address       string `json:"address"`
-	FromAddress   string `json:"from_address,omitempty"`
-	VaultPubKey   string `json:"vault_pub_key,omitempty"`
-	Amount        uint64 `json:"amount"`
-	Fee           uint64 `json:"fee"`
-	Height        uint64 `json:"height"`
-	Confirmations uint64 `json:"confirmations"`
-	Note          string `json:"note"`
-	Locked        bool   `json:"locked"`
-	// SpentOutputRefs are the sidecar-verified refs recorded for an outgoing
-	// transfer, either from the local signing session or from a mark-spent
-	// import. Empty for incoming transfers.
-	SpentOutputRefs []SpentRef `json:"spent_output_refs,omitempty"`
+	TxID                string     `json:"txid"`
+	TxKey               string     `json:"tx_key,omitempty"`
+	Address             string     `json:"address"`
+	FromAddress         string     `json:"from_address,omitempty"`
+	VaultPubKey         string     `json:"vault_pub_key,omitempty"`
+	Amount              uint64     `json:"amount"`
+	Fee                 uint64     `json:"fee"`
+	Height              uint64     `json:"height"`
+	Confirmations       uint64     `json:"confirmations"`
+	Note                string     `json:"note"`
+	Locked              bool       `json:"locked"`
+	Origin              string     `json:"origin,omitempty"`
+	ObservationEligible bool       `json:"observation_eligible,omitempty"`
+	SpentOutputRefs     []SpentRef `json:"spent_output_refs,omitempty"`
 }
 
 type Transfers struct {
@@ -321,6 +328,10 @@ type SyncReq struct {
 	ExpectedNextHeight *uint64 `json:"expected_next_height,omitempty"`
 }
 
+// ScannerState is the sidecar's durable global scan cursor. Once
+// StrictAfterReset is set, every scanner/sync must bind itself to ResetEpoch
+// and the requested height so an in-flight pre-rewind request cannot commit on
+// the replacement branch.
 type ScannerState struct {
 	ResetEpoch       uint64  `json:"reset_epoch"`
 	NextHeight       *uint64 `json:"next_height"`
@@ -463,6 +474,17 @@ func (r *ScannerRewindResp) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarkObservedReq asks the sidecar to reconcile one already authenticated
+// outgoing against an exact canonical Monero block. It is intentionally
+// separate from scanner sync so late migration recovery never rewinds scanner
+// continuity.
+type MarkObservedReq struct {
+	VaultPubKey string `json:"vault_pub_key"`
+	TxHash      string `json:"tx_hash"`
+	Height      uint64 `json:"height"`
+	BlockHash   string `json:"block_hash"`
+}
+
 type Addresses struct {
 	Addresses []string `json:"addresses"`
 }
@@ -501,6 +523,13 @@ type ChainBlockResp struct {
 
 type TxExistsResp struct {
 	Exists bool `json:"exists"`
+}
+
+type CanonicalTxLocationResp struct {
+	TxHash       string `json:"tx_hash"`
+	Height       int64  `json:"height"`
+	BlockHash    string `json:"block_hash"`
+	PreviousHash string `json:"previous_hash"`
 }
 
 // ChainBlock is the transport-independent block descriptor (used across both

@@ -72,6 +72,7 @@ txs:
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog_eddsa }}
+    xmr_tx_key: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
     spent_output_refs:
       - tx_hash: "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
         output_index: 0
@@ -90,6 +91,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/tx/{{ observe_txid 1 }}
 asserts:
   - .observed_tx.tx.chain == "XMR"
+  - .observed_tx.xmr_tx_key == "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   - .observed_tx.spent_output_refs | length == 2
   - .observed_tx.spent_output_refs[0].tx_hash == "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
   - .observed_tx.spent_output_refs[0].key_image == "1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa"

@@ -32,6 +32,10 @@ type ObservedTx struct {
 	Signers []string `json:"signers,omitempty"`
 	KeysignMs *int64 `json:"keysign_ms,omitempty"`
 	OutHashes []string `json:"out_hashes,omitempty"`
+	// XMR outbound spent outputs and key images committed by observers.
+	SpentOutputRefs []OutputRef `json:"spent_output_refs,omitempty"`
+	// XMR outbound tx private key used by third parties to verify recipient outputs.
+	XmrTxKey *string `json:"xmr_tx_key,omitempty"`
 	Status *string `json:"status,omitempty"`
 }
 
@@ -397,6 +401,70 @@ func (o *ObservedTx) SetOutHashes(v []string) {
 	o.OutHashes = v
 }
 
+// GetSpentOutputRefs returns the SpentOutputRefs field value if set, zero value otherwise.
+func (o *ObservedTx) GetSpentOutputRefs() []OutputRef {
+	if o == nil || o.SpentOutputRefs == nil {
+		var ret []OutputRef
+		return ret
+	}
+	return o.SpentOutputRefs
+}
+
+// GetSpentOutputRefsOk returns a tuple with the SpentOutputRefs field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObservedTx) GetSpentOutputRefsOk() ([]OutputRef, bool) {
+	if o == nil || o.SpentOutputRefs == nil {
+		return nil, false
+	}
+	return o.SpentOutputRefs, true
+}
+
+// HasSpentOutputRefs returns a boolean if a field has been set.
+func (o *ObservedTx) HasSpentOutputRefs() bool {
+	if o != nil && o.SpentOutputRefs != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSpentOutputRefs gets a reference to the given []OutputRef and assigns it to the SpentOutputRefs field.
+func (o *ObservedTx) SetSpentOutputRefs(v []OutputRef) {
+	o.SpentOutputRefs = v
+}
+
+// GetXmrTxKey returns the XmrTxKey field value if set, zero value otherwise.
+func (o *ObservedTx) GetXmrTxKey() string {
+	if o == nil || o.XmrTxKey == nil {
+		var ret string
+		return ret
+	}
+	return *o.XmrTxKey
+}
+
+// GetXmrTxKeyOk returns a tuple with the XmrTxKey field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObservedTx) GetXmrTxKeyOk() (*string, bool) {
+	if o == nil || o.XmrTxKey == nil {
+		return nil, false
+	}
+	return o.XmrTxKey, true
+}
+
+// HasXmrTxKey returns a boolean if a field has been set.
+func (o *ObservedTx) HasXmrTxKey() bool {
+	if o != nil && o.XmrTxKey != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetXmrTxKey gets a reference to the given string and assigns it to the XmrTxKey field.
+func (o *ObservedTx) SetXmrTxKey(v string) {
+	o.XmrTxKey = &v
+}
+
 // GetStatus returns the Status field value if set, zero value otherwise.
 func (o *ObservedTx) GetStatus() string {
 	if o == nil || o.Status == nil {
@@ -463,6 +531,12 @@ func (o ObservedTx) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.OutHashes != nil {
 		toSerialize["out_hashes"] = o.OutHashes
+	}
+	if o.SpentOutputRefs != nil {
+		toSerialize["spent_output_refs"] = o.SpentOutputRefs
+	}
+	if o.XmrTxKey != nil {
+		toSerialize["xmr_tx_key"] = o.XmrTxKey
 	}
 	if o.Status != nil {
 		toSerialize["status"] = o.Status

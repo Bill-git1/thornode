@@ -395,13 +395,13 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("fail to create observer")
 	}
+	// Register committed-event callbacks before Start launches the gossip event
+	// client. NewObserver also does this defensively for non-main call sites.
+	ag.SetObserverHandleObservedTxCommitted(obs)
+	ag.SetObserverHandleErrataTxCommitted(obs)
 	if err = obs.Start(ctx); err != nil {
 		log.Fatal().Err(err).Msg("fail to start observer")
 	}
-
-	// enable observer to react to notifications from thornode
-	// that come through the grpc connection within AttestationGossip.
-	ag.SetObserverHandleObservedTxCommitted(obs)
 
 	if xmrClient, ok := chains[tcommon.XMRChain].(*monero.Client); ok {
 		ag.SetObserverApplySpentOutputRefs(xmrClient.ApplySpentOutputRefsWithOutcome)

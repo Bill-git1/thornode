@@ -2939,10 +2939,40 @@ components:
           items:
             type: string
             example: "E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B"
+        spent_output_refs:
+          type: array
+          description: XMR outbound spent outputs and key images committed by observers.
+          items:
+            $ref: "#/components/schemas/OutputRef"
+        xmr_tx_key:
+          type: string
+          description: XMR outbound tx private key used by third parties to verify recipient outputs.
+          example: "1111111111111111111111111111111111111111111111111111111111111111"
         status:
           type: string
           enum: ["done", "incomplete"]
           example: "done"
+
+    OutputRef:
+      type: object
+      properties:
+        tx_hash:
+          type: string
+          description: Source transaction hash for the spent XMR output.
+          example: "E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B"
+        output_index:
+          type: integer
+          format: int64
+          description: Output index in the source transaction.
+          example: 0
+        key_image:
+          type: string
+          description: XMR key image proving the referenced output was spent.
+          example: "2222222222222222222222222222222222222222222222222222222222222222"
+        spend_tx_hash:
+          type: string
+          description: XMR outbound transaction hash that spends this output.
+          example: "3333333333333333333333333333333333333333333333333333333333333333"
 
     OutboundFee:
       type: object
@@ -3118,6 +3148,9 @@ components:
         vault_pub_key_eddsa:
           type: string
           example: "thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4"
+        vault_pub_key_frost:
+          type: string
+          example: "thorpub1zcjduepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe"
         coin:
           $ref: "#/components/schemas/Coin"
         max_gas:

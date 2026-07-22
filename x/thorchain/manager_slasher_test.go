@@ -13,6 +13,7 @@ import (
 type TestSlashingLackKeeper struct {
 	keeper.KVStoreDummy
 	txOut                      *TxOut
+	txOutHeight                int64
 	na                         NodeAccount
 	vaults                     Vaults
 	voter                      ObservedTxVoter
@@ -29,6 +30,10 @@ type TestSlashingLackKeeper struct {
 
 func (k *TestSlashingLackKeeper) PoolExist(ctx cosmos.Context, asset common.Asset) bool {
 	return true
+}
+
+func (k *TestSlashingLackKeeper) GetConfigInt64(ctx cosmos.Context, key constants.ConstantName) int64 {
+	return constants.GetConstantValues(GetCurrentVersion()).GetInt64Value(key)
 }
 
 func (k *TestSlashingLackKeeper) GetObservedTxInVoter(_ cosmos.Context, _ common.TxID) (ObservedTxVoter, error) {
@@ -88,9 +93,12 @@ func (k *TestSlashingLackKeeper) GetAsgardVaultsByStatus(_ cosmos.Context, statu
 	return k.vaults, nil
 }
 
-func (k *TestSlashingLackKeeper) GetTxOut(_ cosmos.Context, _ int64) (*TxOut, error) {
+func (k *TestSlashingLackKeeper) GetTxOut(_ cosmos.Context, height int64) (*TxOut, error) {
 	if k.failGetTxOut {
 		return nil, errKaboom
+	}
+	if k.txOutHeight > 0 && height != k.txOutHeight {
+		return NewTxOut(height), nil
 	}
 	return k.txOut, nil
 }

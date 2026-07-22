@@ -12,6 +12,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	kvTypes "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/types"
+	thortypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type VaultSecurity struct {
@@ -222,20 +223,27 @@ func (k KVStore) getSortedVaultSecurity(ctx cosmos.Context, vaults Vaults, signi
 // GetPendingOutbounds selects txouts in the outbound and scheduled outbound queues (for deduction to leave only 'available' balances),
 // as the amounts of both types of txout items are yet to be deducted from the vault balances.
 func (k KVStore) GetPendingOutbounds(ctx cosmos.Context, asset common.Asset) []TxOutItem {
-	signingPeriod := k.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
-	startHeight := ctx.BlockHeight() - signingPeriod
+	signingPeriod := k.GetConfigInt64(ctx, constants.SigningTransactionPeriod)
+	standardStartHeight := ctx.BlockHeight() - signingPeriod
+	if standardStartHeight < 1 {
+		standardStartHeight = 1
+	}
+	// Use the longest period the requested asset's underlying chain can contain.
+	// GetChain reports THOR for synth, trade, and secured assets, so use the L1
+	// chain to retain any EVM/XMR-backed liabilities conservatively.
+	scanPeriod := thortypes.MaxTxOutSigningTransactionPeriodForChain(asset.GetLayer1Asset().Chain, signingPeriod)
+	startHeight := ctx.BlockHeight() - scanPeriod
 	if startHeight < 1 {
 		startHeight = 1
 	}
 	txOutDelayMax := k.GetConfigInt64(ctx, constants.TxOutDelayMax)
 	maxTxOutOffset := k.GetConfigInt64(ctx, constants.MaxTxOutOffset)
 	var outbounds []TxOutItem
-	// Reuse the same basic pending-outbound filter for the rolling txout window
-	// and for durable stale migrate heights. A nil eligibleVaults means all
-	// vaults are eligible; a non-nil map restricts stale results to vaults that
-	// still have a PendingTxBlockHeights marker for the loaded txout height.
-	appendPendingOutbounds := func(blockOut *TxOut, eligibleVaults map[common.PubKey]struct{}) {
-		for _, txOutItem := range blockOut.TxArray {
+	seen := make(map[string]struct{})
+	// The rolling window spans the longest timing class, while each item retains
+	// only its own signing period. Durable stale migrate markers are added below.
+	appendPendingOutbounds := func(blockOut *TxOut) {
+		for i, txOutItem := range blockOut.TxArray {
 			// only need to look at outbounds for the same asset
 			if !txOutItem.Coin.Asset.Equals(asset) {
 				continue
@@ -244,11 +252,11 @@ func (k KVStore) GetPendingOutbounds(ctx cosmos.Context, asset common.Asset) []T
 			if !txOutItem.OutHash.IsEmpty() {
 				continue
 			}
-			if eligibleVaults != nil {
-				if _, ok := eligibleVaults[txOutItem.VaultPubKey]; !ok {
-					continue
-				}
+			if ctx.BlockHeight()-blockOut.Height > txOutItem.SigningTransactionPeriod(signingPeriod) {
+				continue
 			}
+			itemKey := strconv.FormatInt(blockOut.Height, 10) + "/" + strconv.Itoa(i)
+			seen[itemKey] = struct{}{}
 			outbounds = append(outbounds, txOutItem)
 		}
 	}
@@ -262,7 +270,7 @@ func (k KVStore) GetPendingOutbounds(ctx cosmos.Context, asset common.Asset) []T
 			// rest will be empty as well
 			break
 		}
-		appendPendingOutbounds(blockOut, nil)
+		appendPendingOutbounds(blockOut)
 	}
 
 	if signingPeriod <= 0 {
@@ -282,7 +290,7 @@ func (k KVStore) GetPendingOutbounds(ctx cosmos.Context, asset common.Asset) []T
 	}
 	for _, vault := range retiring {
 		for _, height := range vault.PendingTxBlockHeights {
-			if height < 1 || height >= startHeight {
+			if height < 1 || height >= standardStartHeight {
 				continue
 			}
 			// Pending migrate heights are durable references beyond the rolling
@@ -312,7 +320,7 @@ func (k KVStore) GetPendingOutbounds(ctx cosmos.Context, asset common.Asset) []T
 			continue
 		}
 		eligibleVaults := stalePendingVaultsByHeight[height]
-		for _, txOutItem := range blockOut.TxArray {
+		for i, txOutItem := range blockOut.TxArray {
 			if !txOutItem.Coin.Asset.Equals(asset) || !txOutItem.OutHash.IsEmpty() {
 				continue
 			}
@@ -324,6 +332,11 @@ func (k KVStore) GetPendingOutbounds(ctx cosmos.Context, asset common.Asset) []T
 			if !isMigrateMemoForHeight(txOutItem.Memo, height) {
 				continue
 			}
+			itemKey := strconv.FormatInt(blockOut.Height, 10) + "/" + strconv.Itoa(i)
+			if _, ok := seen[itemKey]; ok {
+				continue
+			}
+			seen[itemKey] = struct{}{}
 			outbounds = append(outbounds, txOutItem)
 		}
 	}

@@ -15,6 +15,25 @@ type MsgObservedTxInSuite struct{}
 
 var _ = Suite(&MsgObservedTxInSuite{})
 
+func (s *MsgObservedTxInSuite) TestRejectsXMRVaultAddressCaseVariant(c *C) {
+	pk := getRandomXMRPubKeyForMsgTest(c)
+	toAddress, err := pk.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	fromAddress, err := common.NewAddress(common.XMRUnknownSenderAddress(GetRandomTxHash().String(), toAddress.String()))
+	c.Assert(err, IsNil)
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.XMRChain,
+		FromAddress: fromAddress,
+		ToAddress:   common.Address(strings.ToUpper(toAddress.String())),
+		Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.OneUint())),
+		Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.OneUint())},
+	}, 55, pk, 55)
+
+	msg := NewMsgObservedTxIn(common.ObservedTxs{tx}, GetRandomBech32Addr())
+	c.Assert(msg.ValidateBasic(), NotNil)
+}
+
 func (s *MsgObservedTxInSuite) TestMsgObservedTxIn(c *C) {
 	var err error
 	pk := GetRandomPubKey()
@@ -91,6 +110,13 @@ func (s *MsgObservedTxInSuite) TestMsgObservedTxIn(c *C) {
 	}}
 	xmrMsg := NewMsgObservedTxIn(common.ObservedTxs{xmrObservedTx}, acc)
 	xmrErr := xmrMsg.ValidateBasic()
+	c.Assert(xmrErr, NotNil)
+	c.Assert(errors.Is(xmrErr, se.ErrUnknownRequest), Equals, true)
+
+	xmrObservedTx.SpentOutputRefs = nil
+	xmrObservedTx.XmrTxKey = strings.Repeat("a", 64)
+	xmrMsg = NewMsgObservedTxIn(common.ObservedTxs{xmrObservedTx}, acc)
+	xmrErr = xmrMsg.ValidateBasic()
 	c.Assert(xmrErr, NotNil)
 	c.Assert(errors.Is(xmrErr, se.ErrUnknownRequest), Equals, true)
 }

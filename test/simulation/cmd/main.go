@@ -207,12 +207,20 @@ func init() {
 
 func main() {
 	// start pprof server
-	go func() {
-		log.Info().Msg("starting pprof server on :6061")
-		if err := http.ListenAndServe(":6061", nil); err != nil {
-			log.Fatal().Err(err).Msg("pprof server failed")
-		}
-	}()
+	pprofAddress := os.Getenv("SIMULATION_PPROF_ADDRESS")
+	if pprofAddress == "" {
+		pprofAddress = ":6061"
+	}
+	if !strings.EqualFold(pprofAddress, "off") {
+		go func() {
+			log.Info().Str("address", pprofAddress).Msg("starting pprof server")
+			if err := http.ListenAndServe(pprofAddress, nil); err != nil {
+				log.Fatal().Err(err).Msg("pprof server failed")
+			}
+		}()
+	} else {
+		log.Info().Msg("pprof server disabled")
+	}
 
 	// prompt to filter run stages if connected to a terminal
 	enabledStages := map[string]bool{}
@@ -598,4 +606,35 @@ func getZecBlockCount(endpoint string) (int64, error) {
 	}
 
 	return response.Result, nil
+}
+
+func generateZecBlocks(endpoint string, blocks int) error {
+	res, err := http.Post(
+		endpoint,
+		"application/json",
+		strings.NewReader(fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"generate","params":[%d]}`, blocks)),
+	)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected zec status code: %d", res.StatusCode)
+	}
+
+	var response struct {
+		Error *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		return err
+	}
+	if response.Error != nil {
+		return fmt.Errorf("zec rpc error %d: %s", response.Error.Code, response.Error.Message)
+	}
+
+	return nil
 }

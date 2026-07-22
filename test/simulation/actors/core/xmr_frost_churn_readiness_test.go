@@ -121,6 +121,38 @@ func TestXMRFrostChurnReadinessSurfacesMoneroHeightErrors(t *testing.T) {
 	}
 }
 
+func TestReadinessEndpointsFromEnvFallbackAndOverrides(t *testing.T) {
+	defaults := []readinessEndpoint{
+		{name: "default-a", url: "http://default-a/ready"},
+		{name: "default-b", url: "http://default-b/ready"},
+	}
+	envName := "TEST_XMR_FROST_READINESS_ENDPOINTS"
+
+	t.Setenv(envName, "")
+	got := readinessEndpointsFromEnv(envName, defaults)
+	if len(got) != len(defaults) || got[0] != defaults[0] || got[1] != defaults[1] {
+		t.Fatalf("expected defaults for empty env, got %+v", got)
+	}
+
+	t.Setenv(envName, " , ,, ")
+	got = readinessEndpointsFromEnv(envName, defaults)
+	if len(got) != len(defaults) || got[0] != defaults[0] || got[1] != defaults[1] {
+		t.Fatalf("expected defaults for separator-only env, got %+v", got)
+	}
+
+	t.Setenv(envName, "http://node-a/ready, ,http://node-b/ready")
+	got = readinessEndpointsFromEnv(envName, defaults)
+	if len(got) != 2 {
+		t.Fatalf("expected two override endpoints, got %+v", got)
+	}
+	if got[0].url != "http://node-a/ready" || got[1].url != "http://node-b/ready" {
+		t.Fatalf("unexpected override urls: %+v", got)
+	}
+	if got[0].name == "" || got[1].name == "" {
+		t.Fatalf("expected generated endpoint names, got %+v", got)
+	}
+}
+
 func readyXMRFrostChurnDeps(t *testing.T) xmrFrostChurnReadinessDeps {
 	t.Helper()
 

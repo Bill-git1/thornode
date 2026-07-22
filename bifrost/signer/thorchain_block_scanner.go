@@ -33,6 +33,8 @@ type ThorchainBlockScan struct {
 	pubkeyMgr      pubkeymanager.PubKeyValidator
 }
 
+const staleKeygenMaxLagBlocks int64 = 10
+
 // NewThorchainBlockScan create a new instance of thorchain block scanner
 func NewThorchainBlockScan(cfg config.BifrostBlockScannerConfiguration, scanStorage blockscanner.ScannerStorage, thorchain thorclient.ThorchainBridge, m *metrics.Metrics, pubkeyMgr pubkeymanager.PubKeyValidator) (*ThorchainBlockScan, error) {
 	if scanStorage == nil {
@@ -79,17 +81,17 @@ func (c *ThorchainBlockScan) FetchMemPool(height int64) (types.TxIn, error) {
 	return types.TxIn{}, nil
 }
 
-func (b *ThorchainBlockScan) FetchTxs(height, _ int64) (types.TxIn, error) {
+func (b *ThorchainBlockScan) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 	if err := b.processTxOutBlock(height); err != nil {
 		return types.TxIn{}, err
 	}
-	if err := b.processKeygenBlock(height); err != nil {
+	if err := b.processKeygenBlock(height, chainHeight); err != nil {
 		return types.TxIn{}, err
 	}
 	return types.TxIn{}, nil
 }
 
-func (b *ThorchainBlockScan) processKeygenBlock(blockHeight int64) error {
+func (b *ThorchainBlockScan) processKeygenBlock(blockHeight, chainHeight int64) error {
 	pk := b.pubkeyMgr.GetNodePubKey(common.SigningAlgoSecp256k1)
 	keygen, err := b.thorchain.GetKeygenBlock(blockHeight, pk.String())
 	if err != nil {
@@ -100,6 +102,22 @@ func (b *ThorchainBlockScan) processKeygenBlock(blockHeight int64) error {
 	// available yet
 	if keygen.Height == 0 {
 		return btypes.ErrUnavailableBlock
+	}
+
+	if chainHeight > 0 && chainHeight > blockHeight+staleKeygenMaxLagBlocks {
+		keygens := keygen.Keygens[:0]
+		for _, keygenReq := range keygen.Keygens {
+			if keygenReq.Type == ttypes.KeygenType_XMRMonovaultKeygen {
+				keygens = append(keygens, keygenReq)
+				continue
+			}
+			b.logger.Warn().
+				Int64("block_height", blockHeight).
+				Int64("chain_height", chainHeight).
+				Str("keygen_type", keygenReq.Type.String()).
+				Msg("skipping stale keygen request while THORChain scanner catches up")
+		}
+		keygen.Keygens = keygens
 	}
 
 	if len(keygen.Keygens) > 0 {

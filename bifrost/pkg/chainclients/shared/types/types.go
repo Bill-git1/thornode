@@ -68,6 +68,23 @@ type ChainClient interface {
 	RollbackBlockScanner() error
 }
 
+// PermanentErrataQuarantiner is an optional chain-client safety hook used
+// when Observer receives a committed errata quorum event. Implementations must
+// durably prevent the exact transaction from being broadcast or re-observed
+// before returning success. Observer currently requires this hook for XMR,
+// whose transactions do not expire, and leaves other chains unchanged.
+type PermanentErrataQuarantiner interface {
+	QuarantinePermanentErrata(errata common.ErrataTx, orphanHeight int64) error
+}
+
+// SpentOutputRefsApplier is the optional XMR durability hook used after a
+// signed outbound exposes its exact consumed outputs. Implementations report
+// the final import outcome exactly once, including after any bounded retries.
+// Callers must retain the outbound until the callback reports success.
+type SpentOutputRefsApplier interface {
+	ApplySpentOutputRefsWithOutcome(tx common.ObservedTx, onOutcome func(applied bool))
+}
+
 // CustomKeygenRequest carries common keygen context for chain-specific hooks.
 type CustomKeygenRequest struct {
 	Members          []string

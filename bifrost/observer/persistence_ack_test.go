@@ -254,19 +254,23 @@ func TestQuorumErrataCommitCompletesDurableOutbox(t *testing.T) {
 	}))
 	require.NoError(t, storage.CompleteErrataCleanup([]types.ErrataTx{tx}, nil))
 
+	observer := &Observer{
+		logger:  log.Logger,
+		storage: storage,
+		lock:    &sync.Mutex{},
+	}
 	gossip := &AttestationGossip{
 		logger:      log.Logger,
+		pubKey:      []byte("local-validator"),
 		errataTxs:   make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
 		observedTxs: make(map[txKey]*AttestationState[*attestableObservedTx]),
 	}
-	gossip.SetErrataCommittedHandler(func(errata common.ErrataTx) {
-		require.NoError(t, storage.MarkErrataCommitted(types.ErrataTx{
-			Chain: errata.Chain,
-			TxID:  errata.Id,
-		}))
-	})
+	gossip.SetObserverHandleErrataTxCommitted(observer)
 	quorumErrata := common.QuorumErrataTx{
 		ErrataTx: &common.ErrataTx{Chain: tx.Chain, Id: tx.TxID},
+		Attestations: []*common.Attestation{{
+			PubKey: gossip.pubKey,
+		}},
 	}
 	payload, err := quorumErrata.Marshal()
 	require.NoError(t, err)

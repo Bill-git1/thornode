@@ -160,7 +160,7 @@ func (a *SwapMemolessActor) getQuote(config *OpConfig) OpResult {
 					Stringer("user_balance", a.fromBalance).
 					Msg("memoless amount encoding may exceed selected user balance, retrying user selection")
 				a.releaseUserSelection()
-				a.releaseTargetXMRSwapSlot()
+				a.releaseXMRSwapSlot()
 				result := a.acquireUserForAmount(config, requiredAmount, false)
 				if !result.Continue || result.Finish {
 					return result
@@ -319,7 +319,7 @@ func (a *SwapMemolessActor) prepareSwapMemolessByRef(config *OpConfig) OpResult 
 }
 
 func (a *SwapMemolessActor) requotePreparedSwap(config *OpConfig) OpResult {
-	quote, quoteAmount, err := getSwapQuoteWithRecommendedMin(a.from, a.to, a.swapAmount, a.toAddress, a.from.Chain.IsUTXO())
+	quote, quoteAmount, err := getSwapQuoteWithRecommendedMin(a.from, a.to, a.swapAmount, a.fromBalance, a.toAddress, a.from.Chain.IsUTXO())
 	if err != nil {
 		a.Log().Error().Err(err).Str("amount", a.swapAmount.String()).Msg("failed to get quote for prepared memoless swap")
 		return OpResult{
@@ -372,7 +372,7 @@ func (a *SwapMemolessActor) prepareSwapMemolessByAmount(config *OpConfig) OpResu
 
 func (a *SwapMemolessActor) requoteEncodedSwap(config *OpConfig) OpResult {
 	for attempt := 0; attempt < 4; attempt++ {
-		quote, quoteAmount, err := getSwapQuoteWithRecommendedMin(a.from, a.to, a.swapAmount, a.toAddress, a.from.Chain.IsUTXO())
+		quote, quoteAmount, err := getSwapQuoteWithRecommendedMin(a.from, a.to, a.swapAmount, a.fromBalance, a.toAddress, a.from.Chain.IsUTXO())
 		if err != nil {
 			a.Log().Error().Err(err).Str("amount", a.swapAmount.String()).Msg("failed to get quote for encoded memoless swap amount")
 			return OpResult{

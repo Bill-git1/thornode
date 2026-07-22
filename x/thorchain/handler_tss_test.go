@@ -704,6 +704,39 @@ func (s *HandlerTssSuite) TestTssHandlerAcceptsKeygenAtRetryBoundary(c *C) {
 	c.Assert(handler.validate(expiredCtx, msg), ErrorMatches, "invalid keygen block: unknown request")
 }
 
+func (s *HandlerTssSuite) TestTssHandlerPreservesDisabledRetryValidity(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	helper.keeper.SetMimir(helper.ctx, constants.ChurnRetryInterval.String(), 0)
+
+	c.Assert(keygenResultValidityBlocks(helper.ctx, helper.keeper, AsgardKeygen), Equals, int64(0))
+	c.Assert(keygenResultValidityBlocks(helper.ctx, helper.keeper, XMRMonovaultKeygen), Equals, int64(0))
+
+	msg, err := NewMsgTssPoolV2(
+		helper.members.Strings(),
+		helper.poolPk,
+		nil,
+		nil,
+		AsgardKeygen,
+		helper.ctx.BlockHeight(),
+		nil,
+		common.Chains{common.RuneAsset().Chain}.Strings(),
+		helper.signer,
+		1024,
+		helper.poolPkEddsa,
+		nil,
+		nil,
+		common.EmptyPubKey,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(handler.validate(helper.ctx, msg), IsNil)
+	c.Assert(
+		handler.validate(helper.ctx.WithBlockHeight(helper.ctx.BlockHeight()+1), msg),
+		ErrorMatches,
+		"invalid keygen block: unknown request",
+	)
+}
+
 func (s *HandlerTssSuite) TestKeygenSuccessHandler(c *C) {
 	helper := newTssHandlerTestHelper(c)
 	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
@@ -1505,7 +1538,7 @@ func (s *HandlerTssSuite) TestSharedKeygenBlockRotatesRegularAsgardWithoutWaitin
 	c.Assert(regularVault.IsXMRMonovault(), Equals, false)
 }
 
-func (s *HandlerTssSuite) TestXMRMonovaultWaitsForRegularVaultRotation(c *C) {
+func (s *HandlerTssSuite) TestXMRMonovaultRotatesWithoutRegularVaultRotation(c *C) {
 	helper := newTssHandlerTestHelper(c)
 	mgr := NewDummyMgrWithKeeper(helper.keeper)
 	mgr.networkMgr = newNetworkMgr(helper.keeper, mgr.TxOutStore(), mgr.EventMgr())
@@ -1518,14 +1551,11 @@ func (s *HandlerTssSuite) TestXMRMonovaultWaitsForRegularVaultRotation(c *C) {
 		ActiveVault,
 		AsgardVault,
 		GetRandomPubKey(),
-		common.Chains{common.THORChain, common.BTCChain, common.XMRChain}.Strings(),
+		common.Chains{common.THORChain, common.BTCChain}.Strings(),
 		nil,
 		GetRandomEd25519PubKey(),
 	)
 	oldRegular.Membership = members.Strings()
-	oldRegular.AddFunds(common.Coins{
-		common.NewCoin(common.XMRAsset, cosmos.NewUint(common.One)),
-	})
 	c.Assert(helper.keeper.SetVault(helper.ctx, oldRegular), IsNil)
 
 	keygenBlock := NewKeygenBlock(helper.ctx.BlockHeight())
@@ -1583,7 +1613,7 @@ func (s *HandlerTssSuite) TestXMRMonovaultWaitsForRegularVaultRotation(c *C) {
 
 	xmrVault, err := helper.keeper.GetVault(helper.ctx, xmrPoolPubKey)
 	c.Assert(err, IsNil)
-	c.Assert(xmrVault.Status, Equals, InitVault)
+	c.Assert(xmrVault.Status, Equals, ActiveVault)
 	c.Assert(xmrVault.IsXMRMonovault(), Equals, true)
 
 	oldRegular, err = helper.keeper.GetVault(helper.ctx, oldRegular.PubKey)

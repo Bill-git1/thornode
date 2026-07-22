@@ -248,6 +248,7 @@ Class | Method | HTTP request | Description
  - [OutboundDelayStage](docs/OutboundDelayStage.md)
  - [OutboundFee](docs/OutboundFee.md)
  - [OutboundSignedStage](docs/OutboundSignedStage.md)
+ - [OutputRef](docs/OutputRef.md)
  - [POL](docs/POL.md)
  - [PaginationMeta](docs/PaginationMeta.md)
  - [Ping](docs/Ping.md)

@@ -344,6 +344,21 @@ func (s *AttestationGossip) sendSolvencyAttestationsToThornode(ctx context.Conte
 
 // handleErrataAttestation processes attestations for errata transactions
 func (s *AttestationGossip) handleErrataAttestation(ctx context.Context, aet common.AttestErrataTx) {
+	s.handleErrataAttestationWithRetry(ctx, aet, false)
+}
+
+// handlePendingErrataAttestation is the local durable-outbox path. It alone
+// may make an identical, previously sent errata vote sendable again; peer
+// duplicates and every other attestation type retain their existing behavior.
+func (s *AttestationGossip) handlePendingErrataAttestation(ctx context.Context, aet common.AttestErrataTx) {
+	s.handleErrataAttestationWithRetry(ctx, aet, true)
+}
+
+func (s *AttestationGossip) handleErrataAttestationWithRetry(
+	ctx context.Context,
+	aet common.AttestErrataTx,
+	retryPending bool,
+) {
 	// Use the errata tx as the map key
 	k := *aet.ErrataTx
 
@@ -367,6 +382,12 @@ func (s *AttestationGossip) handleErrataAttestation(ctx context.Context, aet com
 		s.logger.Error().Err(err).Msg("fail to add attestation")
 		return
 	}
+	if retryPending && rearmPendingErrataAttestations(state, s.config.MinTimeBetweenAttestations) {
+		s.logger.Debug().
+			Str("chain", k.Chain.String()).
+			Str("txid", k.Id.String()).
+			Msg("re-arming uncommitted errata attestations for durable retry")
+	}
 
 	// Get the active validator count
 	activeValCount := s.activeValidatorCount()
@@ -380,6 +401,29 @@ func (s *AttestationGossip) handleErrataAttestation(ctx context.Context, aet com
 		s.logger.Debug().Msgf("errata attestation received - %s, id: %s, quorum: %d/%d",
 			k.Chain, k.Id, state.AttestationCount(), activeValCount)
 	}
+}
+
+// rearmPendingErrataAttestations runs with state.mu held. A successful gRPC
+// submission is not a terminal receipt: if no committed-quorum event arrives,
+// the durable Observer outbox must be able to submit the vote again. Committed
+// attestations are never re-armed.
+func rearmPendingErrataAttestations(
+	state *AttestationState[*common.ErrataTx],
+	minTimeBetweenAttestations time.Duration,
+) bool {
+	if state.lastAttestationsSent.IsZero() ||
+		time.Since(state.lastAttestationsSent) < minTimeBetweenAttestations {
+		return false
+	}
+
+	rearmed := false
+	for i := range state.attestations {
+		if state.attestations[i].sent && !state.attestations[i].committed {
+			state.attestations[i].sent = false
+			rearmed = true
+		}
+	}
+	return rearmed
 }
 
 // sendErrataAttestationsToThornode sends errata attestations to thornode via gRPC

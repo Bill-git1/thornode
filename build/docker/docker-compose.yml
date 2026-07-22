@@ -797,7 +797,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ${XMR_FROST_SIGNER_IMAGE:-registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer:develop}
+    image: ${XMR_FROST_SIGNER_IMAGE:-registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer:b1a1859e@sha256:183d9a00308504fe3e66239aa147a1a23cc502b9881ddf30064cd738799fc220}
     restart: unless-stopped
     user: root
     entrypoint:
@@ -822,6 +822,7 @@ services:
       XMR_FROST_RATE_LIMIT_GLOBAL_BURST: "5000"
       XMR_FROST_RATE_LIMIT_PER_IP_RPS: "500"
       XMR_FROST_RATE_LIMIT_PER_IP_BURST: "5000"
+      XMR_FROST_ADMIN_ALLOW_NON_LOOPBACK: "true"
       SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
       XMR_FROST_AUTH_BEARER: "${XMR_FROST_AUTH_BEARER:-xmr-frost-mocknet-token}"
     volumes:
@@ -829,7 +830,11 @@ services:
     ports:
       - 8283:8283
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8283'"]
+      test:
+        [
+          "CMD-SHELL",
+          'curl -fsS -H "Authorization: Bearer $${XMR_FROST_AUTH_BEARER}" http://127.0.0.1:8283/v1/monero/chain/height >/dev/null',
+        ]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -867,7 +872,7 @@ services:
       - mocknet
       - mocknet-cluster
     # Keep simulation faucet/balance behavior independent from signer image upgrades.
-    # The :develop signer build's faucet is a no-op in mocknet; this pinned build
+    # The signer image's faucet is a no-op in mocknet; this pinned helper build
     # actually funds sim accounts, so the cluster sim can reach unlocked XMR balance.
     image: ${XMR_SIM_HELPER_IMAGE:-registry.gitlab.com/thorchain/devops/serai/xmr-frost-signer@sha256:3f9c6b66a11e175741b914e401c09d0a048d833ca9a45000dd3d0bba4a659553}
     restart: unless-stopped
@@ -907,7 +912,11 @@ services:
     ports:
       - 8284:8284
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8284'"]
+      test:
+        [
+          "CMD-SHELL",
+          'curl -fsS -H "Authorization: Bearer $${XMR_FROST_AUTH_BEARER}" http://127.0.0.1:8284/v1/monero/chain/height >/dev/null',
+        ]
       interval: 5s
       timeout: 5s
       retries: 30

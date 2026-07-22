@@ -107,6 +107,7 @@ message ObservedTx {
     (gogoproto.nullable) = true
   ];
   repeated OutputRef spent_output_refs = 12 [ (gogoproto.nullable) = false ];
+  string xmr_tx_key = 13;
 }
 
 message Attestation {

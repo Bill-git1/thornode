@@ -14,9 +14,11 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 )
 
-// broadcast is an internal helper that broadcasts a transaction with the specified mode.
-// mode can be "async", "sync", or "commit"
-func (b *thorchainBridge) broadcast(mode string, msgs ...stypes.Msg) (common.TxID, error) {
+// broadcastWithPolicy broadcasts a transaction with the specified mode.
+// The current SDK supports "async" and "sync". When strict is true every
+// non-zero ABCI code is returned as an error; the legacy code-6 exception is
+// retained only for generic Broadcast callers which explicitly use it.
+func (b *thorchainBridge) broadcastWithPolicy(mode string, strict bool, msgs ...stypes.Msg) (common.TxID, error) {
 	b.broadcastLock.Lock()
 	defer b.broadcastLock.Unlock()
 
@@ -85,7 +87,7 @@ func (b *thorchainBridge) broadcast(mode string, msgs ...stypes.Msg) (common.TxI
 	}
 	// Code will be the tendermint ABICode , it start at 1 , so if it is an error , code will not be zero
 	if commit.Code > 0 {
-		if commit.Code == 32 {
+		if commit.Code == ABCIWrongSequenceCode {
 			// bad sequence number, fetch new one
 			_, seqNum, _ := b.getAccountNumberAndSequenceNumber()
 			if seqNum > 0 {
@@ -93,10 +95,12 @@ func (b *thorchainBridge) broadcast(mode string, msgs ...stypes.Msg) (common.TxI
 			}
 		}
 		b.logger.Info().Int("bytes", len(txBytes)).Uint32("code", commit.Code).Interface("messages", msgs).Msg("failed tx")
-		// commit code 6 means `unknown request` , which means the tx can't be accepted by thorchain
-		// if that's the case, let's just ignore it and move on
-		if commit.Code != 6 {
-			return txHash, fmt.Errorf("fail to broadcast to THORChain,code:%d, log:%s", commit.Code, commit.RawLog)
+		// Generic callers historically treat code 6 (unknown request) as a
+		// terminal no-op. Security-sensitive callers use BroadcastStrict below so
+		// every non-zero CheckTx response, including code 6, remains visible. A
+		// zero code here does not prove later DeliverTx or voter persistence.
+		if policyErr := broadcastApplicationError(commit.Code, commit.RawLog, strict); policyErr != nil {
+			return txHash, policyErr
 		}
 	} else {
 		b.seqNumber++
@@ -108,12 +112,27 @@ func (b *thorchainBridge) broadcast(mode string, msgs ...stypes.Msg) (common.TxI
 	return txHash, nil
 }
 
+func (b *thorchainBridge) broadcast(mode string, msgs ...stypes.Msg) (common.TxID, error) {
+	return b.broadcastWithPolicy(mode, false, msgs...)
+}
+
 // Broadcast Broadcasts tx to thorchain using sync mode (waits for CheckTx)
 func (b *thorchainBridge) Broadcast(msgs ...stypes.Msg) (common.TxID, error) {
 	return b.broadcast("sync", msgs...)
 }
 
-// BroadcastWithBlocking broadcasts tx to thorchain and waits for block commitment
+// BroadcastStrict broadcasts in sync mode and returns every non-zero CheckTx
+// ABCI code as an error. It does not prove later DeliverTx execution or durable
+// voter persistence. It deliberately is not part of ThorchainBridge: Signer
+// discovers the production capability explicitly and fails closed when it is
+// unavailable.
+func (b *thorchainBridge) BroadcastStrict(msgs ...stypes.Msg) (common.TxID, error) {
+	return b.broadcastWithPolicy("sync", true, msgs...)
+}
+
+// BroadcastWithBlocking broadcasts in sync mode and waits for a later block
+// height. It does not query the transaction and therefore does not prove
+// DeliverTx execution or inclusion in that block.
 func (b *thorchainBridge) BroadcastWithBlocking(msgs ...stypes.Msg) (common.TxID, error) {
 	// First broadcast with sync mode
 	txID, err := b.broadcast("sync", msgs...)
@@ -128,7 +147,8 @@ func (b *thorchainBridge) BroadcastWithBlocking(msgs ...stypes.Msg) (common.TxID
 		// Query for the block height to trigger state update
 		currentHeight, err := b.GetBlockHeight()
 		if err == nil && currentHeight > b.blockHeight {
-			// Transaction should be committed by now
+			// A later height is only a timing signal; callers still lack transaction
+			// inclusion or DeliverTx evidence.
 			b.logger.Info().Str("txid", txID.String()).Int64("height", currentHeight).Msg("transaction likely committed to block")
 			return txID, nil
 		}

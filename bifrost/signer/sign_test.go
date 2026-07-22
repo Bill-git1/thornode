@@ -2,6 +2,7 @@ package signer
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -61,6 +62,9 @@ func TestShouldAutoObserve(t *testing.T) {
 	if signer.shouldAutoObserve(types.TxOutItem{Chain: common.ETHChain}) {
 		t.Fatal("expected non-XMR outbounds to honor disabled global auto-observe")
 	}
+	if !signer.shouldAutoObserve(types.TxOutItem{Chain: common.SOLChain, OriginalMemo: "OUT:ABC"}) {
+		t.Fatal("expected memoless outbounds with original memo to auto-observe")
+	}
 
 	signer.cfg.Signer.AutoObserve = true
 	if !signer.shouldAutoObserve(types.TxOutItem{Chain: common.ETHChain}) {
@@ -68,6 +72,62 @@ func TestShouldAutoObserve(t *testing.T) {
 	}
 }
 
+func TestSecp256k1VerificationSignatureUsesRemoteSignBudget(t *testing.T) {
+	if secp256k1VerificationSignatureTimeout != tss.RemoteSignTimeout+30*time.Second {
+		t.Fatalf(
+			"verification watchdog %s must track RemoteSign timeout %s plus cleanup grace",
+			secp256k1VerificationSignatureTimeout,
+			tss.RemoteSignTimeout,
+		)
+	}
+
+	signer := &Signer{logger: log.Logger}
+	want := []byte("check-signature")
+	got := signer.secp256k1VerificationSignatureWithTimeout(
+		common.EmptyPubKey,
+		123,
+		time.Second,
+		func(common.PubKey, int64) []byte {
+			time.Sleep(20 * time.Millisecond)
+			return want
+		},
+	)
+	if !bytes.Equal(got, want) {
+		t.Fatalf("expected delayed signature before watchdog, got %x", got)
+	}
+}
+
+func TestSecp256k1VerificationSignatureTimeoutDoesNotWaitForLateResult(t *testing.T) {
+	signer := &Signer{logger: log.Logger}
+	releaseLateSigner := make(chan struct{})
+	lateSignerFinished := make(chan struct{})
+	got := signer.secp256k1VerificationSignatureWithTimeout(
+		common.EmptyPubKey,
+		123,
+		5*time.Millisecond,
+		func(common.PubKey, int64) []byte {
+			<-releaseLateSigner
+			close(lateSignerFinished)
+			return []byte("late-check-signature")
+		},
+	)
+	if got != nil {
+		t.Fatalf("expected timeout to return no signature, got %x", got)
+	}
+
+	// The worker publishes into a one-element buffered channel. Its eventual
+	// result must be able to complete after the caller has already timed out.
+	close(releaseLateSigner)
+	select {
+	case <-lateSignerFinished:
+	case <-time.After(time.Second):
+		t.Fatal("late verification signer remained blocked after watchdog timeout")
+	}
+}
+
+// TestApplySpentOutputRefsFromObsUsesObservationHeight verifies that signer
+// observations are converted to ObservedTx values without losing the original
+// observed/finalise height.
 func TestApplySpentOutputRefsFromObsUsesObservationHeight(t *testing.T) {
 	vaultPubKey := types2.GetRandomPubKey()
 	spendTxHash := strings.Repeat("a", 64)
@@ -77,7 +137,7 @@ func TestApplySpentOutputRefsFromObsUsesObservationHeight(t *testing.T) {
 		KeyImage:    strings.Repeat("c", 64),
 		SpendTxHash: spendTxHash,
 	}
-	chain := &spentRefApplyingChainClient{}
+	chain := &spentRefApplyingChainClient{result: true}
 	signer := &Signer{
 		chains: map[common.Chain]chainclients.ChainClient{
 			common.XMRChain: chain,
@@ -85,7 +145,9 @@ func TestApplySpentOutputRefsFromObsUsesObservationHeight(t *testing.T) {
 		logger: log.Logger,
 	}
 
-	signer.applySpentOutputRefsFromObs(types.TxOutItem{Chain: common.XMRChain}, &types.TxInItem{
+	// The helper receives the signer TxInItem shape and should preserve the
+	// observation height when building the sidecar import input.
+	signer.applySpentOutputRefsFromObs(context.Background(), types.TxOutItem{Chain: common.XMRChain}, &types.TxInItem{
 		BlockHeight:         123,
 		Tx:                  spendTxHash,
 		Sender:              "xmr-vault",
@@ -106,6 +168,73 @@ func TestApplySpentOutputRefsFromObsUsesObservationHeight(t *testing.T) {
 	}
 	if chain.applied[0].FinaliseHeight != 123 {
 		t.Fatalf("expected finalise height 123, got %d", chain.applied[0].FinaliseHeight)
+	}
+}
+
+// TestApplySpentOutputRefsFromObsReturnsImportResult ensures the signer keeps a
+// txout item retryable when the XMR chain client reports spent-ref import is
+// not yet durable.
+func TestApplySpentOutputRefsFromObsReturnsImportResult(t *testing.T) {
+	spendTxHash := strings.Repeat("d", 64)
+	chain := &spentRefApplyingChainClient{result: false}
+	signer := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.XMRChain: chain,
+		},
+		logger: log.Logger,
+	}
+
+	// A false return from ApplySpentOutputRefs should propagate all
+	// the way back to processTransaction's retry decision.
+	applied := signer.applySpentOutputRefsFromObs(context.Background(), types.TxOutItem{Chain: common.XMRChain}, &types.TxInItem{
+		BlockHeight:         123,
+		Tx:                  spendTxHash,
+		Sender:              "xmr-vault",
+		To:                  "xmr-recipient",
+		Coins:               common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(1))),
+		Gas:                 common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		ObservedVaultPubKey: types2.GetRandomPubKey(),
+		SpentOutputRefs: []*common.OutputRef{
+			{
+				TxHash:      strings.Repeat("e", 64),
+				OutputIndex: 1,
+				KeyImage:    strings.Repeat("f", 64),
+				SpendTxHash: spendTxHash,
+			},
+		},
+	})
+
+	if applied {
+		t.Fatal("expected spent-ref import result to propagate false")
+	}
+	if len(chain.applied) != 1 {
+		t.Fatalf("expected one spent-ref application, got %d", len(chain.applied))
+	}
+}
+
+func TestApplySpentOutputRefsFromObsFailsClosedWithoutXMRDurabilityHook(t *testing.T) {
+	spendTxHash := strings.Repeat("1", 64)
+	signer := &Signer{
+		chains: map[common.Chain]chainclients.ChainClient{
+			common.XMRChain: &MockChainClient{},
+		},
+		logger: log.Logger,
+	}
+
+	applied := signer.applySpentOutputRefsFromObs(context.Background(), types.TxOutItem{Chain: common.XMRChain}, &types.TxInItem{
+		BlockHeight:         123,
+		Tx:                  spendTxHash,
+		ObservedVaultPubKey: types2.GetRandomPubKey(),
+		SpentOutputRefs: []*common.OutputRef{{
+			TxHash:      strings.Repeat("2", 64),
+			OutputIndex: 1,
+			KeyImage:    strings.Repeat("3", 64),
+			SpendTxHash: spendTxHash,
+		}},
+	})
+
+	if applied {
+		t.Fatal("expected XMR spent-ref import to fail closed without the durability hook")
 	}
 }
 
@@ -432,6 +561,7 @@ func (b *MockChainClient) GetConfirmationCount(txIn types.TxIn) int64 {
 type spentRefApplyingChainClient struct {
 	MockChainClient
 	mu      sync.Mutex
+	result  bool
 	applied []common.ObservedTx
 }
 
@@ -439,14 +569,17 @@ func (b *spentRefApplyingChainClient) GetChain() common.Chain {
 	return common.XMRChain
 }
 
-func (b *spentRefApplyingChainClient) ApplySpentOutputRefs(tx common.ObservedTx) {
+func (b *spentRefApplyingChainClient) ApplySpentOutputRefsWithOutcome(tx common.ObservedTx, onOutcome func(bool)) {
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	b.applied = append(b.applied, tx)
+	result := b.result
+	b.mu.Unlock()
+	onOutcome(result)
 }
 
 type MockCustomKeygenChainClient struct {
 	*MockChainClient
+	mu            sync.Mutex
 	called        bool
 	callCount     int
 	calledKeys    []string
@@ -466,6 +599,9 @@ type MockCustomKeygenChainClient struct {
 func (m *MockCustomKeygenChainClient) CustomKeygen() bool { return true }
 
 func (m *MockCustomKeygenChainClient) Keygen(req chainclienttypes.CustomKeygenRequest) (chainclienttypes.CustomKeygenResult, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.called = true
 	m.callCount++
 	m.calledKeys = append([]string(nil), req.Members...)
@@ -1030,7 +1166,7 @@ func (s *SignSuite) TestRunCustomKeygenHooksFailClosed(c *C) {
 	c.Assert(strings.Contains(err.Error(), "custom keygen failed for ETH"), Equals, true)
 }
 
-func (s *SignSuite) TestFlushPendingKeygenBroadcastsBatchesBlock(c *C) {
+func (s *SignSuite) TestFlushPendingKeygenBroadcastsBatchesMessages(c *C) {
 	bridge := &batchingKeygenBridge{fakeBridge: fakeBridge{s.bridge}}
 	sign := &Signer{
 		thorchainBridge: bridge,
@@ -1079,15 +1215,7 @@ func (s *SignSuite) TestBuildKeygenBackupsRunsEncryptionsInParallel(c *C) {
 	c.Assert(os.WriteFile(secpPath, []byte("{}"), 0o600), IsNil)
 	c.Assert(os.WriteFile(eddsaPath, []byte("{}"), 0o600), IsNil)
 
-	originalSeed, hadSeed := os.LookupEnv("SIGNER_SEED_PHRASE")
-	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testSignerMnemonic), IsNil)
-	defer func() {
-		if hadSeed {
-			_ = os.Setenv("SIGNER_SEED_PHRASE", originalSeed)
-		} else {
-			_ = os.Unsetenv("SIGNER_SEED_PHRASE")
-		}
-	}()
+	defer setSignerSeedPhraseFile(c, tmpDir, testSignerMnemonic)()
 
 	origEncryptKeyshares := encryptKeysharesFn
 	origEncryptRawKeyshares := encryptRawKeysharesFn
@@ -1121,15 +1249,7 @@ func (s *SignSuite) TestBuildKeygenBackupsRunsEncryptionsInParallel(c *C) {
 }
 
 func (s *SignSuite) TestFlushPendingKeygenBroadcastsBuildsMessagesSequentially(c *C) {
-	originalSeed, hadSeed := os.LookupEnv("SIGNER_SEED_PHRASE")
-	c.Assert(os.Setenv("SIGNER_SEED_PHRASE", testSignerMnemonic), IsNil)
-	defer func() {
-		if hadSeed {
-			_ = os.Setenv("SIGNER_SEED_PHRASE", originalSeed)
-		} else {
-			_ = os.Unsetenv("SIGNER_SEED_PHRASE")
-		}
-	}()
+	defer setSignerSeedPhraseFile(c, c.MkDir(), testSignerMnemonic)()
 
 	origEncryptKeyshares := encryptKeysharesFn
 	origEncryptRawKeyshares := encryptRawKeysharesFn
@@ -1192,6 +1312,29 @@ func (s *SignSuite) TestFlushPendingKeygenBroadcastsBuildsMessagesSequentially(c
 	c.Assert(bridge.batchSizes, HasLen, 1)
 	c.Assert(bridge.batchSizes[0], Equals, 2)
 	c.Assert(elapsed >= 325*time.Millisecond, Equals, true)
+}
+
+func setSignerSeedPhraseFile(c *C, dir, seedPhrase string) func() {
+	originalSeed, hadSeed := os.LookupEnv("SIGNER_SEED_PHRASE")
+	originalSeedFile, hadSeedFile := os.LookupEnv("SIGNER_SEED_PHRASE_FILE")
+
+	seedPhraseFile := filepath.Join(dir, "signer-seed-phrase")
+	c.Assert(os.WriteFile(seedPhraseFile, []byte(seedPhrase), 0o600), IsNil)
+	c.Assert(os.Unsetenv("SIGNER_SEED_PHRASE"), IsNil)
+	c.Assert(os.Setenv("SIGNER_SEED_PHRASE_FILE", seedPhraseFile), IsNil)
+
+	return func() {
+		if hadSeed {
+			_ = os.Setenv("SIGNER_SEED_PHRASE", originalSeed)
+		} else {
+			_ = os.Unsetenv("SIGNER_SEED_PHRASE")
+		}
+		if hadSeedFile {
+			_ = os.Setenv("SIGNER_SEED_PHRASE_FILE", originalSeedFile)
+		} else {
+			_ = os.Unsetenv("SIGNER_SEED_PHRASE_FILE")
+		}
+	}
 }
 
 // TestOrderedKeygensForProcessingPrioritizesXMR verifies FROST keygen work is

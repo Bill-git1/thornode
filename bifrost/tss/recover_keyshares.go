@@ -200,11 +200,14 @@ func recoverFrostKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBr
 	}
 
 	backups, err := findRecoveryBackups(conf, thorchain, signer, target)
+	if isFrostRecoveryBackupMissing(backups, err) {
+		log.Warn().
+			Err(err).
+			Msgf("frost key shares backup for %s not found; continuing because local signer state may already exist", target.pubKey)
+		return nil
+	}
 	if err != nil {
 		return err
-	}
-	if len(backups.frost) == 0 {
-		return fmt.Errorf("frost key shares backup not found for %s", target.pubKey)
 	}
 
 	if err = writeRecoveredRawKeyshares(frostRecoveryPath, backups.frost, seedPhrase, network, target.pubKey); err != nil {
@@ -430,11 +433,18 @@ type recoveryBackups struct {
 	frost     []byte
 }
 
+var errRecoveryBackupNotFound = errors.New("key share recovery backup not found")
+
 func findRecoveryBackups(conf config.Bifrost, thorchain thorclient.ThorchainBridge, signer ctypes.AccAddress, target keyshareRecoveryTarget) (recoveryBackups, error) {
 	cdc := thorclient.MakeCodec()
 	dec := ebifrost.TxDecoder(cdc, tx.DefaultTxDecoder(cdc))
-	scanLowerBound := recoverScanLowerBound(target.blockHeight, conf.TSS.MaxKeyshareRecoverScanBlocks)
-	for i := target.blockHeight; i > scanLowerBound; i-- {
+	currentHeight, err := thorchain.GetBlockHeight()
+	if err != nil {
+		log.Warn().Err(err).Msg("fail to get current thorchain height for key share recovery; scanning from vault height")
+		currentHeight = target.blockHeight
+	}
+	scanLowerBound, scanUpperBound := recoverScanBounds(target.blockHeight, currentHeight, conf.TSS.MaxKeyshareRecoverScanBlocks)
+	for i := scanUpperBound; i > scanLowerBound; i-- {
 		if i%1000 == 0 {
 			log.Info().Msgf("scanning block %d for TssPool message to recover key shares", i)
 		}
@@ -467,11 +477,20 @@ func findRecoveryBackups(conf config.Bifrost, thorchain thorclient.ThorchainBrid
 	}
 
 	return recoveryBackups{}, fmt.Errorf(
-		"TssPool message from %s not found within %d blocks of vault height %d",
+		"%w: "+
+			"TssPool message from %s not found within %d blocks before or after vault height %d",
+		errRecoveryBackupNotFound,
 		signer,
 		conf.TSS.MaxKeyshareRecoverScanBlocks,
 		target.blockHeight,
 	)
+}
+
+func isFrostRecoveryBackupMissing(backups recoveryBackups, err error) bool {
+	if err != nil {
+		return errors.Is(err, errRecoveryBackupNotFound)
+	}
+	return len(backups.frost) == 0
 }
 
 func msgMatchesRecoveryTarget(m *types.MsgTssPool, signer ctypes.AccAddress, target keyshareRecoveryTarget) bool {
@@ -497,6 +516,26 @@ func recoverScanLowerBound(lastVaultHeight, maxScanBlocks int64) int64 {
 		return 0
 	}
 	return lowerBound
+}
+
+func recoverScanBounds(lastVaultHeight, currentHeight, maxScanBlocks int64) (int64, int64) {
+	if lastVaultHeight <= 0 {
+		return 0, 0
+	}
+	lowerBound := recoverScanLowerBound(lastVaultHeight, maxScanBlocks)
+	if maxScanBlocks <= 0 {
+		return lowerBound, lastVaultHeight
+	}
+
+	upperBound := lastVaultHeight
+	if currentHeight > lastVaultHeight {
+		upperBound = currentHeight
+		maxUpperBound := lastVaultHeight + maxScanBlocks
+		if upperBound > maxUpperBound {
+			upperBound = maxUpperBound
+		}
+	}
+	return lowerBound, upperBound
 }
 
 func recoverySeedPhrase() (string, error) {

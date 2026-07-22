@@ -175,3 +175,37 @@ func (TxOutTestSuite) TestTxOutItem(c *C) {
 	txOutItem1.Memo = "123456"
 	c.Check(txOutItem.Equals(txOutItem1), Equals, false)
 }
+
+func (TxOutTestSuite) TestSigningTransactionPeriodClasses(c *C) {
+	const signingPeriod int64 = 10
+	usdc, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	c.Assert(err, IsNil)
+
+	tests := []struct {
+		name     string
+		item     TxOutItem
+		expected int64
+	}{
+		{name: "ordinary gas outbound", item: TxOutItem{Chain: common.ETHChain, Coin: common.NewCoin(common.ETHAsset, cosmos.OneUint())}, expected: signingPeriod},
+		{name: "evm aggregator outbound", item: TxOutItem{Chain: common.ETHChain, Coin: common.NewCoin(common.ETHAsset, cosmos.OneUint()), Aggregator: "0xaggregator"}, expected: signingPeriod * 3},
+		{name: "evm token outbound", item: TxOutItem{Chain: common.ETHChain, Coin: common.NewCoin(usdc, cosmos.OneUint())}, expected: signingPeriod * 3},
+		{name: "xmr outbound", item: TxOutItem{Chain: common.XMRChain, Coin: common.NewCoin(common.XMRAsset, cosmos.OneUint())}, expected: signingPeriod * 3},
+	}
+	for _, tc := range tests {
+		c.Assert(tc.item.SigningTransactionPeriod(signingPeriod), Equals, tc.expected, Commentf(tc.name))
+	}
+	c.Assert(MaxTxOutSigningTransactionPeriod(signingPeriod), Equals, signingPeriod*3)
+
+	chainTests := []struct {
+		name     string
+		chain    common.Chain
+		expected int64
+	}{
+		{name: "standard chain", chain: common.BTCChain, expected: signingPeriod},
+		{name: "XMR chain", chain: common.XMRChain, expected: signingPeriod * 3},
+		{name: "EVM chain", chain: common.ETHChain, expected: signingPeriod * 3},
+	}
+	for _, tc := range chainTests {
+		c.Assert(MaxTxOutSigningTransactionPeriodForChain(tc.chain, signingPeriod), Equals, tc.expected, Commentf(tc.name))
+	}
+}

@@ -208,6 +208,7 @@ type memolessBroadcastClient struct {
 	lastSigned     []byte
 	signPayload    []byte
 	signErr        error
+	broadcastErr   error
 	txid           string
 }
 
@@ -229,6 +230,9 @@ func (m *memolessBroadcastClient) SignTx(simtypes.SimTx) ([]byte, error) {
 func (m *memolessBroadcastClient) BroadcastTx(payload []byte) (string, error) {
 	m.broadcastCalls++
 	m.lastSigned = append([]byte(nil), payload...)
+	if m.broadcastErr != nil {
+		return "", m.broadcastErr
+	}
 	if m.txid == "" {
 		return "ok", nil
 	}
@@ -243,6 +247,62 @@ func TestSwapMemolessNonFundingErrorIsUnhandled(t *testing.T) {
 	)
 	if handled {
 		t.Fatal("expected non-funding error to remain unhandled")
+	}
+}
+
+func TestSwapMemolessFundingErrorReleasesResources(t *testing.T) {
+	drainXMRSwapSlotForTest()
+	defer drainXMRSwapSlotForTest()
+
+	actor := &SwapMemolessActor{
+		SwapActor: SwapActor{
+			from: common.ZECAsset,
+			to:   common.XMRAsset,
+		},
+	}
+	user := newTestSwapUser(t, "selected", common.ZECAsset, sdkmath.NewUint(100), common.XMRAsset, sdkmath.ZeroUint())
+	if !user.Acquire() {
+		t.Fatal("expected to lock selected user")
+	}
+	actor.user = user
+
+	select {
+	case xmrSwapSlot <- struct{}{}:
+		actor.xmrSwapSlotAcquired = true
+	default:
+		t.Fatal("XMR swap slot was already held")
+	}
+	defer func() {
+		if actor.xmrSwapSlotAcquired {
+			actor.releaseXMRSwapSlot()
+		}
+		if actor.user != nil {
+			actor.releaseUserSelection()
+		}
+	}()
+
+	err := errors.New("fail to get unspent UTXO: insufficient balance: 0.000000 < 0.061000")
+	result, ok := actor.finishAfterMemolessFundingError(err)
+	if !ok {
+		t.Fatal("expected memoless funding error to be handled")
+	}
+	if !result.Finish || result.Continue || result.Error != nil {
+		t.Fatalf("expected non-fatal finish, got %+v", result)
+	}
+	if actor.user != nil {
+		t.Fatal("expected selected user to be cleared")
+	}
+	if user.IsLocked() {
+		t.Fatal("expected selected user to be released")
+	}
+	if actor.xmrSwapSlotAcquired {
+		t.Fatal("expected XMR swap slot to be released")
+	}
+
+	select {
+	case <-xmrSwapSlot:
+		t.Fatal("expected XMR swap slot channel to be empty")
+	default:
 	}
 }
 

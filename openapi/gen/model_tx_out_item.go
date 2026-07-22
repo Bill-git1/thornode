@@ -23,6 +23,7 @@ type TxOutItem struct {
 	ToAddress string `json:"to_address"`
 	VaultPubKey *string `json:"vault_pub_key,omitempty"`
 	VaultPubKeyEddsa *string `json:"vault_pub_key_eddsa,omitempty"`
+	VaultPubKeyFrost *string `json:"vault_pub_key_frost,omitempty"`
 	Coin Coin `json:"coin"`
 	MaxGas []Coin `json:"max_gas"`
 	GasRate *int64 `json:"gas_rate,omitempty"`
@@ -265,6 +266,38 @@ func (o *TxOutItem) HasVaultPubKeyEddsa() bool {
 // SetVaultPubKeyEddsa gets a reference to the given string and assigns it to the VaultPubKeyEddsa field.
 func (o *TxOutItem) SetVaultPubKeyEddsa(v string) {
 	o.VaultPubKeyEddsa = &v
+}
+
+// GetVaultPubKeyFrost returns the VaultPubKeyFrost field value if set, zero value otherwise.
+func (o *TxOutItem) GetVaultPubKeyFrost() string {
+	if o == nil || o.VaultPubKeyFrost == nil {
+		var ret string
+		return ret
+	}
+	return *o.VaultPubKeyFrost
+}
+
+// GetVaultPubKeyFrostOk returns a tuple with the VaultPubKeyFrost field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetVaultPubKeyFrostOk() (*string, bool) {
+	if o == nil || o.VaultPubKeyFrost == nil {
+		return nil, false
+	}
+	return o.VaultPubKeyFrost, true
+}
+
+// HasVaultPubKeyFrost returns a boolean if a field has been set.
+func (o *TxOutItem) HasVaultPubKeyFrost() bool {
+	if o != nil && o.VaultPubKeyFrost != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultPubKeyFrost gets a reference to the given string and assigns it to the VaultPubKeyFrost field.
+func (o *TxOutItem) SetVaultPubKeyFrost(v string) {
+	o.VaultPubKeyFrost = &v
 }
 
 // GetCoin returns the Coin field value
@@ -561,6 +594,9 @@ func (o TxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.VaultPubKeyEddsa != nil {
 		toSerialize["vault_pub_key_eddsa"] = o.VaultPubKeyEddsa
+	}
+	if o.VaultPubKeyFrost != nil {
+		toSerialize["vault_pub_key_frost"] = o.VaultPubKeyFrost
 	}
 	if true {
 		toSerialize["coin"] = o.Coin

@@ -178,7 +178,7 @@ type AttestationGossip struct {
 	avMu       sync.Mutex
 
 	observerHandleObservedTxCommitted func(tx common.ObservedTx, allowFutureObservation bool)
-	observerHandleErrataCommitted     func(errata common.ErrataTx)
+	observerHandleErrataTxCommitted   func(errata common.ErrataTx) error
 	observerApplySpentOutputRefs      func(tx common.ObservedTx, onOutcome func(applied bool))
 	applySpentRefsSem                 chan struct{}
 	applyCommittedSpentRefsSem        chan struct{}
@@ -190,14 +190,6 @@ type AttestationGossip struct {
 
 	stateInitPeers map[peer.ID]bool // peers that we have asked for their attestation state
 	stateInitMu    sync.Mutex
-}
-
-// SetErrataCommittedHandler registers the durable-outbox completion callback.
-// It runs even when the in-memory attestation state has already been pruned.
-func (s *AttestationGossip) SetErrataCommittedHandler(handler func(common.ErrataTx)) {
-	s.mu.Lock()
-	s.observerHandleErrataCommitted = handler
-	s.mu.Unlock()
 }
 
 // NewAttestationGossip create a new instance of AttestationGossip
@@ -375,6 +367,10 @@ func (s *AttestationGossip) getActiveValidators() map[peer.ID]bool {
 
 func (s *AttestationGossip) SetObserverHandleObservedTxCommitted(o *Observer) {
 	s.observerHandleObservedTxCommitted = o.handleObservedTxCommitted
+}
+
+func (s *AttestationGossip) SetObserverHandleErrataTxCommitted(o *Observer) {
+	s.observerHandleErrataTxCommitted = o.handleErrataTxCommitted
 }
 
 // SetObserverApplySpentOutputRefs wires the XMR sidecar import. The import
@@ -563,13 +559,32 @@ func (s *AttestationGossip) handleQuorumErrataTxCommitted(en *ebifrost.EventNoti
 		s.logger.Error().Err(err).Msg("fail to unmarshal quorum errata")
 		return
 	}
-	if qe.ErrataTx == nil {
-		s.logger.Error().Msg("quorum errata commit omitted errata tx")
+	if qe.ErrataTx == nil || qe.ErrataTx.Chain.IsEmpty() || qe.ErrataTx.Id.IsEmpty() {
+		s.logger.Error().Msg("committed quorum errata is missing chain or transaction id")
 		return
 	}
 
+	// A committed batch can contain only another node's vote. Clear this
+	// observer's durable outbox only when Thornode confirms that this node's
+	// exact attestation was included in the delivered message.
+	localAttestationCommitted := false
+	for _, attestation := range qe.Attestations {
+		if attestation != nil && bytes.Equal(attestation.PubKey, s.pubKey) {
+			localAttestationCommitted = true
+			break
+		}
+	}
+	if localAttestationCommitted && s.observerHandleErrataTxCommitted != nil {
+		if err := s.observerHandleErrataTxCommitted(*qe.ErrataTx); err != nil {
+			s.logger.Error().Err(err).
+				Str("chain", qe.ErrataTx.Chain.String()).
+				Str("txid", qe.ErrataTx.Id.String()).
+				Msg("fail to durably apply committed errata; retain retryable attestations")
+			return
+		}
+	}
+
 	s.mu.Lock()
-	committedHandler := s.observerHandleErrataCommitted
 	as, ok := s.errataTxs[*qe.ErrataTx]
 	if ok {
 		// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
@@ -577,9 +592,6 @@ func (s *AttestationGossip) handleQuorumErrataTxCommitted(en *ebifrost.EventNoti
 		as.mu.Lock()
 	}
 	s.mu.Unlock()
-	if committedHandler != nil {
-		committedHandler(*qe.ErrataTx)
-	}
 	if !ok {
 		return
 	}

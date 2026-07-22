@@ -372,6 +372,8 @@ test-simulation-cluster: build-test-simulation build-mocknet-cluster reset-mockn
 	@docker stop docker-midgard-1 docker-midgard-db-1 >/dev/null 2>&1 || true
 	@STAGES=$(TEST_SIMULATION_CLUSTER_STAGES) docker run --rm ${DOCKER_TTY_ARGS} \
 		-e PARALLELISM=$(PARALLELISM) -e STAGES \
+		-e RANDOM_SEED_HEX \
+		-e SIMULATION_PPROF_ADDRESS \
 		-e XMR_SIM_HELPER_ENDPOINT -e XMR_SIM_HELPER_AUTH_BEARER \
 		-e XMR_FROST_ENDPOINT -e XMR_FROST_AUTH_BEARER \
 		--network host -w /app \
@@ -427,6 +429,8 @@ test-simulation-no-reset: build-test-simulation
 	@docker stop docker-midgard-1 docker-midgard-db-1 >/dev/null 2>&1 || true
 	@STAGES=$(TEST_SIMULATION_STAGES) docker run --rm ${DOCKER_TTY_ARGS} \
 		-e PARALLELISM=$(PARALLELISM) -e STAGES \
+		-e RANDOM_SEED_HEX \
+		-e SIMULATION_PPROF_ADDRESS \
 		-e XMR_SIM_HELPER_ENDPOINT -e XMR_SIM_HELPER_AUTH_BEARER \
 		-e XMR_FROST_ENDPOINT -e XMR_FROST_AUTH_BEARER \
 		--network host -w /app \

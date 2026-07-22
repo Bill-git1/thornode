@@ -336,3 +336,103 @@ func (s *HandlerCommonOutboundSuite) TestMaxEVMGasForChain(c *check.C) {
 	c.Assert(known, check.Equals, true)
 	c.Assert(maxGas.Equal(cosmos.NewUint(uint64(mimirOverride))), check.Equals, true)
 }
+
+func (s *HandlerCommonOutboundSuite) TestEVMOutboundGasShouldSlash(c *check.C) {
+	tokenAsset, err := common.NewAsset("POL.TKN-0X17AB05351FC94A1A67BF3F56DDBB941AE6C63E25")
+	c.Assert(err, check.IsNil)
+	avaxTokenAsset, err := common.NewAsset("AVAX.USDX-0X9999999999999999999999999999999999999999")
+	c.Assert(err, check.IsNil)
+
+	gasOutbound := TxOutItem{
+		Chain: common.POLChain,
+		Coin:  common.NewCoin(common.POLAsset, cosmos.NewUint(1)),
+		MaxGas: common.Gas{
+			common.NewCoin(common.POLAsset, cosmos.NewUint(18_000_000)),
+		},
+	}
+	c.Assert(evmOutboundGasShouldSlash(gasOutbound, cosmos.NewUint(constants.MaxPOLGas-1), cosmos.NewUint(constants.MaxPOLGas)), check.Equals, false)
+	c.Assert(evmOutboundGasShouldSlash(gasOutbound, cosmos.NewUint(constants.MaxPOLGas), cosmos.NewUint(constants.MaxPOLGas)), check.Equals, true)
+
+	tokenOutbound := gasOutbound
+	tokenOutbound.Coin = common.NewCoin(tokenAsset, cosmos.NewUint(1))
+	c.Assert(evmOutboundGasShouldSlash(tokenOutbound, cosmos.NewUint(constants.MaxPOLGas), cosmos.NewUint(constants.MaxPOLGas)), check.Equals, false)
+	// Bifrost permits equality with the multiplied scheduled allowance. The
+	// observer must not slash the same exact-cap transaction.
+	tokenBoundaryCap := cosmos.NewUint(54_000_000)
+	c.Assert(evmOutboundGasShouldSlash(tokenOutbound, tokenBoundaryCap, tokenBoundaryCap), check.Equals, false)
+	c.Assert(evmOutboundGasShouldSlash(tokenOutbound, cosmos.NewUint(54_000_000), cosmos.NewUint(constants.MaxPOLGas)), check.Equals, false)
+	c.Assert(evmOutboundGasShouldSlash(tokenOutbound, cosmos.NewUint(54_000_001), cosmos.NewUint(constants.MaxPOLGas)), check.Equals, true)
+
+	avaxTokenOutbound := TxOutItem{
+		Chain: common.AVAXChain,
+		Coin:  common.NewCoin(avaxTokenAsset, cosmos.NewUint(1)),
+		MaxGas: common.Gas{
+			common.NewCoin(common.AVAXAsset, cosmos.NewUint(960_000)),
+		},
+	}
+	c.Assert(evmOutboundGasShouldSlash(avaxTokenOutbound, cosmos.NewUint(49_999_999), cosmos.NewUint(constants.MaxAVAXGas)), check.Equals, false)
+
+	aggregatorOutbound := tokenOutbound
+	aggregatorOutbound.Aggregator = "aggregator"
+	aggregatorBoundaryCap := cosmos.NewUint(180_000_000)
+	c.Assert(evmOutboundGasShouldSlash(aggregatorOutbound, aggregatorBoundaryCap, aggregatorBoundaryCap), check.Equals, false)
+	c.Assert(evmOutboundGasShouldSlash(aggregatorOutbound, cosmos.NewUint(180_000_000), cosmos.NewUint(constants.MaxPOLGas)), check.Equals, false)
+	c.Assert(evmOutboundGasShouldSlash(aggregatorOutbound, cosmos.NewUint(180_000_001), cosmos.NewUint(constants.MaxPOLGas)), check.Equals, true)
+}
+
+func (s *HandlerCommonOutboundSuite) TestOutboundSearchUsesMimirSigningPeriod(c *check.C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+	defaultPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	overridePeriod := defaultPeriod + 10
+	k.SetMimir(ctx, constants.SigningTransactionPeriod.String(), overridePeriod)
+
+	// Place the token outbound just outside the default 3x window, but inside
+	// the operator's matching 3x Mimir window.
+	ctx = ctx.WithBlockHeight(defaultPeriod*3 + 20)
+	scheduledHeight := ctx.BlockHeight() - defaultPeriod*3 - 1
+	inHash := GetRandomTxHash()
+	outHash := GetRandomTxHash()
+	vaultPubKey := GetRandomPubKey()
+	vaultAddress, err := vaultPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, check.IsNil)
+	toAddress := GetRandomETHAddress()
+	tokenAsset, err := common.NewAsset("ETH.TKN-0X17AB05351FC94A1A67BF3F56DDBB941AE6C63E25")
+	c.Assert(err, check.IsNil)
+	coin := common.NewCoin(tokenAsset, cosmos.NewUint(1_000_000))
+	item := TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      inHash,
+		ToAddress:   toAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        coin,
+		Memo:        NewOutboundMemo(inHash).String(),
+		MaxGas:      common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(10_000))},
+	}
+	txOut := NewTxOut(scheduledHeight)
+	txOut.TxArray = append(txOut.TxArray, item)
+	c.Assert(k.SetTxOut(ctx, txOut), check.IsNil)
+
+	vault := NewVault(1, ActiveVault, AsgardVault, vaultPubKey, common.Chains{common.ETHChain}.Strings(), nil)
+	c.Assert(k.SetVault(ctx, vault), check.IsNil)
+	voter := NewObservedTxVoter(inHash, nil)
+	voter.Height = scheduledHeight
+	voter.FinalisedHeight = scheduledHeight
+	k.SetObservedTxInVoter(ctx, voter)
+
+	observed := NewObservedTx(common.NewTx(
+		outHash,
+		vaultAddress,
+		toAddress,
+		common.NewCoins(coin),
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1_000))},
+		item.Memo,
+	), ctx.BlockHeight(), vaultPubKey, ctx.BlockHeight())
+	_, err = NewCommonOutboundTxHandler(mgr).handle(ctx, observed, inHash)
+	c.Assert(err, check.IsNil)
+
+	stored, err := k.GetTxOut(ctx, scheduledHeight)
+	c.Assert(err, check.IsNil)
+	c.Assert(stored.TxArray, check.HasLen, 1)
+	c.Check(stored.TxArray[0].OutHash.Equals(outHash), check.Equals, true)
+}

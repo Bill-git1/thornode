@@ -154,13 +154,11 @@ func (m *consolidationTSS) FrostKeySign(req tssp.FrostKeySignRequest, _ tssp.Fro
 		return resp, m.sequence[idx].err
 	}
 	if resp.Status == tsscommon.Success {
-		if strings.TrimSpace(resp.MsgID) == "" {
-			msgID, err := tssp.FrostKeySignMsgID(req)
-			if err != nil {
-				return tssp.FrostKeySignResponse{}, err
-			}
-			resp.MsgID = msgID
+		msgID, err := tssp.FrostKeySignMsgID(req)
+		if err != nil {
+			return tssp.FrostKeySignResponse{}, err
 		}
+		resp.MsgID = msgID
 		if len(strings.TrimSpace(resp.TxHash)) != 64 {
 			hashChar := string(rune('a' + ((m.calls - 1) % 26)))
 			resp.TxHash = strings.Repeat(hashChar, 64)
@@ -323,6 +321,7 @@ func newConsolidationClient(
 		sidecar:                 frostSigner,
 		tssServer:               tssServer,
 		signerCacheManager:      newTestSignerCacheManager(t),
+		signedTxPayloadStore:    newTestSignedTxPayloadStore(t),
 		vaultAddressMap:         map[string]common.Address{vaultPubKey.String(): vaultAddr},
 		scanner:                 &Scanner{currentBlockHeight: atomic.NewInt64(100), lastFee: atomic.NewUint64(10)},
 		vaultLocks:              make(map[string]*sync.Mutex),

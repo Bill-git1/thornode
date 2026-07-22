@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -28,6 +29,7 @@ func TestCatchupSpentOutputRefsReadsFromQueryAndCallsSidecar(t *testing.T) {
 
 	var mu sync.Mutex
 	var capturedVault, capturedTxHash string
+	var capturedTxKey string
 	var capturedRefs []sidecar.SpentRef
 	var skipVerification bool
 
@@ -39,6 +41,7 @@ func TestCatchupSpentOutputRefsReadsFromQueryAndCallsSidecar(t *testing.T) {
 			mu.Lock()
 			capturedVault = req.VaultPubKey
 			capturedTxHash = req.TxHash
+			capturedTxKey = req.TxKey
 			capturedRefs = req.SpentRefs
 			skipVerification = req.SkipVerification
 			mu.Unlock()
@@ -70,6 +73,7 @@ func TestCatchupSpentOutputRefsReadsFromQueryAndCallsSidecar(t *testing.T) {
 			BlockHeight:    100,
 			ObservedPubKey: frostKey,
 			FinaliseHeight: 100,
+			XmrTxKey:       strings.Repeat("5", 64),
 		},
 	}
 
@@ -91,6 +95,7 @@ func TestCatchupSpentOutputRefsReadsFromQueryAndCallsSidecar(t *testing.T) {
 
 	assert.Equal(t, frostKey.String(), capturedVault)
 	assert.Equal(t, spendTxHash, capturedTxHash)
+	assert.Equal(t, strings.Repeat("5", 64), capturedTxKey)
 	assert.False(t, skipVerification)
 	require.Equal(t, 3, len(capturedRefs))
 	assert.Equal(t, refs[0].TxHash, capturedRefs[0].TxHash)
@@ -138,6 +143,7 @@ func TestCatchupSpentOutputRefsIncludesInactiveVaultFromPubkeys(t *testing.T) {
 			BlockHeight:    100,
 			ObservedPubKey: frostKey,
 			FinaliseHeight: 100,
+			XmrTxKey:       strings.Repeat("6", 64),
 		},
 	}
 

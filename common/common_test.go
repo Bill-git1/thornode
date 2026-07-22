@@ -73,6 +73,7 @@ func (s CommonSuite) TestObservedTxSignablePayloadFieldCoverage(c *C) {
 		AggregatorTarget:      "target",
 		AggregatorTargetLimit: &limit,
 		SpentOutputRefs:       []OutputRef{{TxHash: "abc", OutputIndex: 0, KeyImage: "ki1", SpendTxHash: "sp1"}},
+		XmrTxKey:              "abc123",
 	}
 	basePayload, err := base.GetSignablePayloadWithInbound(false)
 	c.Assert(err, IsNil)
@@ -92,6 +93,7 @@ func (s CommonSuite) TestObservedTxSignablePayloadFieldCoverage(c *C) {
 		"AggregatorTarget":      func(o *ObservedTx) { o.AggregatorTarget = "changed" },
 		"AggregatorTargetLimit": func(o *ObservedTx) { l := cosmos.NewUint(2000); o.AggregatorTargetLimit = &l },
 		"SpentOutputRefs":       func(o *ObservedTx) { o.SpentOutputRefs = []OutputRef{{TxHash: "different"}} },
+		"XmrTxKey":              func(o *ObservedTx) { o.XmrTxKey = "def456" },
 	}
 	for name, mutate := range covered {
 		mutated := base

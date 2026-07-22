@@ -66,14 +66,20 @@ genesis:
 type: create-blocks
 count: 4
 ---
+# Churn co-schedules the regular Asgard and XMR monovault keygens at height 2.
+# The XMR result-validity floor keeps that original keygen block pending beyond
+# ChurnRetryInterval, so every report below must remain bound to height 2 rather
+# than assuming a replacement keygen was scheduled at each retry height.
+# Each signature-quorum scenario uses a distinct candidate pool pubkey so its
+# TSS voter remains independent while all candidates bind to the same keygen.
 ########################################################################################
-# not signatures provided will fail the check
+# no signatures provided will fail the check
 ########################################################################################
 type: tx-tss-pool
 signer: {{ addr_thor_dog }}
 keygen_type: AsgardKeygen
-height: 4
-pool_pub_key: ${POOL_PUBKEY=tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v}
+height: 2
+pool_pub_key: ${NO_SIG_POOL_PUBKEY=tthorpub1addwnpepqtunpzspjfvvxyzfx38ct7ya2g5m2vwggkpklxdsscqlzyauuqm0j005zl9}
 pub_keys:
   - {{ pubkey_dog }}
   - {{ pubkey_cat }}
@@ -85,8 +91,8 @@ chains:
 type: tx-tss-pool
 signer: {{ addr_thor_cat }}
 keygen_type: AsgardKeygen
-height: 4
-pool_pub_key: ${POOL_PUBKEY}
+height: 2
+pool_pub_key: ${NO_SIG_POOL_PUBKEY}
 pub_keys:
   - {{ pubkey_dog }}
   - {{ pubkey_cat }}
@@ -98,8 +104,8 @@ chains:
 type: tx-tss-pool
 signer: {{ addr_thor_fox }}
 keygen_type: AsgardKeygen
-height: 4
-pool_pub_key: ${POOL_PUBKEY}
+height: 2
+pool_pub_key: ${NO_SIG_POOL_PUBKEY}
 pub_keys:
   - {{ pubkey_dog }}
   - {{ pubkey_cat }}
@@ -126,8 +132,8 @@ count: 1
 type: tx-tss-pool
 signer: {{ addr_thor_dog }}
 keygen_type: AsgardKeygen
-height: 6
-pool_pub_key: ${POOL_PUBKEY}
+height: 2
+pool_pub_key: ${POOL_PUBKEY=tthorpub1addwnpepqw7qvv8309c06z96nwcfhrp5efm2wa2h7nratlgvwpgwksm8d5zwugq792v}
 pub_keys:
   - {{ pubkey_dog }}
   - {{ pubkey_cat }}
@@ -140,7 +146,7 @@ secp256k1_signature: ${SIGNATURE=TAmrPfb9LqTkvdCld4iUqVi/YB7BLRDCpuH7bJV0ByJiv5a
 type: tx-tss-pool
 signer: {{ addr_thor_cat }}
 keygen_type: AsgardKeygen
-height: 6
+height: 2
 pool_pub_key: ${POOL_PUBKEY}
 pub_keys:
   - {{ pubkey_dog }}
@@ -153,7 +159,7 @@ chains:
 type: tx-tss-pool
 signer: {{ addr_thor_fox }}
 keygen_type: AsgardKeygen
-height: 6
+height: 2
 pool_pub_key: ${POOL_PUBKEY}
 pub_keys:
   - {{ pubkey_dog }}
@@ -181,7 +187,7 @@ count: 1
 type: tx-tss-pool
 signer: {{ addr_thor_dog }}
 keygen_type: AsgardKeygen
-height: 8
+height: 2
 pool_pub_key: ${POOL_PUBKEY}
 pub_keys:
   - {{ pubkey_dog }}
@@ -215,8 +221,8 @@ count: 1
 type: tx-tss-pool
 signer: {{ addr_thor_dog }}
 keygen_type: AsgardKeygen
-height: 10
-pool_pub_key: ${POOL_PUBKEY}
+height: 2
+pool_pub_key: ${FINAL_POOL_PUBKEY=tthorpub1addwnpepqtrqglu5g8kh6mfsg4qxa9wq0nv9cauwfwxw70984wkqnw2uwz0w2vxmngk}
 pub_keys:
   - {{ pubkey_dog }}
   - {{ pubkey_cat }}
@@ -224,13 +230,13 @@ pub_keys:
 chains:
   - THOR
   - BTC
-secp256k1_signature: ${SIGNATURE}
+secp256k1_signature: ${FINAL_SIGNATURE=t+9a8BHVrBy/FwPaH2Sk3Lq0hmcJLHWhrNNjEKinnpArmo3rAs7+2b2EC4LoDnLG0ktwZp3/j67aEQAOPCtmSQ==}
 ---
 type: tx-tss-pool
 signer: {{ addr_thor_cat }}
 keygen_type: AsgardKeygen
-height: 10
-pool_pub_key: ${POOL_PUBKEY}
+height: 2
+pool_pub_key: ${FINAL_POOL_PUBKEY}
 pub_keys:
   - {{ pubkey_dog }}
   - {{ pubkey_cat }}
@@ -238,13 +244,13 @@ pub_keys:
 chains:
   - THOR
   - BTC
-secp256k1_signature: ${SIGNATURE}
+secp256k1_signature: ${FINAL_SIGNATURE}
 ---
 type: tx-tss-pool
 signer: {{ addr_thor_fox }}
 keygen_type: AsgardKeygen
-height: 10
-pool_pub_key: ${POOL_PUBKEY}
+height: 2
+pool_pub_key: ${FINAL_POOL_PUBKEY}
 pub_keys:
   - {{ pubkey_dog }}
   - {{ pubkey_cat }}

@@ -15,6 +15,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	bifrosttypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	thortypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -321,7 +322,10 @@ func (s *AttestationGossip) validateHistoricalXMRSpentRefCertificate(
 		return empty, common.AttestTx{}, fmt.Errorf("load historical certificate source vault: %w", err)
 	}
 	if !historicalVaultContainsAttester(vault.Membership, tx.Attestation.PubKey) {
-		return empty, common.AttestTx{}, fmt.Errorf("historical certificate signer is not a source-vault member")
+		return empty, common.AttestTx{}, fmt.Errorf(
+			"%w: historical certificate signer is not a source-vault member",
+			bifrosttypes.ErrObservedTxNotApplicable,
+		)
 	}
 	if !s.historicalXMRCertificatePlan(payloadHash, tx.ObsTx) {
 		return empty, common.AttestTx{}, fmt.Errorf("historical certificate does not match a planned outbound")
@@ -504,6 +508,15 @@ func (s *AttestationGossip) historicalXMRSpentRefCertificateSnapshot(
 		attestations = append(attestations, &copyAttestation)
 	}
 	return bucket.observedTx, attestations, bucket.applied, true
+}
+
+func (s *AttestationGossip) historicalXMRSpentRefCertificateApplied(obsTx common.ObservedTx) bool {
+	payload, err := obsTx.GetSignablePayloadWithInbound(false)
+	if err != nil {
+		return false
+	}
+	_, _, applied, ok := s.historicalXMRSpentRefCertificateSnapshot(sha256.Sum256(payload))
+	return ok && applied
 }
 
 func (s *AttestationGossip) historicalXMRSpentRefAttestations(payloadHash [sha256.Size]byte) []*common.Attestation {

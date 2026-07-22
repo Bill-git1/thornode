@@ -23,7 +23,9 @@ import (
 
 const (
 	maxKeysignPerRequest = 15 // the maximum number of messages include in one single TSS keysign request
-	tssKeysignTimeout    = 5  // in minutes, the maximum time bifrost is going to wait before the tss result come back
+	// RemoteSignTimeout is the maximum time Bifrost waits for a TSS keysign result.
+	// Callers that add an outer watchdog must derive it from this value.
+	RemoteSignTimeout = 5 * time.Minute
 )
 
 type tssServer interface {
@@ -135,8 +137,8 @@ func (s *KeySign) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey str
 			return nil, nil, fmt.Errorf("fail to decode recovery id: %w", err)
 		}
 		return data, bRecoveryId, nil
-	case <-time.After(time.Minute * tssKeysignTimeout):
-		return nil, nil, fmt.Errorf("TIMEOUT: fail to sign message:%s after %d minutes", encodedMsg, tssKeysignTimeout)
+	case <-time.After(RemoteSignTimeout):
+		return nil, nil, fmt.Errorf("TIMEOUT: fail to sign message:%s after %d minutes", encodedMsg, int(RemoteSignTimeout/time.Minute))
 	}
 }
 

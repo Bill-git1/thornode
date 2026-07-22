@@ -1,6 +1,7 @@
 package utxo
 
 import (
+	"encoding/hex"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
+	btctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/txscript"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 )
@@ -175,6 +177,52 @@ func TestGetMemoScriptsSplitsLongMemoForUTXO(t *testing.T) {
 	}
 	if len(scripts) != 2 {
 		t.Fatalf("expected 2 scripts for an 81-byte BTC memo, got %d", len(scripts))
+	}
+}
+
+func TestZECMemoScriptsUseTransparentContinuationOutputs(t *testing.T) {
+	client := &Client{chain: common.ZECChain}
+
+	scripts, err := client.getMemoScripts(strings.Repeat("a", 100))
+	if err != nil {
+		t.Fatalf("expected long ZEC memo to be split into scripts, got %v", err)
+	}
+	if len(scripts) != 3 {
+		t.Fatalf("expected 3 scripts for a 100-byte ZEC memo, got %d", len(scripts))
+	}
+
+	asm, err := btctxscript.DisasmString(scripts[1])
+	if err != nil {
+		t.Fatalf("expected ZEC continuation script to disassemble, got %v", err)
+	}
+	if !strings.HasPrefix(asm, "OP_DUP OP_HASH160 ") || !strings.HasSuffix(asm, " OP_EQUALVERIFY OP_CHECKSIG") {
+		t.Fatalf("expected ZEC continuation script to be transparent P2PKH, got %q", asm)
+	}
+}
+
+func TestZECSpentUtxosOnlyFinalizedAfterSuccessfulBroadcast(t *testing.T) {
+	client := &Client{
+		chain:             common.ZECChain,
+		spentUtxos:        make(map[string]bool),
+		pendingSpentUtxos: make(map[string][]string),
+	}
+	payload := []byte{0x01, 0x02, 0x03}
+	payloadHex := hex.EncodeToString(payload)
+	const key = "txid-0"
+
+	client.rememberPendingSpentUtxos(payload, map[string]int64{key: 1})
+	client.finalizePendingSpentUtxos(payloadHex, false)
+	if client.spentUtxos[key] {
+		t.Fatal("expected failed ZEC broadcast to leave selected UTXOs spendable")
+	}
+	if _, ok := client.pendingSpentUtxos[payloadHex]; ok {
+		t.Fatal("expected failed ZEC broadcast to clear pending selected UTXOs")
+	}
+
+	client.rememberPendingSpentUtxos(payload, map[string]int64{key: 1})
+	client.finalizePendingSpentUtxos(payloadHex, true)
+	if !client.spentUtxos[key] {
+		t.Fatal("expected successful ZEC broadcast to mark selected UTXOs spent")
 	}
 }
 

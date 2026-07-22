@@ -62,10 +62,9 @@ func TestSignAndBroadcastTxRetriesTronConfirmationFailures(t *testing.T) {
 	}()
 
 	client := &retryLiteChainClient{
-		broadcastTxIDs: []string{"unmined", "invisible", "confirmed"},
 		broadcastErrs: []error{
-			errors.New("broadcasted tx unmined not confirmed on tron node"),
-			errors.New("broadcasted tx invisible not observed on tron node"),
+			errors.New("broadcasted tx a not confirmed on tron node"),
+			errors.New("broadcasted tx b not observed on tron node"),
 			nil,
 		},
 	}
@@ -74,7 +73,7 @@ func TestSignAndBroadcastTxRetriesTronConfirmationFailures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected tron retry helper to recover, got %v", err)
 	}
-	if txid != "confirmed" {
+	if txid != "ok" {
 		t.Fatalf("expected successful txid, got %s", txid)
 	}
 	if client.signCalls != 3 {
@@ -125,7 +124,7 @@ func TestSignAndBroadcastTxRetriesTronUnobservedTxID(t *testing.T) {
 	}
 }
 
-func TestSignAndBroadcastTxRetriesUnconfirmedTronOneShotMemo(t *testing.T) {
+func TestSignAndBroadcastTxDoesNotReplaceSubmittedOneShotMemo(t *testing.T) {
 	prevDelay := tronSimTxBroadcastRetryDelay
 	prevAttempts := tronSimTxMaxBroadcastAttempts
 	tronSimTxBroadcastRetryDelay = 0
@@ -136,10 +135,9 @@ func TestSignAndBroadcastTxRetriesUnconfirmedTronOneShotMemo(t *testing.T) {
 	}()
 
 	client := &retryLiteChainClient{
-		broadcastTxIDs: []string{"unmined", "confirmed"},
+		broadcastTxIDs: []string{"submitted"},
 		broadcastErrs: []error{
-			errors.New("broadcasted tx unmined not confirmed on tron node"),
-			nil,
+			errors.New("broadcasted tx submitted not confirmed on tron node"),
 		},
 	}
 
@@ -149,16 +147,16 @@ func TestSignAndBroadcastTxRetriesUnconfirmedTronOneShotMemo(t *testing.T) {
 		OneShotMemo: true,
 	})
 	if err != nil {
-		t.Fatalf("expected one-shot memo to retry unconfirmed TRON tx, got %v", err)
+		t.Fatalf("expected submitted one-shot txid to be accepted, got %v", err)
 	}
-	if txid != "confirmed" {
-		t.Fatalf("expected confirmed replacement txid, got %s", txid)
+	if txid != "submitted" {
+		t.Fatalf("expected submitted txid, got %s", txid)
 	}
-	if client.signCalls != 2 {
-		t.Fatalf("expected 2 sign attempts, got %d", client.signCalls)
+	if client.signCalls != 1 {
+		t.Fatalf("expected 1 sign attempt, got %d", client.signCalls)
 	}
-	if client.broadcastCalls != 2 {
-		t.Fatalf("expected 2 broadcast attempts, got %d", client.broadcastCalls)
+	if client.broadcastCalls != 1 {
+		t.Fatalf("expected 1 broadcast attempt, got %d", client.broadcastCalls)
 	}
 }
 
@@ -313,6 +311,74 @@ func TestSignAndBroadcastTxRetriesSolanaBlockhashFailures(t *testing.T) {
 	}
 }
 
+func TestSignAndBroadcastTxRetriesZecQueuedDownloadFailures(t *testing.T) {
+	prevDelay := zecSimTxBroadcastRetryDelay
+	prevAttempts := zecSimTxMaxBroadcastAttempts
+	zecSimTxBroadcastRetryDelay = 0
+	zecSimTxMaxBroadcastAttempts = 4
+	defer func() {
+		zecSimTxBroadcastRetryDelay = prevDelay
+		zecSimTxMaxBroadcastAttempts = prevAttempts
+	}()
+
+	client := &retryLiteChainClient{
+		broadcastErrs: []error{
+			errors.New("transaction dropped because it is already queued for download"),
+			nil,
+		},
+	}
+
+	txid, err := SignAndBroadcastTx(client, SimTx{Chain: common.ZECChain})
+	if err != nil {
+		t.Fatalf("expected zec retry helper to recover from queued-download failure, got %v", err)
+	}
+	if txid != "ok" {
+		t.Fatalf("expected successful txid, got %s", txid)
+	}
+	if client.signCalls != 2 {
+		t.Fatalf("expected 2 sign attempts, got %d", client.signCalls)
+	}
+	if client.broadcastCalls != 2 {
+		t.Fatalf("expected 2 broadcast attempts, got %d", client.broadcastCalls)
+	}
+}
+
+// TestSignAndBroadcastTxRetriesZecChannelClosedFailures covers the transient
+// Zebra RPC channel close seen during mocknet ZEC account seeding.
+func TestSignAndBroadcastTxRetriesZecChannelClosedFailures(t *testing.T) {
+	prevDelay := zecSimTxBroadcastRetryDelay
+	prevAttempts := zecSimTxMaxBroadcastAttempts
+	zecSimTxBroadcastRetryDelay = 0
+	zecSimTxMaxBroadcastAttempts = 4
+	defer func() {
+		zecSimTxBroadcastRetryDelay = prevDelay
+		zecSimTxMaxBroadcastAttempts = prevAttempts
+	}()
+
+	// A closed RPC channel does not prove the funding transaction is invalid,
+	// so the simulation should rebuild and rebroadcast instead of exiting.
+	client := &retryLiteChainClient{
+		broadcastErrs: []error{
+			errors.New("channel closed"),
+			nil,
+		},
+	}
+
+	txid, err := SignAndBroadcastTx(client, SimTx{Chain: common.ZECChain})
+	if err != nil {
+		t.Fatalf("expected zec retry helper to recover from channel-closed failure, got %v", err)
+	}
+	if txid != "ok" {
+		t.Fatalf("expected successful txid, got %s", txid)
+	}
+	if client.signCalls != 2 {
+		t.Fatalf("expected 2 sign attempts, got %d", client.signCalls)
+	}
+	if client.broadcastCalls != 2 {
+		t.Fatalf("expected 2 broadcast attempts, got %d", client.broadcastCalls)
+	}
+}
+
 func TestShouldRetryTronSimTxBroadcast(t *testing.T) {
 	if !shouldRetryTronSimTxBroadcast(errors.New("broadcasted tx a not confirmed on tron node")) {
 		t.Fatal("expected confirmation failure to be retriable")
@@ -327,6 +393,24 @@ func TestShouldRetryTronSimTxBroadcast(t *testing.T) {
 		t.Fatal("expected unrelated errors to be non-retriable")
 	}
 	if shouldRetryTronSimTxBroadcast(nil) {
+		t.Fatal("expected nil error to be non-retriable")
+	}
+}
+
+func TestShouldRetryZecSimTxBroadcast(t *testing.T) {
+	if !shouldRetryZecSimTxBroadcast(errors.New("transaction dropped because it is already queued for download")) {
+		t.Fatal("expected queued-download failure to be retriable")
+	}
+	if !shouldRetryZecSimTxBroadcast(errors.New("failed to broadcast tx: context deadline exceeded")) {
+		t.Fatal("expected transient zec RPC failure to be retriable")
+	}
+	if !shouldRetryZecSimTxBroadcast(errors.New("channel closed")) {
+		t.Fatal("expected closed zec RPC channel failure to be retriable")
+	}
+	if shouldRetryZecSimTxBroadcast(errors.New("other error")) {
+		t.Fatal("expected unrelated errors to be non-retriable")
+	}
+	if shouldRetryZecSimTxBroadcast(nil) {
 		t.Fatal("expected nil error to be non-retriable")
 	}
 }

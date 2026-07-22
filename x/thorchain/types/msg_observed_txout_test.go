@@ -3,6 +3,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	cometed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -22,6 +23,15 @@ func getRandomXMRPubKeyForMsgTest(c *C) common.PubKey {
 	_, err = pubKey.GetAddress(common.XMRChain)
 	c.Assert(err, IsNil)
 	return pubKey
+}
+
+func validXMRSpentRefForMsgTest(tx common.ObservedTx) common.OutputRef {
+	return common.OutputRef{
+		TxHash:      GetRandomTxHash().String(),
+		OutputIndex: 0,
+		KeyImage:    strings.Repeat("b", 64),
+		SpendTxHash: tx.Tx.ID.String(),
+	}
 }
 
 func (s *MsgObservedTxOutSuite) TestMsgObservedTxOut(c *C) {
@@ -106,4 +116,75 @@ func (s *MsgObservedTxOutSuite) TestMsgObservedTxOutRejectsOversizedXMRSpentRefs
 
 	m := NewMsgObservedTxOut(common.ObservedTxs{tx}, GetRandomBech32Addr())
 	c.Assert(m.ValidateBasic(), NotNil)
+}
+
+func (s *MsgObservedTxOutSuite) TestMsgObservedTxOutRequiresXMRTxKey(c *C) {
+	pk := getRandomXMRPubKeyForMsgTest(c)
+	fromAddress, err := pk.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	toAddress, err := getRandomXMRPubKeyForMsgTest(c).GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.XMRChain,
+		FromAddress: fromAddress,
+		ToAddress:   toAddress,
+		Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(100))),
+		Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:xmr-tx-key",
+	}, 55, pk, 55)
+
+	msg := NewMsgObservedTxOut(common.ObservedTxs{tx}, GetRandomBech32Addr())
+	c.Assert(msg.ValidateBasic(), NotNil)
+
+	tx.XmrTxKey = strings.Repeat("a", 64)
+	msg = NewMsgObservedTxOut(common.ObservedTxs{tx}, GetRandomBech32Addr())
+	c.Assert(msg.ValidateBasic(), IsNil)
+}
+
+func (s *MsgObservedTxOutSuite) TestRejectsXMRVaultAddressCaseVariant(c *C) {
+	pk := getRandomXMRPubKeyForMsgTest(c)
+	fromAddress, err := pk.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	toAddress, err := getRandomXMRPubKeyForMsgTest(c).GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.XMRChain,
+		FromAddress: common.Address(strings.ToUpper(fromAddress.String())),
+		ToAddress:   toAddress,
+		Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.OneUint())),
+		Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.OneUint())},
+	}, 55, pk, 55)
+	tx.XmrTxKey = strings.Repeat("a", 64)
+
+	msg := NewMsgObservedTxOut(common.ObservedTxs{tx}, GetRandomBech32Addr())
+	c.Assert(msg.ValidateBasic(), NotNil)
+}
+
+func (s *MsgObservedTxOutSuite) TestMsgObservedTxOutAllowsOptionalXMRSpentRefs(c *C) {
+	pk := getRandomXMRPubKeyForMsgTest(c)
+	fromAddress, err := pk.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	toAddress, err := getRandomXMRPubKeyForMsgTest(c).GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	tx := common.NewObservedTx(common.Tx{
+		ID:          GetRandomTxHash(),
+		Chain:       common.XMRChain,
+		FromAddress: fromAddress,
+		ToAddress:   toAddress,
+		Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(100))),
+		Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(1))},
+		Memo:        "OUT:xmr-spent-refs",
+	}, 55, pk, 55)
+	tx.XmrTxKey = strings.Repeat("a", 64)
+
+	msg := NewMsgObservedTxOut(common.ObservedTxs{tx}, GetRandomBech32Addr())
+	c.Assert(msg.ValidateBasic(), IsNil)
+
+	tx.SpentOutputRefs = []common.OutputRef{validXMRSpentRefForMsgTest(tx)}
+	msg = NewMsgObservedTxOut(common.ObservedTxs{tx}, GetRandomBech32Addr())
+	c.Assert(msg.ValidateBasic(), IsNil)
 }

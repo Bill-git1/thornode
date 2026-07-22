@@ -221,12 +221,10 @@ func (s *KeysignErrorSuite) TestKeysignErrorString(c *C) {
 }
 
 func (s *KeysignErrorSuite) TestIsTerminalRound(c *C) {
-	// IsTerminalRound is true for the v3 secp256k1 terminal round
-	// (SignRound9Message), the ed25519 terminal round (SignRound3Message), and
-	// the FROST share exchange.
-	// v1's SignRound7Message is no longer accepted — a v3 node will never
-	// emit it for its own terminal failure, and legacy on-chain markers are
-	// not consumed by the per-signer retry path.
+	// This legacy-name coverage complements the protocol-specific secp256k1,
+	// ed25519, and FROST terminal-boundary cases in round_normalizer_test.go.
+	// v1's SignRound7Message is no longer accepted — a v3 node will never emit
+	// it for its own terminal failure.
 	ke := NewKeysignError(stypes.Blame{Round: "SignRound9Message"})
 	c.Assert(ke.IsTerminalRound(), Equals, true)
 

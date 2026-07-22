@@ -686,6 +686,48 @@ func (s *SolTestSuite) TestSignSOLTx_PostKeysignFailureUsesOriginalMemo(c *C) {
 	c.Check(bridge.postCalls[0].memo, Equals, tx.GetMemo())
 }
 
+func (s *SolTestSuite) TestSignSOLTx_ObservationUsesOriginalMemo(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	client, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + s.server.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	client.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	client.solScanner.recentBlockHash = "asdfasdf"
+
+	pubkeys := pubkeyMgr.GetPubKeys()
+	originalMemo := "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87"
+	_, _, obs, err := client.SignTx(stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate:      1,
+		Memo:         "",
+		OriginalMemo: originalMemo,
+	}, 123)
+	c.Assert(err, IsNil)
+	c.Assert(obs, NotNil)
+	c.Check(obs.Memo, Equals, originalMemo)
+}
+
 // TestSignSOLTx_DoesNotPostKeysignFailureWithoutBlameNodes keeps the existing
 // behavior for generic TSS failures where no culprit set is available.
 func (s *SolTestSuite) TestSignSOLTx_DoesNotPostKeysignFailureWithoutBlameNodes(c *C) {

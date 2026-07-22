@@ -109,6 +109,9 @@ func NewEVMClient(
 	if poolMgr == nil {
 		return nil, errors.New("pool manager is nil")
 	}
+	if err := evm.NormalizeGasMultipliers(&cfg); err != nil {
+		return nil, fmt.Errorf("invalid %s gas multiplier configuration: %w", cfg.ChainID, err)
+	}
 
 	// create keys
 	tssKm, err := tss.NewKeySign(server, bridge)

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/blang/semver"
 	"github.com/btcsuite/btcd/btcec"
@@ -18,6 +19,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type TssHandler struct {
@@ -124,8 +126,12 @@ func (h TssHandler) validate(ctx cosmos.Context, msg *MsgTssPool) error {
 		return cosmos.ErrUnknownRequest("invalid tss message")
 	}
 
-	churnRetryBlocks := h.mgr.Keeper().GetConfigInt64(ctx, constants.ChurnRetryInterval)
-	if msg.Height < ctx.BlockHeight()-churnRetryBlocks {
+	keygenBlock, err := h.mgr.Keeper().GetKeygenBlock(ctx, msg.Height)
+	if err != nil {
+		return fmt.Errorf("fail to get keygen block from data store: %w", err)
+	}
+	keygenValidityBlocks := keygenResultValidityBlocksForBlock(ctx, h.mgr.Keeper(), msg.KeygenType, keygenBlock)
+	if msg.Height < ctx.BlockHeight()-keygenValidityBlocks {
 		return cosmos.ErrUnknownRequest("invalid keygen block")
 	}
 
@@ -143,11 +149,6 @@ func (h TssHandler) validate(ctx cosmos.Context, msg *MsgTssPool) error {
 			)
 			return cosmos.ErrUnknownRequest("invalid secp256k1 check signature")
 		}
-	}
-
-	keygenBlock, err := h.mgr.Keeper().GetKeygenBlock(ctx, msg.Height)
-	if err != nil {
-		return fmt.Errorf("fail to get keygen block from data store: %w", err)
 	}
 
 	for _, keygen := range keygenBlock.Keygens {
@@ -168,6 +169,50 @@ func (h TssHandler) validate(ctx cosmos.Context, msg *MsgTssPool) error {
 	}
 
 	return cosmos.ErrUnauthorized("not authorized")
+}
+
+func keygenResultValidityBlocks(ctx cosmos.Context, k keeper.Keeper, keygenType types.KeygenType) int64 {
+	blocks := k.GetConfigInt64(ctx, constants.ChurnRetryInterval)
+	// An explicit zero disables churn retries. Preserve that operational
+	// setting for both ordinary and XMR keygens instead of replacing it with
+	// the default or the XMR minimum window.
+	if blocks == 0 {
+		return 0
+	}
+	if blocks < 0 {
+		blocks = constants.NewConstantValue().GetInt64Value(constants.ChurnRetryInterval)
+	}
+	if keygenType == XMRMonovaultKeygen {
+		blocks = max(blocks, durationToBlocks(6*time.Minute))
+	}
+	return blocks
+}
+
+func keygenResultValidityBlocksForBlock(ctx cosmos.Context, k keeper.Keeper, keygenType types.KeygenType, keygenBlock KeygenBlock) int64 {
+	blocks := keygenResultValidityBlocks(ctx, k, keygenType)
+	if keygenType != AsgardKeygen {
+		return blocks
+	}
+	for _, keygen := range keygenBlock.Keygens {
+		if keygen.Type == XMRMonovaultKeygen {
+			return max(blocks, keygenResultValidityBlocks(ctx, k, XMRMonovaultKeygen))
+		}
+	}
+	return blocks
+}
+
+func durationToBlocks(d time.Duration) int64 {
+	if constants.ThorchainBlockTime <= 0 {
+		return int64(d / time.Second)
+	}
+	blocks := d / constants.ThorchainBlockTime
+	if d%constants.ThorchainBlockTime != 0 {
+		blocks++
+	}
+	if blocks < 1 {
+		return 1
+	}
+	return int64(blocks)
 }
 
 func validateTssAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
@@ -684,14 +729,6 @@ func (h TssHandler) rotateReadyKeygenVaultFamilies(ctx cosmos.Context, keygenBlo
 		xmrInitVaults := filterVaultsByKeygenType(initVaults, keygenBlock, XMRMonovaultKeygen)
 		if keygenTypeReady(keygenBlock, readyVaults, XMRMonovaultKeygen) {
 			if len(xmrInitVaults) > 0 {
-				regularFamilyActive := hasActiveNonXMRAsgardFamily(activeVaults)
-				if keygenBlockHasType(keygenBlock, AsgardKeygen) {
-					regularFamilyActive = keygenTypeReady(keygenBlock, activeVaults, AsgardKeygen)
-				}
-				if !regularFamilyActive {
-					ctx.Logger().Info("waiting for regular vault rotation before activating xmr monovault")
-					return nil
-				}
 				ctx.Logger().Info("tss keygen results xmr monovault", "vaults", len(xmrInitVaults))
 				if rotateErr := h.tryRotateInitVaults(ctx, xmrInitVaults); rotateErr != nil {
 					return fmt.Errorf("fail to rotate xmr monovault: %w", rotateErr)

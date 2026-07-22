@@ -97,6 +97,9 @@ func NewClient(thorKeys *thorclient.Keys,
 	if thorKeys == nil {
 		return nil, fmt.Errorf("fail to create ETH client,thor keys is empty")
 	}
+	if err := evm.NormalizeGasMultipliers(&cfg); err != nil {
+		return nil, fmt.Errorf("invalid ETH gas multiplier configuration: %w", err)
+	}
 	tssKm, err := tss.NewKeySign(server, bridge)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create tss signer: %w", err)

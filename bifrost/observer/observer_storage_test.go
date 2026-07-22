@@ -217,12 +217,15 @@ func TestErrataAttestationRetryStatePersistsWithoutResurrection(t *testing.T) {
 	assert.False(t, recorded)
 }
 
+// Removal must not depend on the errata height matching the deck view's
+// height: the errata block reports 99 while the on-deck views sit at 100.
+// BTC (like every non-XMR chain) therefore removes TxID-wide.
 func TestErrataCleanupPersistsAcrossRestart(t *testing.T) {
 	storage, tempDir := setupTestDB(t)
 	defer os.RemoveAll(tempDir)
 
 	txIn := &types.TxIn{
-		Chain:                common.XMRChain,
+		Chain:                common.BTCChain,
 		Filtered:             true,
 		ConfirmationRequired: 6,
 		TxArray: []*types.TxInItem{
@@ -231,10 +234,10 @@ func TestErrataCleanupPersistsAcrossRestart(t *testing.T) {
 		},
 	}
 	require.NoError(t, storage.AddOrUpdateTx(txIn))
-	errata := types.ErrataTx{Chain: common.XMRChain, TxID: "orphaned"}
+	errata := types.ErrataTx{Chain: common.BTCChain, TxID: "orphaned"}
 	block := types.ErrataBlock{
 		Height:     99,
-		DeliveryID: "xmr-reorg-99-orphaned",
+		DeliveryID: "btc-reorg-99-orphaned",
 		Txs:        []types.ErrataTx{errata},
 	}
 	require.NoError(t, storage.AddErrataBlock(block))
@@ -246,7 +249,9 @@ func TestErrataCleanupPersistsAcrossRestart(t *testing.T) {
 		onDeck:  map[txInKey]*types.TxIn{key: txIn},
 		storage: storage,
 	}
-	require.NoError(t, observer.filterErrataTx(block))
+	// cleanupErrataBlock is the production entry point: it runs filterErrataTx
+	// and then durably marks the outbox record cleanup-complete.
+	require.NoError(t, observer.cleanupErrataBlock(block))
 	require.Len(t, observer.onDeck[key].TxArray, 1)
 	assert.Equal(t, "retained", observer.onDeck[key].TxArray[0].Tx)
 
@@ -424,6 +429,23 @@ func TestAddOrUpdateTx(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "updated-tx-data", storedTx.TxArray[0].Tx)
 	})
+}
+
+func TestObserverWriteOptions(t *testing.T) {
+	ordinary := createTestTxIn(common.BTCChain, 100)
+	assert.Nil(t, observerWriteOptions(ordinary))
+
+	replay := createTestTxIn(common.XMRChain, 100)
+	replay.TxArray[0].OnObservedTxStored = func() {}
+	writeOptions := observerWriteOptions(replay)
+	require.NotNil(t, writeOptions)
+	assert.True(t, writeOptions.Sync)
+
+	rejectedReplay := createTestTxIn(common.XMRChain, 100)
+	rejectedReplay.TxArray[0].OnObservedTxRejected = func(error) {}
+	writeOptions = observerWriteOptions(rejectedReplay)
+	require.NotNil(t, writeOptions)
+	assert.True(t, writeOptions.Sync)
 }
 
 func TestRemoveTx(t *testing.T) {

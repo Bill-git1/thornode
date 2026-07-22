@@ -374,6 +374,10 @@ func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 			fundUserXMRAccounts(master, funded, chainSeedAmount)
 			continue
 		}
+		if chain.Equals(common.ZECChain) {
+			fundUserZecAccounts(master, funded, chainSeedAmount.QuoUint64(uint64(chainSeedTxs)), chainSeedTxs)
+			continue
+		}
 
 		for i := 0; i < chainSeedTxs; i++ {
 			wg.Add(1)
@@ -397,6 +401,18 @@ func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 func fundUserChainAccounts(master *User, users []*User, chain common.Chain, amount sdkmath.Uint) {
 	for _, user := range users {
 		fundUserChainAccount(master, user, chain, amount)
+	}
+}
+
+func fundUserZecAccounts(master *User, users []*User, amount sdkmath.Uint, txs int) {
+	for i := 0; i < txs; i++ {
+		cumulativeAmount := amount.MulUint64(uint64(i + 1))
+		for _, user := range users {
+			fundUserChainAccount(master, user, common.ZECChain, cumulativeAmount)
+			if err := generateZecBlocks(chainRPCs[common.ZECChain], 1); err != nil {
+				log.Fatal().Err(err).Msg("failed to mine zec funding block")
+			}
+		}
 	}
 }
 

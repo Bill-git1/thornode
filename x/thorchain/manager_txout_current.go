@@ -1103,7 +1103,7 @@ func (tos *TxOutStorage) addToBlockOut(ctx cosmos.Context, mgr Manager, item TxO
 
 func (tos *TxOutStorage) calcClout(ctx cosmos.Context, runeValue cosmos.Uint, toi TxOutItem) (cosmos.Uint, cosmos.Uint) {
 	// disable swapper clout for dex agg txs
-	if toi.Aggregator != "" || toi.AggregatorTargetAsset != "" || toi.AggregatorTargetLimit != nil {
+	if txOutHasAggregator(toi) {
 		return runeValue, cosmos.ZeroUint()
 	}
 

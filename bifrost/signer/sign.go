@@ -102,6 +102,8 @@ var (
 	encryptRawKeysharesFn = tss.EncryptRawKeyshares
 )
 
+const secp256k1VerificationSignatureTimeout = tss.RemoteSignTimeout + 30*time.Second
+
 type vaultLocker interface {
 	GetVaultLock(vaultPubKey string) *sync.Mutex
 }
@@ -128,6 +130,16 @@ func chainVaultLockKey(chain chainclients.ChainClient, tx types.TxOutItem) strin
 		return tx.VaultPubKey.String()
 	}
 	return key
+}
+
+func txOutItemEqualsIgnoringGas(a, b types.TxOutItem) bool {
+	a.MaxGas = b.MaxGas
+	a.GasRate = b.GasRate
+	return a.Equals(b)
+}
+
+func txOutItemGasChanged(a, b types.TxOutItem) bool {
+	return a.GasRate != b.GasRate || !a.MaxGas.Equals(b.MaxGas)
 }
 
 // NewSigner create a new instance of signer
@@ -251,7 +263,14 @@ func (s *Signer) shouldAutoObserve(tx types.TxOutItem) bool {
 	// Monero outbounds need sign-time observation even when global auto-observe is disabled.
 	// The chain scanner can later see the mined tx as an incoming change output, which is
 	// insufficient to attribute the scheduled outbound on THORChain.
-	return s.cfg.Signer.AutoObserve || tx.Chain.Equals(common.XMRChain)
+	if tx.Chain.Equals(common.XMRChain) {
+		return true
+	}
+
+	// Memoless outbounds are intentionally broadcast without the canonical memo on-chain.
+	// The signer still has OriginalMemo, so submit the observation directly instead of
+	// waiting for a scanner observation that cannot reconstruct the inbound linkage.
+	return s.cfg.Signer.AutoObserve || (tx.Memo == "" && tx.OriginalMemo != "")
 }
 
 // signTransactions - looks for work to do by getting a list of all unsigned
@@ -741,11 +760,48 @@ func (s *Signer) runCustomKeygenHooks(
 	return effectivePoolPubKeyEddsa, frostPoolPubKey, frostKeyshareHex, observedMoneroHeight, customHookErr
 }
 
-// secp256k1VerificationSignature will make a best effort to sign the public key with
-// its own private key as a sanity check to ensure parties are able to sign. The
-// signature will be included in the TssPool message if successful, and verified by
-// THORNode before the keygen is accepted.
+// secp256k1VerificationSignature signs the public key with its own private key as a
+// sanity check that the parties can sign. Asgard keygen requires a quorum on this
+// check signature before THORNode accepts the keygen. Nodes outside the signing
+// party may legitimately return no signature.
 func (s *Signer) secp256k1VerificationSignature(pk common.PubKey, thorchainHeight int64) []byte {
+	return s.secp256k1VerificationSignatureWithTimeout(
+		pk,
+		thorchainHeight,
+		secp256k1VerificationSignatureTimeout,
+		s.secp256k1VerificationSignatureSync,
+	)
+}
+
+func (s *Signer) secp256k1VerificationSignatureWithTimeout(
+	pk common.PubKey,
+	thorchainHeight int64,
+	timeout time.Duration,
+	sign func(common.PubKey, int64) []byte,
+) []byte {
+	type verificationResult struct {
+		sig []byte
+	}
+	resultCh := make(chan verificationResult, 1)
+	go func() {
+		resultCh <- verificationResult{sig: sign(pk, thorchainHeight)}
+	}()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case result := <-resultCh:
+		return result.sig
+	case <-timer.C:
+		s.logger.Warn().
+			Stringer("pubkey", pk).
+			Stringer("timeout", timeout).
+			Msg("timed out generating secp256k1 keygen check signature")
+		return nil
+	}
+}
+
+func (s *Signer) secp256k1VerificationSignatureSync(pk common.PubKey, thorchainHeight int64) []byte {
 	// create keysign instance
 	ks, err := tss.NewKeySign(s.tssServer, keygenCheckBridge{ThorchainBridge: s.thorchainBridge})
 	if err != nil {
@@ -1002,9 +1058,13 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		inactiveVaultRound7Retry = vault.Status == ttypes.VaultStatus_InactiveVault
 	}
 
-	// if not in round 7 retry or the round 7 retry is on an inactive vault, discard
-	// outbound if within configured blocks of reschedule
-	if !item.Round7Retry || inactiveVaultRound7Retry {
+	// Stale items must stop here so an old transaction cannot be broadcast after
+	// THORChain has rescheduled the outbound. XMR is the only exception: its
+	// vault-independent durable claim prevents a replacement signing ceremony,
+	// so a persisted payload can safely rebroadcast the exact same transaction.
+	hasSignedRetry := len(item.SignedTx) > 0
+	allowStaleSignedRetry := hasSignedRetry && tx.Chain.Equals(common.XMRChain)
+	if !allowStaleSignedRetry && (!item.Round7Retry || inactiveVaultRound7Retry) {
 		if blockHeight-signingTransactionPeriod > height-s.cfg.Signer.RescheduleBufferBlocks {
 			s.logger.Error().Msgf("tx was created at block height(%d), now it is (%d), it is older than (%d) blocks, skip it", height, blockHeight, signingTransactionPeriod)
 			return nil, nil, nil
@@ -1070,11 +1130,36 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		return nil, nil, err
 	}
 	for _, txArray := range txOut.TxArray {
-		if txArray.TxOutItem(item.TxOutItem.Height).Equals(tx) && !txArray.OutHash.IsEmpty() {
+		latestTx := txArray.TxOutItem(item.TxOutItem.Height)
+		if !txOutItemEqualsIgnoringGas(latestTx, tx) {
+			continue
+		}
+		if !latestTx.OutHash.IsEmpty() {
 			// already been signed, we can skip it
-			s.logger.Info().Str("tx_id", tx.OutHash.String()).Msgf("already signed. skipping...")
+			s.logger.Info().Str("tx_id", latestTx.OutHash.String()).Msgf("already signed. skipping...")
 			return nil, nil, nil
 		}
+		// Signed bytes, a checkpoint, or a terminal-round marker all cross the
+		// transaction-immutability boundary. Gas may be part of the chain tx hash,
+		// so only a wholly unexposed attempt may adopt refreshed gas.
+		if len(item.SignedTx) == 0 && len(item.Checkpoint) == 0 && !item.Round7Retry && txOutItemGasChanged(latestTx, tx) {
+			s.logger.Info().
+				Str("chain", tx.Chain.String()).
+				Str("memo", tx.Memo).
+				Int64("old_gas_rate", tx.GasRate).
+				Int64("new_gas_rate", latestTx.GasRate).
+				Msg("refreshing signer txout gas from latest keysign")
+			tx.MaxGas = latestTx.MaxGas
+			tx.GasRate = latestTx.GasRate
+			item.TxOutItem.MaxGas = latestTx.MaxGas
+			item.TxOutItem.GasRate = latestTx.GasRate
+			if s.storage != nil {
+				if storeErr := s.storage.Set(item); storeErr != nil {
+					s.logger.Error().Err(storeErr).Msg("fail to persist refreshed txout gas")
+				}
+			}
+		}
+		break
 	}
 
 	// If the chain client exposes a vault lock, hold it for sign+broadcast so
@@ -1089,7 +1174,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 	var signedTx, checkpoint []byte
 	var elapse time.Duration
 	var observation *types.TxInItem
-	if len(item.SignedTx) > 0 {
+	if hasSignedRetry {
 		s.logger.Info().Str("memo", tx.Memo).Msg("retrying broadcast of already signed tx")
 		signedTx = item.SignedTx
 		observation = item.Observation
@@ -1103,8 +1188,12 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		}
 		elapse = time.Since(startKeySign)
 
-		// store immediately after a successful sign so the signed payload is saved even if broadcast crashes
+		// Store the signed payload before broadcast so a restart can retry the
+		// same transaction. Persist the chain-provided observation with it:
+		// most chains return nil, while XMR uses the observation to carry spent
+		// refs that must survive until import/observation is durable.
 		item.SignedTx = signedTx
+		item.Observation = observation
 		if storeErr := s.storage.Set(item); storeErr != nil {
 			s.logger.Error().Err(storeErr).Msg("fail to persist signed tx before broadcast")
 		}
@@ -1195,12 +1284,20 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 	// the real inputs consumed. Applying immediately ensures the sidecar
 	// marks outputs spent even when broadcast fails (another signer may have
 	// broadcast the same tx successfully).
+	// If the chain client can report import durability, keep the txout item
+	// until refs are applied so a restart can retry the same signed payload.
 	// Fall back to the stored observation from a prior signing attempt.
 	obsForRefs := obs
 	if obsForRefs == nil {
 		obsForRefs = item.Observation
 	}
-	s.applySpentOutputRefsFromObs(item.TxOutItem, obsForRefs)
+	if !s.applySpentOutputRefsFromObs(ctx, item.TxOutItem, obsForRefs) {
+		s.logger.Warn().
+			Interface("tx", item.TxOutItem).
+			Msg("xmr spent output refs not durable; keeping tx out store item for retry")
+		cancel()
+		return
+	}
 
 	if err != nil {
 		// Always store the checkpoint of the built tx if we have one. This ensures the same
@@ -1208,11 +1305,12 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 		// against cases like https://gitlab.com/thorchain/thornode/-/merge_requests/4344.
 		// In tradeoff, we accept a higher likelihood of temporary stuck outbounds.
 		ksErr := tss.KeysignError{}
-		// Terminal-round failure = the keysign died at the phase that emits the
-		// signature share (secp256k1 KEYSIGN9 under tss-lib v3, EDDSAKEYSIGN3
-		// under ed25519, or the FROST share exchange). Round7Retry persists on
-		// the item — its name is the legacy v1 label and is kept stable for
-		// on-disk schema compatibility.
+		// Terminal-round failure = the keysign crossed a signature-exposure
+		// boundary (secp256k1 KEYSIGN9 under tss-lib v3, EDDSAKEYSIGN3 under
+		// ed25519, or FROST frost_share/frost_result). FROST preprocess remains
+		// non-terminal because no signature share has been broadcast yet.
+		// Round7Retry persists on the item — its name is the legacy v1 label and
+		// is kept stable for on-disk schema compatibility.
 		isTerminalRound := errors.As(err, &ksErr) && ksErr.IsTerminalRound()
 		if checkpoint != nil || isTerminalRound {
 			item.Checkpoint = checkpoint
@@ -1263,20 +1361,13 @@ func signingTimeoutForChain(chain common.Chain) time.Duration {
 	return 5 * time.Minute
 }
 
-func (s *Signer) applySpentOutputRefsFromObs(tx types.TxOutItem, obs *types.TxInItem) {
+func (s *Signer) applySpentOutputRefsFromObs(ctx context.Context, tx types.TxOutItem, obs *types.TxInItem) bool {
 	if obs == nil || len(obs.SpentOutputRefs) == 0 {
-		return
+		return true
 	}
 	chain, ok := s.chains[tx.Chain]
 	if !ok {
-		return
-	}
-	type spentRefApplier interface {
-		ApplySpentOutputRefs(common.ObservedTx)
-	}
-	applier, ok := chain.(spentRefApplier)
-	if !ok {
-		return
+		return !tx.Chain.Equals(common.XMRChain)
 	}
 	obsTx := common.NewObservedTx(
 		common.NewTx(
@@ -1292,9 +1383,34 @@ func (s *Signer) applySpentOutputRefsFromObs(tx types.TxOutItem, obs *types.TxIn
 		obs.BlockHeight,
 	)
 	obsTx.SpentOutputRefs = common.OutputRefsFromPointers(obs.SpentOutputRefs)
+	obsTx.XmrTxKey = obs.TxKey
 	s.logger.Info().
 		Str("tx_hash", obs.Tx).
 		Int("refs", len(obs.SpentOutputRefs)).
 		Msg("applying spent output refs from signing observation")
-	applier.ApplySpentOutputRefs(obsTx)
+	applier, ok := chain.(chainclienttypes.SpentOutputRefsApplier)
+	if !ok {
+		// Exact spent refs are an XMR signing invariant. Other clients may carry
+		// future optional metadata, but XMR must never discard the TxOut until
+		// the production sidecar confirms durable import.
+		return !tx.Chain.Equals(common.XMRChain)
+	}
+
+	outcome := make(chan bool, 1)
+	applier.ApplySpentOutputRefsWithOutcome(obsTx, func(applied bool) {
+		// The contract is exactly-once, but keep a misbehaving implementation
+		// from blocking its retry goroutine after the signer has timed out.
+		select {
+		case outcome <- applied:
+		default:
+		}
+	})
+	select {
+	case applied := <-outcome:
+		return applied
+	case <-ctx.Done():
+		return false
+	case <-s.stopChan:
+		return false
+	}
 }

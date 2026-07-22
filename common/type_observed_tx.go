@@ -9,7 +9,10 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-const MaxXMRSpentOutputRefs = 32
+const (
+	MaxXMRSpentOutputRefs = 32
+	xmrTxKeyHexLength     = 64
+)
 
 // ObservedTxs a list of ObservedTx
 type ObservedTxs []ObservedTx
@@ -44,6 +47,28 @@ func (m *ObservedTx) Valid() error {
 	}
 	if err := ValidateSpentOutputRefs(m.Tx.Chain, m.Tx.ID, m.SpentOutputRefs); err != nil {
 		return err
+	}
+	if err := ValidateXMRTxKey(m.Tx.Chain, m.XmrTxKey); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateXMRTxKey(chain Chain, txKey string) error {
+	txKey = strings.TrimSpace(txKey)
+	if txKey == "" {
+		return nil
+	}
+	if !chain.Equals(XMRChain) {
+		return errors.New("xmr tx key is only valid for XMR observed txs")
+	}
+	if len(txKey) != xmrTxKeyHexLength {
+		return fmt.Errorf("xmr tx key must be %d hex characters", xmrTxKeyHexLength)
+	}
+	for _, c := range txKey {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return errors.New("xmr tx key must be hex")
+		}
 	}
 	return nil
 }
@@ -133,7 +158,10 @@ func (m ObservedTx) Equals(tx2 ObservedTx) bool {
 	if !m.AggregatorTargetLimit.Equal(*tx2.AggregatorTargetLimit) {
 		return false
 	}
-	if !m.HasEquivalentSpentOutputRefs(tx2) {
+	if !spentOutputRefsEqual(m.SpentOutputRefs, tx2.SpentOutputRefs) {
+		return false
+	}
+	if !m.HasEquivalentXMRTxKey(tx2) {
 		return false
 	}
 	return true
@@ -143,23 +171,39 @@ func (m ObservedTx) HasEquivalentSpentOutputRefs(tx2 ObservedTx) bool {
 	if !m.Tx.Chain.Equals(XMRChain) && !tx2.Tx.Chain.Equals(XMRChain) {
 		return true
 	}
+	// Spent-output refs are supporting XMR metadata. Signers can provide them,
+	// while non-signing observers may only have the tx key needed to validate
+	// the outbound. Do not split consensus when one side lacks refs; still reject
+	// conflicting non-empty ref sets.
+	if len(m.SpentOutputRefs) == 0 || len(tx2.SpentOutputRefs) == 0 {
+		return true
+	}
 	return spentOutputRefsEqual(m.SpentOutputRefs, tx2.SpentOutputRefs)
+}
+
+func (m ObservedTx) HasEquivalentXMRTxKey(tx2 ObservedTx) bool {
+	if !m.Tx.Chain.Equals(XMRChain) && !tx2.Tx.Chain.Equals(XMRChain) {
+		return true
+	}
+	return normalizeString(m.XmrTxKey) == normalizeString(tx2.XmrTxKey)
 }
 
 func (m ObservedTx) EqualsConsensus(tx2 ObservedTx) bool {
 	return m.ObservedPubKey.Equals(tx2.ObservedPubKey) &&
 		m.Tx.EqualsEx(tx2.Tx) &&
-		m.HasEquivalentSpentOutputRefs(tx2)
+		m.HasEquivalentSpentOutputRefs(tx2) &&
+		m.HasEquivalentXMRTxKey(tx2)
 }
 
 func (m ObservedTx) EqualsConsensusIgnoreGas(tx2 ObservedTx) bool {
 	return m.ObservedPubKey.Equals(tx2.ObservedPubKey) &&
 		m.Tx.EqualsExIgnoreGas(tx2.Tx) &&
-		m.HasEquivalentSpentOutputRefs(tx2)
+		m.HasEquivalentSpentOutputRefs(tx2) &&
+		m.HasEquivalentXMRTxKey(tx2)
 }
 
 func (m ObservedTx) AttestationUniqueHash() string {
-	return observedTxSpentRefsUniqueHash(m.Tx.Hash(m.BlockHeight), m.Tx.Chain, m.SpentOutputRefs)
+	return observedTxXMRMetadataUniqueHash(m.Tx.Hash(m.BlockHeight), m.Tx.Chain, m.XmrTxKey, m.SpentOutputRefs)
 }
 
 // IsFinal indicates whether ObserveTx is final.

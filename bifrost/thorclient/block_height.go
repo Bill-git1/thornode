@@ -48,13 +48,35 @@ func (b *thorchainBridge) GetBlockHeight() (int64, error) {
 	return 0, fmt.Errorf("failed to GetThorchainHeight")
 }
 
+// GetBlockHeightUncached returns the current THORChain height from a fresh HTTP
+// response. It bypasses the shared one-block cache so callers can use it as a
+// visibility barrier before making irreversible local security decisions.
+func (b *thorchainBridge) GetBlockHeightUncached() (int64, error) {
+	latestBlocks, err := b.getLastBlockUncached(common.EmptyChain)
+	if err != nil {
+		return 0, fmt.Errorf("failed to GetThorchainHeight: %w", err)
+	}
+	for _, item := range latestBlocks {
+		return item.Thorchain, nil
+	}
+	return 0, fmt.Errorf("failed to GetThorchainHeight")
+}
+
 // getLastBlock calls the /lastblock/{chain} endpoint and Unmarshal's into the QueryResLastBlockHeights type
 func (b *thorchainBridge) getLastBlock(chain common.Chain) ([]openapi.LastBlock, error) {
+	return b.getLastBlockWithPath(chain, b.getWithPath)
+}
+
+func (b *thorchainBridge) getLastBlockUncached(chain common.Chain) ([]openapi.LastBlock, error) {
+	return b.getLastBlockWithPath(chain, b.getWithPathUncached)
+}
+
+func (b *thorchainBridge) getLastBlockWithPath(chain common.Chain, get func(string) ([]byte, int, error)) ([]openapi.LastBlock, error) {
 	path := LastBlockEndpoint
 	if !chain.IsEmpty() {
 		path = fmt.Sprintf("%s/%s", path, chain.String())
 	}
-	buf, _, err := b.getWithPath(path)
+	buf, _, err := get(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get lastblock: %w", err)
 	}

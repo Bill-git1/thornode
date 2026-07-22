@@ -14,6 +14,10 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
+type vaultSpendKeyProvider interface {
+	spendKeyHexFor(vaultPubKey common.PubKey) (string, bool)
+}
+
 func groupKeyHexFromVaultPubKey(vaultPubKey common.PubKey) (string, error) {
 	if vaultPubKey.IsEmpty() {
 		return "", fmt.Errorf("vault pubkey is empty")
@@ -56,7 +60,7 @@ func ensureVaultRegistered(
 	client *sidecar.Client,
 	chain common.Chain,
 	vaultPubKey common.PubKey,
-	bootstrap *vaultBootstrap,
+	bootstrap vaultSpendKeyProvider,
 	source string,
 	birthday int64,
 ) (common.Address, error) {
@@ -69,7 +73,7 @@ func ensureVaultRegisteredContext(
 	client *sidecar.Client,
 	chain common.Chain,
 	vaultPubKey common.PubKey,
-	bootstrap *vaultBootstrap,
+	bootstrap vaultSpendKeyProvider,
 	source string,
 	birthday int64,
 ) (common.Address, error) {
@@ -100,8 +104,10 @@ func ensureVaultRegisteredContext(
 		Source:              source,
 		VaultCreationHeight: birthday,
 	}
-	if spendKeyHex, ok := bootstrap.spendKeyHexFor(vaultPubKey); ok {
-		req.SpendKeyHex = strings.TrimSpace(spendKeyHex)
+	if bootstrap != nil {
+		if spendKeyHex, ok := bootstrap.spendKeyHexFor(vaultPubKey); ok {
+			req.SpendKeyHex = strings.TrimSpace(spendKeyHex)
+		}
 	}
 
 	// Non-member nodes lack a spend key but can still independently scan for

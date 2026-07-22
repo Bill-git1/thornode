@@ -129,6 +129,7 @@ docs/OraclePricesResponse.md
 docs/OutboundDelayStage.md
 docs/OutboundFee.md
 docs/OutboundSignedStage.md
+docs/OutputRef.md
 docs/POL.md
 docs/PaginationMeta.md
 docs/Ping.md
@@ -289,6 +290,7 @@ model_oracle_prices_response.go
 model_outbound_delay_stage.go
 model_outbound_fee.go
 model_outbound_signed_stage.go
+model_output_ref.go
 model_pagination_meta.go
 model_ping.go
 model_planned_out_tx.go

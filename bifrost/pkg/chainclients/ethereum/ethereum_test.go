@@ -342,6 +342,12 @@ func (s *EthereumSuite) TestNewClient(c *C) {
 	e, err = NewClient(nil, config.BifrostChainConfiguration{}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(e, IsNil)
 	c.Assert(err, NotNil)
+
+	divergent := config.BifrostChainConfiguration{}
+	divergent.EVM.TokenMaxGasMultiplier = constants.EVMTokenMaxGasMultiplier + 1
+	e, err = NewClient(s.thorKeys, divergent, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(e, IsNil)
+	c.Assert(err, ErrorMatches, ".*diverges from Thornode protocol value.*")
 }
 
 func (s *EthereumSuite) TestConvertSigningAmount(c *C) {
