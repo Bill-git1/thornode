@@ -1410,11 +1410,16 @@ func settleSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason strin
 }
 
 func settleSwapCached(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason string) error {
+	stableReserveInternal, err := isStableReserveInternalSwap(ctx, mgr, msg)
+	if err != nil {
+		return err
+	}
+
 	// Schedule outbound for what was already swapped whenever settlement is the
 	// place materializing the final outbound. The advanced swap queue skips
 	// outbound creation during execution and relies on settlement to create the
 	// completed swap outbound, even after multiple sub-swaps have already run.
-	if !msg.State.Out.IsZero() {
+	if !msg.State.Out.IsZero() && !stableReserveInternal {
 		// Parse memo to check if this is a savers add
 		memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), msg.Tx.Memo)
 		if err != nil {
@@ -1466,6 +1471,27 @@ func settleSwapCached(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason
 					ctx.Logger().Error("fail to emit refund event", "error", err)
 				}
 			}
+		}
+	}
+
+	// Internal stable-reserve rescues targeting RUNE accumulate their proceeds in
+	// Asgard during the stream (the outbound above is skipped for internal swaps,
+	// and settleStableReserveInternalSwap deliberately leaves the RUNE in Asgard so
+	// the solvency invariant stays satisfied mid-stream). Move the accumulated RUNE
+	// into the module here, at completion — this runs for both a successful and a
+	// failed final sub-swap, so proceeds from earlier sub-swaps are never stranded.
+	// Deploys always target a stable (never RUNE), so a RUNE target is always a rescue.
+	if stableReserveInternal && msg.TargetAsset.IsRune() && !msg.State.Out.IsZero() {
+		coin := common.NewCoin(common.RuneAsset(), msg.State.Out)
+		if err := mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, StableReserveName, common.NewCoins(coin)); err != nil {
+			return err
+		}
+		if err := mgr.EventMgr().EmitEvent(ctx, newStableReserveEvent(
+			"stable_reserve_rescue_rune_settled",
+			"amount", msg.State.Out.String(),
+			"tx_id", msg.Tx.ID.String(),
+		)); err != nil {
+			return err
 		}
 	}
 

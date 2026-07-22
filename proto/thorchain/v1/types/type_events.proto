@@ -109,6 +109,7 @@ message EventSwap {
     (gogoproto.customtype) = "cosmossdk.io/math.Uint",
     (gogoproto.nullable) = false
   ];
+  bool stable_reserve = 13;
 }
 
 message EventAffiliateFee {

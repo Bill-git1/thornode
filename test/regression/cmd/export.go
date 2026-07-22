@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -25,7 +24,7 @@ import (
 
 func export(out io.Writer, path string, routine int, failExportInvariants bool) error {
 	localLog := consoleLogger(out)
-	home := "/" + strconv.Itoa(routine)
+	home := regtestHome(routine)
 
 	// export blocks
 	err := exportBlocks(out, path)
@@ -59,6 +58,8 @@ func export(out io.Writer, path string, routine int, failExportInvariants bool) 
 	delete(thorchain, "store_version")
 	deleteEmptySpentOutputRefs(thorchain)
 	deleteEmptyPOLReserveDeposits(thorchain)
+	deleteEmptyStableReserveCredits(thorchain)
+	deleteEmptyVaultDeficits(thorchain)
 
 	// ignore node account version for comparison
 	nodeAccounts, _ := thorchain["node_accounts"].([]interface{})
@@ -77,7 +78,7 @@ func export(out io.Writer, path string, routine int, failExportInvariants bool) 
 	// base path without extension and replace path separators with underscores
 	path = strings.TrimPrefix(path, "suites/")
 	exportName := strings.TrimSuffix(path, filepath.Ext(path))
-	exportPath := fmt.Sprintf("/mnt/exports/%s.json", exportName)
+	exportPath := filepath.Join(regtestMntDir(), "exports", exportName+".json")
 
 	// check whether existing export exists
 	_, err = os.Stat(exportPath)
@@ -123,7 +124,7 @@ func exportBlocks(out io.Writer, path string) error {
 	// determine path for the export
 	path = strings.TrimPrefix(path, "suites/")
 	path = strings.TrimSuffix(path, filepath.Ext(path))
-	blocksPath := fmt.Sprintf("/mnt/blocks/%s.json", path)
+	blocksPath := filepath.Join(regtestMntDir(), "blocks", path+".json")
 	blocksDir := strings.TrimSuffix(blocksPath, filepath.Ext(blocksPath))
 
 	// read all block exports in the blocks directory
@@ -308,6 +309,7 @@ func checkExportChanges(out io.Writer, newExport map[string]any, path string) er
 		if thorchain, ok := appState["thorchain"].(map[string]any); ok {
 			deleteEmptySpentOutputRefs(thorchain)
 			deleteEmptyPOLReserveDeposits(thorchain)
+			deleteEmptyVaultDeficits(thorchain)
 		}
 	}
 
@@ -383,6 +385,22 @@ func deleteEmptySpentOutputRefs(value any) {
 func deleteEmptyPOLReserveDeposits(thorchain map[string]any) {
 	if deposits, ok := thorchain["pol_reserve_deposits"]; ok && isEmptyJSONList(deposits) {
 		delete(thorchain, "pol_reserve_deposits")
+	}
+}
+
+func deleteEmptyStableReserveCredits(thorchain map[string]any) {
+	if credits, ok := thorchain["stable_reserve_credits"]; ok && isEmptyJSONList(credits) {
+		delete(thorchain, "stable_reserve_credits")
+	}
+}
+
+func deleteEmptyVaultDeficits(thorchain map[string]any) {
+	vaults, _ := thorchain["vaults"].([]interface{})
+	for _, value := range vaults {
+		vault, _ := value.(map[string]interface{})
+		if vault["deficit"] == nil {
+			delete(vault, "deficit")
+		}
 	}
 }
 

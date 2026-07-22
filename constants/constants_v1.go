@@ -159,6 +159,11 @@ func NewConstantValue() *ConstantVals {
 			ModifyLimitSwapMaxIterations:        100,                // maximum iterations when searching for a user's swap in a ratio-grouped index
 			POLReserveSystemIncomeBps:           0,                  // basis points of system income routed to POL reserve, 0 = disabled
 			POLReserveMaxDeployment:             10_000_000_000,     // maximum RUNE deployed per pool per block (100 RUNE in 1e8 units)
+			StableReserveEnabled:                0,                  // enable/disable Stable Reserve
+			StableReserveDepegToleranceBps:      100,                // maximum stable oracle deviation from $1 in basis points
+			StableReservePOLShareBps:            0,                  // share of POLReserveSystemIncomeBps routed to Stable Reserve
+			StableReserveWithdrawalRequestMax:   10_000,             // maximum request coin amount accepted for Stable Reserve withdrawals
+			StableReserveOraclePricing:          0,                  // 0 = fill stable reserve swaps 1:1, 1 = scale the fill by the oracle price ratio
 			L1DynamicFeeEnabled:                 0,                  // enable/disable dynamic L1 min fee
 			L1DynamicFeeEpochBlocks:             14400,              // number of blocks per dynamic fee epoch
 			L1DynamicFeeFloorBPS:                1,                  // floor basis points for dynamic L1 min fee

@@ -72,6 +72,9 @@ var funcMap = template.FuncMap{
 	"addr_module_pol_reserve": func() string {
 		return ModuleAddrPOLReserve
 	},
+	"addr_module_stable_reserve": func() string {
+		return ModuleAddrStableReserve
+	},
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -92,7 +91,7 @@ TestLoop:
 
 func (r *regressionTest) runTestFile(file string, i int) {
 	// create home directory
-	home := "/" + strconv.Itoa(i)
+	home := regtestHome(i)
 	_ = os.MkdirAll(home, 0o755)
 
 	// create a buffer to capture the logs

@@ -51,6 +51,10 @@ func (h SecuredAssetDepositHandler) validate(ctx cosmos.Context, msg MsgSecuredA
 		return fmt.Errorf("pool %s unavailable", msg.Asset)
 	}
 
+	// STABLE+ (stable-reserve) deposits are intentionally NOT exempt from the
+	// bond/liquidity TVL cap: they mint into the same secured-asset pool depth
+	// that atTVLCap bounds against bonded RUNE, so exempting them would let total
+	// custodied secured value exceed what node bond secures.
 	if atTVLCap(ctx, common.NewCoins(
 		common.NewCoin(msg.Asset, msg.Amount),
 	), h.mgr) {
@@ -62,6 +66,10 @@ func (h SecuredAssetDepositHandler) validate(ctx cosmos.Context, msg MsgSecuredA
 
 // handle process MsgSecuredAssetDeposit
 func (h SecuredAssetDepositHandler) handle(ctx cosmos.Context, msg MsgSecuredAssetDeposit) error {
+	if isStableReserveDepositMemo(msg.Tx.Memo) {
+		return h.mgr.StableReserveManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Tx.FromAddress, msg.Tx.ID)
+	}
+
 	_, err := h.mgr.SecuredAssetManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
 	if err != nil {
 		ctx.Logger().Error("fail to handle Deposit", "error", err)

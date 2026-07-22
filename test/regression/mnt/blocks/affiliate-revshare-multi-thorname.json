@@ -388,7 +388,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "6EE26BB53B4A9E6A62E227E97A94DD88AAF24EFF9C7D1B2CB6932D71F6C34E49",
+      "data_hash": "6DFC2F03A51324FF7359E3A8BA3977EC910C2EB9BE62CD2EFCBC3C4CFC907353",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -618,7 +618,7 @@
         }
       },
       {
-        "hash": "9ED33FEC93F636BD2CBCABEA1637D91BF853837F1A20249F3A57466DC69D24B2",
+        "hash": "6E3E4B446F843CB25512698866ACE3C7953282AC530D0493ED6EB224E833A1EC",
         "tx": {
           "auth_info": {
             "fee": {
@@ -667,7 +667,7 @@
             "unordered": false
           },
           "signatures": [
-            "Xx/Wr+o4ixKB7YqUQlhXm259hwumiP6aT4zFW1ucZ7JkgDS0FByyuUOU0Kv4BoR1bCN3gXXP40CMMn/t2q7fUA=="
+            "T2raKHlxLVq9NEvMlO+wkGtmAB46QXmOSDoijx1dyBcaRRfhzd7pN0xWc+CTELWUCmZ2ggeJ825nSXWG4HPF3w=="
           ]
         },
         "result": {
@@ -700,7 +700,7 @@
               "type": "tx"
             },
             {
-              "signature": "Xx/Wr+o4ixKB7YqUQlhXm259hwumiP6aT4zFW1ucZ7JkgDS0FByyuUOU0Kv4BoR1bCN3gXXP40CMMn/t2q7fUA==",
+              "signature": "T2raKHlxLVq9NEvMlO+wkGtmAB46QXmOSDoijx1dyBcaRRfhzd7pN0xWc+CTELWUCmZ2ggeJ825nSXWG4HPF3w==",
               "type": "tx"
             },
             {
@@ -1310,6 +1310,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "909",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "909",
@@ -1414,6 +1415,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "840",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "840",

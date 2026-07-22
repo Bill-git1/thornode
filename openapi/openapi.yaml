@@ -1034,6 +1034,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/SecuredAssetsResponse"
 
+  # ------------------------------ stable reserve ------------------------------
+
+  /thorchain/stable_reserve:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns Stable Reserve module status, inventory health, deployment stream settings, and active internal swaps
+      operationId: stable_reserve
+      tags:
+        - StableReserve
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StableReserveResponse"
+
+  /thorchain/stable_reserve/contributor/{asset}/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns a contributor's Stable Reserve credit for the given asset
+      operationId: stable_reserve_contributor
+      tags:
+        - StableReserve
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StableReserveContributorResponse"
+
   # ------------------------------ swap ------------------------------
 
   /thorchain/queue/swap/details/{tx_id}:
@@ -4693,6 +4729,104 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/SecuredAssetResponse"
+
+    StableReserveInventory:
+      type: object
+      required:
+        - asset
+        - amount
+        - healthy
+        - reason
+        - oracle_price
+      properties:
+        asset:
+          type: string
+        amount:
+          type: string
+        healthy:
+          type: boolean
+        reason:
+          type: string
+        oracle_price:
+          type: string
+
+    StableReserveStreamingSwap:
+      type: object
+      required:
+        - tx_id
+        - memo
+        - purpose
+        - source_asset
+        - target_asset
+        - amount
+        - stream_quantity
+        - stream_interval
+      properties:
+        tx_id:
+          type: string
+        memo:
+          type: string
+        purpose:
+          type: string
+        source_asset:
+          type: string
+        target_asset:
+          type: string
+        amount:
+          type: string
+        stream_quantity:
+          type: integer
+          format: int64
+        stream_interval:
+          type: integer
+          format: int64
+
+    StableReserveResponse:
+      type: object
+      required:
+        - enabled
+        - rune_balance
+        - depeg_tolerance_bps
+        - pol_share_bps
+        - inventory
+        - deployment_stream_quantity
+        - deployment_stream_interval
+        - active_swaps
+      properties:
+        enabled:
+          type: boolean
+        rune_balance:
+          type: string
+        depeg_tolerance_bps:
+          type: string
+        pol_share_bps:
+          type: string
+        inventory:
+          type: array
+          items:
+            $ref: "#/components/schemas/StableReserveInventory"
+        deployment_stream_quantity:
+          type: string
+        deployment_stream_interval:
+          type: string
+        active_swaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/StableReserveStreamingSwap"
+
+    StableReserveContributorResponse:
+      type: object
+      required:
+        - asset
+        - address
+        - credit
+      properties:
+        asset:
+          type: string
+        address:
+          type: string
+        credit:
+          type: string
 
     MimirResponse:
       type: object

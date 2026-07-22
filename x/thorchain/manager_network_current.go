@@ -2068,6 +2068,30 @@ func (vm *NetworkMgr) UpdateNetwork(ctx cosmos.Context, mgr Manager) error {
 		}
 	}
 
+	// Only divert a POL-income share to the Stable Reserve when the feature is
+	// enabled; otherwise deployment never runs and the RUNE would sit idle in the
+	// module. Gating here keeps the StableReservePOLShareBps and
+	// StableReserveEnabled mimirs from silently disagreeing. When disabled, the
+	// share flows to POLReserve via the remainder below.
+	if !polReserveDeduct.IsZero() && vm.k.GetConfigInt64(ctx, constants.StableReserveEnabled) > 0 {
+		stableReservePOLShareBps := vm.k.GetConfigInt64(ctx, constants.StableReservePOLShareBps)
+		if stableReservePOLShareBps < 0 {
+			stableReservePOLShareBps = 0
+		}
+		if stableReservePOLShareBps > 10_000 {
+			stableReservePOLShareBps = 10_000
+		}
+
+		stableReserveDeduct := common.GetSafeShare(cosmos.NewUint(uint64(stableReservePOLShareBps)), cosmos.NewUint(10_000), polReserveDeduct)
+		if !stableReserveDeduct.IsZero() {
+			coin := common.NewCoin(common.RuneNative, stableReserveDeduct)
+			if err = vm.k.SendFromModuleToModule(ctx, ReserveName, StableReserveName, common.NewCoins(coin)); err != nil {
+				return fmt.Errorf("fail to transfer funds from reserve to stable_reserve: %w", err)
+			}
+			polReserveDeduct = common.SafeSub(polReserveDeduct, stableReserveDeduct)
+		}
+	}
+
 	if !polReserveDeduct.IsZero() {
 		coin := common.NewCoin(common.RuneNative, polReserveDeduct)
 		if err = vm.k.SendFromModuleToModule(ctx, ReserveName, POLReserveName, common.NewCoins(coin)); err != nil {

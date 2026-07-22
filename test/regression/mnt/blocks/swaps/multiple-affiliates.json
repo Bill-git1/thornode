@@ -652,6 +652,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "909",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "909",
@@ -999,6 +1000,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "9",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "9",
@@ -1077,6 +1079,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "9",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "9",
@@ -1155,6 +1158,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "9",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "9",
@@ -1600,6 +1604,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "836",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "836",
@@ -1947,6 +1952,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "41",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "41",
@@ -2025,6 +2031,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "16",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "16",
@@ -2103,6 +2110,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "8",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "8",
@@ -2500,7 +2508,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "C1717535ECFBBDAA9BBBD5DE99845122BBB6C320E66136A4C8E97608E3149649",
+      "data_hash": "9CBC178F1A804C91BDF6CD9C94D6F2B61548F5492482DBA2C928526C1138D7D2",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -2599,7 +2607,7 @@
     ],
     "txs": [
       {
-        "hash": "EAF635B8831E9F0385805CA90971F2882BECFCD2281235C83768C3D70657CB2E",
+        "hash": "03815711858249DB017175E0F0D46FA320247A15D42F0442B4AF83E711D12C5E",
         "tx": {
           "auth_info": {
             "fee": {
@@ -2648,7 +2656,7 @@
             "unordered": false
           },
           "signatures": [
-            "i25mUjSlGfeViGiF1vMn+9+yBI5S3B/+/Jm1Fy/v0VIuu9k7T2gvxhMyd8swesoIt7Zh2oPdZQ7AGoU6HcWW3g=="
+            "0mEqamQ6BW07drqR7ogso1iyABdBjbEWStHvXRBFTpRhymzAty/P/s1lSoxYSFIzaMXe1Hq/5gX4/dKBxFAGnQ=="
           ]
         },
         "result": {
@@ -2681,7 +2689,7 @@
               "type": "tx"
             },
             {
-              "signature": "i25mUjSlGfeViGiF1vMn+9+yBI5S3B/+/Jm1Fy/v0VIuu9k7T2gvxhMyd8swesoIt7Zh2oPdZQ7AGoU6HcWW3g==",
+              "signature": "0mEqamQ6BW07drqR7ogso1iyABdBjbEWStHvXRBFTpRhymzAty/P/s1lSoxYSFIzaMXe1Hq/5gX4/dKBxFAGnQ==",
               "type": "tx"
             },
             {
@@ -3058,6 +3066,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "776",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "776",
@@ -3414,6 +3423,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "8",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "8",
@@ -3492,6 +3502,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "8",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "8",
@@ -3570,6 +3581,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "8",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "8",
@@ -4015,6 +4027,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "3859",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "3859",

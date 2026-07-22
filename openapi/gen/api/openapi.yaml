@@ -1695,6 +1695,71 @@ paths:
           description: OK
       tags:
       - SecuredAssets
+  /thorchain/stable_reserve:
+    get:
+      description: "Returns Stable Reserve module status, inventory health, deployment\
+        \ stream settings, and active internal swaps"
+      operationId: stable_reserve
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StableReserveResponse'
+          description: OK
+      tags:
+      - StableReserve
+  /thorchain/stable_reserve/contributor/{asset}/{address}:
+    get:
+      description: Returns a contributor's Stable Reserve credit for the given asset
+      operationId: stable_reserve_contributor
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: asset
+        required: true
+        schema:
+          example: BTC.BTC
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StableReserveContributorResponse'
+          description: OK
+      tags:
+      - StableReserve
   /thorchain/queue/swap/details/{tx_id}:
     get:
       description: Returns detailed information about a specific swap including its
@@ -7205,6 +7270,154 @@ components:
       items:
         $ref: '#/components/schemas/SecuredAssetResponse'
       type: array
+    StableReserveInventory:
+      example:
+        reason: reason
+        oracle_price: oracle_price
+        amount: amount
+        healthy: true
+        asset: asset
+      properties:
+        asset:
+          type: string
+        amount:
+          type: string
+        healthy:
+          type: boolean
+        reason:
+          type: string
+        oracle_price:
+          type: string
+      required:
+      - amount
+      - asset
+      - healthy
+      - oracle_price
+      - reason
+      type: object
+    StableReserveStreamingSwap:
+      example:
+        amount: amount
+        stream_quantity: 0
+        target_asset: target_asset
+        purpose: purpose
+        stream_interval: 6
+        memo: memo
+        tx_id: tx_id
+        source_asset: source_asset
+      properties:
+        tx_id:
+          type: string
+        memo:
+          type: string
+        purpose:
+          type: string
+        source_asset:
+          type: string
+        target_asset:
+          type: string
+        amount:
+          type: string
+        stream_quantity:
+          format: int64
+          type: integer
+        stream_interval:
+          format: int64
+          type: integer
+      required:
+      - amount
+      - memo
+      - purpose
+      - source_asset
+      - stream_interval
+      - stream_quantity
+      - target_asset
+      - tx_id
+      type: object
+    StableReserveResponse:
+      example:
+        rune_balance: rune_balance
+        active_swaps:
+        - amount: amount
+          stream_quantity: 0
+          target_asset: target_asset
+          purpose: purpose
+          stream_interval: 6
+          memo: memo
+          tx_id: tx_id
+          source_asset: source_asset
+        - amount: amount
+          stream_quantity: 0
+          target_asset: target_asset
+          purpose: purpose
+          stream_interval: 6
+          memo: memo
+          tx_id: tx_id
+          source_asset: source_asset
+        deployment_stream_quantity: deployment_stream_quantity
+        depeg_tolerance_bps: depeg_tolerance_bps
+        deployment_stream_interval: deployment_stream_interval
+        inventory:
+        - reason: reason
+          oracle_price: oracle_price
+          amount: amount
+          healthy: true
+          asset: asset
+        - reason: reason
+          oracle_price: oracle_price
+          amount: amount
+          healthy: true
+          asset: asset
+        pol_share_bps: pol_share_bps
+        enabled: true
+      properties:
+        enabled:
+          type: boolean
+        rune_balance:
+          type: string
+        depeg_tolerance_bps:
+          type: string
+        pol_share_bps:
+          type: string
+        inventory:
+          items:
+            $ref: '#/components/schemas/StableReserveInventory'
+          type: array
+        deployment_stream_quantity:
+          type: string
+        deployment_stream_interval:
+          type: string
+        active_swaps:
+          items:
+            $ref: '#/components/schemas/StableReserveStreamingSwap'
+          type: array
+      required:
+      - active_swaps
+      - depeg_tolerance_bps
+      - deployment_stream_interval
+      - deployment_stream_quantity
+      - enabled
+      - inventory
+      - pol_share_bps
+      - rune_balance
+      type: object
+    StableReserveContributorResponse:
+      example:
+        address: address
+        asset: asset
+        credit: credit
+      properties:
+        asset:
+          type: string
+        address:
+          type: string
+        credit:
+          type: string
+      required:
+      - address
+      - asset
+      - credit
+      type: object
     MimirResponse:
       additionalProperties:
         type: string

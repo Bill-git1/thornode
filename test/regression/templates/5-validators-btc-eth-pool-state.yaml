@@ -86,6 +86,14 @@ genesis:
           pub_key: null
           account_number: "11"
           sequence: "0"
+        - "@type": /cosmos.auth.v1beta1.ModuleAccount
+          base_account:
+            account_number: "12"
+            address: {{ addr_module_stable_reserve }}
+            pub_key: ~
+            sequence: "0"
+          name: stable_reserve
+          permissions: []
     bank:
       balances:
         - address: {{ addr_thor_dog }}

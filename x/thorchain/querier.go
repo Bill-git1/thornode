@@ -2356,6 +2356,171 @@ func (qs queryServer) querySecuredAsset(ctx cosmos.Context, req *types.QuerySecu
 	}, nil
 }
 
+func (qs queryServer) queryStableReserve(ctx cosmos.Context, _ *types.QueryStableReserveRequest) (*types.QueryStableReserveResponse, error) {
+	moduleAddr := qs.mgr.Keeper().GetModuleAccAddress(StableReserveName)
+	securedMgr := qs.mgr.SecuredAssetManager()
+	assets := make(map[string]common.Asset)
+
+	for _, anchor := range qs.mgr.Keeper().GetAnchors(ctx, common.TOR) {
+		asset := anchor.GetLayer1Asset()
+		assets[asset.String()] = asset
+	}
+
+	iter := qs.mgr.Keeper().GetSecuredAssetIterator(ctx)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var secured keeper.SecuredAsset
+		if err := qs.mgr.Keeper().Cdc().Unmarshal(iter.Value(), &secured); err != nil {
+			continue
+		}
+
+		asset := secured.Asset.GetLayer1Asset()
+		if securedMgr.BalanceOf(ctx, asset, moduleAddr).IsZero() {
+			continue
+		}
+		assets[asset.String()] = asset
+	}
+
+	keys := make([]string, 0, len(assets))
+	// analyze-ignore(map-iteration) - extracting keys to sort them immediately after
+	for key := range assets {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	inventory := make([]*types.QueryStableReserveInventory, 0, len(keys))
+	for _, key := range keys {
+		asset := assets[key]
+		healthy, reason := qs.mgr.StableReserveManager().IsEligibleStable(ctx, asset)
+		oraclePrice := ""
+		if price, err := qs.mgr.Keeper().GetPrice(ctx, asset.Ticker.String()); err == nil {
+			oraclePrice = price.Price
+		}
+
+		inventory = append(inventory, &types.QueryStableReserveInventory{
+			Asset:       asset.String(),
+			Amount:      securedMgr.BalanceOf(ctx, asset, moduleAddr).String(),
+			Healthy:     healthy,
+			Reason:      reason,
+			OraclePrice: oraclePrice,
+		})
+	}
+
+	return &types.QueryStableReserveResponse{
+		Enabled:           qs.mgr.StableReserveManager().IsEnabled(ctx),
+		RuneBalance:       qs.mgr.Keeper().GetRuneBalanceOfModule(ctx, StableReserveName).String(),
+		DepegToleranceBps: strconv.FormatInt(qs.mgr.Keeper().GetConfigInt64(ctx, constants.StableReserveDepegToleranceBps), 10),
+		PolShareBps:       strconv.FormatInt(qs.mgr.Keeper().GetConfigInt64(ctx, constants.StableReservePOLShareBps), 10),
+		Inventory:         inventory,
+		// Deployment swaps always use quantity 0 / interval 0 (see
+		// scheduleDeploymentSwap); these are no longer configurable.
+		DeploymentStreamQuantity: "0",
+		DeploymentStreamInterval: "0",
+		ActiveSwaps:              qs.queryStableReserveActiveSwaps(ctx),
+	}, nil
+}
+
+func (qs queryServer) queryStableReserveActiveSwaps(ctx cosmos.Context) []*types.QueryStableReserveStreamingSwap {
+	stableReserveAddress, err := qs.mgr.Keeper().GetModuleAddress(StableReserveName)
+	if err != nil {
+		return nil
+	}
+
+	active := make([]*types.QueryStableReserveStreamingSwap, 0)
+	appendActive := func(iter cosmos.Iterator) {
+		defer iter.Close()
+		for ; iter.Valid(); iter.Next() {
+			var msg MsgSwap
+			if err := qs.mgr.Keeper().Cdc().Unmarshal(iter.Value(), &msg); err != nil {
+				continue
+			}
+			purpose, ok := stableReserveSwapPurpose(msg.Tx.Memo)
+			if !ok {
+				continue
+			}
+			if !msg.Tx.FromAddress.Equals(stableReserveAddress) {
+				continue
+			}
+
+			sourceAsset := ""
+			amount := "0"
+			if len(msg.Tx.Coins) > 0 {
+				sourceAsset = msg.Tx.Coins[0].Asset.String()
+				amount = msg.Tx.Coins[0].Amount.String()
+			}
+			active = append(active, &types.QueryStableReserveStreamingSwap{
+				TxId:           msg.Tx.ID.String(),
+				Memo:           msg.Tx.Memo,
+				Purpose:        purpose,
+				SourceAsset:    sourceAsset,
+				TargetAsset:    msg.TargetAsset.String(),
+				Amount:         amount,
+				StreamQuantity: msg.StreamQuantity,
+				StreamInterval: msg.StreamInterval,
+			})
+		}
+	}
+	appendActive(qs.mgr.Keeper().GetSwapQueueIterator(ctx))
+	appendActive(qs.mgr.Keeper().GetAdvSwapQueueItemIterator(ctx))
+
+	sort.Slice(active, func(i, j int) bool {
+		if active[i].Purpose != active[j].Purpose {
+			return active[i].Purpose < active[j].Purpose
+		}
+		return active[i].Memo < active[j].Memo
+	})
+	return active
+}
+
+func stableReserveSwapPurpose(memo string) (string, bool) {
+	key, ok := types.StableReservePendingSwapKeyFromMemo(memo)
+	if !ok {
+		return "", false
+	}
+	switch {
+	case key == types.StableReservePendingDeploySwapKey:
+		return "deployment", true
+	case strings.HasPrefix(key, types.StableReservePendingRescueSwapPrefix):
+		return "rescue", true
+	default:
+		return "", false
+	}
+}
+
+func (qs queryServer) queryStableReserveContributor(ctx cosmos.Context, req *types.QueryStableReserveContributorRequest) (*types.QueryStableReserveContributorResponse, error) {
+	if len(req.Asset) == 0 {
+		return nil, errors.New("asset not provided")
+	}
+	asset, err := common.NewAsset(req.Asset)
+	if err != nil {
+		ctx.Logger().Error("fail to parse asset", "error", err)
+		return nil, fmt.Errorf("could not parse asset: %w", err)
+	}
+	asset = asset.GetLayer1Asset()
+	if !asset.IsExternalL1Asset() {
+		return nil, fmt.Errorf("invalid stable reserve asset: %s", req.Asset)
+	}
+	if len(req.Address) == 0 {
+		return nil, errors.New("address not provided")
+	}
+	addr, err := common.NewAddress(req.Address)
+	if err != nil {
+		ctx.Logger().Error("fail to parse address", "error", err)
+		return nil, fmt.Errorf("could not parse address: %w", err)
+	}
+
+	credit, err := qs.mgr.Keeper().GetStableReserveCredit(ctx, asset, addr)
+	if err != nil {
+		return nil, fmt.Errorf("could not get stable reserve contributor credit: %w", err)
+	}
+
+	return &types.QueryStableReserveContributorResponse{
+		Asset:   asset.String(),
+		Address: addr.String(),
+		Credit:  credit.String(),
+	}, nil
+}
+
 func extractVoter(ctx cosmos.Context, tx_id string, mgr *Mgrs) (common.TxID, ObservedTxVoter, error) {
 	if len(tx_id) == 0 {
 		return "", ObservedTxVoter{}, errors.New("tx id not provided")

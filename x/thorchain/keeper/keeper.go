@@ -97,6 +97,7 @@ type Keeper interface {
 	KeeperTCYStaker
 	KeeperVolume
 	KeeperPOLReserve
+	KeeperStableReserve
 	KeeperXMRSpentOutputRefs
 	KeeperDynamicFee
 }
@@ -351,6 +352,12 @@ type KeeperPOLReserve interface {
 	SetPOLReserveDeposit(ctx cosmos.Context, data POLReserveDeposit) error
 	GetPOLReserveDepositIterator(ctx cosmos.Context) cosmos.Iterator
 	IsPOLReserveEligiblePool(ctx cosmos.Context, asset common.Asset) bool
+}
+
+type KeeperStableReserve interface {
+	GetStableReserveCredit(ctx cosmos.Context, asset common.Asset, addr common.Address) (cosmos.Uint, error)
+	SetStableReserveCredit(ctx cosmos.Context, asset common.Asset, addr common.Address, amount cosmos.Uint) error
+	GetStableReserveCreditIterator(ctx cosmos.Context) cosmos.Iterator
 }
 
 type KeeperTss interface {

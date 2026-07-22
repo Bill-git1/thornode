@@ -15,6 +15,7 @@ const (
 	TCYClaimingName        = types.TCYClaimingName
 	TCYStakeName           = types.TCYStakeName
 	POLReserveName         = types.POLReserveName
+	StableReserveName      = types.StableReserveName
 	BondName               = types.BondName
 	LendingName            = types.LendingName
 	StoreKey               = types.StoreKey

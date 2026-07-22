@@ -32,6 +32,7 @@ func (s *MemoParserSuite) TestTxTypeIsInbound(c *C) {
 		TxTradeAccountDeposit, TxTradeAccountWithdrawal,
 		TxRunePoolDeposit, TxRunePoolWithdraw,
 		TxSecuredAssetDeposit, TxSecuredAssetWithdraw,
+		TxStableReserveDeposit, TxStableReserveWithdraw,
 		TxReferenceWriteMemo, TxReferenceReadMemo,
 		TxTCYClaim, TxTCYStake, TxTCYUnstake, TxOperatorRotate,
 	}
@@ -72,7 +73,7 @@ func (s *MemoParserSuite) TestTxTypeIsInternal(c *C) {
 
 func (s *MemoParserSuite) TestTxTypeHasOutbound(c *C) {
 	// Types without outbound
-	noOutbound := []TxType{TxAdd, TxBond, TxTradeAccountDeposit, TxSecuredAssetDeposit, TxRunePoolDeposit, TxDonate, TxReserve, TxMigrate, TxMaint, TxRagnarok}
+	noOutbound := []TxType{TxAdd, TxBond, TxTradeAccountDeposit, TxSecuredAssetDeposit, TxStableReserveDeposit, TxRunePoolDeposit, TxDonate, TxReserve, TxMigrate, TxMaint, TxRagnarok}
 	for _, tt := range noOutbound {
 		c.Check(tt.HasOutbound(), Equals, false, Commentf("%s should not have outbound", tt.String()))
 	}
@@ -629,6 +630,16 @@ func (s *MemoParserSuite) TestParseMemoWithoutKeeper(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(memo.IsType(TxSecuredAssetWithdraw), Equals, true)
 
+	// Stable reserve deposit
+	memo, err = ParseMemo(v, "stable+")
+	c.Assert(err, IsNil)
+	c.Check(memo.IsType(TxStableReserveDeposit), Equals, true)
+
+	// Stable reserve withdraw
+	memo, err = ParseMemo(v, "stable-:12345678")
+	c.Assert(err, IsNil)
+	c.Check(memo.IsType(TxStableReserveWithdraw), Equals, true)
+
 	// Trade deposit
 	memo, err = ParseMemo(v, fmt.Sprintf("trade+:%s", addr))
 	c.Assert(err, IsNil)
@@ -952,6 +963,16 @@ func (s *MemoParserSuite) TestSecuredAssetMemoGetters(c *C) {
 	thorAddr := types.GetRandomTHORAddress()
 	wd := NewSecuredAssetWithdrawMemo(thorAddr)
 	c.Check(wd.GetAddress(), Equals, thorAddr)
+}
+
+func (s *MemoParserSuite) TestStableReserveMemoGetters(c *C) {
+	dep := NewStableReserveDepositMemo()
+	c.Check(dep.IsType(TxStableReserveDeposit), Equals, true)
+
+	amount := cosmos.NewUint(12345678)
+	wd := NewStableReserveWithdrawMemo(amount)
+	c.Check(wd.IsType(TxStableReserveWithdraw), Equals, true)
+	c.Check(wd.GetAmount().Equal(amount), Equals, true)
 }
 
 func (s *MemoParserSuite) TestRunePoolDepositMemoString(c *C) {

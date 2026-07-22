@@ -22,6 +22,7 @@ type DummyMgr struct {
 	slasher                   Slasher
 	tradeMgr                  TradeAccountManager
 	securedMgr                SecuredAssetManager
+	stableReserveMgr          StableReserveManager
 	wasmMgr                   WasmManager
 	switchMgr                 SwitchManager
 	scheduledMigrationManager ScheduledMigrationManager
@@ -40,6 +41,8 @@ func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
 		poolMgr:                   NewDummyPoolManager(),
 		slasher:                   NewDummySlasher(),
 		tradeMgr:                  NewDummyTradeAccountManager(),
+		securedMgr:                newSecuredAssetMgr(k, NewDummyEventMgr()),
+		stableReserveMgr:          newStableReserveMgr(k, NewDummyEventMgr()),
 		wasmMgr:                   NewDummyWasmManager(),
 		switchMgr:                 NewDummySwitchManager(),
 		advSwapQueue:              NewDummyAdvSwapQueue(),
@@ -60,6 +63,7 @@ func NewDummyMgr() *DummyMgr {
 		poolMgr:                   NewDummyPoolManager(),
 		slasher:                   NewDummySlasher(),
 		tradeMgr:                  NewDummyTradeAccountManager(),
+		stableReserveMgr:          NewDummyStableReserveManager(),
 		wasmMgr:                   NewDummyWasmManager(),
 		switchMgr:                 NewDummySwitchManager(),
 		advSwapQueue:              NewDummyAdvSwapQueue(),
@@ -67,23 +71,24 @@ func NewDummyMgr() *DummyMgr {
 	}
 }
 
-func (m DummyMgr) GetVersion() semver.Version               { return GetCurrentVersion() }
-func (m DummyMgr) GetConstants() constants.ConstantValues   { return m.constAccessor }
-func (m DummyMgr) Keeper() keeper.Keeper                    { return m.K }
-func (m DummyMgr) GasMgr() GasManager                       { return m.gasMgr }
-func (m DummyMgr) EventMgr() EventManager                   { return m.eventMgr }
-func (m DummyMgr) TxOutStore() TxOutStore                   { return m.txOutStore }
-func (m DummyMgr) NetworkMgr() NetworkManager               { return m.networkMgr }
-func (m DummyMgr) ValidatorMgr() ValidatorManager           { return m.validatorMgr }
-func (m DummyMgr) ObMgr() ObserverManager                   { return m.obMgr }
-func (m DummyMgr) PoolMgr() PoolManager                     { return m.poolMgr }
-func (m DummyMgr) SwapQ() SwapQueue                         { return m.swapQ }
-func (m DummyMgr) Slasher() Slasher                         { return m.slasher }
-func (m DummyMgr) AdvSwapQueueMgr() AdvSwapQueue            { return m.advSwapQueue }
-func (m DummyMgr) TradeAccountManager() TradeAccountManager { return m.tradeMgr }
-func (m DummyMgr) SecuredAssetManager() SecuredAssetManager { return m.securedMgr }
-func (m DummyMgr) WasmManager() WasmManager                 { return m.wasmMgr }
-func (m DummyMgr) SwitchManager() SwitchManager             { return m.switchMgr }
+func (m DummyMgr) GetVersion() semver.Version                 { return GetCurrentVersion() }
+func (m DummyMgr) GetConstants() constants.ConstantValues     { return m.constAccessor }
+func (m DummyMgr) Keeper() keeper.Keeper                      { return m.K }
+func (m DummyMgr) GasMgr() GasManager                         { return m.gasMgr }
+func (m DummyMgr) EventMgr() EventManager                     { return m.eventMgr }
+func (m DummyMgr) TxOutStore() TxOutStore                     { return m.txOutStore }
+func (m DummyMgr) NetworkMgr() NetworkManager                 { return m.networkMgr }
+func (m DummyMgr) ValidatorMgr() ValidatorManager             { return m.validatorMgr }
+func (m DummyMgr) ObMgr() ObserverManager                     { return m.obMgr }
+func (m DummyMgr) PoolMgr() PoolManager                       { return m.poolMgr }
+func (m DummyMgr) SwapQ() SwapQueue                           { return m.swapQ }
+func (m DummyMgr) Slasher() Slasher                           { return m.slasher }
+func (m DummyMgr) AdvSwapQueueMgr() AdvSwapQueue              { return m.advSwapQueue }
+func (m DummyMgr) TradeAccountManager() TradeAccountManager   { return m.tradeMgr }
+func (m DummyMgr) SecuredAssetManager() SecuredAssetManager   { return m.securedMgr }
+func (m DummyMgr) StableReserveManager() StableReserveManager { return m.stableReserveMgr }
+func (m DummyMgr) WasmManager() WasmManager                   { return m.wasmMgr }
+func (m DummyMgr) SwitchManager() SwitchManager               { return m.switchMgr }
 func (m DummyMgr) ScheduledMigrationManager() ScheduledMigrationManager {
 	return m.scheduledMigrationManager
 }

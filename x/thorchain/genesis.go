@@ -144,6 +144,7 @@ func DefaultGenesisState() GenesisState {
 		PolReserveDeposits:      make([]POLReserveDeposit, 0),
 		DynamicFeeRecords:       make([]types.DynamicFeeRecord, 0),
 		DynamicFeeAccumulators:  make([]types.DynamicFeeAccumulator, 0),
+		StableReserveCredits:    make([]StableReserveCredit, 0),
 	}
 }
 
@@ -365,6 +366,25 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 	}
 	if data.LastObservedDynamicFeeEpochBlocks > 0 {
 		keeper.SetLastObservedDynamicFeeEpochBlocks(ctx, data.LastObservedDynamicFeeEpochBlocks)
+	}
+
+	// Restore stable reserve credits. These record how much of each layer-1
+	// asset a contributor is owed; without them a state export/import keeps the
+	// module's inventory in bank balances but forgets who is owed what, and
+	// every prior contributor's STABLE- withdrawal fails with "insufficient
+	// credit".
+	for _, credit := range data.StableReserveCredits {
+		asset, err := common.NewAsset(credit.Asset)
+		if err != nil {
+			panic(err)
+		}
+		addr, err := common.NewAddress(credit.Address)
+		if err != nil {
+			panic(err)
+		}
+		if err := keeper.SetStableReserveCredit(ctx, asset, addr, cosmos.NewUintFromString(credit.Amount)); err != nil {
+			panic(err)
+		}
 	}
 
 	reserveAddr, _ := keeper.GetModuleAddress(ReserveName)
@@ -825,6 +845,38 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		panic(err)
 	}
 
+	stableReserveCredits := make([]StableReserveCredit, 0)
+	iterStableReserveCredit := k.GetStableReserveCreditIterator(ctx)
+	defer iterStableReserveCredit.Close()
+	for ; iterStableReserveCredit.Valid(); iterStableReserveCredit.Next() {
+		// The address comes from the value, NOT the key: KVStore.GetKey uppercases
+		// the whole key, which corrupts case-sensitive base58 addresses (TRON/SOL/
+		// XRP) so they can no longer round-trip through common.NewAddress on import.
+		// The value is "<address>/<amount>" with the address stored verbatim; the
+		// asset is safe to read from the (uppercased) key because common.NewAsset is
+		// case-insensitive. Keys are "stable_reserve_credit//<layer1-asset>/<address>"
+		// and neither assets nor addresses contain "/", so the split is unambiguous.
+		parts := strings.Split(string(iterStableReserveCredit.Key()), "/")
+		if len(parts) < 2 {
+			continue
+		}
+		value := string(iterStableReserveCredit.Value())
+		addr, amountStr, ok := strings.Cut(value, "/")
+		if !ok {
+			// Legacy value (bare amount): fall back to the key-derived address.
+			addr, amountStr = parts[len(parts)-1], value
+		}
+		amount := cosmos.NewUintFromString(amountStr)
+		if amount.IsZero() {
+			continue
+		}
+		stableReserveCredits = append(stableReserveCredits, StableReserveCredit{
+			Asset:   parts[len(parts)-2],
+			Address: addr,
+			Amount:  amount.String(),
+		})
+	}
+
 	return GenesisState{
 		Pools:                             pools,
 		LiquidityProviders:                liquidityProviders,
@@ -861,5 +913,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		DynamicFeeRecords:                 dynamicFeeRecords,
 		DynamicFeeAccumulators:            dynamicFeeAccumulators,
 		LastObservedDynamicFeeEpochBlocks: lastObservedDynamicFeeEpochBlocks,
+		StableReserveCredits:              stableReserveCredits,
 	}
 }

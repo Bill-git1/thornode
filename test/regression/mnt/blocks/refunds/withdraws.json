@@ -736,6 +736,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "3333",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "3333",
@@ -755,6 +756,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "1429",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "1429",
@@ -1131,6 +1133,7 @@
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "3333",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "3333",
@@ -1150,6 +1153,7 @@
         "mode": "EndBlock",
         "pool": "ETH.ETH",
         "pool_slip": "1429",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "1429",
@@ -5774,7 +5778,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "5790B244D93AB7214FA89CF0D113FB630767A10B0F51580EB4B2743576BFDEF8",
+      "data_hash": "A2E93AA34618F94DAF2E9CF5764471A7AA097CCE55A33DAFB28815E995685B38",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -5967,7 +5971,7 @@
     ],
     "txs": [
       {
-        "hash": "956322A84D77D42C10656B5AF072167A525C723DD1E4B7ED59ADCAEF8BF8D57B",
+        "hash": "910EC2DDE20D20CEEC963191373913768F0C5EF3CDA399F36CB5250873697256",
         "tx": {
           "auth_info": {
             "fee": {
@@ -6016,7 +6020,7 @@
             "unordered": false
           },
           "signatures": [
-            "ItH/9MtaSIk7DHrg6k8uudL3OJb0zYkLU7oDHzjydvpl1ZGaJ+KJoq6czhxPjq9TSoTHhDTVQlQURfpnpThiyA=="
+            "GwkpC3kv4VwLjdV4tN7Gpl6BW4nB2vcHExAxz824caBiWBpWXDk+SFWrnJtphMQy881677SMbtOsXDwuIlOFfw=="
           ]
         },
         "result": {
@@ -6050,7 +6054,7 @@
               "type": "tx"
             },
             {
-              "signature": "ItH/9MtaSIk7DHrg6k8uudL3OJb0zYkLU7oDHzjydvpl1ZGaJ+KJoq6czhxPjq9TSoTHhDTVQlQURfpnpThiyA==",
+              "signature": "GwkpC3kv4VwLjdV4tN7Gpl6BW4nB2vcHExAxz824caBiWBpWXDk+SFWrnJtphMQy881677SMbtOsXDwuIlOFfw==",
               "type": "tx"
             }
           ]
@@ -6082,7 +6086,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "9CEE9D533E0BFEBE7B4D6B5F0B5A70587E1813FDFA9ED4C39D07D32CDCCE07F3",
+      "data_hash": "AAF5ED9F95AC3CB38041F13F7E928B48A3686897C0364BCAB123C3AD5225617D",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -6275,7 +6279,7 @@
     ],
     "txs": [
       {
-        "hash": "A334731D2EC0D526FF1B391C18FE156F6ABA79F477B05D4627C12017FB019683",
+        "hash": "7D330D94B523AEC075DDE5A6E5135D13502178559DADC8A788D2AF851F71F3AE",
         "tx": {
           "auth_info": {
             "fee": {
@@ -6324,7 +6328,7 @@
             "unordered": false
           },
           "signatures": [
-            "kQpT01k2J50Ffs6LR+CYhHLHddm7ub4ycW14b/PF3SEj1fI3XSqiCKgo5Zhvarf5IH1Pb9FPJkxsQx5+auigRw=="
+            "o13eAJaUyiDddu2luIyIDePUlnrvWaH0palBYUfU6eR3qIpvw8YXJnBzUlM1NJcSdOqA5xQpQZEtu+EWWICcxg=="
           ]
         },
         "result": {
@@ -6358,7 +6362,7 @@
               "type": "tx"
             },
             {
-              "signature": "kQpT01k2J50Ffs6LR+CYhHLHddm7ub4ycW14b/PF3SEj1fI3XSqiCKgo5Zhvarf5IH1Pb9FPJkxsQx5+auigRw==",
+              "signature": "o13eAJaUyiDddu2luIyIDePUlnrvWaH0palBYUfU6eR3qIpvw8YXJnBzUlM1NJcSdOqA5xQpQZEtu+EWWICcxg==",
               "type": "tx"
             }
           ]

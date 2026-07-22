@@ -3531,6 +3531,53 @@ func (s *NetworkManagerTestSuite) TestCalcBlockRewardsPOLReserveDeduct(c *C) {
 	c.Check(totalWith.Add(polReserveDeduct).String(), Equals, totalWithout.String())
 }
 
+func (s *NetworkManagerTestSuite) TestPOLSystemIncomeShareFundsStableReserve(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	networkMgr := newNetworkMgr(k, mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(k.SetNetwork(ctx, NewNetwork()), IsNil)
+
+	pool := NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.LPUnits = cosmos.NewUint(100)
+	pool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	vault := NewVault(0, ActiveVault, AsgardVault, GetRandomPubKey(), []string{pool.Asset.GetChain().String()}, []ChainContract{})
+	vault.Coins = common.NewCoins(common.NewCoin(pool.Asset, pool.BalanceAsset))
+	c.Assert(k.SetVault(ctx, vault), IsNil)
+
+	c.Assert(k.SetNodeAccount(ctx, GetRandomValidatorNode(NodeActive)), IsNil)
+	c.Assert(k.SetNodeAccount(ctx, GetRandomValidatorNode(NodeActive)), IsNil)
+	c.Assert(k.AddToLiquidityFees(ctx, pool.Asset, cosmos.NewUint(50*common.One)), IsNil)
+
+	k.SetMimir(ctx, constants.DevFundSystemIncomeBps.String(), 0)
+	k.SetMimir(ctx, constants.SystemIncomeBurnRateBps.String(), 0)
+	k.SetMimir(ctx, constants.TCYStakeSystemIncomeBps.String(), 0)
+	k.SetMimir(ctx, constants.MarketingFundSystemIncomeBps.String(), 0)
+	k.SetMimir(ctx, constants.POLReserveSystemIncomeBps.String(), 10_000)
+	k.SetMimir(ctx, constants.StableReserveEnabled.String(), 1)
+	k.SetMimir(ctx, constants.StableReservePOLShareBps.String(), 2_500)
+
+	polBefore := k.GetRuneBalanceOfModule(ctx, POLReserveName)
+	stableBefore := k.GetRuneBalanceOfModule(ctx, StableReserveName)
+
+	c.Assert(networkMgr.UpdateNetwork(ctx, mgr), IsNil)
+
+	polDelta := common.SafeSub(k.GetRuneBalanceOfModule(ctx, POLReserveName), polBefore)
+	stableDelta := common.SafeSub(k.GetRuneBalanceOfModule(ctx, StableReserveName), stableBefore)
+	totalPOLIncome := polDelta.Add(stableDelta)
+	c.Assert(totalPOLIncome.IsZero(), Equals, false)
+
+	expectedStable := common.GetSafeShare(cosmos.NewUint(2_500), cosmos.NewUint(10_000), totalPOLIncome)
+	c.Check(stableDelta.Equal(expectedStable), Equals, true,
+		Commentf("stable reserve delta %s should be 25%% of combined POL-system-income transfer %s", stableDelta, totalPOLIncome))
+	c.Check(polDelta.Equal(common.SafeSub(totalPOLIncome, expectedStable)), Equals, true,
+		Commentf("POL reserve delta %s should receive the remainder after stable reserve share %s", polDelta, expectedStable))
+}
+
 func (s *NetworkManagerTestSuite) TestPOLReserveCycleDisabled(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	networkMgr := newNetworkMgr(mgr.Keeper(), mgr.TxOutStore(), mgr.EventMgr())

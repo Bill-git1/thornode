@@ -98,6 +98,8 @@ type APIClient struct {
 
 	SmartContractsApi *SmartContractsApiService
 
+	StableReserveApi *StableReserveApiService
+
 	StreamingSwapApi *StreamingSwapApiService
 
 	SupplyApi *SupplyApiService
@@ -166,6 +168,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.SecuredAssetApi = (*SecuredAssetApiService)(&c.common)
 	c.SecuredAssetsApi = (*SecuredAssetsApiService)(&c.common)
 	c.SmartContractsApi = (*SmartContractsApiService)(&c.common)
+	c.StableReserveApi = (*StableReserveApiService)(&c.common)
 	c.StreamingSwapApi = (*StreamingSwapApiService)(&c.common)
 	c.SupplyApi = (*SupplyApiService)(&c.common)
 	c.SwapApi = (*SwapApiService)(&c.common)

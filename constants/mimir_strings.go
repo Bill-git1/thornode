@@ -15,6 +15,7 @@ const (
 	// staleness threshold in THORChain blocks (read by bifrost only, never by
 	// consensus code). Unset defaults to ~1 day of blocks; 0 disables the keep-alive.
 	MimirKeySignatureRefreshBlocks = "SignatureRefreshBlocks"
+	MimirKeyStableReserveEnabled   = "StableReserveEnabled"
 
 	MimirTemplateEVMAllowanceCheck         = "EVMAllowanceCheck-%s"         // Use with Chain
 	MimirTemplateEVMDirectERC20Inbound     = "EVMDirectERC20Inbound-%s"     // Use with Chain

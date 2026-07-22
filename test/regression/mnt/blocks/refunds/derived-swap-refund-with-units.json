@@ -705,6 +705,7 @@
         "mode": "EndBlock",
         "pool": "THOR.BTC",
         "pool_slip": "99",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "99",

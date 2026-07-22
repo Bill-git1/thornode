@@ -8,6 +8,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // SwapHandler is the handler to process swap request
@@ -49,6 +50,20 @@ func (h SwapHandler) RunWithEmit(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resu
 func (h SwapHandler) validate(ctx cosmos.Context, msg MsgSwap) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
+	}
+
+	stableReserveInternal, err := isStableReserveInternalSwap(ctx, h.mgr, msg)
+	if err != nil {
+		return err
+	}
+	if stableReserveInternal && !msg.TargetAsset.IsRune() {
+		if ok, reason := h.mgr.StableReserveManager().IsEligibleStable(ctx, msg.TargetAsset); !ok {
+			purpose := "deployment"
+			if strings.HasPrefix(msg.Tx.Memo, types.StableReserveRescueMemoPrefix) {
+				purpose = "rescue"
+			}
+			return fmt.Errorf("stable reserve %s target no longer eligible: %s", purpose, reason)
+		}
 	}
 
 	// For external-origin (here valid) memos, do not allow a network module as the final destination.
@@ -334,6 +349,12 @@ func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Re
 		swapAffiliateBps = mem.GetAffiliatesBasisPoints()
 	}
 
+	if filled, emit, swapErr := h.mgr.StableReserveManager().TrySwap(ctx, h.mgr, msg); swapErr != nil {
+		return nil, cosmos.ZeroUint(), swapErr
+	} else if filled {
+		return &cosmos.Result{}, emit, nil
+	}
+
 	// Only create streaming swap records for actual streaming swaps (not limit swaps)
 	if msg.IsLegacyStreaming() && !msg.IsLimitSwap() {
 		if h.mgr.Keeper().StreamingSwapExists(ctx, msg.Tx.ID) {
@@ -430,6 +451,13 @@ func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Re
 	// by RUNE price moves.
 	creditDynamicFeeForLegs(ctx, h.mgr, swapEvents, swapAffiliates, swapAffiliateBps)
 
+	stableReserveInternalSettled := false
+	if settled, settleErr := settleStableReserveInternalSwap(ctx, h.mgr, msg, emit); settleErr != nil {
+		return nil, cosmos.ZeroUint(), settleErr
+	} else {
+		stableReserveInternalSettled = settled
+	}
+
 	// Check if swap to a synth would cause synth supply to exceed
 	// MaxSynthPerPoolDepth cap
 	// Ignore caps when the swap is streaming (its checked at the start of the
@@ -455,6 +483,10 @@ func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Re
 		}
 		emit = swp.Out
 		finalEmit = swp.Out
+	}
+
+	if stableReserveInternalSettled {
+		return &cosmos.Result{}, finalEmit, nil
 	}
 
 	// this is a preferred asset swap, so return early since there is no need to call any

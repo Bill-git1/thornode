@@ -34,7 +34,8 @@ func (k KVStore) getMsgSwap(ctx cosmos.Context, key []byte, record *MsgSwap) (bo
 
 // SetSwapQueueItem - writes a swap item to the kv store
 func (k KVStore) SetSwapQueueItem(ctx cosmos.Context, msg MsgSwap, i int) error {
-	k.setMsgSwap(ctx, k.GetKey(prefixSwapQueueItem, formatSwapQueueItemKey(msg.Tx.ID, i)), msg)
+	key := k.GetKey(prefixSwapQueueItem, formatSwapQueueItemKey(msg.Tx.ID, i))
+	k.setMsgSwap(ctx, key, msg)
 	return nil
 }
 

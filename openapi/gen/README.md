@@ -140,6 +140,8 @@ Class | Method | HTTP request | Description
 *SecuredAssetsApi* | [**SecuredAssets**](docs/SecuredAssetsApi.md#securedassets) | **Get** /thorchain/securedassets | 
 *SmartContractsApi* | [**ContractInfo**](docs/SmartContractsApi.md#contractinfo) | **Get** /thorchain/contract/{address} | 
 *SmartContractsApi* | [**ContractInfos**](docs/SmartContractsApi.md#contractinfos) | **Get** /thorchain/contracts | 
+*StableReserveApi* | [**StableReserve**](docs/StableReserveApi.md#stablereserve) | **Get** /thorchain/stable_reserve | 
+*StableReserveApi* | [**StableReserveContributor**](docs/StableReserveApi.md#stablereservecontributor) | **Get** /thorchain/stable_reserve/contributor/{asset}/{address} | 
 *StreamingSwapApi* | [**StreamSwap**](docs/StreamingSwapApi.md#streamswap) | **Get** /thorchain/swap/streaming/{hash} | 
 *StreamingSwapApi* | [**StreamSwaps**](docs/StreamingSwapApi.md#streamswaps) | **Get** /thorchain/swaps/streaming | 
 *SupplyApi* | [**Supply**](docs/SupplyApi.md#supply) | **Get** /thorchain/supply | 
@@ -266,6 +268,10 @@ Class | Method | HTTP request | Description
  - [ReferenceMemoResponse](docs/ReferenceMemoResponse.md)
  - [Saver](docs/Saver.md)
  - [SecuredAssetResponse](docs/SecuredAssetResponse.md)
+ - [StableReserveContributorResponse](docs/StableReserveContributorResponse.md)
+ - [StableReserveInventory](docs/StableReserveInventory.md)
+ - [StableReserveResponse](docs/StableReserveResponse.md)
+ - [StableReserveStreamingSwap](docs/StableReserveStreamingSwap.md)
  - [StreamingStatus](docs/StreamingStatus.md)
  - [StreamingSwap](docs/StreamingSwap.md)
  - [SupplyResponse](docs/SupplyResponse.md)

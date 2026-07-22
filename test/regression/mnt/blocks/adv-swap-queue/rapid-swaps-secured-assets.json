@@ -604,6 +604,7 @@
         "mode": "EndBlock",
         "pool": "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
         "pool_slip": "0",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "5",

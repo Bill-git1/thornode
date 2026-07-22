@@ -133,6 +133,7 @@ var maccPerms = map[string][]string{
 	thorchain.TCYClaimingName:        {},
 	thorchain.TCYStakeName:           {},
 	thorchain.POLReserveName:         {},
+	thorchain.StableReserveName:      {},
 }
 
 var (
@@ -941,6 +942,10 @@ func BlockedAddresses() map[string]bool {
 	// Allow lending and treasury to receive funds
 	delete(modAccAddrs, authtypes.NewModuleAddress(thorchaintypes.LendingName).String())
 	delete(modAccAddrs, authtypes.NewModuleAddress(thorchaintypes.TreasuryName).String())
+	// Allow the Stable Reserve to receive funds: STABLE+ deposits mint secured
+	// assets directly to this module account, and the POL income split and depeg
+	// rescue/deployment cycle credit it RUNE and secured inventory.
+	delete(modAccAddrs, authtypes.NewModuleAddress(thorchaintypes.StableReserveName).String())
 
 	return modAccAddrs
 }

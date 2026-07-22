@@ -246,6 +246,10 @@ func (am AppModule) EndBlock(goCtx context.Context) ([]abci.ValidatorUpdate, err
 		ctx.Logger().Error("fail to update network data", "error", err)
 	}
 
+	if err := am.mgr.StableReserveManager().EndBlock(ctx, am.mgr); err != nil {
+		ctx.Logger().Error("fail to process stable reserve", "error", err)
+	}
+
 	if err := am.mgr.NetworkMgr().EndBlock(ctx, am.mgr); err != nil {
 		ctx.Logger().Error("fail to end block for vault manager", "error", err)
 	}

@@ -643,7 +643,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "865A0BEADE9F86414AD25A36C34B4EA4C5C73B2614748AB1812DD501748A2DD3",
+      "data_hash": "6FE40E659AEE916B01AE9500005251AEA194B9549C1DA7C97DC55CDE66DC6C39",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -742,7 +742,7 @@
     ],
     "txs": [
       {
-        "hash": "9ED33FEC93F636BD2CBCABEA1637D91BF853837F1A20249F3A57466DC69D24B2",
+        "hash": "6E3E4B446F843CB25512698866ACE3C7953282AC530D0493ED6EB224E833A1EC",
         "tx": {
           "auth_info": {
             "fee": {
@@ -791,7 +791,7 @@
             "unordered": false
           },
           "signatures": [
-            "Xx/Wr+o4ixKB7YqUQlhXm259hwumiP6aT4zFW1ucZ7JkgDS0FByyuUOU0Kv4BoR1bCN3gXXP40CMMn/t2q7fUA=="
+            "T2raKHlxLVq9NEvMlO+wkGtmAB46QXmOSDoijx1dyBcaRRfhzd7pN0xWc+CTELWUCmZ2ggeJ825nSXWG4HPF3w=="
           ]
         },
         "result": {
@@ -824,7 +824,7 @@
               "type": "tx"
             },
             {
-              "signature": "Xx/Wr+o4ixKB7YqUQlhXm259hwumiP6aT4zFW1ucZ7JkgDS0FByyuUOU0Kv4BoR1bCN3gXXP40CMMn/t2q7fUA==",
+              "signature": "T2raKHlxLVq9NEvMlO+wkGtmAB46QXmOSDoijx1dyBcaRRfhzd7pN0xWc+CTELWUCmZ2ggeJ825nSXWG4HPF3w==",
               "type": "tx"
             },
             {
@@ -1434,6 +1434,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "909",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "909",
@@ -1802,6 +1803,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "835",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "835",
@@ -1918,6 +1920,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "5",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "5",
@@ -1996,6 +1999,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "5",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "5",

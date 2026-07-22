@@ -194,6 +194,7 @@
         "mode": "EndBlock",
         "pool": "SOL.SOL",
         "pool_slip": "10",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "10",

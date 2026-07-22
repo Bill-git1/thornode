@@ -27,6 +27,7 @@ api_savers.go
 api_secured_asset.go
 api_secured_assets.go
 api_smart_contracts.go
+api_stable_reserve.go
 api_streaming_swap.go
 api_supply.go
 api_swap.go
@@ -158,6 +159,11 @@ docs/SecuredAssetApi.md
 docs/SecuredAssetResponse.md
 docs/SecuredAssetsApi.md
 docs/SmartContractsApi.md
+docs/StableReserveApi.md
+docs/StableReserveContributorResponse.md
+docs/StableReserveInventory.md
+docs/StableReserveResponse.md
+docs/StableReserveStreamingSwap.md
 docs/StreamingStatus.md
 docs/StreamingSwap.md
 docs/StreamingSwapApi.md
@@ -303,6 +309,10 @@ model_rune_pool_response_reserve.go
 model_rune_provider.go
 model_saver.go
 model_secured_asset_response.go
+model_stable_reserve_contributor_response.go
+model_stable_reserve_inventory.go
+model_stable_reserve_response.go
+model_stable_reserve_streaming_swap.go
 model_streaming_status.go
 model_streaming_swap.go
 model_supply_response.go

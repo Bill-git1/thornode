@@ -16,7 +16,7 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "12",
+          "account_number": "13",
           "address": "tthor1p3pm60jxtqvr6zvlw97l2ef5rm6cn8nfrtt2ds",
           "pub_key": null,
           "sequence": "0"
@@ -33,7 +33,7 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "13",
+          "account_number": "14",
           "address": "tthor1yqz8q00jlvn4r4hycvkg555ak7lxtxx6jwapqj",
           "pub_key": null,
           "sequence": "0"
@@ -103,6 +103,17 @@
             "sequence": "0"
           },
           "name": "reserve",
+          "permissions": []
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+          "base_account": {
+            "account_number": "12",
+            "address": "tthor102ae04vpk6v2tvjgzdsc2s7ncnptj6pwz0pg2k",
+            "pub_key": null,
+            "sequence": "0"
+          },
+          "name": "stable_reserve",
           "permissions": []
         },
         {

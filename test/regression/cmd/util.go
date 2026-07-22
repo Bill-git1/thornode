@@ -18,7 +18,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// trunk-ignore-all(golangci-lint/forcetypeassert)
+func regtestMntDir() string {
+	if dir := os.Getenv("REGTEST_MNT_DIR"); dir != "" {
+		return dir
+	}
+	return "/mnt"
+}
+
+func regtestCreateBlockPort(routine int) int {
+	base := 8080
+	if val := os.Getenv("REGTEST_CREATE_BLOCK_PORT_BASE"); val != "" {
+		if parsed, err := strconv.Atoi(val); err == nil {
+			base = parsed
+		}
+	}
+	return base + routine
+}
+
+func regtestHome(routine int) string {
+	base := os.Getenv("REGTEST_HOME_BASE")
+	if base == "" {
+		base = "/"
+	}
+	return filepath.Join(base, strconv.Itoa(routine))
+}
 
 // deepMerge merges two maps recursively - if there is an array in the map it will deep
 // merge elements that match on keys in overrideKeys.
@@ -280,11 +303,11 @@ func pathExists(path string) bool {
 	return false
 }
 
-var reBlockExport = regexp.MustCompile(`^/mnt/blocks/.*/[0-9]+\.json$`)
-
 // cleanExports will remove all block and export files without a corresponding test.
 func cleanExports() {
-	for _, dir := range []string{"/mnt/exports", "/mnt/blocks"} {
+	mntDir := regtestMntDir()
+	reBlockExport := regexp.MustCompile(fmt.Sprintf(`^%s/blocks/.*/[0-9]+\.json$`, regexp.QuoteMeta(mntDir)))
+	for _, dir := range []string{filepath.Join(mntDir, "exports"), filepath.Join(mntDir, "blocks")} {
 		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err

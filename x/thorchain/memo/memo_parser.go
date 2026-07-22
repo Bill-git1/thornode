@@ -113,6 +113,10 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseSecuredAssetDeposit()
 	case TxSecuredAssetWithdraw:
 		return p.ParseSecuredAssetWithdraw()
+	case TxStableReserveDeposit:
+		return p.ParseStableReserveDeposit()
+	case TxStableReserveWithdraw:
+		return p.ParseStableReserveWithdraw()
 	case TxExec:
 		return p.ParseExecMemo()
 	case TxSwitch:

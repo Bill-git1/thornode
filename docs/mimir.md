@@ -82,6 +82,20 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `HaltSecuredDeposit-<Chain>`#: Disables deposit of secured assets on the specified chain
 - `HaltSecuredWithdraw-<Chain>`#: Disables withdrawal of secured asset on the specified chain
 
+## Stable Reserve
+
+- `StableReserveEnabled`: Enable/disable Stable Reserve. Defaults to `0`.
+- `StableReserveDepegToleranceBps`: Maximum stable oracle deviation from $1 in basis points.
+- `StableReservePOLShareBps`: Share of `POLReserveSystemIncomeBps` routed to the Stable Reserve module while `StableReserveEnabled > 0`.
+- `StableReserveWithdrawalRequestMax`: Maximum request-coin amount accepted for `STABLE-` withdrawals.
+
+Operational notes:
+
+- RUNE is diverted to the Stable Reserve only when `StableReserveEnabled > 0`, `POLReserveSystemIncomeBps > 0`, and `StableReservePOLShareBps > 0`. If there are no healthy TOR-anchor stable targets, diverted RUNE stays idle in the Stable Reserve module balance until deployment becomes possible.
+- Contributor credits are same-asset obligations. Stable Reserve automation treats outstanding contributor credits as reserved inventory; free stable-to-stable fills and depeg rescue can use only surplus inventory above total credits for that asset.
+- Unfilled `STABLE-` withdrawals preserve contributor credit and return an error so normal refund handling can return the request coin.
+- Every swap event includes the `stable_reserve` attribute. It is `true` only for Stable Reserve fills and `false` for normal swaps.
+
 ## App Layer Management
 
 - `WasmPermissionless`#: Toggles permissionless deployment of CosmWasm smart contracts (default: 0, restricted).

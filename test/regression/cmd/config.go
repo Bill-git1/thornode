@@ -17,6 +17,7 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cosmoscryptoed25519 "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	bech32 "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint SA1019 deprecated
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -77,6 +78,7 @@ func init() {
 	ModuleAddrClaiming = authtypes.NewModuleAddress("tcy_claim").String()                     // "tthor1ss8rrf3twa20kf9frdyru05dmu2kg9llwwcgag"
 	ModuleAddrTCYStake = authtypes.NewModuleAddress("tcy_stake").String()                     // "tthor128a8hqnkaxyqv7qwajpggmfyudh64jl3uxmuaf"
 	ModuleAddrPOLReserve = authtypes.NewModuleAddress("pol_reserve").String()                 // derived at runtime
+	ModuleAddrStableReserve = authtypes.NewModuleAddress("stable_reserve").String()           // derived at runtime
 }
 
 func clientContextAndFactory(routine int) (client.Context, tx.Factory) {
@@ -178,6 +180,7 @@ var (
 	ModuleAddrClaiming           string
 	ModuleAddrTCYStake           string
 	ModuleAddrPOLReserve         string
+	ModuleAddrStableReserve      string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -239,7 +242,33 @@ var (
 		rabbitMnemonic,
 		wolfMnemonic,
 	}
+
+	// mnemonicByName maps an account name (e.g. "dog") to its mnemonic, derived
+	// from the first word of each mnemonic above.
+	mnemonicByName = func() map[string]string {
+		m := make(map[string]string, len(mnemonics))
+		for _, mn := range mnemonics {
+			m[strings.Split(mn, " ")[0]] = mn
+		}
+		return m
+	}()
 )
+
+// nodeSecpPrivKey derives the secp256k1 private key for a named account (e.g.
+// "dog"), matching the derivation used to register keyring accounts in init().
+// Used by tx operations that must sign payloads (such as price-feed quorum
+// attestations) with a node's underlying key rather than the tx envelope key.
+func nodeSecpPrivKey(name string) (cryptotypes.PrivKey, error) {
+	mn, ok := mnemonicByName[name]
+	if !ok {
+		return nil, fmt.Errorf("unknown account name: %s", name)
+	}
+	derivedPriv, err := hd.Secp256k1.Derive()(mn, "", cmd.THORChainHDPath)
+	if err != nil {
+		return nil, err
+	}
+	return hd.Secp256k1.Generate()(derivedPriv), nil
+}
 
 func init() {
 	// register functions for all mnemonic-chain addresses

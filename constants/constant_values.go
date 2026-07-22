@@ -172,6 +172,11 @@ const (
 	ModifyLimitSwapMaxIterations
 	POLReserveSystemIncomeBps
 	POLReserveMaxDeployment
+	StableReserveEnabled
+	StableReserveDepegToleranceBps
+	StableReservePOLShareBps
+	StableReserveWithdrawalRequestMax
+	StableReserveOraclePricing
 	WasmArbContract
 	MaxAbsentKeygenReporters
 

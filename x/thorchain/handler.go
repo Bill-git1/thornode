@@ -278,6 +278,12 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 	case SecuredAssetWithdrawMemo:
 		coin := tx.Tx.Coins[0]
 		newMsg = NewMsgSecuredAssetWithdraw(coin.Asset, coin.Amount, m.GetAddress(), signer, tx.Tx)
+	case StableReserveDepositMemo:
+		coin := tx.Tx.Coins[0]
+		newMsg = NewMsgSecuredAssetDeposit(coin.Asset, coin.Amount, signer, signer, tx.Tx)
+	case StableReserveWithdrawMemo:
+		coin := tx.Tx.Coins[0]
+		newMsg = NewMsgSecuredAssetWithdraw(coin.Asset.GetSecuredAsset(), m.GetAmount(), tx.Tx.FromAddress, signer, tx.Tx)
 	case RunePoolDepositMemo:
 		newMsg = NewMsgRunePoolDeposit(signer, tx.Tx)
 	case RunePoolWithdrawMemo:

@@ -40,6 +40,8 @@ const (
 	TxTradeAccountWithdrawal
 	TxSecuredAssetDeposit
 	TxSecuredAssetWithdraw
+	TxStableReserveDeposit
+	TxStableReserveWithdraw
 	TxRunePoolDeposit
 	TxRunePoolWithdraw
 	TxExec
@@ -87,6 +89,8 @@ var stringToTxTypeMap = map[string]TxType{
 	"trade-":      TxTradeAccountWithdrawal,
 	"secure+":     TxSecuredAssetDeposit,
 	"secure-":     TxSecuredAssetWithdraw,
+	"stable+":     TxStableReserveDeposit,
+	"stable-":     TxStableReserveWithdraw,
 	"pool+":       TxRunePoolDeposit,
 	"pool-":       TxRunePoolWithdraw,
 	"x":           TxExec,
@@ -124,6 +128,8 @@ var txToStringMap = map[TxType]string{
 	TxTradeAccountWithdrawal: "trade-",
 	TxSecuredAssetDeposit:    "secure+",
 	TxSecuredAssetWithdraw:   "secure-",
+	TxStableReserveDeposit:   "stable+",
+	TxStableReserveWithdraw:  "stable-",
 	TxExec:                   "x",
 	TxSwitch:                 "switch",
 	TxTCYClaim:               "tcy",
@@ -153,6 +159,8 @@ func (tx TxType) IsInbound() bool {
 		TxRunePoolWithdraw,
 		TxSecuredAssetDeposit,
 		TxSecuredAssetWithdraw,
+		TxStableReserveDeposit,
+		TxStableReserveWithdraw,
 		TxReferenceWriteMemo,
 		TxReferenceReadMemo,
 		TxSwap,
@@ -213,6 +221,7 @@ func (tx TxType) HasOutbound() bool {
 		TxBond,
 		TxTradeAccountDeposit,
 		TxSecuredAssetDeposit,
+		TxStableReserveDeposit,
 		TxRunePoolDeposit,
 		TxDonate,
 		TxReserve,

@@ -64,6 +64,7 @@ func init() {
 		DevFundSystemIncomeBps:              0,
 		MarketingFundSystemIncomeBps:        0,
 		TCYStakeSystemIncomeBps:             0,
+		StableReserveEnabled:                1,
 		MultipleAffiliatesMaxCount:          5,
 		BankSendEnabled:                     1,
 		MaxAbsentKeygenReporters:            0,

@@ -47,6 +47,7 @@ type Manager interface {
 	Slasher() Slasher
 	TradeAccountManager() TradeAccountManager
 	SecuredAssetManager() SecuredAssetManager
+	StableReserveManager() StableReserveManager
 	WasmManager() WasmManager
 	SwitchManager() SwitchManager
 	ScheduledMigrationManager() ScheduledMigrationManager
@@ -68,6 +69,15 @@ type SecuredAssetManager interface {
 	GetSecuredAssetStatus(_ cosmos.Context, _ common.Asset) (keeper.SecuredAsset, cosmos.Uint, error)
 	GetShareSupply(_ cosmos.Context, _ common.Asset) cosmos.Uint
 	CheckHalt(_ cosmos.Context) error
+}
+
+type StableReserveManager interface {
+	EndBlock(ctx cosmos.Context, mgr Manager) error
+	IsEnabled(ctx cosmos.Context) bool
+	IsEligibleStable(ctx cosmos.Context, asset common.Asset) (bool, string)
+	Deposit(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, contributor common.Address, txID common.TxID) error
+	Withdraw(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, contributor common.Address, txID common.TxID) (common.Coin, bool, error)
+	TrySwap(ctx cosmos.Context, mgr Manager, msg MsgSwap) (bool, cosmos.Uint, error)
 }
 
 // GasManager define all the methods required to manage gas
@@ -275,6 +285,7 @@ type Mgrs struct {
 	slasher                   Slasher
 	tradeManager              TradeAccountManager
 	securedManager            SecuredAssetManager
+	stableReserveManager      StableReserveManager
 	wasmManager               WasmManager
 	switchManager             SwitchManager
 	scheduledMigrationManager ScheduledMigrationManager
@@ -419,6 +430,11 @@ func (mgr *Mgrs) recreateManagers(ctx cosmos.Context, v semver.Version) error {
 		return fmt.Errorf("fail to create secured manager: %w", err)
 	}
 
+	mgr.stableReserveManager, err = GetStableReserveManager(v, mgr.K, mgr.eventMgr)
+	if err != nil {
+		return fmt.Errorf("fail to create stable reserve manager: %w", err)
+	}
+
 	mgr.wasmManager, err = GetWasmManager(ctx, mgr.K, mgr.wasmKeeper, mgr.eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create wasm manager: %w", err)
@@ -488,6 +504,8 @@ func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
 func (mgr *Mgrs) TradeAccountManager() TradeAccountManager { return mgr.tradeManager }
 
 func (mgr *Mgrs) SecuredAssetManager() SecuredAssetManager { return mgr.securedManager }
+
+func (mgr *Mgrs) StableReserveManager() StableReserveManager { return mgr.stableReserveManager }
 
 func (mgr *Mgrs) WasmManager() WasmManager { return mgr.wasmManager }
 
@@ -581,6 +599,10 @@ func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper, eventM
 
 func GetSecuredAssetManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (SecuredAssetManager, error) {
 	return newSecuredAssetMgr(keeper, eventMgr), nil
+}
+
+func GetStableReserveManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (StableReserveManager, error) {
+	return newStableReserveMgr(keeper, eventMgr), nil
 }
 
 func GetWasmManager(ctx cosmos.Context, keeper keeper.Keeper, wasmKeeper wasmkeeper.Keeper, eventMgr EventManager) (WasmManager, error) {

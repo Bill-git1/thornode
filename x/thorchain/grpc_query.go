@@ -161,6 +161,22 @@ func (s *queryServer) SecuredAssets(c context.Context, req *types.QuerySecuredAs
 	return s.querySecuredAssets(ctx, req)
 }
 
+func (s *queryServer) StableReserve(c context.Context, req *types.QueryStableReserveRequest) (*types.QueryStableReserveResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryStableReserve(ctx, req)
+}
+
+func (s *queryServer) StableReserveContributor(c context.Context, req *types.QueryStableReserveContributorRequest) (*types.QueryStableReserveContributorResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryStableReserveContributor(ctx, req)
+}
+
 func (s *queryServer) Node(c context.Context, req *types.QueryNodeRequest) (*types.QueryNodeResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

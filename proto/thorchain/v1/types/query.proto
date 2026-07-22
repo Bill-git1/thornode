@@ -49,6 +49,7 @@ import "types/query_account.proto";
 import "types/query_export.proto";
 import "types/query_bank.proto";
 import "types/query_secured_asset.proto";
+import "types/query_stable_reserve.proto";
 import "types/query_tcy_stakers.proto";
 import "types/query_tcy_claimers.proto";
 import "types/query_tcy_protocol_owned.proto";
@@ -148,6 +149,17 @@ service Query {
   rpc SecuredAssets(QuerySecuredAssetsRequest)
       returns (QuerySecuredAssetsResponse) {
     option (google.api.http).get = "/thorchain/securedassets";
+  }
+
+  rpc StableReserve(QueryStableReserveRequest)
+      returns (QueryStableReserveResponse) {
+    option (google.api.http).get = "/thorchain/stable_reserve";
+  }
+
+  rpc StableReserveContributor(QueryStableReserveContributorRequest)
+      returns (QueryStableReserveContributorResponse) {
+    option (google.api.http).get =
+        "/thorchain/stable_reserve/contributor/{asset}/{address}";
   }
 
   rpc Node(QueryNodeRequest) returns (QueryNodeResponse) {

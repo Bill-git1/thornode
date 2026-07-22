@@ -1495,6 +1495,7 @@
         "mode": "EndBlock",
         "pool": "THOR.NAMI",
         "pool_slip": "385",
+        "stable_reserve": "false",
         "streaming_swap_count": "1",
         "streaming_swap_quantity": "1",
         "swap_slip": "385",
