@@ -565,6 +565,7 @@ type Thornode struct {
 			EnabledUnsafeCORS bool   `mapstructure:"enabled_unsafe_cors"`
 			EnabledSwagger    bool   `mapstructure:"enabled_swagger"`
 			Address           string `mapstructure:"address"`
+			QueryViaGRPC      bool   `mapstructure:"query_via_grpc"`
 		} `mapstructure:"api"`
 
 		GRPC struct {

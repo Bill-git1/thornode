@@ -42,7 +42,7 @@ x-thorchain-env: &thorchain-env
   CHAIN_ID: thorchain
   SIGNER_NAME: thorchain
   SIGNER_PASSWD: password
-  THORNODE_GRPC_ENABLE: "true"
+  THOR_COSMOS_GRPC_ENABLE: "true"
   THOR_COSMOS_EBIFROST_ADDRESS: "0.0.0.0:50051"
   THOR_BLOCK_TIME: "6s"
   PORT_RPC: "26657"

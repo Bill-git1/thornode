@@ -3,6 +3,7 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"cosmossdk.io/core/store"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
@@ -271,6 +272,14 @@ type DynamicFeeManager interface {
 
 // Mgrs is an implementation of Manager interface
 type Mgrs struct {
+	// mu guards the version-dependent fields below (currentVersion through K).
+	// Consensus is the only writer (recreateManagers), but queries served off the
+	// direct gRPC path read them concurrently, no longer serialized behind the
+	// comet ABCI lock. loadMu serializes LoadManagerIfNecessary itself (BeginBlock
+	// vs the regtest querier's initManager).
+	mu     sync.RWMutex
+	loadMu sync.Mutex
+
 	currentVersion            semver.Version
 	constAccessor             constants.ConstantValues
 	gasMgr                    GasManager
@@ -324,16 +333,23 @@ func NewManagers(
 }
 
 func (mgr *Mgrs) GetVersion() semver.Version {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
 	return mgr.currentVersion
 }
 
 func (mgr *Mgrs) GetConstants() constants.ConstantValues {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
 	return mgr.constAccessor
 }
 
 // LoadManagerIfNecessary detect whether there are new version available, if it is available then create a new version of Mgr
 func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
-	v := mgr.K.GetLowestActiveVersion(ctx)
+	mgr.loadMu.Lock()
+	defer mgr.loadMu.Unlock()
+
+	v := mgr.Keeper().GetLowestActiveVersion(ctx)
 
 	if !v.Equals(mgr.GetVersion()) {
 		// version is different , thus all the manager need to re-create
@@ -361,165 +377,269 @@ func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 }
 
 func (mgr *Mgrs) recreateManagers(ctx cosmos.Context, v semver.Version) error {
-	mgr.currentVersion = v
-	mgr.constAccessor = constants.GetConstantValues(v)
-	var err error
+	// Build the full manager set into locals first, then swap under the write
+	// lock, so concurrent queries never observe a partially updated set and a
+	// construction error leaves the previous set intact.
+	constAccessor := constants.GetConstantValues(v)
 
-	mgr.K, err = GetKeeper(v, mgr.cdc, mgr.storeService, mgr.coinKeeper, mgr.accountKeeper, mgr.upgradeKeeper)
+	k, err := GetKeeper(v, mgr.cdc, mgr.storeService, mgr.coinKeeper, mgr.accountKeeper, mgr.upgradeKeeper)
 	if err != nil {
 		return fmt.Errorf("fail to create keeper: %w", err)
 	}
 
-	mgr.gasMgr, err = GetGasManager(v, mgr.K)
+	gasMgr, err := GetGasManager(v, k)
 	if err != nil {
 		return fmt.Errorf("fail to create gas manager: %w", err)
 	}
 
-	mgr.eventMgr, err = GetEventManager(v)
+	eventMgr, err := GetEventManager(v)
 	if err != nil {
 		return fmt.Errorf("fail to get event manager: %w", err)
 	}
 
-	mgr.txOutStore, err = GetTxOutStore(v, mgr.K, mgr.eventMgr, mgr.gasMgr)
+	txOutStore, err := GetTxOutStore(v, k, eventMgr, gasMgr)
 	if err != nil {
 		return fmt.Errorf("fail to get tx out store: %w", err)
 	}
 
-	mgr.networkMgr, err = GetNetworkManager(v, mgr.K, mgr.txOutStore, mgr.eventMgr)
+	networkMgr, err := GetNetworkManager(v, k, txOutStore, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to get vault manager: %w", err)
 	}
 
-	mgr.poolMgr, err = GetPoolManager(v)
+	poolMgr, err := GetPoolManager(v)
 	if err != nil {
 		return fmt.Errorf("fail to get pool manager: %w", err)
 	}
 
-	mgr.validatorMgr, err = GetValidatorManager(v, mgr.K, mgr.networkMgr, mgr.txOutStore, mgr.eventMgr)
+	validatorMgr, err := GetValidatorManager(v, k, networkMgr, txOutStore, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to get validator manager: %w", err)
 	}
 
-	mgr.obMgr, err = GetObserverManager(v)
+	obMgr, err := GetObserverManager(v)
 	if err != nil {
 		return fmt.Errorf("fail to get observer manager: %w", err)
 	}
 
-	mgr.swapQ, err = GetSwapQueue(v, mgr.K)
+	swapQ, err := GetSwapQueue(v, k)
 	if err != nil {
 		return fmt.Errorf("fail to create swap queue: %w", err)
 	}
 
-	mgr.advSwapQueue, err = GetAdvSwapQueue(v, mgr.K)
+	advSwapQueue, err := GetAdvSwapQueue(v, k)
 	if err != nil {
 		return fmt.Errorf("fail to create adv swap queue: %w", err)
 	}
 
-	mgr.slasher, err = GetSlasher(v, mgr.K, mgr.eventMgr)
+	slasher, err := GetSlasher(v, k, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create swap queue: %w", err)
 	}
 
-	mgr.tradeManager, err = GetTradeAccountManager(v, mgr.K, mgr.eventMgr)
+	tradeManager, err := GetTradeAccountManager(v, k, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create trade manager: %w", err)
 	}
 
-	mgr.securedManager, err = GetSecuredAssetManager(v, mgr.K, mgr.eventMgr)
+	securedManager, err := GetSecuredAssetManager(v, k, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create secured manager: %w", err)
 	}
 
-	mgr.stableReserveManager, err = GetStableReserveManager(v, mgr.K, mgr.eventMgr)
+	stableReserveManager, err := GetStableReserveManager(v, k, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create stable reserve manager: %w", err)
 	}
 
-	mgr.wasmManager, err = GetWasmManager(ctx, mgr.K, mgr.wasmKeeper, mgr.eventMgr)
+	wasmManager, err := GetWasmManager(ctx, k, mgr.wasmKeeper, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create wasm manager: %w", err)
 	}
 
-	mgr.switchManager, err = GetSwitchManager(v, mgr.K, mgr.eventMgr)
+	switchManager, err := GetSwitchManager(v, k, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create switch manager: %w", err)
 	}
 
-	mgr.oracleManager, err = GetOracleManager(v, mgr.K, mgr.eventMgr)
+	oracleManager, err := GetOracleManager(v, k, eventMgr)
 	if err != nil {
 		return fmt.Errorf("fail to create oracle manager: %w", err)
 	}
 
-	mgr.volumeManager, err = GetVolumeManager(v, mgr.K)
+	volumeManager, err := GetVolumeManager(v, k)
 	if err != nil {
 		return fmt.Errorf("fail to create volume manager: %w", err)
 	}
 
-	mgr.dynamicFeeManager, err = GetDynamicFeeManager(v, mgr.K)
+	dynamicFeeManager, err := GetDynamicFeeManager(v, k)
 	if err != nil {
 		return fmt.Errorf("fail to create dynamic fee manager: %w", err)
 	}
 
-	mgr.scheduledMigrationManager, err = GetScheduledMigrationManager(v, mgr)
+	scheduledMigrationManager, err := GetScheduledMigrationManager(v, mgr)
 	if err != nil {
 		return fmt.Errorf("fail to create scheduled migration manager: %w", err)
 	}
+
+	mgr.mu.Lock()
+	defer mgr.mu.Unlock()
+	mgr.currentVersion = v
+	mgr.constAccessor = constAccessor
+	mgr.K = k
+	mgr.gasMgr = gasMgr
+	mgr.eventMgr = eventMgr
+	mgr.txOutStore = txOutStore
+	mgr.networkMgr = networkMgr
+	mgr.poolMgr = poolMgr
+	mgr.validatorMgr = validatorMgr
+	mgr.obMgr = obMgr
+	mgr.swapQ = swapQ
+	mgr.advSwapQueue = advSwapQueue
+	mgr.slasher = slasher
+	mgr.tradeManager = tradeManager
+	mgr.securedManager = securedManager
+	mgr.stableReserveManager = stableReserveManager
+	mgr.wasmManager = wasmManager
+	mgr.switchManager = switchManager
+	mgr.oracleManager = oracleManager
+	mgr.volumeManager = volumeManager
+	mgr.dynamicFeeManager = dynamicFeeManager
+	mgr.scheduledMigrationManager = scheduledMigrationManager
 
 	return nil
 }
 
 // Keeper return Keeper
-func (mgr *Mgrs) Keeper() keeper.Keeper { return mgr.K }
+func (mgr *Mgrs) Keeper() keeper.Keeper {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.K
+}
 
 // GasMgr return GasManager
-func (mgr *Mgrs) GasMgr() GasManager { return mgr.gasMgr }
+func (mgr *Mgrs) GasMgr() GasManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.gasMgr
+}
 
 // EventMgr return EventMgr
-func (mgr *Mgrs) EventMgr() EventManager { return mgr.eventMgr }
+func (mgr *Mgrs) EventMgr() EventManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.eventMgr
+}
 
 // TxOutStore return an TxOutStore
-func (mgr *Mgrs) TxOutStore() TxOutStore { return mgr.txOutStore }
+func (mgr *Mgrs) TxOutStore() TxOutStore {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.txOutStore
+}
 
 // VaultMgr return a valid NetworkManager
-func (mgr *Mgrs) NetworkMgr() NetworkManager { return mgr.networkMgr }
+func (mgr *Mgrs) NetworkMgr() NetworkManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.networkMgr
+}
 
 // PoolMgr return a valid PoolManager
-func (mgr *Mgrs) PoolMgr() PoolManager { return mgr.poolMgr }
+func (mgr *Mgrs) PoolMgr() PoolManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.poolMgr
+}
 
 // ValidatorMgr return an implementation of ValidatorManager
-func (mgr *Mgrs) ValidatorMgr() ValidatorManager { return mgr.validatorMgr }
+func (mgr *Mgrs) ValidatorMgr() ValidatorManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.validatorMgr
+}
 
 // ObMgr return an implementation of ObserverManager
-func (mgr *Mgrs) ObMgr() ObserverManager { return mgr.obMgr }
+func (mgr *Mgrs) ObMgr() ObserverManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.obMgr
+}
 
 // SwapQ return an implementation of SwapQueue
-func (mgr *Mgrs) SwapQ() SwapQueue { return mgr.swapQ }
+func (mgr *Mgrs) SwapQ() SwapQueue {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.swapQ
+}
 
 // AdvSwapQueueMgr
-func (mgr *Mgrs) AdvSwapQueueMgr() AdvSwapQueue { return mgr.advSwapQueue }
+func (mgr *Mgrs) AdvSwapQueueMgr() AdvSwapQueue {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.advSwapQueue
+}
 
 // Slasher return an implementation of Slasher
-func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
+func (mgr *Mgrs) Slasher() Slasher {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.slasher
+}
 
-func (mgr *Mgrs) TradeAccountManager() TradeAccountManager { return mgr.tradeManager }
+func (mgr *Mgrs) TradeAccountManager() TradeAccountManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.tradeManager
+}
 
-func (mgr *Mgrs) SecuredAssetManager() SecuredAssetManager { return mgr.securedManager }
+func (mgr *Mgrs) SecuredAssetManager() SecuredAssetManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.securedManager
+}
 
-func (mgr *Mgrs) StableReserveManager() StableReserveManager { return mgr.stableReserveManager }
+func (mgr *Mgrs) StableReserveManager() StableReserveManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.stableReserveManager
+}
 
-func (mgr *Mgrs) WasmManager() WasmManager { return mgr.wasmManager }
+func (mgr *Mgrs) WasmManager() WasmManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.wasmManager
+}
 
-func (mgr *Mgrs) SwitchManager() SwitchManager { return mgr.switchManager }
+func (mgr *Mgrs) SwitchManager() SwitchManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.switchManager
+}
 
 func (mgr *Mgrs) ScheduledMigrationManager() ScheduledMigrationManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
 	return mgr.scheduledMigrationManager
 }
 
-func (mgr *Mgrs) OracleManager() OracleManager { return mgr.oracleManager }
+func (mgr *Mgrs) OracleManager() OracleManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.oracleManager
+}
 
-func (mgr *Mgrs) VolumeManager() VolumeManager { return mgr.volumeManager }
+func (mgr *Mgrs) VolumeManager() VolumeManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.volumeManager
+}
 
-func (mgr *Mgrs) DynamicFeeMgr() DynamicFeeManager { return mgr.dynamicFeeManager }
+func (mgr *Mgrs) DynamicFeeMgr() DynamicFeeManager {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+	return mgr.dynamicFeeManager
+}
 
 // GetKeeper return Keeper
 func GetKeeper(

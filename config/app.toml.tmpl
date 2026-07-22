@@ -128,6 +128,13 @@ rpc-max-body-bytes = 1000000
 # EnableUnsafeCORS defines if CORS should be enabled (unsafe - use it at your own risk).
 enabled-unsafe-cors = {{ .API.EnabledUnsafeCORS }}
 
+# QueryViaGRPC routes REST (grpc-gateway) queries through the in-process gRPC
+# server when it is enabled, bypassing the comet ABCI query path whose global
+# lock serializes queries behind block execution. With the [grpc] server
+# disabled, REST queries use the legacy ABCI path regardless; set to false to
+# keep ABCI routing even with the [grpc] server enabled.
+query-via-grpc = {{ .API.QueryViaGRPC }}
+
 ###############################################################################
 ###                           Rosetta Configuration                         ###
 ###############################################################################

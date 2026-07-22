@@ -1077,6 +1077,14 @@ thor:
       enabled_unsafe_cors: true
       enabled_swagger: true
       address: tcp://0.0.0.0:1317
+      # When the gRPC server is enabled, route REST (grpc-gateway) queries
+      # through it in-process, off the comet ABCI query path whose global lock
+      # serializes queries behind block execution. With grpc.enable false
+      # (default) REST queries use the legacy ABCI path regardless; set false to
+      # keep ABCI routing even with the gRPC server running.
+      query_via_grpc: true
+    # Enabling gRPC also reroutes REST queries via api.query_via_grpc above.
+    # External exposure is governed by the operator's published ports.
     grpc:
       enable: false
       address: 0.0.0.0:9090

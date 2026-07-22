@@ -125,7 +125,7 @@ func (qs queryServer) queryTHORName(ctx cosmos.Context, req *types.QueryThorname
 
 	threshold := cosmos.ZeroUint()
 	if !name.PreferredAsset.IsEmpty() {
-		paOf, err := qs.mgr.gasMgr.GetAssetOutboundFee(ctx, name.PreferredAsset, true)
+		paOf, err := qs.mgr.GasMgr().GetAssetOutboundFee(ctx, name.PreferredAsset, true)
 		if err == nil {
 			multiplier := getEffectiveMultiplier(ctx, qs.mgr, name)
 			threshold = paOf.MulUint64(uint64(multiplier))
@@ -803,7 +803,7 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 	targetOutboundFeeSurplus := qs.mgr.Keeper().GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune)
 	maxMultiplierBasisPoints := qs.mgr.Keeper().GetConfigInt64(ctx, constants.MaxOutboundFeeMultiplierBasisPoints)
 	minMultiplierBasisPoints := qs.mgr.Keeper().GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)
-	outboundFeeMultiplier := qs.mgr.gasMgr.CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), cosmos.NewUint(data.OutboundGasSpentRune), cosmos.NewUint(data.OutboundGasWithheldRune), cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
+	outboundFeeMultiplier := qs.mgr.GasMgr().CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), cosmos.NewUint(data.OutboundGasSpentRune), cosmos.NewUint(data.OutboundGasWithheldRune), cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
 
 	assets := qs.mgr.Keeper().GetAnchors(ctx, common.TOR)
 	median := qs.mgr.Keeper().AnchorMedian(ctx, assets).QuoUint64(constants.DollarMulti)
