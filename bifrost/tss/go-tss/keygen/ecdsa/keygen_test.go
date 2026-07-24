@@ -168,7 +168,7 @@ func getPreparams(c *C) []*btsskeygen.LocalPreParams {
 func (s *TssECDSAKeygenTestSuite) TestGenerateNewKey(c *C) {
 	log.SetLogLevel("tss-lib", "info")
 	sort.Strings(testPubKeys)
-	req := keygen.NewRequest(testPubKeys, 10, "", tcommon.SigningAlgoSecp256k1)
+	req := keygen.NewRequest(testPubKeys, 10, common.SessionNonceActivationVersion, tcommon.SigningAlgoSecp256k1)
 	messageID, err := common.MsgToHashString([]byte(strings.Join(req.Keys, "")))
 	c.Assert(err, IsNil)
 	conf := common.TssConfig{
@@ -235,7 +235,7 @@ func (s *TssECDSAKeygenTestSuite) TestGenerateNewKeyWithStop(c *C) {
 			var localpubKey []string
 			localpubKey = append(localpubKey, testPubKeys...)
 			sort.Strings(testPubKeys)
-			req := keygen.NewRequest(localpubKey, 10, "", tcommon.SigningAlgoSecp256k1)
+			req := keygen.NewRequest(localpubKey, 10, common.SessionNonceActivationVersion, tcommon.SigningAlgoSecp256k1)
 			messageID, err := common.MsgToHashString([]byte(strings.Join(req.Keys, "")))
 			c.Assert(err, IsNil)
 			comm := s.comms[idx]

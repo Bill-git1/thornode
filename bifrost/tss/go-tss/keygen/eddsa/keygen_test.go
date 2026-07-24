@@ -147,7 +147,7 @@ func (s *EddsaKeygenTestSuite) TearDownTest(c *C) {
 
 func (s *EddsaKeygenTestSuite) TestGenerateNewKey(c *C) {
 	sort.Strings(testPubKeys)
-	req := keygen.NewRequest(testPubKeys, 1, "0.15.0", tcommon.SigningAlgoEd25519)
+	req := keygen.NewRequest(testPubKeys, 1, common.SessionNonceActivationVersion, tcommon.SigningAlgoEd25519)
 	messageID, err := common.MsgToHashString([]byte(strings.Join(req.Keys, "")))
 	c.Assert(err, IsNil)
 	conf := common.TssConfig{

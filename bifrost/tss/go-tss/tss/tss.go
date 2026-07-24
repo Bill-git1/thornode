@@ -237,17 +237,3 @@ func (t *TssServer) persistPeerAddressBook() {
 		t.logger.Error().Err(err).Msg("fail to save the peer addresses")
 	}
 }
-
-// GetP2PComm returns the underlying p2p.Communication.
-// TEMP: keyverify — remove with the keyverify rollout.
-func (t *TssServer) GetP2PComm() *p2p.Communication { return t.p2pCommunication }
-
-// GetBroadcastChan returns the shared broadcast message channel.
-// TEMP: keyverify — remove with the keyverify rollout.
-func (t *TssServer) GetBroadcastChan() chan *messages.BroadcastMsgChan {
-	return t.p2pCommunication.BroadcastMsgChan
-}
-
-// GetLocalNodePubKey returns the bech32-encoded thorpub of the local node.
-// TEMP: keyverify — remove with the keyverify rollout.
-func (t *TssServer) GetLocalNodePubKey() string { return t.localNodePubKey }

@@ -170,7 +170,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessage(c *C) {
 	}
 	log.SetLogLevel("tss-lib", "info")
 	sort.Strings(testPubKeys)
-	req := keysign.NewRequest("thorpub1addwnpepq2wctjhw3awtacnd7lfx6nke28rle65daaltm4ylnr46lyaugj5euw0ml2w", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, "")
+	req := keysign.NewRequest("thorpub1addwnpepq2wctjhw3awtacnd7lfx6nke28rle65daaltm4ylnr46lyaugj5euw0ml2w", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, common.SessionNonceActivationVersion)
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
 	messageID, err := common.MsgToHashString(dat)
@@ -210,7 +210,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessage(c *C) {
 
 			localState, err := s.stateMgrs[idx].GetLocalState(req.PoolPubKey)
 			c.Assert(err, IsNil)
-			sig, err := keysignIns.SignMessage(msgForSign, localState, req.SignerPubKeys)
+			sig, err := keysignIns.SignMessage(msgForSign, localState, req.SignerPubKeys, req.Version)
 
 			c.Assert(err, IsNil)
 			lock.Lock()
@@ -261,7 +261,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageLegacyKeyshare(c *C) {
 		[]string{"helloworld-test", "t"},
 		10,
 		testPubKeys,
-		"",
+		common.SessionNonceActivationVersion,
 	)
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
@@ -309,7 +309,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageLegacyKeyshare(c *C) {
 
 			localState, err := s.stateMgrs[idx].GetLocalState(req.PoolPubKey)
 			c.Assert(err, IsNil)
-			sig, err := keysignIns.SignMessage(msgForSign, localState, req.SignerPubKeys)
+			sig, err := keysignIns.SignMessage(msgForSign, localState, req.SignerPubKeys, req.Version)
 			c.Assert(err, IsNil)
 
 			lock.Lock()
@@ -365,7 +365,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageWithStop(c *C) {
 		return
 	}
 	sort.Strings(testPubKeys)
-	req := keysign.NewRequest("thorpub1addwnpepq2wctjhw3awtacnd7lfx6nke28rle65daaltm4ylnr46lyaugj5euw0ml2w", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, "")
+	req := keysign.NewRequest("thorpub1addwnpepq2wctjhw3awtacnd7lfx6nke28rle65daaltm4ylnr46lyaugj5euw0ml2w", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, common.SessionNonceActivationVersion)
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
 	messageID, err := common.MsgToHashString(dat)
@@ -410,7 +410,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageWithStop(c *C) {
 			msgsToSign = append(msgsToSign, []byte(req.Messages[0]))
 			msgsToSign = append(msgsToSign, []byte(req.Messages[1]))
 
-			_, err = keysignIns.SignMessage(msgsToSign, localState, req.SignerPubKeys)
+			_, err = keysignIns.SignMessage(msgsToSign, localState, req.SignerPubKeys, req.Version)
 			c.Assert(err, NotNil)
 			lastMsg := keysignIns.tssCommonStruct.GetBlameMgr().GetLastMsg()
 			if lastMsg != nil {
@@ -464,7 +464,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageRejectOnePeer(c *C) {
 		return
 	}
 	sort.Strings(testPubKeys)
-	req := keysign.NewRequest("thorpub1addwnpepq2wctjhw3awtacnd7lfx6nke28rle65daaltm4ylnr46lyaugj5euw0ml2w", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, "")
+	req := keysign.NewRequest("thorpub1addwnpepq2wctjhw3awtacnd7lfx6nke28rle65daaltm4ylnr46lyaugj5euw0ml2w", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, common.SessionNonceActivationVersion)
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
 	messageID, err := common.MsgToHashString(dat)
@@ -505,7 +505,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageRejectOnePeer(c *C) {
 			var msgsToSign [][]byte
 			msgsToSign = append(msgsToSign, []byte(req.Messages[0]))
 			msgsToSign = append(msgsToSign, []byte(req.Messages[1]))
-			_, err = keysignIns.SignMessage(msgsToSign, localState, req.SignerPubKeys)
+			_, err = keysignIns.SignMessage(msgsToSign, localState, req.SignerPubKeys, req.Version)
 			// lastMsg may be nil if the protocol terminates before emitting any
 			// outgoing message; log only when it is set.
 			lastMsg := keysignIns.tssCommonStruct.GetBlameMgr().GetLastMsg()
@@ -562,7 +562,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageNotInParty(c *C) {
 	parties := []string{"thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69"}
 
 	// SignMessage returns error when local party key is not in the parties list
-	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, parties)
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, parties, "")
 	c.Assert(err, NotNil)
 	c.Assert(sig, IsNil)
 }
@@ -579,7 +579,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageInvalidLocalData(c *C) {
 		LocalData:       []byte("not-valid-json"),
 	}
 
-	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, testPubKeys)
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, testPubKeys, "")
 	c.Assert(err, NotNil)
 	c.Assert(sig, IsNil)
 }
@@ -594,7 +594,7 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageInvalidParties(c *C) {
 	}
 
 	// Empty parties should cause GetParties to fail
-	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, []string{})
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, []string{}, "")
 	c.Assert(err, NotNil)
 	c.Assert(sig, IsNil)
 }

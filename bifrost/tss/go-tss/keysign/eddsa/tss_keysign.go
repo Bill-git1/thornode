@@ -87,7 +87,7 @@ func (tKeySign *EDDSAKeySign) startBatchSigning(keySignPartyMap *sync.Map, msgNu
 }
 
 // signMessage
-func (tKeySign *EDDSAKeySign) SignMessage(msgsToSign [][]byte, localStateItem storage.KeygenLocalState, parties []string) ([]*tsslibcommon.SignatureData, error) {
+func (tKeySign *EDDSAKeySign) SignMessage(msgsToSign [][]byte, localStateItem storage.KeygenLocalState, parties []string, version string) ([]*tsslibcommon.SignatureData, error) {
 	partiesID, localPartyID, err := conversion.GetParties(parties, localStateItem.LocalPartyKey)
 	tKeySign.localParty = localPartyID
 	if err != nil {
@@ -136,6 +136,13 @@ func (tKeySign *EDDSAKeySign) SignMessage(msgsToSign [][]byte, localStateItem st
 		eachLocalPartyID.Index = localPartyID.Index // Set the index from the local party ID
 
 		params := tss.NewParameters(tss.Edwards(), ctx, eachLocalPartyID, len(partiesID), threshold)
+		// Bind the SSID to this message's sub-session so proofs cannot be
+		// replayed across sessions; msgsToSign is sorted by digest before
+		// this loop, so (m, i) is identical on every signer. Version-gated
+		// so the nonce activates on the whole network at once.
+		if common.SessionNonceEnabled(version) {
+			params.SetSessionNonce(common.KeysignSessionNonce(localStateItem.PubKey, m.String(), i, parties))
+		}
 		keySignParty := signing.NewLocalParty(m, params, localData, outCh, endCh)
 		keySignPartyMap.Store(moniker, keySignParty)
 	}

@@ -133,6 +133,8 @@ func runSign(dir string, t int) {
 	// init the parties
 	for i := 0; i < len(signPIDs); i++ {
 		params := tss.NewParameters(tss.S256(), p2pCtx, signPIDs[i], len(signPIDs), t)
+		// fixed nonce: all bench parties run in-process in one session
+		params.SetSessionNonce(big.NewInt(1))
 		P := signing.NewLocalParty(msg, params, keys[i], outCh, endCh).(*signing.LocalParty)
 		parties = append(parties, P)
 		go func(P *signing.LocalParty) {

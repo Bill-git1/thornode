@@ -899,11 +899,3 @@ func (c *Communication) ProcessBroadcast() {
 func (c *Communication) ReleaseStream(msgID string) {
 	c.streamMgr.ReleaseStream(msgID)
 }
-
-// ReleaseStreamsByPrefix resets every parked stream whose msgID has the
-// given prefix, plus any parked under StreamUnknown. TEMP: keyverify — used
-// by the parked-stream sweep in cmd/bifrost; remove with the keyverify
-// rollout if unused.
-func (c *Communication) ReleaseStreamsByPrefix(prefix string) {
-	c.streamMgr.ReleaseStreamsByPrefix(prefix)
-}

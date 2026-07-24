@@ -3,9 +3,7 @@ package main
 import (
 	"errors"
 
-	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
-	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keygen"
@@ -87,19 +85,4 @@ func (mts *MockTssServer) FrostKeygen(_ tss.FrostKeygenRequest, _ tss.FrostSidec
 		Status:   common.Success,
 		Blame:    blame.Blame{},
 	}, nil
-}
-
-// Keyverify accessors panic — this mock does not back the keyverify scheduler.
-// If a future test wires it in, a panic surfaces here instead of a nil deref one
-// stack frame deeper. TEMP: keyverify — remove with the keyverify rollout.
-func (mts *MockTssServer) GetP2PComm() *p2p.Communication {
-	panic("keyverify not supported by MockTssServer")
-}
-
-func (mts *MockTssServer) GetBroadcastChan() chan *messages.BroadcastMsgChan {
-	panic("keyverify not supported by MockTssServer")
-}
-
-func (mts *MockTssServer) GetLocalNodePubKey() string {
-	panic("keyverify not supported by MockTssServer")
 }

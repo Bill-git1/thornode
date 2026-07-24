@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"math"
+	"math/big"
 	"os"
 	"runtime"
 	"sync/atomic"
@@ -136,6 +137,8 @@ func runKeyGen(dir string, t, n int) {
 	// init the parties
 	for i := 0; i < len(pIDs); i++ {
 		params := tss.NewParameters(tss.S256(), p2pCtx, pIDs[i], len(pIDs), t)
+		// fixed nonce: all bench parties run in-process in one session
+		params.SetSessionNonce(big.NewInt(1))
 		P := keygen.NewLocalParty(params, outCh, endCh, preParamTestData).(*keygen.LocalParty)
 		parties = append(parties, P)
 		go func(P *keygen.LocalParty) {

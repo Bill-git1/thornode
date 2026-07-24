@@ -32,7 +32,11 @@ const (
 	testFileLocation = "../test_data"
 	preParamTestFile = "preParam_test.data"
 
-	newJoinPartyVersion string = "0.14.0"
+	// newJoinPartyVersion selects the leader-based joinParty (anything >=
+	// 0.14.0 does) and must also be >= common.SessionNonceActivationVersion:
+	// the pinned tss-lib requires SessionNonce on keygen and the ceremony
+	// only sets it from that network version on.
+	newJoinPartyVersion string = common.SessionNonceActivationVersion
 )
 
 var (

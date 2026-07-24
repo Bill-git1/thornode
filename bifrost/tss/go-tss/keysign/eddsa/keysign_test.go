@@ -171,7 +171,7 @@ func (s *EddsaKeysignTestSuite) TestSignMessage(c *C) {
 		return
 	}
 	sort.Strings(testPubKeys)
-	req := keysign.NewRequest("thorpub1zcjduepq665vjeq34n7ccpvdl8t6akgls3c6u2uq242vpag2d9knstxymxfqq2ufwe", tcommon.SigningAlgoEd25519, []string{"helloworld-test111", "test2"}, 10, testPubKeys, "0.16.0")
+	req := keysign.NewRequest("thorpub1zcjduepq665vjeq34n7ccpvdl8t6akgls3c6u2uq242vpag2d9knstxymxfqq2ufwe", tcommon.SigningAlgoEd25519, []string{"helloworld-test111", "test2"}, 10, testPubKeys, common.SessionNonceActivationVersion)
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
 	messageID, err := common.MsgToHashString(dat)
@@ -213,7 +213,7 @@ func (s *EddsaKeysignTestSuite) TestSignMessage(c *C) {
 
 			localState, err := s.stateMgrs[idx].GetLocalState(req.PoolPubKey)
 			c.Assert(err, IsNil)
-			sig, err := keysignIns.SignMessage(msgForSign, localState, req.SignerPubKeys)
+			sig, err := keysignIns.SignMessage(msgForSign, localState, req.SignerPubKeys, req.Version)
 			c.Assert(err, IsNil)
 			lock.Lock()
 			defer lock.Unlock()
@@ -272,7 +272,7 @@ func (s *EddsaKeysignTestSuite) TestSignMessageNotInParty(c *C) {
 	}
 	parties := []string{"thorpub1addwnpepq2ryyje5zr09lq7gqptjwnxqsy2vcdngvwd6z7yt5yjcnyj8c8cn559xe69"}
 
-	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, parties)
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, parties, "")
 	c.Assert(err, NotNil)
 	c.Assert(err, ErrorMatches, "fail to form key sign party:.*")
 	c.Assert(sig, IsNil)
@@ -288,7 +288,7 @@ func (s *EddsaKeysignTestSuite) TestSignMessageInvalidParties(c *C) {
 	}
 
 	// Empty parties should cause GetParties to fail
-	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, []string{})
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, []string{}, "")
 	c.Assert(err, NotNil)
 	c.Assert(sig, IsNil)
 }
@@ -305,7 +305,7 @@ func (s *EddsaKeysignTestSuite) TestSignMessageInvalidLocalData(c *C) {
 		LocalData:       []byte("not-valid-json"),
 	}
 
-	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, testPubKeys)
+	sig, err := ks.SignMessage([][]byte{[]byte("msg")}, localState, testPubKeys, "")
 	c.Assert(err, NotNil)
 	c.Assert(sig, IsNil)
 }

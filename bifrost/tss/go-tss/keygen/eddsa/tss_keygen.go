@@ -85,6 +85,12 @@ func (tKeyGen *EDDSAKeyGen) GenerateNewKey(keygenReq keygen.Request) (*bcrypto.E
 	}
 	ctx := btss.NewPeerContext(partiesID)
 	params := btss.NewParameters(tss.Edwards(), ctx, localPartyID, len(partiesID), threshold)
+	// Bind the SSID to this ceremony so proofs cannot be replayed across
+	// sessions; the nonce must be byte-identical on every participant, so it
+	// is version-gated to activate on the whole network at once.
+	if common.SessionNonceEnabled(keygenReq.Version) {
+		params.SetSessionNonce(common.KeygenSessionNonce(keygenReq.Keys, keygenReq.BlockHeight, string(keygenReq.Algo)))
+	}
 	bufferSize := len(partiesID) * 10 // buffer size for outCh and endCh
 	outCh := make(chan btss.Message, bufferSize)
 	endCh := make(chan *eddsakg.LocalPartySaveData, bufferSize)

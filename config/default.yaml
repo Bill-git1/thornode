@@ -77,22 +77,6 @@ bifrost:
     keysign_timeout: 45s
     party_timeout: 45s
     pre_param_timeout: 5m
-    # keyverify scheduler — independent of keygen/keysign budgets. Set
-    # via BIFROST_SIGNER_KEYVERIFY_ROUND_TIMEOUT /
-    # BIFROST_SIGNER_KEYVERIFY_PER_VAULT_TIMEOUT to adjust on a live
-    # bifrost without a release cut. round < per_vault so per-peer blame
-    # attribution wins over outer ctx-cancellation.
-    keyverify_round_timeout: 2m
-    keyverify_per_vault_timeout: 3m
-    # per-attempt recovery ticker: re-send dropped round messages/confirms
-    # every interval, at most max_retries times per artifact.
-    keyverify_retry_interval: 5s
-    keyverify_max_retries: 3
-    # set true to disable the keyverify scheduler entirely (stops the
-    # every-100-blocks TSS re-attestation load; inbound keyverify streams
-    # from peers that still run it are swept by a background timer). Can also
-    # be set via BIFROST_SIGNER_KEYVERIFY_DISABLED without a release cut.
-    keyverify_disabled: false
   tss:
     rendezvous: asgard
     p2p_port: 5040

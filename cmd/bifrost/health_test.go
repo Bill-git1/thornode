@@ -9,9 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
-	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keygen"
@@ -86,25 +84,13 @@ func (mts *MockTssServer) FrostKeygen(req tss.FrostKeygenRequest, sidecar tss.Fr
 	return tss.FrostKeygenResponse{Status: common.Success}, nil
 }
 
-// GetP2PComm returns nil; keyverify is not exercised in this mock's tests.
-// TEMP: keyverify — remove with the keyverify rollout.
-func (mts *MockTssServer) GetP2PComm() *p2p.Communication { return nil }
-
-// GetBroadcastChan returns nil; keyverify is not exercised in this mock's tests.
-// TEMP: keyverify — remove with the keyverify rollout.
-func (mts *MockTssServer) GetBroadcastChan() chan *messages.BroadcastMsgChan { return nil }
-
-// GetLocalNodePubKey returns "" ; keyverify is not exercised in this mock's tests.
-// TEMP: keyverify — remove with the keyverify rollout.
-func (mts *MockTssServer) GetLocalNodePubKey() string { return "" }
-
 type HealthServerTestSuite struct{}
 
 var _ = Suite(&HealthServerTestSuite{})
 
 func (HealthServerTestSuite) TestHealthServer(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewHealthServer("127.0.0.1:8080", tssServer, nil, nil, false)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	c.Assert(s, NotNil)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -119,7 +105,7 @@ func (HealthServerTestSuite) TestHealthServer(c *C) {
 
 func (HealthServerTestSuite) TestPingHandler(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewHealthServer("127.0.0.1:8080", tssServer, nil, nil, false)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	c.Assert(s, NotNil)
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
 	res := httptest.NewRecorder()
@@ -129,7 +115,7 @@ func (HealthServerTestSuite) TestPingHandler(c *C) {
 
 func (HealthServerTestSuite) TestGetP2pIDHandler(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewHealthServer("127.0.0.1:8080", tssServer, nil, nil, false)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	c.Assert(s, NotNil)
 	req := httptest.NewRequest(http.MethodGet, "/p2pid", nil)
 	res := httptest.NewRecorder()
@@ -208,7 +194,7 @@ func (HealthServerTestSuite) TestClassifyHost(c *C) {
 
 func (HealthServerTestSuite) TestVersionHandler(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewHealthServer("127.0.0.1:8080", tssServer, nil, nil, false)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	c.Assert(s, NotNil)
 	req := httptest.NewRequest(http.MethodGet, "/version", nil)
 	res := httptest.NewRecorder()
@@ -229,7 +215,7 @@ func (HealthServerTestSuite) TestProviderStatusHandler(c *C) {
 	tssServer := &MockTssServer{}
 
 	// handler returns 500 when payload is nil (marshal failure path)
-	s := NewHealthServer("127.0.0.1:8080", tssServer, nil, nil, false)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	s.providerPayload = nil
 	req := httptest.NewRequest(http.MethodGet, "/status/provider", nil)
 	res := httptest.NewRecorder()

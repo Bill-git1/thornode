@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -72,33 +71,6 @@ func (sm *StreamMgr) ReleaseStream(msgID string) {
 		delete(sm.unusedStreams, msgID)
 		delete(sm.unusedStreams, StreamUnknown)
 		sm.streamLocker.Unlock()
-	}
-}
-
-// ReleaseStreamsByPrefix resets and forgets every parked stream whose msgID
-// has the given prefix, plus any parked under StreamUnknown (always inbound
-// with completed or failed reads, so dead on both ends). Scoping by prefix is
-// what makes a periodic sweep safe: Reset is abortive, so resetting a parked
-// outbound stream races the remote peer's read of the already-written
-// payload — acceptable only for msgIDs the caller owns. Keygen/keysign/FROST
-// msgIDs are hex hashes and can never match a non-hex prefix. TEMP: keyverify
-// — added for keyverify msgIDs that no local attempt will ever release, such
-// as disabled nodes or locally verified vaults that peers keep retrying;
-// remove with the keyverify rollout if unused.
-func (sm *StreamMgr) ReleaseStreamsByPrefix(prefix string) {
-	var victims []network.Stream
-	sm.streamLocker.Lock()
-	for msgID, streams := range sm.unusedStreams {
-		if strings.HasPrefix(msgID, prefix) || msgID == StreamUnknown {
-			victims = append(victims, streams...)
-			delete(sm.unusedStreams, msgID)
-		}
-	}
-	sm.streamLocker.Unlock()
-	for _, el := range victims {
-		if err := el.Reset(); err != nil {
-			sm.logger.Error().Err(err).Msg("fail to reset the stream,skip it")
-		}
 	}
 }
 

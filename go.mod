@@ -114,7 +114,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d
 	github.com/tendermint/btcd v0.1.1
-	gitlab.com/thorchain/tss/tss-lib-private.git/v3 v3.0.0-rc5
+	gitlab.com/thorchain/tss/tss-lib-private.git/v3 v3.0.0-rc6
 	go.uber.org/atomic v1.11.0
 	golang.org/x/crypto v0.47.0
 	golang.org/x/oauth2 v0.27.0

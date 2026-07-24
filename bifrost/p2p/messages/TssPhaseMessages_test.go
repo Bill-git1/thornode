@@ -101,32 +101,3 @@ func TestTSSKEYSIGNROUNDS_FitsAllKeysignIndices(t *testing.T) {
 		t.Fatalf("TSSKEYSIGNROUNDS=%d must be greater than max ECDSA keysign index=%d (otherwise round arrays sized by this constant would index-out-of-range)", TSSKEYSIGNROUNDS, maxIndexEmitted)
 	}
 }
-
-// TestKeyverifyRoundConstants_AreDistinctFromKeysign is a TEMP test for the
-// keyverify rollout — verifies the four keyverify round names don't collide
-// with any keysign or keygen names. Remove this test alongside the keyverify
-// feature.
-// TEMP: keyverify — remove with the keyverify rollout.
-func TestKeyverifyRoundConstants_AreDistinctFromKeysign(t *testing.T) {
-	kv := []string{KEYVERIFY1, KEYVERIFY2a, KEYVERIFY2b, KEYVERIFY3}
-	keysign := []string{
-		KEYSIGN1aUnicast, KEYSIGN1b, KEYSIGN2Unicast, KEYSIGN3, KEYSIGN4,
-		KEYSIGN5, KEYSIGN6, KEYSIGN7, KEYSIGN8, KEYSIGN9,
-		FROSTKEYSIGNPREPROCESS, FROSTKEYSIGNSHARE, FROSTKEYSIGNRESULT,
-		EDDSAKEYSIGN1, EDDSAKEYSIGN2, EDDSAKEYSIGN3,
-	}
-	keygen := []string{
-		KEYGEN1, KEYGEN2aUnicast, KEYGEN2b, KEYGEN3,
-		EDDSAKEYGEN1, EDDSAKEYGEN2a, EDDSAKEYGEN2b,
-	}
-	for _, v := range kv {
-		if v == "" {
-			t.Errorf("keyverify constant is empty")
-		}
-		for _, k := range append(keysign, keygen...) {
-			if v == k {
-				t.Errorf("keyverify constant %q collides with %q", v, k)
-			}
-		}
-	}
-}
