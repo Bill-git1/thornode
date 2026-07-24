@@ -92,6 +92,13 @@ func recoverKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBridge,
 	if err != nil {
 		return fmt.Errorf("fail to get asgards: %w", err)
 	}
+	// GetAsgards only returns Active + Retiring. A vault in signer_membership
+	// may already be Inactive after a churn — fetch each missing entry
+	// individually so the recovery target lookup below doesn't send bifrost
+	// startup into an infinite retry (cmd/bifrost/main.go loops without bound).
+	vaults = augmentVaultsWithMissingMembership(membership, vaults, func(pk common.PubKey) (types.Vault, error) {
+		return thorchain.GetVault(pk.String())
+	})
 
 	targets, recoveryErrs := keyshareRecoveryTargets(membership, vaults, selectedKind)
 	for _, target := range targets {
@@ -106,6 +113,30 @@ func recoverKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBridge,
 		}
 	}
 	return errors.Join(recoveryErrs...)
+}
+
+// augmentVaultsWithMissingMembership fetches each membership entry that isn't
+// present in the supplied vault list via the provided closure and appends the
+// result. Fetch failures are logged and skipped — recovery still surfaces the
+// missing vault via keyshareRecoveryTargets, and the caller's outer retry loop
+// handles transient thorchain read failures.
+func augmentVaultsWithMissingMembership(
+	membership common.PubKeys,
+	vaults types.Vaults,
+	fetch func(common.PubKey) (types.Vault, error),
+) types.Vaults {
+	for _, m := range membership {
+		if _, found := findKeyshareRecoveryTarget(m, vaults); found {
+			continue
+		}
+		v, err := fetch(m)
+		if err != nil {
+			log.Warn().Err(err).Msgf("signer_membership includes vault %s not returned by GetAsgards, and per-vault lookup failed", m)
+			continue
+		}
+		vaults = append(vaults, v)
+	}
+	return vaults
 }
 
 // keyshareRecoveryTargets resolves every distinct membership still assigned to

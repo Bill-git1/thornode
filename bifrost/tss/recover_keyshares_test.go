@@ -72,6 +72,37 @@ func (s *RecoverKeysharesSuite) TestFindKeyshareRecoveryTargetPrefersFrostPubKey
 	c.Check(ok, Equals, false)
 }
 
+func (s *RecoverKeysharesSuite) TestAugmentVaultsWithMissingMembershipFetchesMissing(c *C) {
+	active := types.Vault{PubKey: types.GetRandomPubKey(), BlockHeight: 100}
+	inactive := types.Vault{PubKey: types.GetRandomPubKey(), BlockHeight: 50}
+	membership := common.PubKeys{active.PubKey, inactive.PubKey}
+	vaults := types.Vaults{active}
+
+	fetched := common.PubKeys{}
+	result := augmentVaultsWithMissingMembership(membership, vaults, func(pk common.PubKey) (types.Vault, error) {
+		fetched = append(fetched, pk)
+		return inactive, nil
+	})
+
+	c.Assert(fetched, HasLen, 1)
+	c.Check(fetched[0].Equals(inactive.PubKey), Equals, true, Commentf("only the missing vault should be fetched"))
+	c.Assert(result, HasLen, 2)
+	c.Check(result[1].PubKey.Equals(inactive.PubKey), Equals, true)
+}
+
+func (s *RecoverKeysharesSuite) TestAugmentVaultsWithMissingMembershipSkipsFetchFailure(c *C) {
+	missing := types.GetRandomPubKey()
+	membership := common.PubKeys{missing}
+
+	result := augmentVaultsWithMissingMembership(membership, types.Vaults{}, func(pk common.PubKey) (types.Vault, error) {
+		return types.Vault{}, fmt.Errorf("thorchain unreachable")
+	})
+
+	// Fetch failure is skipped; keyshareRecoveryTargets still surfaces the
+	// missing entry so the outer retry loop keeps working.
+	c.Assert(result, HasLen, 0)
+}
+
 func (s *RecoverKeysharesSuite) TestKeyshareRecoveryTargetsResolvesEveryMembership(c *C) {
 	legacyPubKey := types.GetRandomPubKey()
 	eddsaPubKey := types.GetRandomEd25519PubKey()
