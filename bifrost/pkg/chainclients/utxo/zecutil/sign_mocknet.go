@@ -8,8 +8,8 @@ package zecutil
 // activation levels are used for testnet because mainnet is already updated
 // TODO: need implement own complete chain params and use them
 var upgradeParams = []upgradeParam{
-	// Zcash chain in mocknet starts with NU6.2 from block 0
-	{0, []byte{0x30, 0xF3, 0x37, 0x54}},
+	// Zcash chain in mocknet starts with NU6.3 from block 0
+	{0, []byte{0x5B, 0x16, 0xA5, 0x37}},
 	// Test in sign_mocknet.go expects overwinter hash for height 215039
 	// Reaching that block height by regularly running the mocknet container
 	// is highly unlikely
