@@ -544,7 +544,9 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		case common.DOGEChain, common.BCHChain:
 			maxFee = true // "allowHighFees"
 		case common.LTCChain, common.BTCChain:
-			maxFee = 10_000_000
+			// "maxfeerate" is denominated in BTC/kvB, not sats - Core multiplies by 1e8
+			// itself and rejects anything >= 1 BTC/kvB. 0.1 is Core's own default.
+			maxFee = 0.1
 		}
 
 		txid, err = c.rpc.SendRawTransaction(redeemTx, maxFee)
