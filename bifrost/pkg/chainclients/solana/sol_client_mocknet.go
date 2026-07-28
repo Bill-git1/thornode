@@ -11,5 +11,5 @@ func init() {
 	// Mocknet block production is much faster than mainnet, and simulation actors
 	// time out quickly. Keep the same chain-side verification gate, but shorten
 	// the unconditional cache window so dropped mocknet broadcasts can be retried.
-	signerCacheExpiry = 20 * time.Second
+	signerCacheExpiryOverride = 20 * time.Second
 }

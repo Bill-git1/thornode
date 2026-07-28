@@ -75,15 +75,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		return err == nil && skipCache > 0
 	}
 	verifyFn := func(sig string) signercache.LookupResult {
-		_, txLookupErr := c.rpc.GetRawTransactionVerbose(sig)
-		switch {
-		case txLookupErr == nil:
-			return signercache.LookupFound
-		case isUTXOTxNotFoundErr(txLookupErr):
-			return signercache.LookupNotFound
-		default:
-			return signercache.LookupAmbiguous
-		}
+		verbose, txLookupErr := c.rpc.GetRawTransactionVerbose(sig)
+		return utxoVerifyPresence(verbose, txLookupErr)
 	}
 	check := c.signerCacheManager.SignTxCacheCheck(tx.CacheHash(), gateFn, verifyFn)
 	if check.Phase != signercache.PhaseNoEntry {
@@ -451,9 +444,9 @@ func allNotSelectedForKeysign(err error) bool {
 	return true
 }
 
-// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+// getSignerCacheExpiry returns the configured signer-cache expiry (config signer_cache_expiry).
 func (c *Client) getSignerCacheExpiry() time.Duration {
-	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+	return c.cfg.SignerCacheExpiry
 }
 
 // isUTXOTxNotFoundErr returns true when the error from GetRawTransactionVerbose
@@ -478,6 +471,32 @@ func isUTXOTxNotFoundErr(err error) bool {
 		return zecErr.Code == int(btcjson.ErrRPCInvalidAddressOrKey)
 	}
 	return false
+}
+
+// utxoVerifyPresence maps a GetRawTransactionVerbose outcome to a signer-cache
+// LookupResult for the SignTx verify path.
+//
+// A node with txindex retains a transaction even after its block is orphaned by a
+// reorg, so a bare "no error" is not proof the tx is canonical. Only treat it as
+// present (LookupFound) when it is in the canonical chain (>0 confirmations) or
+// still pending in the mempool (no block hash yet). A tx whose containing block
+// was orphaned reports confirmations <= 0 with a block hash set — surface it as
+// absent (LookupNotFound) so that, under the SkipSignerCache mimir gate, an
+// operator can let an expired outbound re-sign after its inputs were re-spent by
+// another transaction. A not-found error is absence; any other error is ambiguous
+// (fail closed — the cache is respected).
+func utxoVerifyPresence(verbose *btcjson.TxRawResult, lookupErr error) signercache.LookupResult {
+	switch {
+	case lookupErr == nil:
+		if verbose == nil || verbose.Confirmations > 0 || verbose.BlockHash == "" {
+			return signercache.LookupFound
+		}
+		return signercache.LookupNotFound
+	case isUTXOTxNotFoundErr(lookupErr):
+		return signercache.LookupNotFound
+	default:
+		return signercache.LookupAmbiguous
+	}
 }
 
 // GetVaultLock returns a mutex for the given vault pubkey. This is primarily used to

@@ -257,15 +257,3 @@ func (s *SignTxCheckSuite) TestCacheCheckPhaseStrings(c *C) {
 func (s *SignTxCheckSuite) TestCacheCheckPhaseStringUnknown(c *C) {
 	c.Assert(CacheCheckPhase(999).String(), Equals, "unknown phase")
 }
-
-// ResolveExpiry returns the configured value when positive.
-func (s *SignTxCheckSuite) TestResolveExpiry_PositiveConfigured(c *C) {
-	custom := DefaultExpiry / 2
-	c.Assert(ResolveExpiry(custom), Equals, custom)
-}
-
-// ResolveExpiry falls back to DefaultExpiry on zero or negative input.
-func (s *SignTxCheckSuite) TestResolveExpiry_FallbackToDefault(c *C) {
-	c.Assert(ResolveExpiry(0), Equals, DefaultExpiry)
-	c.Assert(ResolveExpiry(-1), Equals, DefaultExpiry)
-}

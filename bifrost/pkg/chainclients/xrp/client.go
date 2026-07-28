@@ -689,9 +689,9 @@ func (c *Client) GetConfirmationCount(txIn stypes.TxIn) int64 {
 	return 0
 }
 
-// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+// getSignerCacheExpiry returns the configured signer-cache expiry (config signer_cache_expiry).
 func (c *Client) getSignerCacheExpiry() time.Duration {
-	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+	return c.cfg.SignerCacheExpiry
 }
 
 // GetGasEstimateForSolvency returns the current gas fee estimate used by solvency checks.

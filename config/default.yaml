@@ -288,6 +288,7 @@ bifrost:
 
     tron:
       <<: *default-chain
+      signer_cache_expiry: 2h # TRON keysigns embed a recent ref block; a long window is unnecessary
       chain_id: TRON
       block_scanner:
         <<: *default-block-scanner
@@ -552,6 +553,7 @@ bifrost:
 
     sol:
       <<: *default-chain
+      signer_cache_expiry: 2h # SOL keysigns embed a recent blockhash (~60s validity); a long window is unnecessary
       chain_id: SOL
       block_scanner:
         <<: *default-block-scanner

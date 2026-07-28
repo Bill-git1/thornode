@@ -1,26 +1,5 @@
 package signercache
 
-import "time"
-
-// DefaultExpiry is the default window after broadcast during which the signer
-// cache is respected unconditionally. After expiry, callers can verify the
-// recorded broadcast on chain and clear the cache only on definitive absence.
-//
-// This default is intentionally generous (multiples of SigningTransactionPeriod)
-// so a stuck outbound has many rescheduled rounds during which the original
-// broadcast may still settle before any re-sign is even considered.
-const DefaultExpiry = 72 * time.Hour
-
-// ResolveExpiry returns the configured cache expiry, falling back to
-// DefaultExpiry when the configured value is zero or negative. Centralized
-// here so chain clients don't reimplement the same trivial fallback.
-func ResolveExpiry(configured time.Duration) time.Duration {
-	if configured > 0 {
-		return configured
-	}
-	return DefaultExpiry
-}
-
 // LookupResult communicates the outcome of an on-chain verification call.
 //
 // The asymmetry between LookupAmbiguous and LookupNotFound is critical to the

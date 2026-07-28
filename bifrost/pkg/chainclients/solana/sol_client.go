@@ -33,18 +33,28 @@ import (
 	mem "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 )
 
-// signerCacheExpiry is the window after a broadcast during which SignTx respects
-// the cache unconditionally, without an RPC lookup. Past this window, SignTx
-// verifies the recorded signature on chain and only re-signs if the RPC
+// signerCacheExpiryOverride, when > 0, replaces the config-sourced signer-cache
+// expiry. Only the mocknet build sets it (see sol_client_mocknet.go), shortening
+// the window so simulations can retry dropped broadcasts quickly. Mainnet leaves
+// it zero and sources the window from config (signer_cache_expiry, default 2h).
+var signerCacheExpiryOverride time.Duration
+
+// getSignerCacheExpiry returns the window after a broadcast during which SignTx
+// respects the cache unconditionally, without an RPC lookup. Past this window,
+// SignTx verifies the recorded signature on chain and only re-signs if the RPC
 // definitively reports it absent. Both conditions must hold — expiry alone never
 // invalidates, because thorchain observation consensus can lag actual Solana
 // inclusion and re-signing a landed-but-not-yet-observed tx would double-spend.
 //
-// 2h is well past Solana's ~60s blockhash validity (MAX_PROCESSING_AGE = 150 slots)
-// and generous against prolonged scanner or consensus lag. It corresponds to 4x
-// SigningTransactionPeriod (1200 thorchain blocks at 6s), so a stuck outbound gets
-// at most a few rescheduled reschedules before this window allows re-sign.
-var signerCacheExpiry = 2 * time.Hour
+// The configured 2h (config signer_cache_expiry) is well past Solana's ~60s
+// blockhash validity (MAX_PROCESSING_AGE = 150 slots) and generous against
+// prolonged scanner or consensus lag.
+func (c *SOLClient) getSignerCacheExpiry() time.Duration {
+	if signerCacheExpiryOverride > 0 {
+		return signerCacheExpiryOverride
+	}
+	return c.cfg.SignerCacheExpiry
+}
 
 // broadcastLookupDelay is the time to wait after a broadcast error before
 // querying the chain to see if the transaction landed anyway. Exposed as a
@@ -702,7 +712,7 @@ func (c *SOLClient) BroadcastTx(txOutItem stypes.TxOutItem, rawTx []byte) (strin
 			if result, lookupErr := c.rpcClient.GetTransactionConfirmed(knownSig); lookupErr == nil && result.Slot > 0 {
 				c.logger.Warn().Str("memo", txOutItem.Memo).Str("txid", knownSig).
 					Msg("tx found on chain despite broadcast error, updating signer cache")
-				expiry := time.Now().Add(signerCacheExpiry).UnixMilli()
+				expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
 				if cacheErr := c.signerCacheManager.SetSignedWithExpiry(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), knownSig, expiry); cacheErr != nil {
 					c.logger.Err(cacheErr).Interface("txOutItem", txOutItem).Msg("fail to mark tx out item as signed")
 				}
@@ -717,7 +727,7 @@ func (c *SOLClient) BroadcastTx(txOutItem stypes.TxOutItem, rawTx []byte) (strin
 	// the cache unconditionally until the expiry passes; past expiry it verifies on
 	// chain before re-signing, so a dropped broadcast eventually recovers without
 	// risking a double-spend against a lagging observation.
-	expiry := time.Now().Add(signerCacheExpiry).UnixMilli()
+	expiry := time.Now().Add(c.getSignerCacheExpiry()).UnixMilli()
 	if err := c.signerCacheManager.SetSignedWithExpiry(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), txSig, expiry); err != nil {
 		c.logger.Err(err).Interface("txOutItem", txOutItem).Msg("fail to mark tx out item as signed")
 	}

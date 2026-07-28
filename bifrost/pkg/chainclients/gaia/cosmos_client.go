@@ -259,9 +259,9 @@ func (c *CosmosClient) GetLatestTxForVault(vault string) (string, string, error)
 	return lastObserved, lastBroadCasted, err
 }
 
-// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+// getSignerCacheExpiry returns the configured signer-cache expiry (config signer_cache_expiry).
 func (c *CosmosClient) getSignerCacheExpiry() time.Duration {
-	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+	return c.cfg.SignerCacheExpiry
 }
 
 // GetAddress return current signer address, it will be bech32 encoded address
@@ -362,11 +362,20 @@ func (c *CosmosClient) processOutboundTx(tx stypes.TxOutItem, thorchainHeight in
 // the full mempool was fetched and sig is absent, and LookupAmbiguous (fail
 // closed) on any RPC error or when the mempool is larger than we could fetch — so
 // a still-pending broadcast is never mistaken for "absent" and re-signed.
+//
+// CometBFT clamps the page size server-side to maxPerPage = 100 (validatePerPage),
+// so whenever res.Total > 100 this returns LookupAmbiguous: on a busy Cosmos Hub
+// mempool GAIA therefore has no mempool-based auto-recovery, the same fail-closed
+// posture as XRP. A reliable absence signal for Cosmos is the account sequence —
+// once the vault's on-chain sequence advances past the cached tx's signed
+// sequence, that tx can never land, definitively absent regardless of mempool
+// size. That requires the signer cache to record the signed sequence and is left
+// as a follow-up.
 func (c *CosmosClient) mempoolLookup(ctx context.Context, sig string) signercache.LookupResult {
 	if c.cometRPC == nil {
 		return signercache.LookupAmbiguous
 	}
-	limit := 1000
+	limit := 100 // CometBFT caps per-page at maxPerPage=100; a larger value is silently clamped
 	res, err := c.cometRPC.UnconfirmedTxs(ctx, &limit)
 	if err != nil {
 		return signercache.LookupAmbiguous

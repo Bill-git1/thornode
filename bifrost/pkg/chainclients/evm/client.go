@@ -81,9 +81,9 @@ type EVMClient struct {
 	signingReady atomic.Bool
 }
 
-// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+// getSignerCacheExpiry returns the configured signer-cache expiry (config signer_cache_expiry).
 func (c *EVMClient) getSignerCacheExpiry() time.Duration {
-	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+	return c.cfg.SignerCacheExpiry
 }
 
 // NewEVMClient creates a new EVMClient.

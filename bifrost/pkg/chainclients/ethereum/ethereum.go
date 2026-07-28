@@ -598,9 +598,9 @@ func (c *Client) convertThorchainAmountToWei(amt *big.Int) *big.Int {
 	return big.NewInt(0).Mul(amt, big.NewInt(common.One*100))
 }
 
-// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+// getSignerCacheExpiry returns the configured signer-cache expiry (config signer_cache_expiry).
 func (c *Client) getSignerCacheExpiry() time.Duration {
-	return signercache.ResolveExpiry(c.cfg.SignerCacheExpiry)
+	return c.cfg.SignerCacheExpiry
 }
 
 // verifyBroadcast is the signer-cache verifyFn: it reports whether the recorded

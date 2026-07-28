@@ -469,9 +469,9 @@ func (c *TronClient) ConfirmationCountReady(_ types.TxIn) bool {
 // OnObservedTxIn is called when a new observed tx is received.
 func (c *TronClient) OnObservedTxIn(_ types.TxInItem, _ int64) {}
 
-// getSignerCacheExpiry returns the configured signer cache expiry, falling back to the default.
+// getSignerCacheExpiry returns the configured signer-cache expiry (config signer_cache_expiry).
 func (c *TronClient) getSignerCacheExpiry() time.Duration {
-	return signercache.ResolveExpiry(c.config.SignerCacheExpiry)
+	return c.config.SignerCacheExpiry
 }
 
 // SignTx returns the signed transaction.
