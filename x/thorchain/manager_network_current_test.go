@@ -2811,6 +2811,71 @@ func (s *NetworkManagerTestSuite) TestSolvencyStreamingSwapSynthTargetNotSubtrac
 		Commentf("BTC solvency: expected 0 (synth output NOT subtracted), got %s", btcSolvency))
 }
 
+// TestSolvencyStreamingSwapTradeTargetSubtracted verifies that the in-flight
+// output of a streaming swap targeting a TRADE asset is treated as a liability.
+// Trade (and secured) targets, unlike synths, DO reduce the underlying L1 pool
+// balance per sub-swap, while the trade/secured depth is not credited until
+// settlement. The accumulated output must therefore be subtracted so the lowered
+// pool balance does not appear as excess vault funds (issue #3069).
+func (s *NetworkManagerTestSuite) TestSolvencyStreamingSwapTradeTargetSubtracted(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	// BTC pool has already emitted 20 BTC to the in-flight stream (BalanceAsset
+	// reduced), but the vault still holds the coins and no trade depth is credited
+	// until settlement.
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceAsset = cosmos.NewUint(80 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// V2 streaming swap: RUNE -> BTC~BTC (trade target)
+	streamingTxID := GetRandomTxHash()
+	streamingSwapMsg := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    streamingTxID,
+			Chain: common.THORChain,
+			Coins: common.Coins{common.NewCoin(common.RuneNative, cosmos.NewUint(50*common.One))},
+		},
+		TargetAsset: common.BTCAsset.GetTradeAsset(),
+		Version:     types.SwapVersion_v2,
+		State: &types.SwapState{
+			Quantity: 10,
+			Count:    6,
+			Interval: 5,
+			Deposit:  cosmos.NewUint(50 * common.One),
+			In:       cosmos.NewUint(30 * common.One),
+			Out:      cosmos.NewUint(20 * common.One), // 20 BTC emitted from pool, owed to trade acct
+		},
+	}
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, streamingSwapMsg), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	var btcSolvency math.Int
+	for _, sol := range solvency {
+		if sol.Asset.Equals(common.BTCAsset) {
+			btcSolvency = sol.Amount
+		}
+	}
+
+	// BTC: Vault 100 - Pool 80 - StreamingOutput 20 = 0
+	// Without the fix, it would be: Vault 100 - Pool 80 = 20 (phantom over-solvency)
+	c.Assert(btcSolvency.Equal(math.NewInt(0)), Equals, true,
+		Commentf("BTC solvency: expected 0 (trade streaming output subtracted), got %s", btcSolvency))
+}
+
 func (s *NetworkManagerTestSuite) TestProcessPostChurnSolvency(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
@@ -3205,6 +3270,118 @@ func (s *NetworkManagerTestSuite) TestSolvencyWithPendingOutboundsAtPastHeight(c
 	c.Assert(len(solvency2), Equals, 1)
 	c.Assert(solvency2[0].Amount.Equal(expectedSolvency), Equals, true,
 		Commentf("expected %s, got %s", expectedSolvency.String(), solvency2[0].Amount.String()))
+}
+
+// TestSolvencyXMRExtendedBackwardScan verifies that XMR pending outbounds older
+// than the base SigningTransactionPeriod but within the extended XMR window
+// (xmrSigningPeriodMultiplier x period) are still subtracted, while non-XMR
+// outbounds past the base window are not (issue #3071).
+func (s *NetworkManagerTestSuite) TestSolvencyXMRExtendedBackwardScan(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	signingPeriod := mgr.Keeper().GetConfigInt64(ctx, constants.SigningTransactionPeriod) // 300
+	// Block height must exceed the extended XMR window so the scan reaches back far enough.
+	ctx = ctx.WithBlockHeight(signingPeriod*xmrSigningPeriodMultiplier + 100)
+
+	// XMR pool + vault.
+	xmrPool := NewPool()
+	xmrPool.Asset = common.XMRAsset
+	xmrPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	xmrPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	xmrPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, xmrPool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.XMRAsset, cosmos.NewUint(150*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Pending XMR outbound at a height older than the base window (300) but within
+	// the extended XMR window (900). Unsigned (OutHash empty) -> still a liability.
+	xmrHeight := ctx.BlockHeight() - signingPeriod - 100 // ~400 back, > base 300, < 900
+	txOut := &TxOut{
+		Height: xmrHeight,
+		TxArray: []TxOutItem{
+			{
+				Chain:       common.XMRChain,
+				Coin:        common.NewCoin(common.XMRAsset, cosmos.NewUint(20*common.One)),
+				ToAddress:   GetRandomTHORAddress(), // address value irrelevant for solvency math
+				VaultPubKey: vault.PubKey,
+			},
+		},
+	}
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	var xmrSolvency math.Int
+	for _, sol := range solvency {
+		if sol.Asset.Equals(common.XMRAsset) {
+			xmrSolvency = sol.Amount
+		}
+	}
+
+	// XMR: Vault 150 - Pool 100 - PendingOutbound 20 = 30
+	// Without the fix (base 300 window only), the outbound is missed: 150 - 100 = 50.
+	c.Assert(xmrSolvency.Equal(math.NewInt(30*common.One)), Equals, true,
+		Commentf("XMR solvency: expected 30 (extended-window pending outbound subtracted), got %s", xmrSolvency))
+}
+
+// TestSolvencyForwardScanBeyondMaxOffset verifies that scheduled outbounds placed
+// beyond MaxTxOutOffset (up to TxOutDelayMax, as CalcTxOutHeight does under
+// congestion) are still subtracted from solvency (issue #3070).
+func (s *NetworkManagerTestSuite) TestSolvencyForwardScanBeyondMaxOffset(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgr(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = ActiveVault
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(150*common.One)),
+	}
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	maxOffset := mgr.Keeper().GetConfigInt64(ctx, constants.MaxTxOutOffset) // 720
+	// Schedule a congested outbound just beyond MaxTxOutOffset (within TxOutDelayMax).
+	// CalcTxOutHeight only advances past a block once it is full, so scheduled items are
+	// contiguous with no gap; the scan continues until the first empty block past the
+	// offset. Place the item at the first block beyond the offset to exercise the
+	// extended forward scan without an intervening empty block.
+	scheduledHeight := ctx.BlockHeight() + maxOffset + 1
+	txOut := &TxOut{
+		Height: scheduledHeight,
+		TxArray: []TxOutItem{
+			{
+				Chain:       common.BTCChain,
+				Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(20*common.One)),
+				ToAddress:   GetRandomBTCAddress(),
+				VaultPubKey: vault.PubKey,
+			},
+		},
+	}
+	c.Assert(mgr.Keeper().SetTxOut(ctx, txOut), IsNil)
+
+	solvency, err := nmgr.calculateNetworkSolvency(ctx, mgr)
+	c.Assert(err, IsNil)
+	c.Assert(len(solvency), Equals, 1)
+
+	// Vault 150 - Pool 100 - ScheduledOutbound 20 = 30
+	// Without the fix (scan stops at MaxTxOutOffset), the outbound is missed: 150 - 100 = 50.
+	c.Assert(solvency[0].Amount.Equal(math.NewInt(30*common.One)), Equals, true,
+		Commentf("expected 30 (outbound beyond MaxTxOutOffset subtracted), got %s", solvency[0].Amount))
 }
 
 func (s *NetworkManagerTestSuite) TestSolvencyWithTradeAndSecuredAssets(c *C) {

@@ -2869,8 +2869,13 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 			// For streaming swaps, subtract accumulated output from the TARGET asset
 			// regardless of the source asset. The pool has already emitted these assets
 			// (reducing pool.BalanceAsset), but no outbound exists until settleSwap runs.
-			// Skip synth/trade/secured targets: those are minted without reducing L1 pool balance.
-			if msg.IsLegacyStreaming() && !msg.TargetAsset.IsSyntheticAsset() && !msg.TargetAsset.IsTradeAsset() && !msg.TargetAsset.IsSecuredAsset() {
+			// Skip only synth targets: synths are minted without reducing the L1 pool
+			// balance. Trade and secured targets DO reduce the underlying L1 pool balance
+			// (only synths bypass the BalanceAsset subtraction in swapOne), yet their
+			// trade/secured depth is not credited until settlement, so the in-flight
+			// output is a real liability that must be subtracted here to avoid the
+			// reduced pool balance appearing as excess vault funds.
+			if msg.IsLegacyStreaming() && !msg.TargetAsset.IsSyntheticAsset() {
 				swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
 				if err == nil && swp.TxID.Equals(msg.Tx.ID) {
 					targetAsset := msg.TargetAsset.GetLayer1Asset()
@@ -2921,8 +2926,13 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 			// For streaming swaps, subtract accumulated output from the TARGET asset
 			// regardless of the source asset. The pool has already emitted these assets
 			// (reducing pool.BalanceAsset), but no outbound exists until settleSwap runs.
-			// Skip synth/trade/secured targets: those are minted without reducing L1 pool balance.
-			if msg.IsStreaming() && !msg.TargetAsset.IsSyntheticAsset() && !msg.TargetAsset.IsTradeAsset() && !msg.TargetAsset.IsSecuredAsset() {
+			// Skip only synth targets: synths are minted without reducing the L1 pool
+			// balance. Trade and secured targets DO reduce the underlying L1 pool balance
+			// (only synths bypass the BalanceAsset subtraction in swapOne), yet their
+			// trade/secured depth is not credited until settlement, so the in-flight
+			// output is a real liability that must be subtracted here to avoid the
+			// reduced pool balance appearing as excess vault funds.
+			if msg.IsStreaming() && !msg.TargetAsset.IsSyntheticAsset() {
 				stateOut := msg.State.Out
 				if msg.State.Deposit.IsZero() {
 					swp, err := vm.k.GetStreamingSwap(ctx, msg.Tx.ID)
@@ -3011,8 +3021,14 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 	// Outbounds scheduled at past block heights with empty OutHash are still pending
 	// (funds committed but not yet sent). Once OutHash is set, vault coins have already
 	// been decremented in the same block, so those items should be skipped.
+	// Scan back far enough to cover the longest chain-specific signing window.
+	// Extended-window chains (XMR/EVM) legitimately remain unsigned for
+	// xmrSigningPeriodMultiplier x the base SigningTransactionPeriod (multi-round
+	// signing + confirmation latency), the same window LackSigning and outbound
+	// observation matching use. Items are filtered per-item back to their own
+	// chain-specific window below, so standard-window chains keep the base window.
 	signingPeriod := vm.k.GetConfigInt64(ctx, constants.SigningTransactionPeriod)
-	startHeight := ctx.BlockHeight() - signingPeriod
+	startHeight := ctx.BlockHeight() - signingPeriod*xmrSigningPeriodMultiplier
 	if startHeight < 1 {
 		startHeight = 1
 	}
@@ -3025,6 +3041,13 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 			// Only deduct items that haven't been signed yet.
 			// When OutHash is set, vault.SubFundsWithClamping has already been called in the same block.
 			if !item.OutHash.IsEmpty() {
+				continue
+			}
+			// Only deduct outbounds still within their chain-specific signing window.
+			// Items older than their own signing period have already been
+			// rescheduled/handled by the slasher; extended-window chains (XMR/EVM)
+			// keep the longer window.
+			if height < ctx.BlockHeight()-item.SigningTransactionPeriod(signingPeriod) {
 				continue
 			}
 			// Skip outbounds from inactive vaults
@@ -3060,13 +3083,25 @@ func (vm *NetworkMgr) calculateNetworkSolvency(ctx cosmos.Context, mgr Manager) 
 		}
 	}
 
-	// Step 6b: Scan forward for scheduled outbounds (current block + future)
+	// Step 6b: Scan forward for scheduled outbounds (current block + future).
+	// TxOutStorage.CalcTxOutHeight can push congested outbounds well past
+	// MaxTxOutOffset, up to TxOutDelayMax. Scan the full TxOutDelayMax window so
+	// those committed-but-unsigned items are still subtracted, mirroring the
+	// GetPendingOutbounds keeper helper: only break once past MaxTxOutOffset and an
+	// empty txout height is observed (scheduled items are contiguous within the
+	// offset but sparse beyond it).
 	maxOffset := vm.k.GetConfigInt64(ctx, constants.MaxTxOutOffset)
-	for i := int64(0); i <= maxOffset; i++ {
+	txOutDelayMax := vm.k.GetConfigInt64(ctx, constants.TxOutDelayMax)
+	for i := int64(0); i <= txOutDelayMax; i++ {
 		height := ctx.BlockHeight() + i
 		txOut, err := vm.k.GetTxOut(ctx, height)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get txout for height %d: %w", height, err)
+		}
+		if i > maxOffset && len(txOut.TxArray) == 0 {
+			// Past the max offset and hit an empty block; the remaining scheduled
+			// heights are assumed empty as well.
+			break
 		}
 		for _, item := range txOut.TxArray {
 			// Skip outbounds from inactive vaults (e.g., pending refunds)
