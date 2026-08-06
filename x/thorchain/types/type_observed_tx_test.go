@@ -779,6 +779,61 @@ func (TypeObservedTxSuite) TestVoterMergesEquivalentXMRSpentRefsRegardlessOfOrde
 	c.Assert(voter.GetTx(nas).HasEquivalentSpentOutputRefs(obTxA), Equals, true)
 }
 
+func (TypeObservedTxSuite) TestShouldRefundRedundantObservationXMRSpentRefJoker(c *C) {
+	txID := GetRandomTxHash()
+	tx := GetRandomTx()
+	tx.ID = txID
+	tx.Chain = common.XMRChain
+	tx.Memo = "OUT:xmr-ref-joker"
+
+	signer := GetRandomBech32Addr()
+	observedPubKey := GetRandomPubKey()
+	voter := NewObservedTxVoter(txID, nil)
+
+	// The first observation has no spent-output refs, so it is a consensus
+	// wildcard (the "joker") for any later ref list.
+	joker := common.NewObservedTx(tx, 1, observedPubKey, 1)
+	c.Assert(voter.Add(joker, signer), Equals, true)
+
+	variantA := common.NewObservedTx(tx, 1, observedPubKey, 1)
+	variantA.SpentOutputRefs = []common.OutputRef{
+		{TxHash: "aaaa", OutputIndex: 0, KeyImage: "ki_aaaa", SpendTxHash: txID.String()},
+	}
+	// The optional-ref transition remains in the same cap class, but it does not
+	// receive an immediate refund; consensus/flex accounting credits it normally.
+	c.Assert(voter.ShouldRefundRedundantObservation(variantA, signer), Equals, false)
+	c.Assert(voter.Add(variantA, signer), Equals, true)
+
+	variantB := common.NewObservedTx(tx, 1, observedPubKey, 1)
+	variantB.SpentOutputRefs = []common.OutputRef{
+		{TxHash: "bbbb", OutputIndex: 1, KeyImage: "ki_bbbb", SpendTxHash: txID.String()},
+	}
+	// Although variant A and B conflict with each other, both belong to the
+	// same refund class. The joker must not keep the count at 1.
+	c.Assert(voter.ShouldRefundRedundantObservation(variantB, signer), Equals, false)
+
+	// Even a gas-only variant with variant A's exact refs is no longer eligible:
+	// both the joker and variant A occupy the transitive refund class, so the
+	// one-redundant-observation allowance has already been consumed.
+	sameRefsDifferentGas := variantA
+	sameRefsDifferentGas.Tx.Gas = common.Gas{
+		common.NewCoin(common.XMRAsset, cosmos.NewUint(1234)),
+	}
+	c.Assert(voter.ShouldRefundRedundantObservation(sameRefsDifferentGas, signer), Equals, false)
+
+	// Without the joker, one conflicting non-empty ref set is in the same
+	// transitive refund class but is not consensus-compatible. It must not make
+	// the next variant eligible for an immediate refund, because a late matching
+	// observation can also receive the flex-window refund.
+	conflictingOnly := NewObservedTxVoter(txID, nil)
+	c.Assert(conflictingOnly.Add(variantA, signer), Equals, true)
+	c.Assert(conflictingOnly.ShouldRefundRedundantObservation(variantB, signer), Equals, false)
+
+	// A normal gas-only variant with the same canonical refs remains eligible for
+	// the intended one-time redundant-observation refund.
+	c.Assert(conflictingOnly.ShouldRefundRedundantObservation(sameRefsDifferentGas, signer), Equals, true)
+}
+
 func (TypeObservedTxSuite) TestGetConsensusSignersStayScopedToObservedVault(c *C) {
 	txID := GetRandomTxHash()
 	acc1 := GetRandomBech32Addr()
@@ -855,4 +910,103 @@ func (TypeObservedTxSuite) TestGetConsensusSignersStayScopedToObservedVault(c *C
 	c.Assert(signerSet[acc2.String()], Equals, true)
 	c.Assert(signerSet[acc3.String()], Equals, true)
 	c.Assert(signerSet[acc4.String()], Equals, false)
+}
+
+// TestGetObserveSignersCreditsDifferentGasObserver reproduces the EVM
+// instant-observation slash (thornode#3081): a signer's pre-broadcast
+// gas-limit observation of an outbound differs only in gas from the scanner's
+// gas-used observation that wins consensus. GetConsensusSigners (gas-sensitive)
+// excludes it; GetObserveSigners (gas-agnostic) must credit it so its observe
+// slash point is refunded.
+func (TypeObservedTxSuite) TestGetObserveSignersCreditsDifferentGasObserver(c *C) {
+	txID := GetRandomTxHash()
+	acc1 := GetRandomBech32Addr()
+	acc2 := GetRandomBech32Addr()
+	acc3 := GetRandomBech32Addr()
+	acc4 := GetRandomBech32Addr()
+
+	trusts4 := NodeAccounts{
+		{NodeAddress: acc1, Status: NodeStatus_Active, PubKeySet: GetRandomPubKeySet(), ValidatorConsPubKey: GetRandomBech32ConsensusPubKey()},
+		{NodeAddress: acc2, Status: NodeStatus_Active, PubKeySet: GetRandomPubKeySet(), ValidatorConsPubKey: GetRandomBech32ConsensusPubKey()},
+		{NodeAddress: acc3, Status: NodeStatus_Active, PubKeySet: GetRandomPubKeySet(), ValidatorConsPubKey: GetRandomBech32ConsensusPubKey()},
+		{NodeAddress: acc4, Status: NodeStatus_Active, PubKeySet: GetRandomPubKeySet(), ValidatorConsPubKey: GetRandomBech32ConsensusPubKey()},
+	}
+
+	observePoolAddr := GetRandomPubKey()
+
+	// Same outbound tx observed two ways, differing ONLY in gas.
+	gasUsedTx := GetRandomTx()
+	gasUsedTx.ID = txID
+	gasUsedTx.Memo = "OUT:" + txID.String()
+	gasUsedTx.Gas = common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(21000))}
+
+	gasLimitTx := gasUsedTx
+	gasLimitTx.Gas = common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(50000))}
+
+	obGasUsed := common.NewObservedTx(gasUsedTx, 1, observePoolAddr, 2)
+	obGasLimit := common.NewObservedTx(gasLimitTx, 1, observePoolAddr, 2)
+
+	voter := NewObservedTxVoter(txID, nil)
+	// 3-of-4 observe the gas-used version (reaches consensus); acc4 is the lone
+	// signer's gas-limit "instant" observation.
+	c.Assert(voter.Add(obGasUsed, acc1), Equals, true)
+	c.Assert(voter.Add(obGasUsed, acc2), Equals, true)
+	c.Assert(voter.Add(obGasUsed, acc3), Equals, true)
+	c.Assert(voter.Add(obGasLimit, acc4), Equals, true)
+
+	txGood := voter.GetTx(trusts4)
+	c.Assert(txGood.IsEmpty(), Equals, false)
+	// Consensus stays gas-sensitive: the gas-used value wins.
+	c.Assert(txGood.Tx.Gas.Equals(gasUsedTx.Gas), Equals, true)
+	voter.Tx = *txGood
+
+	// Gas-sensitive set excludes the gas-limit observer.
+	consensusSigners := voter.GetConsensusSigners()
+	c.Assert(consensusSigners, HasLen, 3)
+
+	// Gas-agnostic set credits every honest observer, including acc4.
+	observeSigners := voter.GetObserveSigners()
+	c.Assert(observeSigners, HasLen, 4)
+	observeSet := make(map[string]bool, len(observeSigners))
+	for _, s := range observeSigners {
+		observeSet[s.String()] = true
+	}
+	c.Assert(observeSet[acc1.String()], Equals, true)
+	c.Assert(observeSet[acc2.String()], Equals, true)
+	c.Assert(observeSet[acc3.String()], Equals, true)
+	c.Assert(observeSet[acc4.String()], Equals, true)
+}
+
+// TestRecordObserveSignersNoAliasing is a regression guard for the backing-array
+// aliasing bug: m.Tx is a shallow struct copy of a Txs entry (getConsensusTx
+// returns a range-copy), so m.Tx.Signers shares its backing array with the
+// originating m.Txs[i].Signers. Before the clone-on-write, RecordObserveSigners
+// appended in place into that shared array, so a later append to the sibling
+// slice silently overwrote the consensus Tx's freshly-credited signer.
+func (s TypeObservedTxSuite) TestRecordObserveSignersNoAliasing(c *C) {
+	accA := GetRandomBech32Addr()
+	accB := GetRandomBech32Addr()
+	accC := GetRandomBech32Addr()
+
+	// Signers slice with spare capacity so an in-place append reuses the backing
+	// array — exactly the state getConsensusTx hands back.
+	shared := make([]string, 1, 8)
+	shared[0] = accA.String()
+
+	obTx := common.NewObservedTx(GetRandomTx(), 0, GetRandomPubKey(), 1)
+	obTx.Signers = shared
+
+	voter := NewObservedTxVoter(GetRandomTxHash(), []common.ObservedTx{obTx})
+	voter.Tx = voter.Txs[0] // shallow copy: voter.Tx.Signers aliases voter.Txs[0].Signers
+
+	// Credit the wider observe-signer set; accB is new, so it is appended.
+	voter.RecordObserveSigners([]cosmos.AccAddress{accB})
+	c.Assert(voter.Tx.Signers, HasLen, 2)
+	c.Assert(voter.Tx.Signers[1], Equals, accB.String())
+
+	// An independent, later append to the sibling Txs entry must NOT reach back
+	// through a shared backing array and overwrite voter.Tx.Signers[1]. Without
+	// clone-on-write this rewrites the consensus signer accB to accC.
+	voter.Txs[0].Signers = append(voter.Txs[0].Signers, accC.String())
+	c.Assert(voter.Tx.Signers[1], Equals, accB.String())
 }

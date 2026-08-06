@@ -53,12 +53,33 @@ func processTxInAttestation(
 	// to be decremented only if contributing to or within ObservationDelayFlexibility of consensus.
 	slasher.IncSlashPoints(slashCtx, observeSlashPoints, signer)
 
+	// A committee member's pre-broadcast "instant" observation and its later
+	// scanner observation of the same tx differ only in gas (EVM) or block height
+	// (all chains, from signing-tip vs inclusion) and split into separate voter
+	// entries. Detect that the signer already recorded a matching variant BEFORE
+	// Add records this one, so the redundant observe point can be refunded exactly
+	// once below without depending on the post-consensus flex branch.
+	// Refund a redundant re-observation only for the signer's FIRST prior variant
+	// (exactly one earlier matching observation) — the honest "observed it, lost the
+	// gas/height race, re-observed once" case. Further variants (count >= 2) are
+	// self-inflicted spam and keep their observe slash point, so a node cannot file
+	// unlimited gas/height variants at zero cost to erase the per-observation charge.
+	redundantReObservation := voter.ShouldRefundRedundantObservation(tx, signer)
+
 	if !voter.Add(tx, signer) {
 		if !shouldSlashForDuplicate {
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints, signer)
 		}
 		// A duplicate message, so do nothing further.
 		return voter, ok
+	}
+
+	// The signer already observed this tx via a different gas/height variant, so
+	// this observation is redundant honest work rather than a missed observation:
+	// refund its observe point. The observation stays recorded above so it still
+	// counts toward consensus and gas correction.
+	if redundantReObservation {
+		slasher.DecSlashPoints(slashCtx, observeSlashPoints, signer)
 	}
 	if voter.HasFinalised(nas) {
 		if voter.FinalisedHeight == 0 {
@@ -72,13 +93,18 @@ func processTxInAttestation(
 
 			// This signer brings the voter to consensus;
 			// decrement all the signers' slash points and increment the non-signers' slash points.
-			signers := voter.GetConsensusSigners()
+			signers := voter.GetObserveSigners()
 			nonSigners := getNonSigners(nas, signers)
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+			// Record the credited gas-agnostic observers on the consensus Tx so the
+			// ObservationDelayFlexibility branch below (keyed off Tx.HasSigned) does
+			// not refund the same node a second time when its own gas-used
+			// observation arrives after consensus has already formed.
+			voter.RecordObserveSigners(signers)
 		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.EqualsConsensus(tx) &&
+			voter.Tx.EqualsConsensusIgnoreGas(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
@@ -99,13 +125,18 @@ func processTxInAttestation(
 
 			// This signer brings the voter to consensus;
 			// decrement all the signers' slash points and increment the non-signers' slash points.
-			signers := voter.GetConsensusSigners()
+			signers := voter.GetObserveSigners()
 			nonSigners := getNonSigners(nas, signers)
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+			// Record the credited gas-agnostic observers on the consensus Tx so the
+			// ObservationDelayFlexibility branch below (keyed off Tx.HasSigned) does
+			// not refund the same node a second time when its own gas-used
+			// observation arrives after consensus has already formed.
+			voter.RecordObserveSigners(signers)
 		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.EqualsConsensus(tx) &&
+			voter.Tx.EqualsConsensusIgnoreGas(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
@@ -566,12 +597,33 @@ func processTxOutAttestation(
 	// to be decremented only if contributing to or within ObservationDelayFlexibility of consensus.
 	slasher.IncSlashPoints(slashCtx, observeSlashPoints, signer)
 
+	// A committee member's pre-broadcast "instant" observation and its later
+	// scanner observation of the same tx differ only in gas (EVM) or block height
+	// (all chains, from signing-tip vs inclusion) and split into separate voter
+	// entries. Detect that the signer already recorded a matching variant BEFORE
+	// Add records this one, so the redundant observe point can be refunded exactly
+	// once below without depending on the post-consensus flex branch.
+	// Refund a redundant re-observation only for the signer's FIRST prior variant
+	// (exactly one earlier matching observation) — the honest "observed it, lost the
+	// gas/height race, re-observed once" case. Further variants (count >= 2) are
+	// self-inflicted spam and keep their observe slash point, so a node cannot file
+	// unlimited gas/height variants at zero cost to erase the per-observation charge.
+	redundantReObservation := voter.ShouldRefundRedundantObservation(tx, signer)
+
 	if !voter.Add(tx, signer) {
 		if !shouldSlashForDuplicate {
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints, signer)
 		}
 		// A duplicate message, so do nothing further.
 		return voter, ok
+	}
+
+	// The signer already observed this tx via a different gas/height variant, so
+	// this observation is redundant honest work rather than a missed observation:
+	// refund its observe point. The observation stays recorded above so it still
+	// counts toward consensus and gas correction.
+	if redundantReObservation {
+		slasher.DecSlashPoints(slashCtx, observeSlashPoints, signer)
 	}
 
 	// Outbound memos can have | data passthrough,
@@ -611,13 +663,18 @@ func processTxOutAttestation(
 
 			// This signer brings the voter to consensus;
 			// decrement all the signers' slash points and increment the non-signers' slash points.
-			signers := voter.GetConsensusSigners()
+			signers := voter.GetObserveSigners()
 			nonSigners := getNonSigners(nas, signers)
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+			// Record the credited gas-agnostic observers on the consensus Tx so the
+			// ObservationDelayFlexibility branch below (keyed off Tx.HasSigned) does
+			// not refund the same node a second time when its own gas-used
+			// observation arrives after consensus has already formed.
+			voter.RecordObserveSigners(signers)
 		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.EqualsConsensus(tx) &&
+			voter.Tx.EqualsConsensusIgnoreGas(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
@@ -654,13 +711,18 @@ func processTxOutAttestation(
 
 			// This signer brings the voter to consensus;
 			// decrement all the signers' slash points and increment the non-signers' slash points.
-			signers := voter.GetConsensusSigners()
+			signers := voter.GetObserveSigners()
 			nonSigners := getNonSigners(nas, signers)
 			slasher.DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 			slasher.IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+			// Record the credited gas-agnostic observers on the consensus Tx so the
+			// ObservationDelayFlexibility branch below (keyed off Tx.HasSigned) does
+			// not refund the same node a second time when its own gas-used
+			// observation arrives after consensus has already formed.
+			voter.RecordObserveSigners(signers)
 		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) &&
 			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.EqualsConsensus(tx) &&
+			voter.Tx.EqualsConsensusIgnoreGas(tx) &&
 			!voter.Tx.HasSigned(signer) {
 			// Track already-decremented slash points with the consensus Tx's Signers list.
 			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())

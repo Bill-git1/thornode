@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"slices"
 	"strings"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -250,4 +251,147 @@ func (m *ObservedTxVoter) GetConsensusSigners() []cosmos.AccAddress {
 	}
 
 	return signers
+}
+
+// GetObserveSigners returns every node that observed the consensus tx while
+// IGNORING gas. It is the gas-agnostic sibling of GetConsensusSigners, used for
+// observe-point refunds and the lack-of-observation penalty so an honest
+// observer whose only difference is the gas value is credited as a signer.
+// The motivating case is a signer's pre-broadcast gas-limit "instant"
+// observation of an outbound, which loses gas-sensitive consensus to the
+// scanner's later gas-used observation and would otherwise never be refunded
+// its observe slash point. The authoritative consensus tx/gas selection
+// (GetTx/getConsensusTx) stays gas-sensitive, so recorded gas and vault
+// accounting are unaffected.
+func (m *ObservedTxVoter) GetObserveSigners() []cosmos.AccAddress {
+	if m.Tx.IsEmpty() {
+		return nil
+	}
+
+	final := m.Tx.IsFinal()
+	signersMap := make(map[string]bool)
+	var signers []cosmos.AccAddress
+	for _, tx := range m.Txs {
+		// Only include signers for Txs matching the Tx's finality.
+		if tx.IsFinal() != final {
+			continue
+		}
+		if !m.Tx.EqualsConsensusIgnoreGas(tx) {
+			continue
+		}
+
+		for _, signer := range tx.GetSigners() {
+			// Use a map to ensure only a single record of each signer.
+			// However, do not iterate over the map to get the signers slice,
+			// as the slice order would vary between nodes.
+			if !signersMap[signer.String()] {
+				signers = append(signers, signer)
+				signersMap[signer.String()] = true
+			}
+		}
+	}
+
+	return signers
+}
+
+// RecordObserveSigners marks the given gas-agnostic observer set as credited on
+// the consensus Tx by appending any signer not already present to Tx.Signers.
+// The ObservationDelayFlexibility ("late signer") refund branches key their
+// "already refunded" check off Tx.HasSigned, but the consensus Tx.Signers only
+// holds the gas-sensitive signer set. Without recording the wider GetObserveSigners
+// set here, a signer credited at consensus via its gas-limit observation (and so
+// absent from the gas-used consensus Tx.Signers) would be refunded a second time
+// when its own gas-used observation lands after consensus, removing unrelated
+// pre-existing slash points. Signer order follows the deterministic
+// GetObserveSigners output, so the appended Tx.Signers stays identical across nodes.
+func (m *ObservedTxVoter) RecordObserveSigners(signers []cosmos.AccAddress) {
+	// Clone-on-write before appending. m.Tx is a shallow struct copy of a Txs
+	// entry (see getConsensusTx), so m.Tx.Signers shares its backing array with
+	// the originating m.Txs[i].Signers. An in-place append here would write into
+	// that shared array; a later append to the sibling slice (e.g. another
+	// observation via Add) could then silently overwrite the consensus Tx's
+	// freshly-credited signer, and vice versa. Cloning gives m.Tx.Signers its own
+	// backing array so the two evolve independently.
+	m.Tx.Signers = slices.Clone(m.Tx.Signers)
+	for _, signer := range signers {
+		if !m.Tx.HasSigned(signer) {
+			m.Tx.Signers = append(m.Tx.Signers, signer.String())
+		}
+	}
+}
+
+// equalsObservationRefundClass reports whether two observations share the same
+// one-refund allowance. It deliberately ignores gas, block heights, and XMR
+// spent-output refs, while still requiring the same underlying transaction,
+// observed vault, and XMR tx key.
+//
+// Do not replace this with EqualsConsensusIgnoreGas. For XMR, an empty
+// spent-output-ref list acts as a wildcard for consensus: it matches every
+// non-empty list even though two different non-empty lists do not match each
+// other. That non-transitive "joker" behavior is required for consensus when an
+// honest observer lacks optional refs, but using it for refund accounting would
+// let a signer submit unlimited ref variants while keeping the match count at 1.
+func equalsObservationRefundClass(a, b common.ObservedTx) bool {
+	return a.ObservedPubKey.Equals(b.ObservedPubKey) &&
+		a.Tx.EqualsExIgnoreGas(b.Tx) &&
+		a.HasEquivalentXMRTxKey(b)
+}
+
+// equalsRefundableObservation reports whether two observations are close enough
+// for the special immediate redundant-observation refund. Unlike XMR consensus
+// matching, it requires canonically identical spent-output refs: the empty-ref
+// wildcard is non-transitive and could otherwise bridge conflicting ref sets.
+func equalsRefundableObservation(a, b common.ObservedTx) bool {
+	return equalsObservationRefundClass(a, b) &&
+		common.SpentOutputRefsEqual(a.SpentOutputRefs, b.SpentOutputRefs)
+}
+
+// ShouldRefundRedundantObservation reports whether this is the signer's first
+// redundant observation in the refund class and a prior observation has the
+// same canonical XMR spent refs. A committee member's pre-broadcast "instant"
+// observation and its later scanner observation can differ only in gas or block
+// height and land as separate voter entries. Call this before Add so the
+// submitted observation is not counted as its own prior match.
+//
+// The redundant-observation refund is eligible only when the prior count is 1
+// and that prior observation has the same canonical XMR spent refs — the signer's
+// single original observation in the honest "observed it, lost the gas/height
+// race, re-observed once" case. A count of 2+ means the signer already submitted
+// a redundant variant, so any further variant is self-inflicted spam and keeps
+// its observe slash point; otherwise a node could file unlimited gas/height
+// variants at zero cost, defeating the per-observation charge.
+//
+// Two costs are knowingly ACCEPTED rather than engineered away, both bounded:
+//   - Signing-party bias: a committee member files two legitimate entries per
+//     outbound — the pre-broadcast "instant" observation plus the scanner
+//     observation — so a gas-correction reorg makes its corrected re-observation
+//     variant #3 (count 2) and it keeps one observe point, while a non-committee
+//     node (single entry) is still refunded. This is a bounded ~1-point-per-
+//     gas-correction-reorg bias against the signing party. The alternatives are
+//     worse: refunding count>=2 re-opens the unlimited-variant spam hole, and
+//     gating the refund on WHY an observation differs makes a consensus-critical
+//     count depend on the reason — a determinism hazard.
+//   - Bogus-class floor: the first redundant variant of an ignore-gas class that
+//     never reaches consensus is still refunded, because pre-consensus a bogus
+//     instant/scanner pair is indistinguishable from an honest one. So spam of N
+//     distinct bogus classes costs N-1 points, not N — inherent to the base
+//     feature and bounded at one free variant per class.
+func (m *ObservedTxVoter) ShouldRefundRedundantObservation(tx common.ObservedTx, signer cosmos.AccAddress) bool {
+	count := 0
+	hasRefundableMatch := false
+	for _, existing := range m.Txs {
+		// Final and non-final observations receive separate normal consensus
+		// credits, so they must also have separate redundant-refund allowances.
+		if existing.IsFinal() != tx.IsFinal() || !existing.HasSigned(signer) {
+			continue
+		}
+		if !equalsObservationRefundClass(existing, tx) {
+			continue
+		}
+		count++
+		if equalsRefundableObservation(existing, tx) {
+			hasRefundableMatch = true
+		}
+	}
+	return count == 1 && hasRefundableMatch
 }

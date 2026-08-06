@@ -1211,6 +1211,369 @@ func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionOnReorg(c *C) {
 	c.Assert(vault.GetCoin(common.ETHAsset).Amount.Equal(vaultBalanceAfter), Equals, true)
 }
 
+// The following three tests drive real manager/keeper slash accounting through
+// processTxOutAttestation and assert the PERSISTED slash points (not just the
+// GetObserveSigners return set), covering the facets fixed in #3081/#3104. Each
+// starts from a nonzero pre-existing slash balance so any over-refund of
+// unrelated points is observable.
+
+// observeSlashOutboundTx builds an ETH outbound observed tx for these tests.
+func observeSlashOutboundTx(txID common.TxID, vaultPubKey common.PubKey, gas, blockHeight int64) common.ObservedTx {
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.ETHChain,
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(305570))),
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(uint64(gas)))},
+		Memo:        "OUT:" + txID.String(),
+	}
+	return common.NewObservedTx(baseTx, blockHeight, vaultPubKey, blockHeight)
+}
+
+func observeSlashSetup(c *C, ctx cosmos.Context, mgr *Mgrs) (NodeAccounts, common.PubKey) {
+	nas := NodeAccounts{
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+	}
+	vaultPubKey := GetRandomPubKey()
+	vault := GetRandomVault()
+	vault.PubKey = vaultPubKey
+	vault.AddFunds(common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+	return nas, vaultPubKey
+}
+
+// TestObserveSlashExcessRefundGasSplit (#3081-B + #3104): a member's pre-broadcast
+// gas-limit observation is credited gas-agnostically at consensus; its later
+// gas-used scanner observation must net zero (redundant observe refunded at
+// submission) and must NOT re-fire the flex branch to remove unrelated points.
+func (s *HandlerObservedTxHelpersSuite) TestObserveSlashExcessRefundGasSplit(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	nas, vaultPubKey := observeSlashSetup(c, ctx, mgr)
+
+	member := nas[3].NodeAddress
+	const pre = int64(50)
+	mgr.Keeper().SetNodeAccountSlashPoints(ctx, member, pre)
+
+	txID := GetRandomTxHash()
+	gasUsed := observeSlashOutboundTx(txID, vaultPubKey, 21000, 100)
+	gasLimit := observeSlashOutboundTx(txID, vaultPubKey, 50000, 100)
+	// Keep the non-gas tx identity identical across the two variants.
+	gasLimit.Tx.FromAddress = gasUsed.Tx.FromAddress
+	gasLimit.Tx.ToAddress = gasUsed.Tx.ToAddress
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasLimit, member, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasUsed, nas[0].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasUsed, nas[1].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasUsed, nas[2].NodeAddress, false)
+	c.Assert(voter.FinalisedHeight, Equals, int64(100))
+
+	pts, _ := mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre, Commentf("member should be back to pre-existing after gas-agnostic credit, got %d", pts))
+
+	// Same member's later gas-used scanner observation within the flex window.
+	ctx = ctx.WithBlockHeight(101)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasUsed, member, false)
+
+	pts, _ = mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre, Commentf("redundant scanner observation must net zero without double-refund; got %d want %d", pts, pre))
+}
+
+// TestObserveSlashLateGasLimitObserverRefunded (#3081-A): a node that missed
+// consensus (took the lack penalty) then submits a late gas-limit observation
+// within the flex window must be fully refunded via the gas-agnostic flex branch.
+func (s *HandlerObservedTxHelpersSuite) TestObserveSlashLateGasLimitObserverRefunded(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	nas, vaultPubKey := observeSlashSetup(c, ctx, mgr)
+
+	late := nas[3].NodeAddress
+	const pre = int64(50)
+	mgr.Keeper().SetNodeAccountSlashPoints(ctx, late, pre)
+
+	txID := GetRandomTxHash()
+	gasUsed := observeSlashOutboundTx(txID, vaultPubKey, 21000, 100)
+	gasLimit := observeSlashOutboundTx(txID, vaultPubKey, 50000, 100)
+	gasLimit.Tx.FromAddress = gasUsed.Tx.FromAddress
+	gasLimit.Tx.ToAddress = gasUsed.Tx.ToAddress
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasUsed, nas[0].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasUsed, nas[1].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasUsed, nas[2].NodeAddress, false)
+	c.Assert(voter.FinalisedHeight, Equals, int64(100))
+
+	lackPts := mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
+	pts, _ := mgr.Keeper().GetNodeAccountSlashPoints(ctx, late)
+	c.Assert(pts, Equals, pre+lackPts, Commentf("non-observer should carry the lack penalty, got %d want %d", pts, pre+lackPts))
+
+	ctx = ctx.WithBlockHeight(101)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, gasLimit, late, false)
+
+	pts, _ = mgr.Keeper().GetNodeAccountSlashPoints(ctx, late)
+	c.Assert(pts, Equals, pre, Commentf("honest late gas-limit observer must be fully refunded; got %d want %d", pts, pre))
+}
+
+// TestObserveSlashBlockHeightSplitRefunded (#3104): even when gas matches exactly
+// (gas-deterministic chains), a member's pre-broadcast observation and its scanner
+// observation split on block height into separate voter entries; the member must
+// not keep an unrefundable observe point.
+func (s *HandlerObservedTxHelpersSuite) TestObserveSlashBlockHeightSplitRefunded(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	nas, vaultPubKey := observeSlashSetup(c, ctx, mgr)
+
+	member := nas[3].NodeAddress
+	const pre = int64(50)
+	mgr.Keeper().SetNodeAccountSlashPoints(ctx, member, pre)
+
+	txID := GetRandomTxHash()
+	// Identical gas; the only difference is the observation block height
+	// (signing tip vs inclusion), which splits them into separate voter entries.
+	preBroadcast := observeSlashOutboundTx(txID, vaultPubKey, 21000, 99)
+	scanner := observeSlashOutboundTx(txID, vaultPubKey, 21000, 100)
+	scanner.Tx.FromAddress = preBroadcast.Tx.FromAddress
+	scanner.Tx.ToAddress = preBroadcast.Tx.ToAddress
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, preBroadcast, member, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, scanner, nas[0].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, scanner, nas[1].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, scanner, nas[2].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, scanner, member, false)
+
+	c.Assert(voter.FinalisedHeight > 0, Equals, true)
+	pts, _ := mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre, Commentf("block-height split must net zero for the committee member; got %d want %d", pts, pre))
+}
+
+// TestObserveSlashConfCountingNoErasure guards the finality-tier boundary: on a
+// confirmation-counting chain an honest node observes the same tx twice — once
+// non-final (pre-confirmations) and once final — reaching consensus in each tier.
+// The redundant-observation refund must NOT treat the final observation as a
+// redundant variant of the non-final one (they are credited in separate tiers),
+// otherwise the node loses a legitimately-accrued slash point on every such tx.
+func (s *HandlerObservedTxHelpersSuite) TestObserveSlashConfCountingNoErasure(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	nas, vaultPubKey := observeSlashSetup(c, ctx, mgr)
+
+	honest := nas[0].NodeAddress
+	const pre = int64(50)
+	mgr.Keeper().SetNodeAccountSlashPoints(ctx, honest, pre)
+
+	txID := GetRandomTxHash()
+	inTx := common.Tx{
+		ID:          txID,
+		Chain:       common.BTCChain,
+		FromAddress: GetRandomBTCAddress(),
+		ToAddress:   GetRandomBTCAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))),
+		Gas:         common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+		Memo:        "SWAP:BTC.BTC",
+	}
+	// Same tx observed non-final (FinaliseHeight > BlockHeight) then final.
+	nonFinal := common.NewObservedTx(inTx, 100, vaultPubKey, 110)
+	final := common.NewObservedTx(inTx, 100, vaultPubKey, 100)
+	c.Assert(nonFinal.IsFinal(), Equals, false)
+	c.Assert(final.IsFinal(), Equals, true)
+
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+	// Non-final consensus tier.
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, nonFinal, nas[0].NodeAddress, false)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, nonFinal, nas[1].NodeAddress, false)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, nonFinal, nas[2].NodeAddress, false)
+	// Final consensus tier (same nodes re-observe after confirmations).
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, final, nas[0].NodeAddress, false)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, final, nas[1].NodeAddress, false)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, final, nas[2].NodeAddress, false)
+	c.Assert(voter.FinalisedHeight > 0, Equals, true)
+
+	pts, _ := mgr.Keeper().GetNodeAccountSlashPoints(ctx, honest)
+	c.Assert(pts, Equals, pre, Commentf("conf-counting double-observer must net zero; a cross-finality false match erases a slash point (got %d want %d)", pts, pre))
+}
+
+// TestObserveSlashRedundantVariantSpamCapped (#3081, huginn follow-up): the
+// redundant re-observation refund is capped at the signer's FIRST prior matching
+// variant. A member's honest re-observation (its 2nd variant) is refunded, but any
+// further self-inflicted variant (3rd+) keeps its observe slash point, so a node
+// cannot file unlimited gas/height variants at zero cost to defeat the
+// per-observation charge.
+func (s *HandlerObservedTxHelpersSuite) TestObserveSlashRedundantVariantSpamCapped(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	nas, vaultPubKey := observeSlashSetup(c, ctx, mgr)
+
+	member := nas[3].NodeAddress
+	const pre = int64(50)
+	mgr.Keeper().SetNodeAccountSlashPoints(ctx, member, pre)
+	observeSlashPoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+
+	txID := GetRandomTxHash()
+	// Three variants of the same outbound differing ONLY by gas.
+	variantA := observeSlashOutboundTx(txID, vaultPubKey, 50000, 100)
+	variantB := observeSlashOutboundTx(txID, vaultPubKey, 21000, 100)
+	variantC := observeSlashOutboundTx(txID, vaultPubKey, 30000, 100)
+	variantB.Tx.FromAddress = variantA.Tx.FromAddress
+	variantB.Tx.ToAddress = variantA.Tx.ToAddress
+	variantC.Tx.FromAddress = variantA.Tx.FromAddress
+	variantC.Tx.ToAddress = variantA.Tx.ToAddress
+
+	// member's original observation, then consensus forms on variantB.
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, variantA, member, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, variantB, nas[0].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, variantB, nas[1].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, variantB, nas[2].NodeAddress, false)
+	c.Assert(voter.FinalisedHeight, Equals, int64(100))
+
+	pts, _ := mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre, Commentf("original observer credited gas-agnostic at consensus; got %d want %d", pts, pre))
+
+	// 2nd variant (1st redundant): honest re-observation, refunded → net zero.
+	ctx = ctx.WithBlockHeight(101)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, variantB, member, false)
+	pts, _ = mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre, Commentf("first redundant re-observation must be refunded; got %d want %d", pts, pre))
+
+	// 3rd variant (2nd redundant): self-inflicted spam, NOT refunded → keeps its
+	// observe point. Without the cap this would net zero (spam free); with it the
+	// node pays the per-observation charge for the extra variant.
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, variantC, member, false)
+	pts, _ = mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre+observeSlashPoints, Commentf("second redundant variant must NOT be refunded (spam cap); got %d want %d", pts, pre+observeSlashPoints))
+}
+
+// TestObserveSlashRedundantVariantSpamCappedTxIn (#3081, huginn follow-up): the
+// same redundant-variant refund cap on the INBOUND path (processTxInAttestation).
+// The gate is byte-identical to the outbound site; this guards the txin
+// integration so the two paths can't silently diverge.
+func (s *HandlerObservedTxHelpersSuite) TestObserveSlashRedundantVariantSpamCappedTxIn(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	nas, vaultPubKey := observeSlashSetup(c, ctx, mgr)
+
+	member := nas[3].NodeAddress
+	const pre = int64(50)
+	mgr.Keeper().SetNodeAccountSlashPoints(ctx, member, pre)
+	observeSlashPoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+
+	txID := GetRandomTxHash()
+	base := common.Tx{
+		ID:          txID,
+		Chain:       common.BTCChain,
+		FromAddress: GetRandomBTCAddress(),
+		ToAddress:   GetRandomBTCAddress(),
+		Coins:       common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))),
+		Memo:        "SWAP:BTC.BTC",
+	}
+	// Three variants of the same inbound differing ONLY by gas, all final.
+	mkVariant := func(gas uint64) common.ObservedTx {
+		tx := base
+		tx.Gas = common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(gas))}
+		return common.NewObservedTx(tx, 100, vaultPubKey, 100)
+	}
+	variantA := mkVariant(1000)
+	variantB := mkVariant(2000)
+	variantC := mkVariant(3000)
+
+	// member's original observation, then consensus forms on variantB.
+	voter := NewObservedTxVoter(txID, []common.ObservedTx{})
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, variantA, member, false)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, variantB, nas[0].NodeAddress, false)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, variantB, nas[1].NodeAddress, false)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, variantB, nas[2].NodeAddress, false)
+	c.Assert(voter.FinalisedHeight > 0, Equals, true)
+
+	pts, _ := mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre, Commentf("original observer credited gas-agnostic at consensus; got %d want %d", pts, pre))
+
+	// 2nd variant (1st redundant): honest re-observation, refunded → net zero.
+	ctx = ctx.WithBlockHeight(101)
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, variantB, member, false)
+	pts, _ = mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre, Commentf("first redundant re-observation must be refunded; got %d want %d", pts, pre))
+
+	// 3rd variant (2nd redundant): self-inflicted spam, NOT refunded → keeps its point.
+	voter, _ = processTxInAttestation(ctx, mgr, voter, nas, variantC, member, false)
+	pts, _ = mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre+observeSlashPoints, Commentf("second redundant variant must NOT be refunded (spam cap); got %d want %d", pts, pre+observeSlashPoints))
+}
+
+// TestObserveSlashXMRConflictingRefLateMatchKeepsOriginalPoint guards the
+// interaction between the transitive XMR refund class and the flex-window
+// refund. A prior observation with conflicting non-empty refs must remain
+// charged when a later consensus-compatible observation receives its own
+// observe-point and lack-of-observation refunds.
+func (s *HandlerObservedTxHelpersSuite) TestObserveSlashXMRConflictingRefLateMatchKeepsOriginalPoint(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(100)
+	nas, _ := observeSlashSetup(c, ctx, mgr)
+
+	member := nas[3].NodeAddress
+	const pre = int64(50)
+	mgr.Keeper().SetNodeAccountSlashPoints(ctx, member, pre)
+	observePoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackPoints := mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
+
+	fromPubKey := GetRandomEd25519PubKey()
+	fromAddress, err := fromPubKey.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+	toPubKey := GetRandomEd25519PubKey()
+	toAddress, err := toPubKey.GetAddress(common.XMRChain)
+	c.Assert(err, IsNil)
+
+	txID := GetRandomTxHash()
+	baseTx := common.Tx{
+		ID:          txID,
+		Chain:       common.XMRChain,
+		FromAddress: fromAddress,
+		ToAddress:   toAddress,
+		Coins:       common.NewCoins(common.NewCoin(common.XMRAsset, cosmos.NewUint(1_000_000))),
+		Gas:         common.Gas{common.NewCoin(common.XMRAsset, cosmos.NewUint(10_000))},
+		Memo:        "OUT:" + txID.String(),
+	}
+	refA := common.NewObservedTx(baseTx, 100, fromPubKey, 100)
+	refA.XmrTxKey = strings.Repeat("a", 64)
+	refA.SpentOutputRefs = []common.OutputRef{
+		{TxHash: "aaaa", OutputIndex: 0, KeyImage: "ki_aaaa", SpendTxHash: txID.String()},
+	}
+	refB := common.NewObservedTx(baseTx, 100, fromPubKey, 100)
+	refB.XmrTxKey = strings.Repeat("a", 64)
+	refB.SpentOutputRefs = []common.OutputRef{
+		{TxHash: "bbbb", OutputIndex: 1, KeyImage: "ki_bbbb", SpendTxHash: txID.String()},
+	}
+	c.Assert(NewMsgObservedTxOut(common.ObservedTxs{refA}, member).ValidateBasic(), IsNil)
+	c.Assert(NewMsgObservedTxOut(common.ObservedTxs{refB}, member).ValidateBasic(), IsNil)
+
+	// The member's refA observation conflicts with the refB observation that
+	// reaches consensus, so its original observe point remains and it receives
+	// the lack-of-observation penalty.
+	voter := NewObservedTxVoter(txID, nil)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, refA, member, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, refB, nas[0].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, refB, nas[1].NodeAddress, false)
+	voter, _ = processTxOutAttestation(ctx, mgr, voter, nas, refB, nas[2].NodeAddress, false)
+
+	pts, _ := mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre+observePoints+lackPoints)
+
+	// The late refB observation is consensus-compatible, so the flex branch
+	// refunds that submission and the lack penalty. The conflicting refA point
+	// must not also be erased by the immediate redundant-observation refund.
+	ctx = ctx.WithBlockHeight(101)
+	updatedVoter, reachedConsensus := processTxOutAttestation(ctx, mgr, voter, nas, refB, member, false)
+	c.Assert(reachedConsensus, Equals, false)
+	c.Assert(updatedVoter.Tx.HasSigned(member), Equals, true)
+	pts, _ = mgr.Keeper().GetNodeAccountSlashPoints(ctx, member)
+	c.Assert(pts, Equals, pre+observePoints)
+}
+
 func (s *HandlerObservedTxHelpersSuite) TestGasCorrectionFinalizedIgnoresNonFinalObservations(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockHeight(100)
