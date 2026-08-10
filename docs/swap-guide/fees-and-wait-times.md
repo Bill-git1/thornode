@@ -21,13 +21,17 @@ If a transaction fails, it is refunded, thus it will pay the `outboundFee` for t
 
 - The Destination Chain outboundFee, or
 - The Source Chain outboundFee, or
-- $1.00 (the minimum outboundFee).
+- The minimum outbound fee, set by the `MinimumL1OutboundFeeUSD` Mimir (currently $0.25 on mainnet).
+
+```admonish info
+This value is set by node operators via Mimir and may change. See [Constants and Mimirs](../mimir.md) for current values.
+```
 
 For convenience, a `recommended_min_amount_in` is included on the [Swap Quote](../swap-guide/quickstart-guide.md#2-query-for-a-swap-quote) endpoint, which is the value described above. This value is priced in the inbound asset of the quote request (in 1e8). This should be the minimum-allowed swap amount for the requested quote. If a swap is attempted and fails due to insufficient funds to pay for fees, the endpoint will return an error message that includes the recommended minimum amount.
 
 ## Wait Times
 
-There are four phases of a transaction sent to THORChain each taking time to complete.
+There are five phases of a transaction sent to THORChain each taking time to complete.
 
 1. **Layer1 Inbound Confirmation** - assuming the inboundTx will be confirmed in the next block, it is the source blockchain block time.
 2. **Observation Counting** - time for 67% THORChain Nodes to observe and agree on the inboundTx.

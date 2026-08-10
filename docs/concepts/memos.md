@@ -49,6 +49,7 @@ The following functions can be put into a memo:
 1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
 1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
 1. [**BOND**, **UNBOND**, **REBOND** & **LEAVE**](memos.md#bond-unbond-rebond-and-leave)
+1. [**MAINT** (Maintenance Mode)](memos.md#maintenance-mode)
 1. [**OPERATOR Rotate**](memos.md#operator-rotate)
 1. [**DONATE** & **RESERVE**](memos.md#donate--reserve)
 1. [**REFERENCE MEMO** - Memoless Transactions](memos.md#reference-memo---memoless-transactions)
@@ -72,7 +73,7 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 | Parameter     | Notes                                                                                 | Conditions                                                                                                                                                                                               |
 | ------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Payload       | Send the asset to swap.                                                               | Must be an active pool on THORChain.                                                                                                                                                                     |
-| `SWAP`        | The swap handler.                                                                     | Also `s` (legacy), `=` (market swap), or `=<` (limit swap)                                                                                                                                               |
+| `SWAP`        | The swap handler.                                                                     | Also `s`, `=` (market swap), or `=<` (limit swap)                                                                                                                                                        |
 | `:ASSET`      | The [asset identifier](asset-notation.md).                                            | Can be shortened.                                                                                                                                                                                        |
 | `:DESTADDR`   | The destination address to send to.                                                   | Can use THORName.                                                                                                                                                                                        |
 | `/REFUNDADDR` | The destination address for a refund to be sent to.                                   | Optional. If provided, the refund will be sent to this address; otherwise, it will be sent to the originator's address.                                                                                  |
@@ -99,7 +100,7 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 **Real-world Examples:**
 
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0` &mdash; swap to Ether, send output to the specified address
-- `=:BTC.BTC:bc1q6527vxxqjpq80la2l0sw7hay3lj6dz07zs6gzl/0x7a093cebfa77403672d68e1c22d0681400a36682` &mdash; swap to Ether, send output to the specified address. If a refund, send to the other specific address. Source and refund address should be the same chain.
+- `=:BTC.BTC:bc1q6527vxxqjpq80la2l0sw7hay3lj6dz07zs6gzl/0x7a093cebfa77403672d68e1c22d0681400a36682` &mdash; swap to Bitcoin, send output to the specified address. If a refund, send to the other specific address. Source and refund address should be the same chain.
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000` &mdash; same as above except the ETH output should be more than 0.1 ETH else refund
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/1/1` &mdash; same as above except do not stream the swap
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0` &mdash; same as above except streaming the swap, every 3 blocks, and THORChain to calculate the number of swaps required to achieve optimal price efficiency
@@ -155,7 +156,7 @@ There are rules for adding liquidity, see [the rules here](https://docs.thorchai
 | Parameter     | Notes                                                                                                                                                                                                                                  | Conditions                                                                  |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | Payload       | The asset to add liquidity with.                                                                                                                                                                                                       | Must be supported by THORChain.                                             |
-| `ADD`         | The add liquidity handler.                                                                                                                                                                                                             | Also `a` or `+`                                                             |
+| `ADD`         | The add liquidity handler.                                                                                                                                                                                                             | Also `+`                                                                    |
 | `:POOL`       | The pool to add liquidity to.                                                                                                                                                                                                          | Can be shortened.                                                           |
 | `:PAIREDADDR` | The other address to link with. If on external chain, link to THOR address. If on THORChain, link to external address. If a paired address is found, the LP is matched and added. If none is found, the liquidity is put into pending. | Optional. If not specified, a single-sided add-liquidity action is created. |
 | `:AFFILIATE`  | The affiliate address. The affiliate is added to the pool as an LP.                                                                                                                                                                    | Optional. Must be a THORName or THOR Address.                               |
@@ -188,7 +189,7 @@ A withdrawal can be either dual-sided (withdrawn based on pool's price) or entir
 
 - `WITHDRAW:POOL:10000` &mdash; dual-sided 100% withdraw liquidity. If a single-address position, this withdraws single-sidedly instead
 - `-:POOL:1000` &mdash; dual-sided 10% withdraw liquidity
-- `wd:POOL:5000:ASSET` &mdash; withdraw 50% liquidity as the asset specified while the rest stays in the pool, e.g., `w:BTC.BTC:5000:BTC.BTC`
+- `wd:POOL:5000:ASSET` &mdash; withdraw 50% liquidity as the asset specified while the rest stays in the pool, e.g., `wd:BTC.BTC:5000:BTC.BTC`
 
 ### Claim TCY
 
@@ -303,7 +304,7 @@ Note: Secured Assets and amount are determined by the `coins` within the `MsgDep
 
 Execute a Smart Contract from a base layer transaction.
 
-**`X:ADDR:PAYLOAD`**
+**`X:ADDR:MSG`**
 
 | Parameter | Notes                                                                                                                          | Conditions                                       |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
@@ -326,10 +327,12 @@ The above example creates a `MsgWasmExec` object for a smart contract execution 
 
 One way switch for external tokens to be a native THORChain asset. Supported Assets are listed in a switchMap within the `SwitchManager`.
 
+**`SWITCH:ADDR`**
+
 | Parameter | Notes                              | Conditions                           |
 | --------- | ---------------------------------- | ------------------------------------ |
 | Payload   | The asset to become a Native Asset | Must be a L1 supported on THORChain. |
-| `switch`  | The Secured Asset handler.         |                                      |
+| `switch`  | The Switch handler.                |                                      |
 | `ADDR`    | The thor address for native asset  | Must be a thor address               |
 
 ### Limit Swap Modification
@@ -339,13 +342,13 @@ One way switch for external tokens to be a native THORChain asset. Supported Ass
 A trader can modify a limit swap by changing the target amount. Setting this
 value to 0 will cancel the limit swap.
 
-| Parameter               | Description                               | Notes            |
-| ----------------------- | ----------------------------------------- | ---------------- |
-| `Payload`               | None required                             | Use `MsgDeposit` |
-| `m=<`                   | The limit swap modifier handler           |                  |
-| `:SOURCE`               | The source coin (e.g., `1234BTC.BTC`)     |                  |
-| `:TARGET`               | The target coin (e.g., `1234ETH.ETH`)     |                  |
-| `:MODIFIEDTARGETAMOUNT` | The modified target amount (e.g., `1235`) |                  |
+| Parameter               | Description                               | Notes                                        |
+| ----------------------- | ----------------------------------------- | -------------------------------------------- |
+| `Payload`               | None required                             | Use `MsgDeposit` or send from external chain |
+| `m=<`                   | The limit swap modifier handler           |                                              |
+| `:SOURCE`               | The source coin (e.g., `1234BTC.BTC`)     |                                              |
+| `:TARGET`               | The target coin (e.g., `1234ETH.ETH`)     |                                              |
+| `:MODIFIEDTARGETAMOUNT` | The modified target amount (e.g., `1235`) |                                              |
 
 ### **Deposit Savers**
 
@@ -366,7 +369,7 @@ Deposit an asset into THORChain Savers.
 
 - `ADD:ETH/ETH` &mdash; deposit into the ETH Savings Vault
 - `+:BTC/BTC::t:10` &mdash; deposit into the BTC Savings Vault, with 10 basis points being sent to affiliate `t` (THORSwap)
-- `a:DOGE/DOGE` &mdash; deposit into the DOGE Savings Vault
+- `+:DOGE/DOGE` &mdash; deposit into the DOGE Savings Vault
 
 ```admonish info
 Depositing into Savers can also work without a memo, however memos are recommended to be explicit about the transaction intent.
@@ -588,13 +591,13 @@ Perform node maintenance features. Also see [Pooled Nodes](https://docs.thorchai
 
 **`UNBOND:NODEADDR:AMOUNT:PROVIDER`**
 
-| Parameter   | Notes                    | Conditions                                                            |
-| ----------- | ------------------------ | --------------------------------------------------------------------- |
-| Payload     | None required.           | Use `MsgDeposit`.                                                     |
-| `UNBOND`    | The unbond handler.      |                                                                       |
-| `:NODEADDR` | The node to unbond from. | Must be in standby only.                                              |
-| `:AMOUNT`   | The amount to unbond.    | In 1e8 format. If setting more than actual bond, then capped at bond. |
-| `:PROVIDER` | Unwhitelist a provider.  | Optional. Remove a provider.                                          |
+| Parameter   | Notes                    | Conditions                                                                           |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------------ |
+| Payload     | None required.           | Use `MsgDeposit`.                                                                    |
+| `UNBOND`    | The unbond handler.      |                                                                                      |
+| `:NODEADDR` | The node to unbond from. | Must be in standby only and not churning out.                                        |
+| `:AMOUNT`   | The amount to unbond.    | In 1e8 format. If setting more than actual bond, then capped at bond.                |
+| `:PROVIDER` | Remove a bond provider.  | Optional. Node operator only. Removes the provider from the bond provider whitelist. |
 
 **`REBOND:NODEADDR:NEWADDR:AMOUNT`**
 
@@ -604,7 +607,7 @@ Migrate bonded RUNE to a different whitelisted address on the same node
 | ----------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Payload     | None required                           | Use `MsgDeposit`                                                                                      |
 | `REBOND`    | The rebond handler.                     |                                                                                                       |
-| `:NODEADDR` | The node to unbond from.                | Can be in any state.                                                                                  |
+| `:NODEADDR` | The node to rebond from.                | Cannot be in `Unknown` state.                                                                         |
 | `:NEWADDR`  | The address to receive the bonded RUNE. | Must be whitelisted and on the same node.                                                             |
 | `:AMOUNT`   | The amount to migrate.                  | Optional. Default is 0. In 1e8 format. If setting is 0 or more than actual bond, then capped at bond. |
 
@@ -621,6 +624,22 @@ Migrate bonded RUNE to a different whitelisted address on the same node
 - `BOND:thor19m4kqulyqvya339jfja84h6qp8tkjgxuxa4n4a`
 - `UNBOND:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6:750000000000`
 - `LEAVE:thor1hlhdm0ngr2j4lt8tt8wuvqxz6aus58j57nxnps`
+
+### Maintenance Mode
+
+Toggle a node's maintenance flag. When in maintenance mode, the node is excluded from churn cycles and will not be slashed for not signing. The node operator sends this as a `MsgDeposit`.
+
+**`MAINT:NODEADDR`**
+
+| Parameter   | Notes                                          | Conditions        |
+| ----------- | ---------------------------------------------- | ----------------- |
+| Payload     | None required.                                 | Use `MsgDeposit`. |
+| `MAINT`     | The maintenance mode toggle handler.           |                   |
+| `:NODEADDR` | The node address to toggle maintenance on/off. |                   |
+
+**Example:**
+
+- `MAINT:thor19m4kqulyqvya339jfja84h6qp8tkjgxuxa4n4a` &mdash; toggle maintenance mode for the specified node
 
 ### Operator Rotate
 
@@ -685,5 +704,5 @@ Refunds cost fees to prevent DoS (denial-of-service) attacks. The user will pay 
 - `name` or `n` or `~` &mdash; THORName operations; see [THORName Guide](../affiliate-guide/thorname-guide.md)
 - `out` &mdash; for outbound transaction, set within a outbound transaction
 - `ragnarok` &mdash; used to delist pools, set within a outbound transaction
-- `switch` &mdash; [killswitch](https://medium.com/thorchain/upgrading-to-native-rune-a9d48e0bf40f) operations (deprecated)
+- `switch` &mdash; convert external tokens to native THORChain assets; see [Switch Asset](#switch-asset)
 - `yggdrasil+` and `yggdrasil-` &mdash; Yggdrasil vault operations (deprecated; see [ADR002](../architecture/adr-002-removeyggvaults.md))

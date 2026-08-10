@@ -6,7 +6,7 @@
 
 THORNames have the following properties:
 
-- **Name:** The THORName's string. Between 1-30 hexadecimal characters and `-_+` special characters.
+- **Name:** The THORName's string. Between 1-30 alphanumeric characters and `-_+` special characters.
 - **Owner**: This is the THORChain address that owns the THORName
 - **Aliases**: THORNames can have an alias address for any external chain supported by THORChain, and can have an alias for the THORChain L1 that is different than the owner.
 - **Expiry:** THORChain Block-height at which the THORName expires.
@@ -31,13 +31,17 @@ The expiration of the THORName will automatically be set to the number of blocks
 
 Memo template is: `~:name:chain:address:?owner:?preferredAsset:?expiry:?preferredAssetOutboundFeeMultiplier`
 
-- **name**: Your THORName. Must be unique, between 1-30 characters, hexadecimal and `-_+` special characters.
+- **name**: Your THORName. Must be unique, between 1-30 characters, alphanumeric and `-_+` special characters.
 - **chain:** The chain of the alias to set.
 - **address**: The alias address. Must be an address of chain.
 - **owner**: THORChain address of owner (optional).
 - **preferredAsset:** Asset to receive fees in. Must be supported by an active pool on THORChain. Value should be `asset` property from the [Pools endpoint](https://gateway.liquify.com/chain/thorchain_api/thorchain/pools).
 - **preferredAssetOutboundFeeMultiplier:** Optional parameter. Custom multiplier for the outbound fee threshold for affiliate fee payouts. This enables affiliate fees to get paid out at a custom threshold. If not specified, uses the global default of 100. Must be between 0 and 10000 (0 resets to global default). This determines how much RUNE must accumulate before triggering a payout in your preferred asset.
   - Example: Assuming default of 100, if your preferred asset is ETH.USDC and the ETH.USDC outbound fee is $1, the RUNE gets swapped to ETH.USDC and sent to your address when it hits $100 (100 \* $1).
+
+```admonish warning
+Changing the owner of a THORName resets the preferred asset and all chain aliases. The new owner must reconfigure them after taking ownership.
+```
 
 ```admonish info
 Example: `~:ODIN:BTC:bc1Address:thorAddress:BTC.BTC`
@@ -78,6 +82,10 @@ _(Remember this value will be in 1e8, so adjust accordingly for your transaction
 
 Affiliates can collect their fees in the asset of their choice (choosing from the assets that have a pool on THORChain). In order to collect fees in a preferred asset, affiliates must use a [THORName](https://docs.thorchain.org/how-it-works/thorchain-name-service) in their swap memos.
 
+```admonish warning
+If a preferred asset is set but the THORName has no chain alias for that asset's chain, payouts will silently fail and RUNE will remain stuck in the `AffiliateCollector` module. Set the missing alias to unblock: `~:<thorname>:<CHAIN>:<address>`
+```
+
 ### Configuring a Preferred Asset for a THORName
 
 1. [**Register a THORName**](../affiliate-guide/thorname-guide.md#create-a-thorname) if not done already. This is done with a `MsgDeposit` posted to the THORChain network.
@@ -117,21 +125,17 @@ The response should look like:
 {
   "name": "ac-test",
   "expire_block_height": 28061405,
-  "owner": "thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k",
-  "preferred_asset": "BNB.BUSD-BD1",
+  "owner": "thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd",
+  "preferred_asset": "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
   "affiliate_collector_rune": "0",
   "aliases": [
     {
       "chain": "ETH",
-      "address": "0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430"
+      "address": "0x6621d872f17109d6601c49edba526ebcfd332d5d"
     },
     {
       "chain": "THOR",
-      "address": "thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"
-    },
-    {
-      "chain": "BNB",
-      "address": "bnb1laxspje9u0faauqh7j07p9x6ds8lg4ychhg5qh"
+      "address": "thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd"
     }
   ],
   "preferred_asset_swap_threshold_rune": "0"

@@ -1,11 +1,11 @@
 # Affiliate Fee Guide
 
-Affiliate fees provide a way for interfaces to generate revenue through THORChain. These fees are collected from select transactions, sent to an affiliate collector module, and periodically distributed in a gas-efficient manner using the interface's preferred asset. These fees range from 0 to 10,000 basis points (bps), where 100 bps equals 1%, and are deducted from either the inbound or outbound transaction amount.
+Affiliate fees provide a way for interfaces to generate revenue through THORChain. These fees are collected from select transactions, sent to an affiliate collector module, and periodically distributed in a gas-efficient manner using the interface's preferred asset. Affiliate fees range from 0 to 1,000 basis points (10%) total, where 100 bps equals 1%. When using multiple affiliates, the total across all affiliates cannot exceed 1,000 basis points (10%).
 
 ## Overview
 
 - **Fee Structure**: Affiliate fees are calculated in basis points and deducted from the transaction amount.
-- **THORName Requirement**: A valid THORName is required to collect affiliate fees. Learn how to create a THORName [here](./thorname-guide.md).
+- **Address or THORName**: A valid THORChain address or THORName can be used to collect affiliate fees. A THORName is only required for preferred asset payouts. Learn how to create a THORName [here](./thorname-guide.md).
 - **Preferred Asset**: By default, affiliates are paid in $RUNE, but a preferred asset can be specified using a THORName.
 - **Multiple Affiliates for Swaps**: Swaps can support multiple affiliate fees, while single affiliate fees apply to savings deposits and RUNE pool withdrawals.
 - **Automatic Distribution**: Affiliate fees are automatically distributed to the affiliate address within your THORName based on accumulated thresholds. No manual processing is required.
@@ -36,6 +36,10 @@ The affiliate fee system operates automatically, following these steps:
 1. **Preferred Asset Swap**: If the affiliate's THORName specifies a preferred asset (e.g., BTC, USDC), the network swaps $RUNE to that asset before distribution. If no preferred asset is set, $RUNE is distributed directly.
 1. **Automatic Distribution**: The converted (or original) amount is sent to the affiliate's address without requiring any manual intervention.
 
+```admonish warning
+If the affiliate fee amount is too small and the resulting swap to RUNE would not cover outbound fees, the affiliate fee will be silently skipped. This can occur with very small swap amounts or very low affiliate basis points.
+```
+
 ### Benefits of Automatic Distribution
 
 - **Gas Efficiency**: By waiting until the threshold is met, the network minimizes gas costs associated with frequent small transactions.
@@ -45,6 +49,10 @@ The affiliate fee system operates automatically, following these steps:
 
 Interfaces can define up to a limit set by [MultipleAffiliatesMaxCount](../mimir.md) for valid affiliate and affiliate basis points pairs in a swap memo. This is used if more than one affiliate needs to be paid, e.g. an interface and implementation partner.
 The network deducts a fee for each valid affiliate defined in the memo. Alternatively, up to 5 valid affiliates and exactly one valid basis point value can be defined, and the network will attempt to skim the same basis point fee for each affiliate.
+
+```admonish warning
+The total affiliate fee across all affiliates cannot exceed 1,000 basis points (10%). If the sum of all affiliate fees exceeds this limit, the transaction will be rejected.
+```
 
 ### Valid Memo Examples
 

@@ -4,6 +4,10 @@
 
 The Advanced Swap Queue is THORChain's enhanced swap processing system that provides improved performance, better price discovery, and support for limit swaps. It represents a significant upgrade from the legacy swap queue, offering multiple swap types and advanced processing capabilities.
 
+```admonish info
+The advanced swap queue is controlled by the `EnableAdvSwapQueue` Mimir value. Check the current value on the [Constants and Mimirs](../mimir.md) page. A value of 0 means disabled, 1 means enabled, and 2 means market-only mode (limit swaps are skipped).
+```
+
 ## Key Features
 
 ### Swap Types
