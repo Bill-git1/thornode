@@ -59,7 +59,7 @@ THORChain has several APIs with Swagger documentation.
 
 - Midgard - [https://gateway.liquify.com/chain/thorchain_midgard/v2/doc](https://gateway.liquify.com/chain/thorchain_midgard/v2/doc)
 - THORNode - [https://gateway.liquify.com/chain/thorchain_api/thorchain/doc](https://gateway.liquify.com/chain/thorchain_api/thorchain/doc)
-- Cosmos RPC - [https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
+- Cosmos RPC - [https://docs.cosmos.network/sdk/v0.53/learn/advanced/grpc_rest](https://docs.cosmos.network/sdk/v0.53/learn/advanced/grpc_rest)
 - CometBFT RPC - [https://docs.cometbft.com/v0.38/rpc/](https://docs.cometbft.com/v0.38/rpc/)
 
 See [Connecting to THORChain](concepts/connecting-to-thorchain.md "mention") for a full list of public endpoints and more information.
