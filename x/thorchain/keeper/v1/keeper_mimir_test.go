@@ -42,11 +42,6 @@ func (s *KeeperMimirSuite) TestIsOperationalMimirPOLReserveBlackList(c *C) {
 	c.Check(k.IsOperationalMimir("POLRESERVEBLACKLIST-BTC-BTC"), Equals, true)
 	c.Check(k.IsOperationalMimir("polreserveblacklist-btc-btc"), Equals, true)
 
-	// Whitelist is NOT operational — adding new assets to POL Reserve is an
-	// economic decision requiring full admin mimir consensus.
-	c.Check(k.IsOperationalMimir("POLReserveWhitelist-BTC-BTC"), Equals, false)
-	c.Check(k.IsOperationalMimir("polreservewhitelist-btc-btc"), Equals, false)
-
 	// Similarly-prefixed but unrelated keys must NOT be flagged operational.
 	c.Check(k.IsOperationalMimir("POLReserveFoo-BTC-BTC"), Equals, false)
 	c.Check(k.IsOperationalMimir("POLReserveDeposit-BTC-BTC"), Equals, false)
@@ -59,6 +54,18 @@ func (s *KeeperMimirSuite) TestIsOperationalMimirPOLReserveSystemIncomeBps(c *C)
 	c.Check(k.IsOperationalMimir(key), Equals, true)
 	c.Check(k.IsOperationalMimir(strings.ToUpper(key)), Equals, true)
 	c.Check(k.IsOperationalMimir(strings.ToLower(key)), Equals, true)
+}
+
+func (s *KeeperMimirSuite) TestIsOperationalMimirPOLReserveWhitelist(c *C) {
+	_, k := setupKeeperForTest(c)
+
+	c.Check(k.IsOperationalMimir("POLReserveWhitelist-BTC-BTC"), Equals, true)
+	c.Check(
+		k.IsOperationalMimir("POLReserveWhitelist-ETH-USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48"),
+		Equals, true,
+	)
+	c.Check(k.IsOperationalMimir("POLRESERVEWHITELIST-BTC-BTC"), Equals, true)
+	c.Check(k.IsOperationalMimir("polreservewhitelist-btc-btc"), Equals, true)
 }
 
 func (s *KeeperMimirSuite) TestIsOperationalMimirCompromisedVault(c *C) {
