@@ -41,8 +41,8 @@ resolve_signer_seed_phrase() {
   # Fail loudly on a missing, empty, or corrupt phrase rather than letting
   # create_thor_user silently fall through to generating a brand-new key. This
   # uses the same validation as the Go reader (common.IsValidMnemonic).
-  if ! printf '%s' "$SIGNER_SEED_PHRASE" | thornode validate-seed-phrase >/dev/null 2>&1; then
-    echo "SIGNER_SEED_PHRASE is not a valid 24-word BIP39 mnemonic (refusing to start)"
+  if ! validate_err=$(printf '%s' "$SIGNER_SEED_PHRASE" | thornode validate-seed-phrase 2>&1); then
+    echo "SIGNER_SEED_PHRASE is not a valid 24-word BIP39 mnemonic (refusing to start): $validate_err"
     exit 1
   fi
   # Intentionally NOT exported: every consumer takes the phrase as a positional

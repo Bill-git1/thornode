@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"os"
 	"sort"
 	"testing"
 
@@ -9,8 +10,14 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/constants"
 )
+
+func TestMain(m *testing.M) {
+	config.Init()
+	os.Exit(m.Run())
+}
 
 func TestPackage(t *testing.T) { TestingT(t) }
 

@@ -16,9 +16,10 @@ import (
 // corrupt signer seed phrase before any key material is provisioned.
 func GetValidateSeedPhraseCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "validate-seed-phrase",
-		Short: "Validate a 24-word BIP39 mnemonic read from stdin",
-		Args:  cobra.ExactArgs(0),
+		Use:               "validate-seed-phrase",
+		Short:             "Validate a 24-word BIP39 mnemonic read from stdin",
+		Args:              cobra.ExactArgs(0),
+		PersistentPreRunE: func(*cobra.Command, []string) error { return nil },
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			data, err := io.ReadAll(cmd.InOrStdin())
 			if err != nil {
