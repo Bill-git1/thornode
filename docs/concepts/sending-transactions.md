@@ -76,7 +76,7 @@ Inbound transactions must not be delayed to avoid sending funds to an outdated A
 ```
 
 ```admonish info
-Memo limited to 80 bytes in `OP_RETURN` on BTC, BCH, LTC and DOGE. Use [abbreviated options](./memo-length-reduction.md) where possible.
+Memo limited to 80 bytes in `OP_RETURN` on BTC, BCH, LTC and DOGE. Use [abbreviated options](./memo-length-reduction.md) where possible. When shortening is not enough, or for reusable memos, see [Memoless Swaps](../swap-guide/memoless-swaps.md).
 ```
 
 ```admonish warning

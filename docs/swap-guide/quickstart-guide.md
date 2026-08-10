@@ -77,6 +77,10 @@ _For security reasons, your inbound transaction will be delayed by 600 seconds (
 The swap will be conduced over 7 blocks taking 42 seconds for the streaming swap to complete.
 
 ```admonish info
+Streaming swaps are the default behavior when no `streaming_interval`/`streaming_quantity` is specified. See [Streaming Swaps](./streaming-swaps.md#default-behavior-change) to opt out or tune this.
+```
+
+```admonish info
 Full quote swap endpoint specification can be found here: [https://gateway.liquify.com/chain/thorchain_api/thorchain/doc/](https://gateway.liquify.com/chain/thorchain_api/thorchain/doc/).
 ```
 
