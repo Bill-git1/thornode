@@ -9,6 +9,8 @@ Affiliate fees provide a way for interfaces to generate revenue through THORChai
 - **Preferred Asset**: By default, affiliates are paid in $RUNE, but a preferred asset can be specified using a THORName.
 - **Multiple Affiliates for Swaps**: Swaps can support multiple affiliate fees, while single affiliate fees apply to savings deposits and RUNE pool withdrawals.
 - **Automatic Distribution**: Affiliate fees are automatically distributed to the affiliate address within your THORName based on accumulated thresholds. No manual processing is required.
+- **Revenue Share**: Beyond the user-side fee, a THORName can be configured to earn a share of the protocol's own swap liquidity fees. See [Revenue Share (REVSHARE)](#revenue-share-revshare).
+- **Dynamic L1 Minimum Fee**: An enrolled THORName can set the minimum swap fee its users pay on L1 pairs. See [Dynamic L1 Minimum Fee](#dynamic-l1-minimum-fee).
 
 ## Getting Started
 
@@ -88,3 +90,7 @@ REVSHARE is opt-in by node operators on a per-affiliate basis (low-quorum operat
 2. Coordinate with node operators to set `REVSHARE-<thorname>` to your agreed basis points.
 
 See [ADR 027](../architecture/adr-027-affiliate-revshare.md) for the full rationale and design.
+
+## Dynamic L1 Minimum Fee
+
+Enrolling your THORName lets your users pay a **lower minimum swap fee** on L1 pairs. This is the protocol swap fee, whitelisted per THORName by node operators — it does not change your affiliate fee or payouts. See [Dynamic L1 Minimum Fee](../concepts/fees.md#dynamic-l1-minimum-fee) for how the floor works, enrollment and current values.

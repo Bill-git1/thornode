@@ -5,7 +5,7 @@
 Users pay up to four kinds of fees when conducting a swap.
 
 1. **Layer1 Network Fees** (gas): paid by the user when sending the asset to THORChain to be swapped. This is controlled by the user's wallet.
-2. **Slip Fee**: protects the pool from being manipulated by large swaps. Calculated as a function of transaction size and current pool depth. The slip fee formula is explained [here](https://docs.thorchain.org/thorchain-finance/continuous-liquidity-pools#clp-derivation).
+2. **Slip Fee**: protects the pool from being manipulated by large swaps. Calculated as a function of transaction size and current pool depth. The slip fee formula is explained [here](https://docs.thorchain.org/thorchain-finance/continuous-liquidity-pools#clp-derivation), and a [minimum applies](../concepts/fees.md#minimum-swap-fee) when it falls below the floor for the asset type.
 3. **Affiliate Fee** - (optional) a percentage skimmed from the inbound amount that can be paid to exchanges or wallet providers. See the [Affiliate Fee Guide](../affiliate-guide/affiliate-fee-guide.md) and the [Fees](../concepts/fees.md#affiliate-fee) section for more details and setup information.
 4. **Outbound Fee** - the fee the Network pays on behalf of the user to send the outbound transaction. See [Outbound Fee](../concepts/fees.md#outbound-fee).
 

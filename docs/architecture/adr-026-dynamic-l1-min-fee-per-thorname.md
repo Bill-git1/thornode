@@ -2,6 +2,8 @@
 
 ## Changelog
 
+- 2026-07-22: Status moved to Implemented — the feature is live on mainnet
+  (`L1DynamicFeeEnabled = 1`).
 - 2026-04-27: Switch the gradient signal from `fees_rune` to `fees_tor`
   (TOR-denominated, 1e8-precision USD value). Volume is also tracked in
   TOR. RUNE-denominated values are converted at the swap-completion
@@ -54,7 +56,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## TL;DR
 

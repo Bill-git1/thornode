@@ -74,6 +74,49 @@ See more information in the [Liquidity Section](https://docs.thorchain.org/thorc
 A minimum swap fee in basis points applies for different asset types, governed by the [mimir network settings](../mimir.md#swapping).
 ```
 
+### Minimum Swap Fee
+
+When a swap generates less slip than the applicable minimum, the liquidity fee is charged at that minimum instead. The network selects the floor in the following order, first match wins ([`getMinSlipBps`](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/helpers.go)):
+
+1. The swap originates from the WASM arbitrage contract — `WasmArbSlipMinBps`.
+2. The swap is an L1 pair carrying an active whitelisted affiliate THORName — that THORName's [dynamic floor](#dynamic-l1-minimum-fee).
+3. Both assets are stablecoin [TOR](https://docs.thorchain.org/technical-documentation/thorchain-finance/tor) anchors and neither side is RUNE — `StableSlipMinBps`. Unlike the floors below, this one is selected by the pair rather than the asset type, so it overrides whichever class floor would otherwise apply.
+4. Otherwise the asset-class floor — `L1SlipMinBps`, `TradeAccountsSlipMinBps`, `SecuredAssetSlipMinBps`, `SynthSlipMinBps` or `DerivedSlipMinBps`.
+
+### Dynamic L1 Minimum Fee
+
+For L1 pairs carrying an enrolled THORName affiliate, the minimum is set per THORName and trading pair rather than by the network-wide `L1SlipMinBps`, and increases or decreases with the fee revenue that affiliate generates on the pair.
+
+At the end of each epoch (~24h) the network totals the fee income that THORName produced on the pair and compares it with the period before its last floor change. Income up, the floor continues in the same direction; income down, it reverses. Each step is one basis point, so the floor settles higher where THORChain is the only venue and lower where it competes. See [ADR 026](../architecture/adr-026-dynamic-l1-min-fee-per-thorname.md) for the rule, bounds and events.
+
+This only affects the liquidity fee charged to the swapper. The affiliate's own basis points and the existing fee accounting path (extraction to the Reserve, then distribution via the [Incentive Pendulum](./incentive-pendulum.md)) are unchanged. The THORName is only the key that selects the floor.
+
+Enrollment is per-THORName, set by node operators via the operational mimir `DYNAMICFEE-WHITELIST-<thorname>`:
+
+| Value        | State        | Effect                                                                             |
+| ------------ | ------------ | ---------------------------------------------------------------------------------- |
+| `1`          | Active       | The dynamic floor is applied to the THORName's swaps.                              |
+| `2`          | Monitor      | The floor is calculated and stored but **not** applied — swaps use `L1SlipMinBps`. |
+| `0` / absent | Not enrolled | Swaps use `L1SlipMinBps`.                                                          |
+
+THORNames containing `_` or `+` cannot currently be enrolled via `DYNAMICFEE-WHITELIST-<thorname>` because of mimir key charset restrictions. ([REVSHARE](../affiliate-guide/affiliate-fee-guide.md#revenue-share-revshare) solved the same issue with an explicit alias; dynamic fee does not.)
+
+A new record starts at 1 bps and ratchets up, so enrollment begins below `L1SlipMinBps`; the ceiling is not capped at `L1SlipMinBps`, so a THORName whose fees fall can rise above it until the next epoch moves it back down. When a memo lists several affiliates, the protocol first filters to Active enrolled THORNames that carry a non-zero affiliate fee, then selects the largest affiliate basis-point split among those remaining — that entry's floor applies. Raw addresses, expired THORNames, Monitor-mode, unenrolled, and zero-bps entries are skipped; if none remain eligible the swap uses `L1SlipMinBps`. See the [THORName guide](../affiliate-guide/thorname-guide.md) for validity and expiry rules.
+
+Current state is exposed by [`/thorchain/dynamic_l1_fees`](https://gateway.liquify.com/chain/thorchain_api/thorchain/dynamic_l1_fees), `/{thorname}` and `/dynamic_l1_fees_current`.
+Example output:
+
+| Pair              | `ss`  | `symbiosis` | Unenrolled |
+| ----------------- | ----- | ----------- | ---------- |
+| `BTC.BTC`↔RUNE   | 4 bps | 4 bps       | 10 bps     |
+| `ETH.ETH`↔RUNE   | 3 bps | —           | 10 bps     |
+| `LTC.LTC`↔RUNE   | 3 bps | 2 bps       | 10 bps     |
+| `GAIA.ATOM`↔RUNE | 2 bps | —           | 10 bps     |
+
+```admonish info
+Quotes account for this. The [Swap Quote](../swap-guide/quickstart-guide.md#2-query-for-a-swap-quote) endpoint simulates the real swap, so a quote carrying your `affiliate` **and a non-zero `affiliate_bps`** returns your dynamic floor. Omit either and the quote is priced at `L1SlipMinBps` and will not match the executed swap.
+```
+
 ## 3. Affiliate Fee
 
 Within the transactions you build for your users you can include an affiliate for your exchange.

@@ -51,11 +51,24 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `AdvSwapQueueRapidSwapMax`: Maximum number of rapid swap iterations per block
 - `StreamingLimitSwapMaxAge`: Maximum number of blocks a limit swap can exist before expiring
 - `ModifyLimitSwapMaxIterations`: Maximum iterations when searching for a user's swap to modify or cancel
+
+### [Swap Fee Minimums](./concepts/fees.md#minimum-swap-fee)
+
 - `L1SlipMinBps`: Minimum L1 asset swap fee in basis points
 - `TradeAccountsSlipMinBps`: Minimum trade asset swap fee in basis points
 - `SecuredAssetSlipMinBps`: Minimum secured asset swap fee in basis points
 - `SynthSlipMinBps`: Minimum synth asset swap fee in basis points
 - `DerivedSlipMinBps`: Minimum derived asset swap fee in basis points
+- `StableSlipMinBps`: Minimum swap fee in basis points for stable-to-stable swaps
+- `WasmArbSlipMinBps`: Minimum swap fee in basis points for swaps from the WASM arbitrage contract
+- `SlipMinBpsMax`: Upper limit accepted for any of the minimum swap fee mimirs
+- `L1DynamicFeeEnabled`: Enable/disable the per-thorname [dynamic L1 minimum fee](./concepts/fees.md#dynamic-l1-minimum-fee)
+- `L1DynamicFeeEpochBlocks`: Number of blocks per dynamic fee epoch
+- `L1DynamicFeeFloorBPS`: Lower bound of the dynamic minimum, and the value a new record starts at
+- `L1DynamicFeeCeilingBPS`: Upper bound of the dynamic minimum
+- `L1DynamicFeeStepBPS`: Basis points the dynamic minimum moves per epoch
+- `L1DynamicFeeDeadbandBPS`: Percentage change in fees (in basis points) below which the floor is left unchanged
+- `L1DynamicFeeWindowEpochs`: Epochs averaged either side of the last change when measuring the fee response
 
 ## Memoless Transactions
 
@@ -146,7 +159,8 @@ Operational notes:
 - `MaxOutboundFeeMultiplierBasisPoints`\*: Maximum outbound fee multiplier in basis points
 - `MinOutboundFeeMultiplierBasisPoints`\*: Minimum outbound fee multiplier in basis points
 - `PreferredAssetOutboundFeeMultiplier`\*: Multiplier of preferred asset outbound fee for triggering preferred asset swaps
-- `REVSHARE-<thorname>`#: Per-thorname share (in basis points, capped at 5000) of attributed swap liquidity fees that the protocol pays from the reserve to the affiliate's `AffiliateCollector` balance at end of block. Operational mimir; only valid for existing thornames whose name uses characters `[a-zA-Z0-9-]`. See [ADR 027](./architecture/adr-027-affiliate-revshare.md) and the [Affiliate Fee Guide](./affiliate-guide/affiliate-fee-guide.md#revenue-share-revshare).
+- `DYNAMICFEE-WHITELIST-<thorname>`#: Per-thorname [enrollment](./concepts/fees.md#dynamic-l1-minimum-fee) in the dynamic L1 minimum fee
+- `REVSHARE-<thorname>`#: Per-thorname [share of swap liquidity fees](./affiliate-guide/affiliate-fee-guide.md#revenue-share-revshare) paid to the affiliate from the reserve, in basis points (max 5000)
 
 ### Solvency Checker
 
@@ -218,6 +232,7 @@ Operational notes:
 ## Miscellaneous
 
 - `DollarsPerRune`: Manual override of number of dollars per one RUNE. Used for metrics data collection and RUNE calculation from MinimumL1OutboundFeeUSD
+- `TorAnchor-<asset>`#: Set above zero to include a stablecoin pool in the [TOR](https://docs.thorchain.org/technical-documentation/thorchain-finance/tor) anchor set, e.g. `TorAnchor-ETH-USDC-0XA0B8...`. The median of these pools prices RUNE in USD, and a swap between two anchors uses `StableSlipMinBps`
 - `THORNames`: Enable/Disable THORNames
 - `TNSRegisterFee`: TNS registration fee of new names
 - `TNSFeePerBlock`: TNS cost per block to retain ownership of a name
