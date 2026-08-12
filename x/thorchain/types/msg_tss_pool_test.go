@@ -172,6 +172,45 @@ func (s *MsgTssPoolSuite) TestXMRMsgTssPoolIDIncludesFrostKeyAndMoneroHeight(c *
 	c.Check(changedHeight.ID == base.ID, Equals, false)
 }
 
+func (s *MsgTssPoolSuite) TestMsgTssPoolIDDistinguishesSuccessFromZeroNodeFailure(c *C) {
+	poolPk := GetRandomPubKey()
+	members := []string{GetRandomPubKey().String(), GetRandomPubKey().String()}
+	signer, err := common.PubKey(members[0]).GetThorAddress()
+	c.Assert(err, IsNil)
+
+	success, err := NewMsgTssPool(
+		members,
+		poolPk,
+		nil,
+		nil,
+		KeygenType_AsgardKeygen,
+		1,
+		nil,
+		[]string{common.RuneAsset().Chain.String()},
+		signer,
+		1024,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(success.IsSuccess(), Equals, true)
+
+	failure, err := NewMsgTssPool(
+		members,
+		poolPk,
+		nil,
+		nil,
+		KeygenType_AsgardKeygen,
+		1,
+		[]Blame{{FailReason: "failure without an attributable node"}},
+		[]string{common.RuneAsset().Chain.String()},
+		signer,
+		1024,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(failure.IsSuccess(), Equals, false)
+	c.Assert(failure.Blame[0].BlameNodes, HasLen, 0)
+	c.Assert(failure.ID, Not(Equals), success.ID)
+}
+
 func (s *MsgTssPoolSuite) TestMsgTssPoolFrostKeysharesBackupValidation(c *C) {
 	poolPk := GetRandomPubKey()
 	frostPk := GetRandomEd25519PubKey()

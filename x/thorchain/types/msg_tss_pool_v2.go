@@ -24,9 +24,9 @@ func NewMsgTssPoolV2(
 	keysharesBackupFrost []byte,
 	poolPubKeyFrost common.PubKey,
 ) (*MsgTssPool, error) {
-	id, err := getTssID(pks, poolpk, height, bl)
+	id, err := getTssID(pks, poolpk, poolPubKeyEddsa, height, bl)
 	if keygenType == KeygenType_XMRMonovaultKeygen {
-		id, err = getXMRTssID(pks, poolpk, height, bl, poolPubKeyFrost, 0)
+		id, err = getXMRTssID(pks, poolpk, poolPubKeyEddsa, height, bl, poolPubKeyFrost, 0)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("fail to get tss id: %w", err)
@@ -73,7 +73,7 @@ func NewMsgTssPoolV3(
 	}
 	msg.ObservedMoneroHeight = observedMoneroHeight
 	if keygenType == KeygenType_XMRMonovaultKeygen {
-		id, idErr := getXMRTssID(pks, poolpk, height, bl, poolPubKeyFrost, observedMoneroHeight)
+		id, idErr := getXMRTssID(pks, poolpk, poolPubKeyEddsa, height, bl, poolPubKeyFrost, observedMoneroHeight)
 		if idErr != nil {
 			return nil, fmt.Errorf("fail to get tss id: %w", idErr)
 		}

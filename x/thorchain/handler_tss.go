@@ -96,6 +96,25 @@ func (h TssHandler) validate(ctx cosmos.Context, msg *MsgTssPool) error {
 		}
 	}
 
+	// handle() requires every reporter of an ID to agree on PoolPubKey,
+	// PoolPubKeyEddsa, PoolPubKeyFrost and ObservedMoneroHeight, pinning them
+	// from whichever message lands first. Each of those fields must therefore be
+	// bound into the message ID (and so into the voter identity) or be pinned to
+	// a fixed value here, otherwise one keygen member can pin bogus values and
+	// every honest report is rejected before it is counted, stalling the keygen
+	// (issue #2953). The FROST pubkey and the observed Monero height are only
+	// part of the ID for XMR keygens, so reject asgard messages that set them -
+	// bifrost never populates them for an asgard keygen, and a non-empty FROST
+	// pubkey would additionally be written onto the asgard vault.
+	if msg.KeygenType == AsgardKeygen {
+		if !msg.PoolPubKeyFrost.IsEmpty() {
+			return cosmos.ErrUnknownRequest("asgard keygen must not set frost pool pubkey")
+		}
+		if msg.ObservedMoneroHeight != 0 {
+			return cosmos.ErrUnknownRequest("asgard keygen must not set observed monero height")
+		}
+	}
+
 	var newMsg *MsgTssPool
 	var err error
 	if msg.KeygenType == XMRMonovaultKeygen {
@@ -124,6 +143,16 @@ func (h TssHandler) validate(ctx cosmos.Context, msg *MsgTssPool) error {
 	}
 	if msg.ID != newMsg.ID {
 		return cosmos.ErrUnknownRequest("invalid tss message")
+	}
+
+	// A keygen result can only report a keygen block that has already been
+	// reached: bifrost only runs a keygen once the chain scanner reaches its
+	// height. Keygen blocks may be scheduled ahead of time (the genesis XMR
+	// monovault keygen is scheduled 128 blocks out), so without this bound
+	// members could vote on such a keygen before its height arrives and finalize
+	// the vault early, defeating the scheduled delay (issue #3046).
+	if msg.Height > ctx.BlockHeight() {
+		return cosmos.ErrUnknownRequest("invalid keygen block")
 	}
 
 	keygenBlock, err := h.mgr.Keeper().GetKeygenBlock(ctx, msg.Height)

@@ -704,6 +704,59 @@ func (s *HandlerTssSuite) TestTssHandlerAcceptsKeygenAtRetryBoundary(c *C) {
 	c.Assert(handler.validate(expiredCtx, msg), ErrorMatches, "invalid keygen block: unknown request")
 }
 
+// TestTssHandlerRejectsFutureKeygenBlock ensures a keygen result cannot report a
+// keygen block that has not been reached yet. Keygen blocks can be scheduled
+// ahead of the current height (the genesis XMR monovault keygen is scheduled 128
+// blocks out), so an unbounded height would let members vote on such a keygen
+// early and finalize the vault before its scheduled block (issue #3046).
+func (s *HandlerTssSuite) TestTssHandlerRejectsFutureKeygenBlock(c *C) {
+	helper := newTssHandlerTestHelper(c)
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+
+	futureHeight := helper.ctx.BlockHeight() + 128
+	keygenBlock := NewKeygenBlock(futureHeight)
+	keygenBlock.Keygens = []Keygen{{
+		Type:    AsgardKeygen,
+		Members: helper.members.Strings(),
+	}}
+	helper.keeper.SetKeygenBlock(helper.ctx, keygenBlock)
+
+	newMsgAtHeight := func(height int64) *MsgTssPool {
+		msg, err := NewMsgTssPoolV2(
+			helper.members.Strings(),
+			helper.poolPk,
+			nil,
+			nil,
+			AsgardKeygen,
+			height,
+			nil,
+			common.Chains{common.RuneAsset().Chain}.Strings(),
+			helper.signer,
+			1024,
+			helper.poolPkEddsa,
+			nil,
+			nil,
+			common.EmptyPubKey,
+		)
+		c.Assert(err, IsNil)
+		return msg
+	}
+
+	c.Assert(
+		handler.validate(helper.ctx, newMsgAtHeight(futureHeight)),
+		ErrorMatches,
+		"invalid keygen block: unknown request",
+	)
+	c.Assert(
+		handler.validate(helper.ctx, newMsgAtHeight(helper.ctx.BlockHeight()+1)),
+		ErrorMatches,
+		"invalid keygen block: unknown request",
+	)
+
+	// once the scheduled height is reached the same report is accepted
+	c.Assert(handler.validate(helper.ctx.WithBlockHeight(futureHeight), newMsgAtHeight(futureHeight)), IsNil)
+}
+
 func (s *HandlerTssSuite) TestTssHandlerPreservesDisabledRetryValidity(c *C) {
 	helper := newTssHandlerTestHelper(c)
 	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
@@ -1722,6 +1775,178 @@ func (s *HandlerTssSuite) TestAsgardKeygenAllActiveStillWaitsForCompleteConsensu
 	c.Assert(updatedVoter.HasConsensus(), Equals, true)
 	c.Assert(updatedVoter.HasCompleteConsensus(), Equals, false)
 	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, false)
+}
+
+// TestAsgardKeygenRejectsXMROnlyFields ensures an asgard keygen report cannot
+// carry the FROST pubkey or the observed Monero height. Those fields are only
+// bound into the message ID for XMR keygens, so for asgard they would be pinned
+// into the voter by whichever report is processed first and every honest report
+// would then be rejected before it is counted (issue #2953).
+func (s *HandlerTssSuite) TestAsgardKeygenRejectsXMROnlyFields(c *C) {
+	verifySecp256K1Signature = func(_ common.PubKey, _ []byte) error { return nil }
+
+	helper := newTssHandlerTestHelper(c)
+	for _, member := range helper.members {
+		setKeygenMemberNodeAccount(c, helper, member, NodeActive)
+	}
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	keygenTime := int64(1024)
+	poolPubKey := GetRandomPubKey()
+	poolEddsaPubKey := GetRandomPubKey()
+
+	newAsgardMsg := func() *MsgTssPool {
+		msg, err := NewMsgTssPoolV2(helper.members.Strings(), poolPubKey, keygenCheckSig, nil, AsgardKeygen, helper.ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), helper.signer, keygenTime, poolEddsaPubKey, nil, nil, common.EmptyPubKey)
+		c.Assert(err, IsNil)
+		return msg
+	}
+
+	// an untainted asgard report is accepted
+	c.Assert(handler.validate(helper.ctx, newAsgardMsg()), IsNil)
+
+	frostMsg := newAsgardMsg()
+	frostMsg.PoolPubKeyFrost = GetRandomEd25519PubKey()
+	c.Assert(handler.validate(helper.ctx, frostMsg), NotNil)
+
+	moneroHeightMsg := newAsgardMsg()
+	moneroHeightMsg.ObservedMoneroHeight = 1
+	c.Assert(handler.validate(helper.ctx, moneroHeightMsg), NotNil)
+}
+
+// TestAsgardKeygenEddsaMismatchDoesNotBlockConsensus ensures a member reporting
+// a divergent eddsa pubkey first cannot stall the keygen: the eddsa pubkey is
+// part of the message ID, so the divergent report tallies in its own voter and
+// the honest members still reach consensus and finalise the vault (issue #2953).
+func (s *HandlerTssSuite) TestAsgardKeygenEddsaMismatchDoesNotBlockConsensus(c *C) {
+	verifySecp256K1Signature = func(_ common.PubKey, _ []byte) error { return nil }
+
+	helper := newTssHandlerTestHelper(c)
+	for _, member := range helper.members {
+		setKeygenMemberNodeAccount(c, helper, member, NodeActive)
+	}
+	helper.keeper.SetMimir(helper.ctx, constants.MaxAbsentKeygenReporters.String(), 1)
+
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	keygenTime := int64(1024)
+	poolPubKey := GetRandomPubKey()
+	poolEddsaPubKey := GetRandomPubKey()
+
+	newReport := func(signer cosmos.AccAddress, eddsa common.PubKey) *MsgTssPool {
+		msg, err := NewMsgTssPoolV2(helper.members.Strings(), poolPubKey, keygenCheckSig, nil, AsgardKeygen, helper.ctx.BlockHeight(), nil, common.Chains{common.RuneAsset().Chain}.Strings(), signer, keygenTime, eddsa, nil, nil, common.EmptyPubKey)
+		c.Assert(err, IsNil)
+		return msg
+	}
+
+	// the last member reports a divergent eddsa pubkey before anyone else
+	poisonAddr, err := helper.members[len(helper.members)-1].GetThorAddress()
+	c.Assert(err, IsNil)
+	poisonMsg := newReport(poisonAddr, GetRandomPubKey())
+	honestMsg := newReport(helper.signer, poolEddsaPubKey)
+	c.Assert(poisonMsg.ID, Not(Equals), honestMsg.ID)
+	_, err = handler.Run(helper.ctx, poisonMsg)
+	c.Assert(err, IsNil)
+
+	// the honest members still reach consensus among themselves
+	for _, member := range helper.members[:len(helper.members)-1] {
+		thorAddr, addrErr := member.GetThorAddress()
+		c.Assert(addrErr, IsNil)
+		_, runErr := handler.Run(helper.ctx, newReport(thorAddr, poolEddsaPubKey))
+		c.Assert(runErr, IsNil)
+	}
+
+	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, true)
+	vault, err := helper.keeper.GetVault(helper.ctx, poolPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(vault.PubKeyEddsa.Equals(poolEddsaPubKey), Equals, true)
+
+	// the divergent report tallied in its own voter and never reached consensus
+	poisonVoter, err := helper.keeper.GetTssVoter(helper.ctx, poisonMsg.ID)
+	c.Assert(err, IsNil)
+	c.Assert(poisonVoter.HasConsensus(), Equals, false)
+}
+
+// TestAsgardKeygenZeroNodeFailureCannotCompleteSuccessVoter ensures a failure
+// report that cannot attribute blame to a specific node does not join the
+// success voter. Otherwise the failure report could supply the quorum-crossing
+// vote and make the handler execute the failure branch for honest success
+// reports, including resetting Ready nodes to Standby.
+func (s *HandlerTssSuite) TestAsgardKeygenZeroNodeFailureCannotCompleteSuccessVoter(c *C) {
+	verifySecp256K1Signature = func(_ common.PubKey, _ []byte) error { return nil }
+
+	helper := newTssHandlerTestHelper(c)
+	for _, member := range helper.members {
+		setKeygenMemberNodeAccount(c, helper, member, NodeReady)
+	}
+	handler := NewTssHandler(NewDummyMgrWithKeeper(helper.keeper))
+	poolPubKey := GetRandomPubKey()
+	poolEddsaPubKey := GetRandomPubKey()
+	keygenTime := int64(1024)
+
+	newReport := func(member common.PubKey, blame []Blame) *MsgTssPool {
+		signer, err := member.GetThorAddress()
+		c.Assert(err, IsNil)
+		msg, err := NewMsgTssPoolV2(
+			helper.members.Strings(),
+			poolPubKey,
+			keygenCheckSig,
+			nil,
+			AsgardKeygen,
+			helper.ctx.BlockHeight(),
+			blame,
+			common.Chains{common.RuneAsset().Chain}.Strings(),
+			signer,
+			keygenTime,
+			poolEddsaPubKey,
+			nil,
+			nil,
+			common.EmptyPubKey,
+		)
+		c.Assert(err, IsNil)
+		return msg
+	}
+
+	// Five reports are one short of the six-of-eight supermajority.
+	var successID string
+	for _, member := range helper.members[:5] {
+		msg := newReport(member, nil)
+		successID = msg.ID
+		_, err := handler.Run(helper.ctx, msg)
+		c.Assert(err, IsNil)
+	}
+
+	zeroNodeFailure := newReport(helper.members[5], []Blame{{
+		FailReason: "failure without an attributable node",
+		Round:      "keygen",
+	}})
+	c.Assert(zeroNodeFailure.IsSuccess(), Equals, false)
+	c.Assert(zeroNodeFailure.Blame[0].BlameNodes, HasLen, 0)
+	c.Assert(zeroNodeFailure.ID, Not(Equals), successID)
+	_, err := handler.Run(helper.ctx, zeroNodeFailure)
+	c.Assert(err, IsNil)
+
+	successVoter, err := helper.keeper.GetTssVoter(helper.ctx, successID)
+	c.Assert(err, IsNil)
+	c.Assert(successVoter.Signers, HasLen, 5)
+	c.Assert(successVoter.HasConsensus(), Equals, false)
+	failureVoter, err := helper.keeper.GetTssVoter(helper.ctx, zeroNodeFailure.ID)
+	c.Assert(err, IsNil)
+	c.Assert(failureVoter.Signers, HasLen, 1)
+	c.Assert(failureVoter.HasConsensus(), Equals, false)
+
+	// Since the failure voter did not reach quorum, Ready nodes are untouched.
+	readyAddr, err := helper.members[7].GetThorAddress()
+	c.Assert(err, IsNil)
+	readyNode, err := helper.keeper.GetNodeAccount(helper.ctx, readyAddr)
+	c.Assert(err, IsNil)
+	c.Assert(readyNode.Status, Equals, NodeReady)
+
+	// The same reporter can still submit the sixth success vote, which reaches
+	// consensus in the separate success voter and finalizes the vault.
+	_, err = handler.Run(helper.ctx, newReport(helper.members[5], nil))
+	c.Assert(err, IsNil)
+	successVoter, err = helper.keeper.GetTssVoter(helper.ctx, successID)
+	c.Assert(err, IsNil)
+	c.Assert(successVoter.HasConsensus(), Equals, true)
+	c.Assert(helper.keeper.VaultExists(helper.ctx, poolPubKey), Equals, true)
 }
 
 // keygenCheckSig is a non-empty placeholder check signature used to satisfy

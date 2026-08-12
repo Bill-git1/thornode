@@ -61,7 +61,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "FCF633ECFBF279DED4BA9AA2A737FD65FA515872848E7E01DD1AC009E5ED0788",
+      "data_hash": "DF725213FD4F0EDFB8EABF08788A4224E30BBE96F65F9228FDE3816F0B5CA7A2",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -75,7 +75,7 @@
     "end_block_events": [],
     "txs": [
       {
-        "hash": "7718D2F1B69873F429D764D5B5D1C6772E5CCEA4EFE9D625C92DC9572ED4D319",
+        "hash": "8D34273ACE4A135D1F699A015444C17A0DA2A00E63AF88A1AEB97F5E570061B1",
         "tx": {
           "auth_info": {
             "fee": {
@@ -111,7 +111,7 @@
                   "THOR"
                 ],
                 "height": "0",
-                "id": "d87ba3871b60ec3caf52184943ea7e8797aadeb0880565f7935a7be41d1b7c0a",
+                "id": "6cf67f737c6f0f45ce07e55f4f1ca74753cdc1e092310d47cfc10ad42d47a3f0",
                 "keygen_time": "0",
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
@@ -135,7 +135,7 @@
             "unordered": false
           },
           "signatures": [
-            "axWBAGg6drd0pSLgG/l3zHBDXSaK9cvEw1kN6pj+LGRV75DkQ8imh0vXXNwDJKAdWS5vwVF8CnE+EYq8EEwcLw=="
+            "68LOxYP7fnijH1W0rqHDqIgJh8Al4j3ZdqnozpV641gZS5xkcmnjQTLeGlrlTlaa4lbQ70GJsnCNoHwaP+0kTQ=="
           ]
         },
         "result": {
@@ -149,7 +149,7 @@
               "type": "tx"
             },
             {
-              "signature": "axWBAGg6drd0pSLgG/l3zHBDXSaK9cvEw1kN6pj+LGRV75DkQ8imh0vXXNwDJKAdWS5vwVF8CnE+EYq8EEwcLw==",
+              "signature": "68LOxYP7fnijH1W0rqHDqIgJh8Al4j3ZdqnozpV641gZS5xkcmnjQTLeGlrlTlaa4lbQ70GJsnCNoHwaP+0kTQ==",
               "type": "tx"
             }
           ]

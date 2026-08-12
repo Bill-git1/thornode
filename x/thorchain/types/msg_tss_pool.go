@@ -37,7 +37,7 @@ var (
 
 // NewMsgTssPool is a constructor function for MsgTssPool
 func NewMsgTssPool(pks []string, poolpk common.PubKey, secp256k1Signature, keysharesBackup []byte, keygenType KeygenType, height int64, bl []Blame, chains []string, signer cosmos.AccAddress, keygenTime int64) (*MsgTssPool, error) {
-	id, err := getTssID(pks, poolpk, height, bl)
+	id, err := getTssID(pks, poolpk, common.EmptyPubKey, height, bl)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get tss id: %w", err)
 	}
@@ -56,18 +56,27 @@ func NewMsgTssPool(pks []string, poolpk common.PubKey, secp256k1Signature, keysh
 	}, nil
 }
 
-// getTssID
-func getTssID(members []string, poolPk common.PubKey, height int64, bl []Blame) (string, error) {
-	return getTssIDWithXMRFields(members, poolPk, height, bl, common.EmptyPubKey, 0, false)
+// getTssID computes the identity of a keygen result, which is also the identity
+// of the TssVoter that tallies it.
+//
+// Every field the handler requires all reporters of an ID to agree on must
+// either be bound into this identity or be pinned to a fixed value by
+// TssHandler.validate. An unbound field is set in the voter by whichever
+// message is processed first, and every later message that disagrees is
+// rejected before it is counted - so a single keygen member could otherwise
+// pin a bogus value and stall consensus for that keygen (issue #2953).
+func getTssID(members []string, poolPk, poolPubKeyEddsa common.PubKey, height int64, bl []Blame) (string, error) {
+	return getTssIDWithXMRFields(members, poolPk, poolPubKeyEddsa, height, bl, common.EmptyPubKey, 0, false)
 }
 
-func getXMRTssID(members []string, poolPk common.PubKey, height int64, bl []Blame, poolPubKeyFrost common.PubKey, observedMoneroHeight int64) (string, error) {
-	return getTssIDWithXMRFields(members, poolPk, height, bl, poolPubKeyFrost, observedMoneroHeight, true)
+func getXMRTssID(members []string, poolPk, poolPubKeyEddsa common.PubKey, height int64, bl []Blame, poolPubKeyFrost common.PubKey, observedMoneroHeight int64) (string, error) {
+	return getTssIDWithXMRFields(members, poolPk, poolPubKeyEddsa, height, bl, poolPubKeyFrost, observedMoneroHeight, true)
 }
 
 func getTssIDWithXMRFields(
 	members []string,
 	poolPk common.PubKey,
+	poolPubKeyEddsa common.PubKey,
 	height int64,
 	bl []Blame,
 	poolPubKeyFrost common.PubKey,
@@ -93,11 +102,21 @@ func getTssIDWithXMRFields(
 	for _, item := range members {
 		sb.WriteString("m:" + item)
 	}
+	// IsSuccess is determined by whether the Blame slice itself is empty, not
+	// by whether any blamed pubkeys are present. Bind that distinction
+	// explicitly so a legitimate failure with zero BlameNodes cannot share a
+	// voter with successful reports.
+	if len(bl) == 0 {
+		sb.WriteString("r:success")
+	} else {
+		sb.WriteString("r:failure")
+	}
 	for _, item := range pubkeys {
 		sb.WriteString("p:" + item)
 	}
 	sb.WriteString(poolPk.String())
 	sb.WriteString(fmt.Sprintf("%d", height))
+	sb.WriteString("e:" + poolPubKeyEddsa.String())
 	if includeXMRFields {
 		sb.WriteString("f:" + poolPubKeyFrost.String())
 		sb.WriteString(fmt.Sprintf("x:%d", observedMoneroHeight))
