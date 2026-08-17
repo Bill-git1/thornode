@@ -336,32 +336,125 @@ func (c *Communication) GetLocalPeerID() string {
 	return c.host.ID().String()
 }
 
-// Broadcast message to Peers
-func (c *Communication) Broadcast(peers []peer.ID, msg []byte, msgID string) {
+const (
+	streamWriteAttempts = 3
+
+	// streamWriteRetryDelay is the base backoff between write attempts; it is
+	// multiplied by the attempt number, giving 2s then 4s. Deliberately longer
+	// than a network round trip: libp2p keeps its own dial backoff per peer, so
+	// a sub-second retry lands inside that window and fails instantly. Spacing
+	// at 2s/4s gives the backoff a chance to clear.
+	streamWriteRetryDelay = 2 * time.Second
+
+	// streamWriteRetryBudget caps total time spent retrying one message so a
+	// retry cannot outlive the ceremony that produced it. A single attempt can
+	// take up to TimeoutWritePayload (40s), so three attempts could otherwise
+	// run past 120s — well beyond keysign_timeout (45s).
+	streamWriteRetryBudget = 60 * time.Second
+)
+
+// Broadcast message to Peers. msgType decides whether a failed write is
+// retried (only keygen traffic is retried; see writeAttemptsFor).
+func (c *Communication) Broadcast(peers []peer.ID, msg []byte, msgID string, msgType messages.THORChainTSSMessageType) {
 	if len(peers) == 0 {
 		return
 	}
-	// try to discover all peers and then broadcast the messages
 	c.wg.Add(1)
-	go c.broadcastToPeers(peers, msg, msgID)
+	go c.broadcastToPeers(peers, msg, msgID, msgType)
 }
 
-func (c *Communication) broadcastToPeers(peers []peer.ID, msg []byte, msgID string) {
+// writeAttemptsFor returns how many times a write of this message type may be
+// attempted. Retries are scoped to keygen: it has a 5m budget and its unicast
+// round has no receiver-side recovery. Keysign has a 45s budget and recovers
+// lost broadcasts through the hash-confirmation path.
+func writeAttemptsFor(msgType messages.THORChainTSSMessageType) int {
+	switch msgType {
+	case messages.TSSKeyGenMsg, messages.TSSKeyGenVerMsg:
+		return streamWriteAttempts
+	default:
+		return 1
+	}
+}
+
+func (c *Communication) broadcastToPeers(peers []peer.ID, msg []byte, msgID string, msgType messages.THORChainTSSMessageType) {
 	defer c.wg.Done()
 	defer func() {
 		c.logger.Debug().Msgf("finished sending message to peer(%v)", peers)
 	}()
-	var wgSend sync.WaitGroup
+	var (
+		wgSend    sync.WaitGroup
+		failed    int64
+		recovered int64
+	)
+	start := time.Now()
+	maxAttempts := writeAttemptsFor(msgType)
 	wgSend.Add(len(peers))
 	for _, p := range peers {
 		go func(p peer.ID) {
 			defer wgSend.Done()
-			if err := c.writeToStream(p, msg, msgID); nil != err {
-				c.logger.Error().Err(err).Msg("fail to write to stream")
+			attempts, err := c.writeToStreamWithRetry(p, msg, msgID, maxAttempts)
+			if err != nil {
+				atomic.AddInt64(&failed, 1)
+				c.logger.Error().Err(err).
+					Str("peer", p.String()).
+					Str("msgID", msgID).
+					Int("attempts", attempts).
+					Msg("fail to write to stream")
+				return
+			}
+			if attempts > 1 {
+				atomic.AddInt64(&recovered, 1)
 			}
 		}(p)
 	}
 	wgSend.Wait()
+
+	if f, r := atomic.LoadInt64(&failed), atomic.LoadInt64(&recovered); f > 0 || r > 0 {
+		c.logger.Info().
+			Str("msgID", msgID).
+			Str("msgType", msgType.String()).
+			Int("peers", len(peers)).
+			Int("bytes", len(msg)).
+			Int64("recovered", r).
+			Int64("failed", f).
+			Dur("elapsed", time.Since(start)).
+			Msg("tss fanout retry summary")
+	}
+}
+
+// writeToStreamWithRetry pushes msg to a single peer, retrying on a fresh
+// stream up to maxAttempts times within the streamWriteRetryBudget.
+func (c *Communication) writeToStreamWithRetry(pID peer.ID, msg []byte, msgID string, maxAttempts int) (int, error) {
+	var err error
+	deadline := time.Now().Add(streamWriteRetryBudget)
+	attempt := 0
+	for attempt < maxAttempts {
+		attempt++
+		err = c.writeToStream(pID, msg, msgID)
+		if err == nil {
+			if attempt > 1 {
+				c.logger.Info().
+					Str("peer", pID.String()).
+					Str("msgID", msgID).
+					Int("attempt", attempt).
+					Msg("stream write recovered on retry")
+			}
+			return attempt, nil
+		}
+		if attempt >= maxAttempts || time.Now().After(deadline) {
+			break
+		}
+		c.logger.Debug().Err(err).
+			Str("peer", pID.String()).
+			Str("msgID", msgID).
+			Msg("stream write failed, retrying on a new stream")
+		select {
+		case <-c.stopChan:
+			return attempt, err
+		case <-time.After(streamWriteRetryDelay * time.Duration(attempt)):
+		}
+	}
+	return attempt, err
 }
 
 func (c *Communication) writeToStream(pID peer.ID, msg []byte, msgID string) error {
@@ -888,7 +981,7 @@ func (c *Communication) ProcessBroadcast() {
 				continue
 			}
 			c.logger.Debug().Msgf("broadcast message %s to %+v", msg.WrappedMessage, msg.PeersID)
-			c.Broadcast(msg.PeersID, wrappedMsgBytes, msg.WrappedMessage.MsgID)
+			c.Broadcast(msg.PeersID, wrappedMsgBytes, msg.WrappedMessage.MsgID, msg.WrappedMessage.MessageType)
 
 		case <-c.stopChan:
 			return

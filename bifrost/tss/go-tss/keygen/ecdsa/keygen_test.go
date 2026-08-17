@@ -272,7 +272,8 @@ func (s *TssECDSAKeygenTestSuite) TestGenerateNewKeyWithStop(c *C) {
 			c.Assert(err, NotNil)
 			// we skip the node 1 as we force it to stop
 			if idx != 0 {
-				blames := keygenInstance.GetTssCommonStruct().GetBlameMgr().GetBlame().BlameNodes
+				blameSnapshot := keygenInstance.GetTssCommonStruct().GetBlameMgr().GetBlame().Snapshot()
+				blames := blameSnapshot.BlameNodes
 				c.Assert(blames, HasLen, 1)
 				c.Assert(blames[0].Pubkey, Equals, testPubKeys[0])
 			}

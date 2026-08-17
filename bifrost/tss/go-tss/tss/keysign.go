@@ -145,7 +145,7 @@ func (t *TssServer) generateSignature(
 		t.logger.Error().Err(err).Msg("err in keysign")
 		sigChan <- "signature generated"
 		t.broadcastKeysignFailure(msgID, allPeersID)
-		blameNodes := *blameMgr.GetBlame()
+		blameNodes := blameMgr.GetBlame().Snapshot()
 		return keysign.Response{
 			Status: common.Fail,
 			Blame:  blameNodes,

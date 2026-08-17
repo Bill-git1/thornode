@@ -420,7 +420,8 @@ func (s *TssECDSAKeysignTestSuite) TestSignMessageWithStop(c *C) {
 			}
 			// we skip the node 1 as we force it to stop
 			if idx != 1 {
-				blames := keysignIns.GetTssCommonStruct().GetBlameMgr().GetBlame().BlameNodes
+				blameSnapshot := keysignIns.GetTssCommonStruct().GetBlameMgr().GetBlame().Snapshot()
+				blames := blameSnapshot.BlameNodes
 				c.Assert(blames, HasLen, 1)
 				c.Assert(blames[0].Pubkey, Equals, testPubKeys[1])
 			}

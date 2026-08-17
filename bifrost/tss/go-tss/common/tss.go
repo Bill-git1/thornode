@@ -35,7 +35,8 @@ type TssCommon struct {
 	PartyIDtoP2PID              map[string]peer.ID
 	unConfirmedMsgLock          *sync.Mutex
 	unConfirmedMessages         map[string]*LocalCacheItem
-	RoundInfo                   string
+	roundInfo                   string
+	roundInfoLock               *sync.RWMutex
 	localPeerID                 string
 	broadcastChannel            chan *messages.BroadcastMsgChan
 	TssMsg                      chan *p2p.Message
@@ -62,8 +63,9 @@ func NewTssCommon(peerID string, broadcastChannel chan *messages.BroadcastMsgCha
 		PartyIDtoP2PID:              make(map[string]peer.ID),
 		unConfirmedMsgLock:          &sync.Mutex{},
 		unConfirmedMessages:         make(map[string]*LocalCacheItem),
+		roundInfoLock:               &sync.RWMutex{},
 		broadcastChannel:            broadcastChannel,
-		TssMsg:                      make(chan *p2p.Message, msgNum),
+		TssMsg:                      make(chan *p2p.Message, max(msgNum, 4096)),
 		P2PPeersLock:                &sync.RWMutex{},
 		P2PPeers:                    nil,
 		msgID:                       msgID,
@@ -177,6 +179,20 @@ func (t *TssCommon) GetLocalPeerID() string {
 	return t.localPeerID
 }
 
+// SetRoundInfo records the round of the message currently being applied.
+func (t *TssCommon) SetRoundInfo(round string) {
+	t.roundInfoLock.Lock()
+	defer t.roundInfoLock.Unlock()
+	t.roundInfo = round
+}
+
+// GetRoundInfo returns the last applied round.
+func (t *TssCommon) GetRoundInfo() string {
+	t.roundInfoLock.RLock()
+	defer t.roundInfoLock.RUnlock()
+	return t.roundInfo
+}
+
 func (t *TssCommon) SetLocalPeerID(peerID string) {
 	t.localPeerID = peerID
 }
@@ -282,7 +298,7 @@ func (t *TssCommon) updateLocal(wireMsg *messages.WireMessage) error {
 			t.logger.Error().Err(err).Msg("broken tss share")
 			return err
 		}
-		t.RoundInfo = round.RoundMsg
+		t.SetRoundInfo(round.RoundMsg)
 
 		// we only allow a message be updated only once.
 		// here we use round + msgIdentifier as the key for the acceptedShares
@@ -511,28 +527,32 @@ func (t *TssCommon) ProcessOutCh(msg btss.Message, msgType messages.THORChainTSS
 		return fmt.Errorf("fail to get wire bytes: %w", err)
 	}
 
+	// Keep the fully qualified protobuf type on the wire for compatibility
+	// with existing peers. Unicast blame lookup tolerates full and short names.
+	roundName := msg.Type()
+
 	if r.IsBroadcast {
 		cachedWiredMsg := NewBulkWireMsg(msgData, msg.GetFrom().Moniker, r)
-		// now we store this message in cache
-		dat, ok := t.cachedWireBroadcastMsgLists.Load(msg.Type())
+		dat, ok := t.cachedWireBroadcastMsgLists.Load(roundName)
 		if !ok {
 			l := []BulkWireMsg{cachedWiredMsg}
-			t.cachedWireBroadcastMsgLists.Store(msg.Type(), l)
+			t.cachedWireBroadcastMsgLists.Store(roundName, l)
 		} else {
 			cachedList := dat.([]BulkWireMsg)
 			cachedList = append(cachedList, cachedWiredMsg)
-			t.cachedWireBroadcastMsgLists.Store(msg.Type(), cachedList)
+			t.cachedWireBroadcastMsgLists.Store(roundName, cachedList)
 		}
 	} else {
 		cachedWiredMsg := NewBulkWireMsg(msgData, msg.GetFrom().Moniker, r)
-		dat, ok := t.cachedWireUnicastMsgLists.Load(msg.Type() + ":" + r.To[0].String())
+		cacheKey := roundName + ":" + r.To[0].String()
+		dat, ok := t.cachedWireUnicastMsgLists.Load(cacheKey)
 		if !ok {
 			l := []BulkWireMsg{cachedWiredMsg}
-			t.cachedWireUnicastMsgLists.Store(msg.Type()+":"+r.To[0].String(), l)
+			t.cachedWireUnicastMsgLists.Store(cacheKey, l)
 		} else {
 			cachedList := dat.([]BulkWireMsg)
 			cachedList = append(cachedList, cachedWiredMsg)
-			t.cachedWireUnicastMsgLists.Store(msg.Type()+":"+r.To[0].String(), cachedList)
+			t.cachedWireUnicastMsgLists.Store(cacheKey, cachedList)
 		}
 	}
 	t.cachedWireUnicastMsgLists.Range(func(key, value interface{}) bool {
@@ -586,11 +606,11 @@ func (t *TssCommon) applyShare(localCacheItem *LocalCacheItem, threshold int, ke
 		blamePk, err := t.blameMgr.TssWrongShareBlame(localCacheItem.Msg)
 		if err != nil {
 			t.logger.Error().Err(err).Msgf("error in get the blame nodes")
-			t.blameMgr.GetBlame().SetBlame(blame.HashCheckFail, nil, unicast, t.RoundInfo)
+			t.blameMgr.GetBlame().SetBlame(blame.HashCheckFail, nil, unicast, t.GetRoundInfo())
 			return fmt.Errorf("error in getting the blame nodes %w", blame.ErrHashCheck)
 		}
 		blameNode := blame.NewNode(blamePk, localCacheItem.Msg.Message, localCacheItem.Msg.Sig)
-		t.blameMgr.GetBlame().SetBlame(blame.HashCheckFail, []blame.Node{blameNode}, unicast, t.RoundInfo)
+		t.blameMgr.GetBlame().SetBlame(blame.HashCheckFail, []blame.Node{blameNode}, unicast, t.GetRoundInfo())
 		return blame.ErrHashCheck
 	}
 

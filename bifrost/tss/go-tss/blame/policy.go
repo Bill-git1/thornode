@@ -3,6 +3,7 @@ package blame
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -11,6 +12,19 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )
+
+func roundInfoMatches(left, right string) bool {
+	if left == right {
+		return true
+	}
+	if left == "" || right == "" {
+		return false
+	}
+
+	left = left[strings.LastIndexByte(left, '.')+1:]
+	right = right[strings.LastIndexByte(right, '.')+1:]
+	return left == right
+}
 
 func (m *Manager) tssTimeoutBlame(lastMessageType string, partyIDMap map[string]*btss.PartyID) ([]string, error) {
 	peersSet := mapset.NewSet()
@@ -74,17 +88,23 @@ func (m *Manager) GetUnicastBlame(lastMsgType string) ([]Node, error) {
 		m.logger.Debug().Msg("we do not have any unicast message received yet")
 		return nil, nil
 	}
-	peersMap := make(map[string]bool)
-	peersID, ok := m.lastUnicastPeer[lastMsgType]
+	peersMap := make(map[string]struct{})
+	found := false
+	for roundInfo, peers := range m.lastUnicastPeer {
+		if !roundInfoMatches(roundInfo, lastMsgType) {
+			continue
+		}
+		found = true
+		for _, p := range peers {
+			peersMap[p.String()] = struct{}{}
+		}
+	}
 	m.lastMsgLocker.RUnlock()
-	if !ok {
+	if !found {
 		return nil, fmt.Errorf("fail to find peers of the given msg type %w", ErrTssTimeOut)
 	}
-	for _, el := range peersID {
-		peersMap[el.String()] = true
-	}
 
-	var onlinePeers []string
+	onlinePeers := make([]string, 0, len(peersMap))
 	for key := range peersMap {
 		onlinePeers = append(onlinePeers, key)
 	}

@@ -63,11 +63,57 @@ func (p *policyTestSuite) SetUpTest(c *C) {
 	p.blameMgr.SetPartyInfo(testPartyMap, partyIDMap)
 }
 
-func (p *policyTestSuite) TestGetUnicastBlame(c *C) {
+func decodeTestPeerIDs(c *C) []peer.ID {
+	peers := make([]peer.ID, 0, len(testPeers))
+	for _, rawPeerID := range testPeers {
+		peerID, err := peer.Decode(rawPeerID)
+		c.Assert(err, IsNil)
+		peers = append(peers, peerID)
+	}
+	return peers
+}
+
+func (p *policyTestSuite) TestGetUnicastBlameExactName(c *C) {
 	_, err := p.blameMgr.GetUnicastBlame("testTypeWrong")
 	c.Assert(err, NotNil)
-	_, err = p.blameMgr.GetUnicastBlame("testType")
+
+	peers := decodeTestPeerIDs(c)
+	p.blameMgr.SetLastUnicastPeer(peers[3], "testType")
+	blameNodes, err := p.blameMgr.GetUnicastBlame("testType")
 	c.Assert(err, IsNil)
+	c.Assert(blameNodes, HasLen, 0)
+}
+
+func (p *policyTestSuite) TestGetUnicastBlameShortNameMatchesFullyQualifiedName(c *C) {
+	shortName := messages.KEYGEN2aUnicast
+	fullName := "binance.tsslib.ecdsa.keygen." + shortName
+	for _, peerID := range decodeTestPeerIDs(c) {
+		p.blameMgr.SetLastUnicastPeer(peerID, fullName)
+	}
+
+	blameNodes, err := p.blameMgr.GetUnicastBlame(shortName)
+	c.Assert(err, IsNil)
+	c.Assert(blameNodes, HasLen, 0)
+}
+
+func (p *policyTestSuite) TestGetUnicastBlameUnionsBothNameFormats(c *C) {
+	shortName := messages.KEYGEN2aUnicast
+	fullName := "binance.tsslib.ecdsa.keygen." + shortName
+	peers := decodeTestPeerIDs(c)
+
+	p.blameMgr.SetLastUnicastPeer(peers[0], shortName)
+	p.blameMgr.SetLastUnicastPeer(peers[1], shortName)
+	p.blameMgr.SetLastUnicastPeer(peers[1], fullName)
+	p.blameMgr.SetLastUnicastPeer(peers[2], fullName)
+	p.blameMgr.SetLastUnicastPeer(peers[3], fullName)
+
+	blameNodes, err := p.blameMgr.GetUnicastBlame(shortName)
+	c.Assert(err, IsNil)
+	c.Assert(blameNodes, HasLen, 0)
+
+	blameNodes, err = p.blameMgr.GetUnicastBlame(fullName)
+	c.Assert(err, IsNil)
+	c.Assert(blameNodes, HasLen, 0)
 }
 
 func (p *policyTestSuite) TestGetBroadcastBlame(c *C) {

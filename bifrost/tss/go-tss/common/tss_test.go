@@ -102,6 +102,7 @@ func (t *TssTestSuite) TestContains(c *C) {
 
 func (t *TssTestSuite) TestTssProcessOutCh(c *C) {
 	conf := TssConfig{}
+	outbound := make(chan *messages.BroadcastMsgChan, 1)
 	localTestPubKeys := make([]string, len(testPubKeys))
 	copy(localTestPubKeys, testPubKeys[:])
 	partiesID, localPartyID, err := conversion.GetParties(localTestPubKeys, testPubKeys[0])
@@ -119,9 +120,40 @@ func (t *TssTestSuite) TestTssProcessOutCh(c *C) {
 	}
 	msg := btss.NewMessageWrapper(messageRouting, testContent)
 	tssMsg := btss.NewMessage(messageRouting, testContent, msg)
-	tssCommonStruct := NewTssCommon("", nil, conf, "test", t.privKey, 1)
+	tssCommonStruct := NewTssCommon("", outbound, conf, "test", t.privKey, 1)
 	err = tssCommonStruct.ProcessOutCh(tssMsg, messages.TSSKeyGenMsg)
 	c.Assert(err, IsNil)
+
+	emitted := <-outbound
+	var wireMsg messages.WireMessage
+	err = json.Unmarshal(emitted.WrappedMessage.Payload, &wireMsg)
+	c.Assert(err, IsNil)
+	c.Assert(wireMsg.RoundInfo, Equals, tssMsg.Type())
+}
+
+func (t *TssTestSuite) TestRoundInfoAccessors(c *C) {
+	tssCommonStruct := NewTssCommon("", nil, TssConfig{}, "test", t.privKey, 1)
+	c.Assert(tssCommonStruct.GetRoundInfo(), Equals, "")
+
+	const iterations = 1000
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			tssCommonStruct.SetRoundInfo(fmt.Sprintf("round-%d", i))
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			_ = tssCommonStruct.GetRoundInfo()
+		}
+	}()
+	wg.Wait()
+
+	tssCommonStruct.SetRoundInfo("final-round")
+	c.Assert(tssCommonStruct.GetRoundInfo(), Equals, "final-round")
 }
 
 func fabricateTssMsg(c *C, privKey tcrypto.PrivKey, partyID *btss.PartyID, roundInfo, msg, msgID string, msgType messages.THORChainTSSMessageType) (*messages.WrappedMessage, []byte) {
@@ -243,7 +275,7 @@ func (t *TssTestSuite) testDropMsgOwner(c *C, privKey tcrypto.PrivKey, tssCommon
 	c.Assert(err, Equals, blame.ErrHashCheck)
 	// since we re-use the tsscommon, so we may have more than one signature
 	var blameSig [][]byte
-	blameNodes := tssCommonStruct.blameMgr.GetBlame().BlameNodes
+	blameNodes := tssCommonStruct.blameMgr.GetBlame().Snapshot().BlameNodes
 	for _, el := range blameNodes {
 		blameSig = append(blameSig, el.BlameSignature)
 	}
@@ -460,7 +492,7 @@ func (t *TssTestSuite) TestProcessInvalidMsgBlame(c *C) {
 
 	fakeErr := btss.NewError(errors.New("test error"), "test task", 1, nil, culprits...)
 	tssCommonStruct.processInvalidMsgBlame(wiredMsg.RoundInfo, blame.RoundInfo{RoundMsg: roundInfo}, fakeErr)
-	blameResult := tssCommonStruct.GetBlameMgr().GetBlame()
+	blameResult := tssCommonStruct.GetBlameMgr().GetBlame().Snapshot()
 	c.Assert(blameResult.BlameNodes, HasLen, 3)
 
 	routingInfo := btss.MessageRouting{
@@ -499,7 +531,7 @@ func (t *TssTestSuite) TestProcessInvalidMsgBlameEmptyCulprits(c *C) {
 	err := tssCommonStruct.processInvalidMsgBlame(roundInfo, blame.RoundInfo{RoundMsg: roundInfo}, fakeErr)
 	c.Assert(err, NotNil) // original cause is preserved as wrapped error
 
-	blameResult := tssCommonStruct.GetBlameMgr().GetBlame()
+	blameResult := tssCommonStruct.GetBlameMgr().GetBlame().Snapshot()
 	c.Assert(blameResult.BlameNodes, HasLen, 0)
 	c.Assert(blameResult.FailReason, Equals, blame.TssBrokenMsg)
 }

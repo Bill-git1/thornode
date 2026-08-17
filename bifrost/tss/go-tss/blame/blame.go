@@ -72,6 +72,50 @@ func (b *Blame) AlreadyBlame() bool {
 	return len(b.BlameNodes) > 0
 }
 
+// GetFailReason returns the current fail reason under the read lock.
+func (b *Blame) GetFailReason() string {
+	b.blameLock.RLock()
+	defer b.blameLock.RUnlock()
+	return b.FailReason
+}
+
+// BlameNodesCount returns the number of blamed nodes under the read lock.
+func (b *Blame) BlameNodesCount() int {
+	b.blameLock.RLock()
+	defer b.blameLock.RUnlock()
+	return len(b.BlameNodes)
+}
+
+// SetIsUnicast sets the unicast flag under the write lock.
+func (b *Blame) SetIsUnicast(isUnicast bool) {
+	b.blameLock.Lock()
+	defer b.blameLock.Unlock()
+	b.IsUnicast = isUnicast
+}
+
+// SetRound sets the round under the write lock.
+func (b *Blame) SetRound(round string) {
+	b.blameLock.Lock()
+	defer b.blameLock.Unlock()
+	b.Round = round
+}
+
+// Snapshot returns a consistent copy with an independent lock and node slice.
+func (b *Blame) Snapshot() Blame {
+	b.blameLock.RLock()
+	defer b.blameLock.RUnlock()
+
+	nodes := make([]Node, len(b.BlameNodes))
+	copy(nodes, b.BlameNodes)
+	return Blame{
+		FailReason: b.FailReason,
+		IsUnicast:  b.IsUnicast,
+		Round:      b.Round,
+		BlameNodes: nodes,
+		blameLock:  &sync.RWMutex{},
+	}
+}
+
 // AddBlameNodes add nodes to the blame list
 func (b *Blame) AddBlameNodes(newBlameNodes ...Node) {
 	b.blameLock.Lock()

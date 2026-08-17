@@ -148,7 +148,7 @@ func (t *TssServer) Keygen(req keygen.Request) (keygen.Response, error) {
 	keygenTime := time.Since(beforeKeygen)
 	if err != nil {
 		t.tssMetrics.UpdateKeyGen(keygenTime, false)
-		blameNodes := *blameMgr.GetBlame()
+		blameNodes := blameMgr.GetBlame().Snapshot()
 		t.logger.Error().Err(err).Msgf("failed to generate key, blaming: %+v", blameNodes.BlameNodes)
 		return keygen.NewResponse(req.Algo, "", "", common.Fail, blameNodes), err
 	} else {
@@ -170,7 +170,7 @@ func (t *TssServer) Keygen(req keygen.Request) (keygen.Response, error) {
 		status = common.Fail
 	}
 
-	blameNodes := *blameMgr.GetBlame()
+	blameNodes := blameMgr.GetBlame().Snapshot()
 	t.logger.Trace().Msgf("returning from keygen with status=%d, blaming=%+v", status, blameNodes.BlameNodes)
 	return keygen.NewResponse(
 		req.Algo,
@@ -347,13 +347,13 @@ func (t *TssServer) KeygenAllAlgo(req keygen.Request) ([]keygen.Response, error)
 			t.tssMetrics.UpdateKeyGen(keygenTime, false)
 			t.logger.Error().Err(keygenErr).Msg("err in keygen")
 			blameMgr := instance.GetTssCommonStruct().GetBlameMgr()
-			blameNode = *blameMgr.GetBlame()
+			blameNode = blameMgr.GetBlame().Snapshot()
 			break
 		} else {
 			t.tssMetrics.UpdateKeyGen(keygenTime, true)
 		}
 
-		blameNodes := *blameMgr.GetBlame()
+		blameNodes := blameMgr.GetBlame().Snapshot()
 		var newPubKey string
 		var addr types.AccAddress
 		switch algo {

@@ -15,6 +15,18 @@ import (
 
 var testProtocolID protocol.ID = "/p2p/test-stream"
 
+func TestPayloadDeadlineRelationship(t *testing.T) {
+	if TimeoutReadPayload != 40*time.Second {
+		t.Fatalf("TimeoutReadPayload = %s, want 40s", TimeoutReadPayload)
+	}
+	if TimeoutWritePayload != 40*time.Second {
+		t.Fatalf("TimeoutWritePayload = %s, want 40s", TimeoutWritePayload)
+	}
+	if TimeoutReadPayload < TimeoutWritePayload {
+		t.Fatalf("read timeout (%s) must be at least write timeout (%s)", TimeoutReadPayload, TimeoutWritePayload)
+	}
+}
+
 type MockNetworkStream struct {
 	*bytes.Buffer
 	protocol            *protocol.ID

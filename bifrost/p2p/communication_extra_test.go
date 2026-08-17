@@ -84,7 +84,7 @@ func TestBroadcastEmptyPeers(t *testing.T) {
 	comm, err := NewCommunication(&Config{Port: 7791, RendezvousString: "test"}, nil, nil)
 	assert.NoError(t, err)
 	// Should return immediately without panicking
-	comm.Broadcast(nil, []byte("hello"), "test")
+	comm.Broadcast(nil, []byte("hello"), "test", messages.TSSKeyGenMsg)
 }
 
 func TestReleaseStream(t *testing.T) {
@@ -155,11 +155,11 @@ func (CommunicationTestSuite) TestBroadcastAndProcessBroadcast(c *C) {
 	}()
 
 	// Broadcast with no peers should return immediately
-	comm.Broadcast(nil, []byte("hello"), "test")
-	comm.Broadcast([]peer.ID{}, []byte("hello"), "test")
+	comm.Broadcast(nil, []byte("hello"), "test", messages.TSSKeyGenMsg)
+	comm.Broadcast([]peer.ID{}, []byte("hello"), "test", messages.TSSKeyGenMsg)
 
 	// Broadcast to self should silently succeed (writeToStream skips self)
-	comm.Broadcast([]peer.ID{comm.host.ID()}, []byte("hello"), "test-self")
+	comm.Broadcast([]peer.ID{comm.host.ID()}, []byte("hello"), "test-self", messages.TSSKeyGenMsg)
 	// Give it a moment for the goroutine
 	time.Sleep(time.Millisecond * 100)
 }
