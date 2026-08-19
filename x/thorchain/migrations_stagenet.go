@@ -196,3 +196,7 @@ func (m Migrator) Migrate15to16(_ sdk.Context) error {
 func (m Migrator) Migrate16to17(_ sdk.Context) error {
 	return nil
 }
+
+func (m Migrator) Migrate17to18(_ sdk.Context) error {
+	return nil
+}

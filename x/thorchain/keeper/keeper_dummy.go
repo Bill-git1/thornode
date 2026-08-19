@@ -126,6 +126,10 @@ func (k KVStoreDummy) BurnFromModule(ctx cosmos.Context, module string, coin com
 	return kaboom
 }
 
+func (k KVStoreDummy) BurnEntireSynthSupply(ctx cosmos.Context, synthAsset common.Asset) (cosmos.Uint, error) {
+	return cosmos.ZeroUint(), kaboom
+}
+
 func (k KVStoreDummy) MintAndSendToAccount(ctx cosmos.Context, to cosmos.AccAddress, coin common.Coin) error {
 	return kaboom
 }

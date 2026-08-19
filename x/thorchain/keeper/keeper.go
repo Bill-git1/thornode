@@ -29,6 +29,7 @@ type Keeper interface {
 	SendFromModuleToAccount(ctx cosmos.Context, from string, to cosmos.AccAddress, coin common.Coins) error
 	MintToModule(ctx cosmos.Context, module string, coin common.Coin) error
 	BurnFromModule(ctx cosmos.Context, module string, coin common.Coin) error
+	BurnEntireSynthSupply(ctx cosmos.Context, synthAsset common.Asset) (cosmos.Uint, error)
 	MintAndSendToAccount(ctx cosmos.Context, to cosmos.AccAddress, coin common.Coin) error
 	GetModuleAddress(module string) (common.Address, error)
 	GetModuleAccAddress(module string) cosmos.AccAddress

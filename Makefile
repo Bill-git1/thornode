@@ -244,6 +244,7 @@ test-network-specific:
 	@go test -tags stagenet ${RUN_FLAG} ./common
 	@go test -tags chainnet ${RUN_FLAG} ./common
 	@go test -tags mainnet ${RUN_FLAG} ./common ./bifrost/pkg/chainclients/utxo/...
+	@go test -tags mainnet ./x/thorchain -run TestPackage -check.f Migrate # mainnet store-migration tests are mainnet-tagged; otherwise they never run in CI (unit-tests job is mocknet-only)
 	@go test -tags mocknet ${RUN_FLAG} ./common ./bifrost/pkg/chainclients/utxo/...
 
 test-race:

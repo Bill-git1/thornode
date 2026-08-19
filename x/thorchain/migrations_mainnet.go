@@ -1789,3 +1789,812 @@ func mainnetDanglingSettlementSpecs16to17() ([]danglingSettlementSpec, error) {
 
 	return specs, nil
 }
+
+// adr028WritedownSpec identifies one pool whose BalanceAsset must be written down
+// by `deltaAsset` (1e8) to remove the ADR-028 residual "phantom depth" — pool
+// depth in excess of the live-backed Asgard vault holdings.
+type adr028WritedownSpec struct {
+	asset common.Asset
+	// deltaAsset is the phantom slice to remove: pool.BalanceAsset − live backing.
+	// It is stored as a DELTA rather than an absolute target because the delta is
+	// height-invariant (a swap credits the pool and the vault equally, so the gap
+	// is a frozen historical amount) while an absolute target goes stale the
+	// moment the pool trades. The write target is derived from live depth at
+	// execution: target = pool.BalanceAsset − deltaAsset.
+	deltaAsset cosmos.Uint
+}
+
+// Migrate17to18 completes the ADR-028 reconciliation begun in Migrate15to16 by
+// writing down the residual pool "phantom depth". Migrate15to16 cut the
+// record/obligation side but left two halves unfinished: pool depth that still
+// exceeds live-backed Asgard holdings (the ~-$3.5M DEFICIT, corrected here), and
+// the freed L1 asset left physically in Asgard (the ~+$3.1M orphaned-ΔA SURPLUS,
+// left in place — excess L1 backing, net-solvent, swept later if ever).
+//
+// For each deficit pool, write pool.BalanceAsset down to
+//
+//	target = max(0, asgard − trade.depth − secured.depth − in-flight-stream)
+//
+// so pool + trade + secured == asgard. trade.depth and secured.depth are 1:1
+// redemption claims honored at par and are NOT touched. BalanceRune is reduced by
+// the symmetric ratio ΔR = ΔA × BR/BA to hold pool price constant, and the freed
+// RUNE is moved Asgard→Reserve in FULL — none burned (all cut RUNE to Reserve),
+// matching the seed pools. After all pool writes,
+// RUNEPool.ReserveUnits is re-solved so POL providers are held whole (the reserve
+// bucket absorbs the depth loss), same as Migrate15to16.
+//
+// Snapshot basis: THOR height 26,967,482. The per-pool targets are POINT-IN-TIME
+// and MUST be re-derived against fresh chain state at the actual upgrade height
+// and hardcoded before release, exactly as Migrate15to16's 2026-05-26 snapshot.
+func (m Migrator) Migrate17to18(ctx sdk.Context) error {
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	specs, err := mainnetADR028WritedownSpecs17to18()
+	if err != nil {
+		return err
+	}
+
+	// Snapshot POL provider value BEFORE any pool write; held whole by the
+	// ReserveUnits re-solve after all writes (reserve absorbs the depth loss).
+	runePool, err := m.mgr.Keeper().GetRUNEPool(ctx)
+	if err != nil {
+		return fmt.Errorf("adr028 writedown: fail to get RUNEPool: %w", err)
+	}
+	vPre, err := runePoolValue(ctx, m.mgr)
+	if err != nil {
+		return fmt.Errorf("adr028 writedown: fail to compute runePoolValue pre: %w", err)
+	}
+	providerValuePre := common.GetSafeShare(runePool.PoolUnits, runePool.TotalUnits(), vPre)
+
+	// ── Pre-flight balance checks — before any mutation ──────────────────────
+	// A mid-loop send failure is NOT recoverable partial state: RunMigrations
+	// returns the error, the upgrade handler panics, and the block never commits
+	// — deterministically on every node, i.e. a chain halt at the upgrade height
+	// needing an emergency binary. Verify up front that Asgard can fund the
+	// writedown ΔR moves (ΣΔR, summed exactly as the loop below computes/skips it)
+	// plus the seed pools' freed RUNE, and that the Reserve can fund the seed draws
+	// plus the Secured-Ops coverage, so a shortfall aborts cleanly instead.
+	totalDeltaR := cosmos.ZeroUint()
+	for _, spec := range specs {
+		pool, err := m.mgr.Keeper().GetPool(ctx, spec.asset)
+		if err != nil || pool.IsEmpty() || pool.BalanceAsset.LTE(spec.deltaAsset) {
+			continue
+		}
+		dR := common.GetUncappedShare(spec.deltaAsset, pool.BalanceAsset, pool.BalanceRune)
+		if dR.IsZero() || dR.GTE(pool.BalanceRune) {
+			continue // mirrors the writedown loop's skip below
+		}
+		totalDeltaR = totalDeltaR.Add(dR)
+	}
+	// The seed step (seedADR028Pools) also moves RUNE both ways: a seed pool with
+	// more RUNE than its $5k target frees the excess Asgard→Reserve; one with less
+	// draws the shortfall Reserve→Asgard. Mirror both, so the Asgard guard covers
+	// ΣΔR AND the (often larger) seed-freed drains, and the Reserve guard covers
+	// the seed draws AND the Secured-Ops coverage.
+	seedSpecs, err := mainnetADR028SeedSpecs17to18()
+	if err != nil {
+		return err
+	}
+	seedDraw, seedFreed := cosmos.ZeroUint(), cosmos.ZeroUint()
+	for _, spec := range seedSpecs {
+		pool, err := m.mgr.Keeper().GetPool(ctx, spec.asset)
+		if err != nil || pool.IsEmpty() {
+			continue
+		}
+		switch {
+		case spec.seedRune.GT(pool.BalanceRune):
+			seedDraw = seedDraw.Add(common.SafeSub(spec.seedRune, pool.BalanceRune))
+		case pool.BalanceRune.GT(spec.seedRune):
+			seedFreed = seedFreed.Add(common.SafeSub(pool.BalanceRune, spec.seedRune))
+		}
+	}
+	asgardNeed := totalDeltaR.Add(seedFreed)
+	if bal := m.mgr.Keeper().GetRuneBalanceOfModule(ctx, AsgardName); bal.LT(asgardNeed) {
+		return fmt.Errorf("adr028 writedown: Asgard RUNE %s < ΣΔR+seedFreed %s; aborting before any mutation", bal, asgardNeed)
+	}
+	reserveNeed := cosmos.NewUint(adr028SecuredOpsCoverageRune).Add(seedDraw)
+	if bal := m.mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName); bal.LT(reserveNeed) {
+		return fmt.Errorf("adr028 writedown: Reserve RUNE %s < coverage+seedDraw %s; aborting before any mutation", bal, reserveNeed)
+	}
+
+	// Snapshot pre-mutation CalcUnits safety for every touched pool. After all
+	// mutations, the recompute loop checks whether any pool TRANSITIONED from
+	// safe (2×BA > synthSupply) to unsafe (2×BA ≤ synthSupply) — a migration-
+	// caused CalcUnits blow-up that must abort. Pre-existing unsafe pools are
+	// logged and skipped (the migration didn't create or worsen them).
+	preMigrationSafe := make(map[string]bool, len(specs)+len(seedSpecs))
+	for _, s := range specs {
+		pool, err := m.mgr.Keeper().GetPool(ctx, s.asset)
+		if err != nil || pool.IsEmpty() {
+			continue
+		}
+		ss := m.mgr.Keeper().GetTotalSupply(ctx, s.asset.GetSyntheticAsset())
+		preMigrationSafe[s.asset.String()] = pool.BalanceAsset.MulUint64(2).GT(ss)
+	}
+	for _, s := range seedSpecs {
+		if _, already := preMigrationSafe[s.asset.String()]; already {
+			continue // pool appears in both specs — writedown snapshot is canonical
+		}
+		pool, err := m.mgr.Keeper().GetPool(ctx, s.asset)
+		if err != nil || pool.IsEmpty() {
+			continue
+		}
+		ss := m.mgr.Keeper().GetTotalSupply(ctx, s.asset.GetSyntheticAsset())
+		preMigrationSafe[s.asset.String()] = pool.BalanceAsset.MulUint64(2).GT(ss)
+	}
+
+	for _, spec := range specs {
+		pool, err := m.mgr.Keeper().GetPool(ctx, spec.asset)
+		if err != nil {
+			return fmt.Errorf("adr028 writedown: fail to get pool %s: %w", spec.asset, err)
+		}
+		if pool.IsEmpty() {
+			ctx.Logger().Error("adr028 writedown: empty pool; skipping", "asset", spec.asset)
+			continue
+		}
+		// Skip if the pool already sits at/below target (drifted since snapshot) —
+		// a writedown would only apply if depth still exceeds backing.
+		// The write target is derived from LIVE depth, not hardcoded: the phantom
+		// slice is height-invariant, so removing it from whatever the pool holds at
+		// execution keeps the migration correct however long after the snapshot the
+		// upgrade fires. A pool that has since shrunk below its own phantom slice
+		// contradicts that invariant — skip it loudly rather than zero the pool.
+		if pool.BalanceAsset.LTE(spec.deltaAsset) {
+			ctx.Logger().Error("adr028 writedown: BalanceAsset <= phantom delta; skipping",
+				"asset", spec.asset, "balance_asset", pool.BalanceAsset, "delta", spec.deltaAsset)
+			continue
+		}
+		deltaA := spec.deltaAsset
+		target := common.SafeSub(pool.BalanceAsset, deltaA)
+		// ΔR = ΔA × BR/BA — symmetric AMM identity, holds pool price constant.
+		deltaR := common.GetUncappedShare(deltaA, pool.BalanceAsset, pool.BalanceRune)
+		if deltaR.IsZero() {
+			continue // dust pool: ΔR rounds to 0, nothing to move
+		}
+		if deltaR.GTE(pool.BalanceRune) {
+			ctx.Logger().Error("adr028 writedown: ΔR >= BalanceRune (would zero or underflow the RUNE side); skipping",
+				"asset", spec.asset, "balance_rune", pool.BalanceRune, "delta_r", deltaR)
+			continue
+		}
+
+		pool.BalanceAsset = target
+		pool.BalanceRune = common.SafeSub(pool.BalanceRune, deltaR)
+		if err := m.mgr.Keeper().SetPool(ctx, pool); err != nil {
+			return fmt.Errorf("adr028 writedown: fail to set pool %s: %w", spec.asset, err)
+		}
+
+		// Resolve CalcUnits clamp (2×target ≤ synthSupply) by reducing synth
+		// supply. Two paths:
+		//   UNDERBACKED (named pools with live savers + vault free backing):
+		//     step-3 savers haircut — settle savers at real free backing.
+		//   All others: BurnEntireSynthSupply.
+		// The pool set is explicit because the generic "vault − pool.BA"
+		// gate doesn't account for trade/secured claims that reduce free
+		// backing; hardcoding avoids burning savers that should be settled.
+		synthAsset := spec.asset.GetSyntheticAsset()
+		synthSupply := m.mgr.Keeper().GetTotalSupply(ctx, synthAsset)
+		if !synthSupply.IsZero() && target.MulUint64(2).LTE(synthSupply) {
+			if adr028SaversHaircutPools[spec.asset.String()] {
+				freeBacking, err := m.adr028FreeBacking(ctx, spec.asset, target)
+				if err != nil {
+					return fmt.Errorf("adr028 writedown: %w", err)
+				}
+				if !freeBacking.IsZero() {
+					if err := m.adr028SaversHaircut(ctx, spec.asset, synthAsset, synthSupply, freeBacking); err != nil {
+						return fmt.Errorf("adr028 writedown: fail savers haircut for %s: %w", spec.asset, err)
+					}
+				} else {
+					ctx.Logger().Error("adr028 writedown: haircut pool has zero free backing, degrading to full burn",
+						"asset", spec.asset)
+					burned, err := m.mgr.Keeper().BurnEntireSynthSupply(ctx, synthAsset)
+					if err != nil {
+						return fmt.Errorf("adr028 writedown: fail to burn synth supply for %s: %w", spec.asset, err)
+					}
+					ctx.Logger().Info("adr028 writedown: burned entire synth supply (degraded)",
+						"asset", spec.asset, "synth_burned", burned)
+				}
+			} else {
+				wasSafe, hasPre := preMigrationSafe[spec.asset.String()]
+				if hasPre && !wasSafe {
+					ctx.Logger().Info("adr028 writedown: pre-existing CalcUnits clamp, skipping burn",
+						"asset", spec.asset, "target", target, "synth_supply", synthSupply)
+				} else {
+					burned, err := m.mgr.Keeper().BurnEntireSynthSupply(ctx, synthAsset)
+					if err != nil {
+						return fmt.Errorf("adr028 writedown: fail to burn synth supply for %s: %w", spec.asset, err)
+					}
+					if adr028ZeroSaversPools[spec.asset.String()] {
+						if err := m.adr028ZeroSavers(ctx, synthAsset); err != nil {
+							return fmt.Errorf("adr028 writedown: fail to zero savers for %s: %w", spec.asset, err)
+						}
+					}
+					ctx.Logger().Info("adr028 writedown: burned entire synth supply",
+						"asset", spec.asset, "synth_burned", burned)
+				}
+			}
+		}
+
+		emitPoolBalanceChangedEvent(ctx, NewPoolMod(spec.asset, deltaR, false, deltaA, false), "adr028_writedown", m.mgr)
+
+		// Dispose the freed RUNE by moving it Asgard→Reserve in FULL — none burned
+		// (all cut RUNE goes to Reserve), matching the seed pools. Deliberately NOT
+		// splitFreedRune (that half-burns; kept only for the shipped Migrate15to16).
+		freedRune := common.NewCoin(common.RuneAsset(), deltaR)
+		if err := m.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(freedRune)); err != nil {
+			return fmt.Errorf("adr028 writedown: fail to move freed RUNE Asgard→Reserve for %s: %w", spec.asset, err)
+		}
+
+		ctx.Logger().Info("adr028 writedown: pool depth written down",
+			"asset", spec.asset, "delta_asset", deltaA, "delta_rune", deltaR,
+			"new_balance_asset", pool.BalanceAsset, "new_balance_rune", pool.BalanceRune)
+	}
+
+	// ── Re-seed the four empty-vault pools to $5k per side ───────────────────
+	// These are NOT written down to backing. Both sides are cut to a $5k seed so
+	// the pool quotes at market price; the displaced RUNE is moved Asgard→Reserve
+	// in full (not burned). Real backing / claim settlement is a separate manual
+	// step after the upgrade.
+	if err := m.seedADR028Pools(ctx); err != nil {
+		return err
+	}
+
+	// ── Recompute SynthUnits for ALL pools ──────────────────────────────────
+	// CalcUnits derives SU = L·S/(2A−S) from the pool's current BalanceAsset.
+	// The writedown and seed paths mutated BalanceAsset without recomputing, so
+	// persisted SynthUnits are stale. Recompute before the POL re-solve, which
+	// reads GetPoolUnits() (= LPUnits + SynthUnits) via polPoolValue.
+	//
+	// The CalcUnits-clamp guard aborts only on a SAFE→UNSAFE transition that the
+	// migration caused: a pool that was 2×BA > S before mutation but 2×BA ≤ S
+	// after. Pre-existing clamp pools (already
+	// 2×BA ≤ S before the migration) are logged and skipped; their CalcUnits
+	// recompute would just re-persist the clamped value they already had.
+	allPools, err := m.mgr.Keeper().GetPools(ctx)
+	if err != nil {
+		return fmt.Errorf("adr028 writedown: fail to get pools for SynthUnits recompute: %w", err)
+	}
+	for _, pool := range allPools {
+		if pool.Asset.IsNative() || pool.BalanceAsset.IsZero() {
+			continue
+		}
+		synthSupply := m.mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
+		if pool.BalanceAsset.MulUint64(2).LTE(synthSupply) {
+			wasSafe, hasSnapshot := preMigrationSafe[pool.Asset.String()]
+			if hasSnapshot && wasSafe {
+				// Skip rather than abort: user-held synths surviving the haircut
+				// can keep the pool clamped even after the burn. An abort here
+				// would deterministically halt the chain at the upgrade height.
+				ctx.Logger().Error("adr028 writedown: pool crossed safe→clamp (migration-caused); skipping recompute",
+					"asset", pool.Asset, "two_ba", pool.BalanceAsset.MulUint64(2), "synth_supply", synthSupply)
+			} else {
+				ctx.Logger().Error("adr028 writedown: pre-existing CalcUnits clamp (not migration-caused); skipping recompute",
+					"asset", pool.Asset, "balance_asset", pool.BalanceAsset, "synth_supply", synthSupply)
+			}
+			continue
+		}
+		pool.CalcUnits(synthSupply)
+		if err := m.mgr.Keeper().SetPool(ctx, pool); err != nil {
+			return fmt.Errorf("adr028 writedown: fail to save recomputed SynthUnits for %s: %w", pool.Asset, err)
+		}
+	}
+
+	// ── POL provider-whole solve (after all pool writes) ─────────────────────
+	// Re-solve RUNEPool.ReserveUnits so provider value is preserved (the reserve
+	// bucket absorbs the depth loss). Identical structure to Migrate15to16; a
+	// no-op when POL holds no units in the written-down pools.
+	vPost, err := runePoolValue(ctx, m.mgr)
+	if err != nil {
+		return fmt.Errorf("adr028 writedown: fail to compute runePoolValue post: %w", err)
+	}
+	switch {
+	case runePool.PoolUnits.IsZero():
+		ctx.Logger().Info("adr028 writedown: PoolUnits is zero; leaving ReserveUnits unchanged",
+			"reserve_units", runePool.ReserveUnits)
+	case providerValuePre.GT(vPost) || runePool.TotalUnits().IsZero():
+		// Skip the re-solve rather than abort: the writedown should still proceed.
+		// The accounting drift is safe-direction (CurrentDeposit overstated → POL
+		// under-deposits, not over-deposits). An abort here would deterministically
+		// halt the chain at the upgrade height.
+		ctx.Logger().Error("adr028 writedown: POL re-solve skipped — providerValuePre > vPost (or TotalUnits=0); leaving ReserveUnits unchanged",
+			"v_pre", vPre, "v_post", vPost, "provider_value_pre", providerValuePre,
+			"reserve_units", runePool.ReserveUnits)
+	default:
+		// ReserveUnits_post = PoolUnits × vPost / providerValuePre − PoolUnits
+		newTotalUnits := common.GetUncappedShare(runePool.PoolUnits, providerValuePre, vPost)
+		runePool.ReserveUnits = common.SafeSub(newTotalUnits, runePool.PoolUnits)
+	}
+	m.mgr.Keeper().SetRUNEPool(ctx, runePool)
+	ctx.Logger().Info("adr028 writedown: RUNEPool.ReserveUnits adjusted",
+		"v_pre", vPre, "v_post", vPost,
+		"provider_value_pre", providerValuePre,
+		"new_reserve_units", runePool.ReserveUnits)
+
+	// ── Secured-Ops coverage settlement ──────────────────────────────────────
+	// The three empty-vault pools carry trade+secured claims their drained vaults
+	// cannot honour. Send the RUNE-equivalent of that uncovered claim value from
+	// the Reserve to the TC Secured-Ops account, which settles the claim holders
+	// off-chain in kind.
+	if err := m.sendADR028SecuredOpsCoverage(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// adr028SecuredOpsAddr is the TC Secured-Ops THORChain account that receives the
+// RUNE-equivalent coverage for the empty-vault pools' unbacked trade+secured
+// claims (ECDSA pubkey 03af714f…3236fbcd). It is deliberately NOT the similarly
+// named Secured-Ops vault (03de3ba3…).
+const adr028SecuredOpsAddr = "thor1gkvvzfnkyqv8dfhk0593tfhgr03a3ndgjqdalf"
+
+// adr028SecuredOpsCoverageRune is the RUNE-equivalent of the uncovered
+// trade+secured claim value across the three empty-vault seed pools, valued at
+// the h=26,967,482 snapshot (RUNE $0.405553, ETH $1,802.40):
+//
+//	BSC.USDC 23,751.67 + BSC.USDT 23,388.57 + BASE.ETH 9.2217 ETH ≈ $63,761
+//	=> 157,221.00 RUNE
+//
+// Like the seed constants this is $-denominated and MUST be re-derived at the
+// upgrade height (RUNE and ETH prices drift) and hardcoded before release.
+const adr028SecuredOpsCoverageRune = 15722100323851
+
+// sendADR028SecuredOpsCoverage moves the Secured-Ops coverage RUNE from the
+// Reserve to the TC Secured-Ops account. Failure aborts the migration — the
+// amount and recipient are fixed, pre-verified constants.
+func (m Migrator) sendADR028SecuredOpsCoverage(ctx sdk.Context) error {
+	to, err := cosmos.AccAddressFromBech32(adr028SecuredOpsAddr)
+	if err != nil {
+		return fmt.Errorf("adr028 secured-ops: parse address %s: %w", adr028SecuredOpsAddr, err)
+	}
+	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(adr028SecuredOpsCoverageRune))
+	if err := m.mgr.Keeper().SendFromModuleToAccount(ctx, ReserveName, to, common.NewCoins(coin)); err != nil {
+		return fmt.Errorf("adr028 secured-ops: send Reserve→%s: %w", adr028SecuredOpsAddr, err)
+	}
+	ctx.Logger().Info("adr028 secured-ops: coverage sent from Reserve",
+		"to", adr028SecuredOpsAddr, "rune", coin.Amount)
+	return nil
+}
+
+// mainnetADR028WritedownSpecs17to18 returns the per-pool phantom-depth slice to
+// remove for the ADR-028 reconciliation.
+//
+// SNAPSHOT @ THOR height 26,967,482 (reconciliation inspector's full CSV):
+//
+//	backing = asgard − trade.depth − secured.depth − stream_inflight
+//	delta   = pool.BalanceAsset − backing        (both 1e8)
+//
+// These are DELTAS, not absolute targets, and that distinction is load-bearing.
+// The phantom slice is a frozen historical hole: a swap credits the pool and the
+// vault equally, so pool.BalanceAsset and backing move in lockstep and their gap
+// does not change with trading. An absolute target, by contrast, goes stale the
+// moment the pool trades — measured against live chain state 148,076 blocks
+// (~10 days) after this snapshot, shipping absolute targets would have
+// over-written-down by ~$302k, concentrated in ETH.USDC/USDT/WBTC/DOGE.
+//
+// Storing the delta and deriving target = pool.BalanceAsset − delta at execution
+// makes the writedown independent of how long after the snapshot the upgrade
+// fires. Invariance was verified empirically across all 26 pools over those
+// 148,076 blocks: 24 bit-identical, AVAX.USDT −41 native, ETH.USDC −2 native.
+// Re-derivation at the upgrade height is therefore a sanity check rather than a
+// correctness dependency (unlike the seed constants, which remain $-denominated
+// at snapshot prices — see mainnetADR028SeedSpecs17to18).
+//
+// This set is the non-THOR positive-deficit rows ONLY. Deliberately EXCLUDED:
+//   - THOR.TCY / THOR.RUJI: native THORChain tokens whose pool.BalanceAsset is
+//     backed by bank/module supply, not asgard vault custody (asgard_record=0 is
+//     by design). Writing them down would destroy two solvent pools.
+//   - Surplus rows (asgard > obligation): AVAX.AVAX, BCH.BCH, BSC.BTCB, BSC.ETH,
+//     BTC.BTC, ETH.ETH, LTC.LTC, SOL.SOL, TRON.TRX, TRON.USDT, XRP.XRP — the
+//     orphaned-ΔA/float side, left in place (excess L1 backing, net-solvent).
+//   - The four SEEDED pools (BSC.USDC, BSC.USDT, BASE.ETH, ETH.THOR) — they are
+//     NOT written down to backing; they are re-seeded and RUNE-funded instead.
+//     See mainnetADR028SeedSpecs17to18.
+//
+// 26 rows total, all positive-target. BSC.BUSD (~$1.17) and ETH.XRUNE are real
+// but dead/sunset tokens — retained for completeness; drop both if the
+// reconciliation excludes dead tokens.
+// adr028SaversHaircutPools identifies writedown pools that carry live saver
+// positions with positive vault free backing. These pools get the step-3
+// savers haircut (settle savers proportionally at free backing) instead of
+// BurnEntireSynthSupply. All other clamped pools are burned entirely.
+var adr028SaversHaircutPools = map[string]bool{
+	"ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48": true,
+}
+
+// adr028ZeroSaversPools identifies UNBACKED writedown pools whose savers
+// records must be zeroed alongside BurnEntireSynthSupply. The synth burn
+// removes the coins but leaves the saver pool and LP records intact —
+// without zeroing, savers would hold phantom units against an empty pool.
+var adr028ZeroSaversPools = map[string]bool{
+	"ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7":  true,
+	"AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E": true,
+	"BSC.BNB": true,
+}
+
+func mainnetADR028WritedownSpecs17to18() ([]adr028WritedownSpec, error) {
+	// {asset identifier, writedown delta BalanceAsset (1e8)}. Generated from the
+	// inspector CSV (pool_BA(snapshot) − live backing), adjusted upward for the
+	// ETH.USDC/ETH.USDT/GAIA.ATOM/ETH.WBTC outbounds that Migrate16to17 requeues
+	// at the same upgrade height: those committed coins still sit in vault.coins
+	// when the CSV was snapshotted, inflating the apparent backing. Without this
+	// adjustment the pools are under-backed once the outbounds settle.
+	rows := []struct {
+		asset string
+		delta uint64
+	}{
+		{"AVAX.SOL-0XFE6B19286885A4F7F55ADAD09C3CD1F906D2478F", 38893875330},
+		{"AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E", 18438759809862},
+		{"AVAX.USDT-0X9702230A8EA53601F5CD2DC00FDBC13D4DF4A8C7", 4256523275720},
+		{"BASE.USDC-0X833589FCD6EDB6E08F4C7C32D4F71B54BDA02913", 685491225982},
+		{"BASE.VVV-0XACFE6019ED1A7DC6F7B508C02D1B04EC88CC21BF", 2957939847},
+		{"BSC.BNB", 4856114802},
+		{"BSC.BUSD-0XE9E7CEA3DEDCA5984780BAFC599BD69ADD087D56", 123066821},
+		{"BSC.TWT-0X4B0F1812E5DF2A09796481FF14017E6005508003", 3298025883526},
+		{"DOGE.DOGE", 188322561538022},
+		{"ETH.AAVE-0X7FC66500C84A76AD7E9C93437BFC5AC33E2DDAE9", 2795812734},
+		{"ETH.DAI-0X6B175474E89094C44DA98B954EEDEAC495271D0F", 245264736890},
+		{"ETH.DPI-0X1494CA1F11D487C2BBE4543E90080AEBA4BA3C2B", 1143217176},
+		{"ETH.FOX-0XC770EEFAD204B5180DF6A14EE197D99D808EE52D", 47623739145492},
+		{"ETH.GUSD-0X056FD409E1D7A124BD7017459DFEA2F387B6D5CD", 6107452410472},
+		{"ETH.LINK-0X514910771AF9CA656AF840DFF83E8264ECF986CA", 104374231717},
+		{"ETH.LUSD-0X5F98805A4E8BE255A32880FDEC7F6728C6568BA0", 6413841177179},
+		{"ETH.SNX-0XC011A73EE8576FB46F5E1C5751CA3B9FE0AF2A6F", 99792896784},
+		{"ETH.TGT-0X108A850856DB3F85D0269A2693D896B394C80325", 77950001213139},
+		{"ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48", 106612841513705}, // 101889575459905 + 4723266053800 (16to17 requeue)
+		{"ETH.USDP-0X8E870D67F660D95D5BE530380D0EC0BD388289E1", 3876245256026},
+		{"ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7", 98310077343961}, // 97010081642161 + 1299995701800 (16to17 requeue)
+		{"ETH.VTHOR-0X815C23ECA83261B6EC689B60CC4A58B54BC24D8D", 3438326325955},
+		{"ETH.WBTC-0X2260FAC5E5542A773AA44FBCFEDF7C193BC2C599", 520601044}, // 520600072 + 972 (16to17 requeue)
+		{"ETH.XRUNE-0X69FA0FEE221AD11012BAB0FDB45D444D3D2CE71C", 7326188839277660},
+		{"ETH.YFI-0X0BC529C00C6401AEF6D220BE8C6EA1667F6AD93E", 105337362},
+		{"GAIA.ATOM", 1679285461912}, // 1657535475912 + 21749986000 (16to17 requeue)
+	}
+
+	specs := make([]adr028WritedownSpec, 0, len(rows))
+	for _, r := range rows {
+		asset, err := common.NewAsset(r.asset)
+		if err != nil {
+			return nil, fmt.Errorf("adr028 writedown: parse asset %s: %w", r.asset, err)
+		}
+		specs = append(specs, adr028WritedownSpec{
+			asset:      asset,
+			deltaAsset: cosmos.NewUint(r.delta),
+		})
+	}
+
+	return specs, nil
+}
+
+// seedADR028Pools cuts the four re-seeded pools to a $5k-per-side seed. Per pool:
+//
+//	pool.BalanceAsset = seedAsset   ($5k of asset)
+//	pool.BalanceRune  = seedRune    ($5k of RUNE)
+//
+// This is a symmetric double-sided haircut: both sides are set to $5k so the
+// pool quotes at market price (a balanced seed is un-skewed — no arbitrage
+// window). The RUNE displaced by collapsing the old depth to the seed is moved
+// Asgard→Reserve in FULL — none of it is burned (unlike the writedown path's
+// splitFreedRune), so the freed RUNE is retained by the protocol. If a pool's
+// RUNE side is somehow already below the seed the shortfall is drawn
+// Reserve→Asgard, but for the frozen empty-vault pools that branch is not
+// expected to fire. Failures on one pool abort the migration — these are fixed,
+// pre-verified rows, so a mismatch means the snapshot is stale.
+func (m Migrator) seedADR028Pools(ctx sdk.Context) error {
+	specs, err := mainnetADR028SeedSpecs17to18()
+	if err != nil {
+		return err
+	}
+
+	for _, spec := range specs {
+		pool, err := m.mgr.Keeper().GetPool(ctx, spec.asset)
+		if err != nil {
+			return fmt.Errorf("adr028 seed: fail to get pool %s: %w", spec.asset, err)
+		}
+		if pool.IsEmpty() {
+			ctx.Logger().Error("adr028 seed: empty pool; skipping", "asset", spec.asset)
+			continue
+		}
+
+		oldAsset, oldRune := pool.BalanceAsset, pool.BalanceRune
+
+		// Reconcile the pool's RUNE side with Asgard: move the displaced RUNE to
+		// the Reserve in full (no burn), or draw the shortfall from the Reserve.
+		switch {
+		case oldRune.GT(spec.seedRune):
+			freed := common.NewCoin(common.RuneNative, common.SafeSub(oldRune, spec.seedRune))
+			if err := m.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(freed)); err != nil {
+				return fmt.Errorf("adr028 seed: fail to move freed RUNE Asgard→Reserve for %s: %w", spec.asset, err)
+			}
+		case spec.seedRune.GT(oldRune):
+			fund := common.NewCoin(common.RuneNative, common.SafeSub(spec.seedRune, oldRune))
+			if err := m.mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, AsgardName, common.NewCoins(fund)); err != nil {
+				return fmt.Errorf("adr028 seed: fail to fund %s Reserve→Asgard: %w", spec.asset, err)
+			}
+		}
+
+		// Burn the pool's entire synth supply if it would trip the CalcUnits
+		// blow-up (2×seedBA ≤ synthSupply). These are frozen ThorFi-era residuals
+		// that treasury already settled; zeroing writes off a settled liability.
+		synthAsset := spec.asset.GetSyntheticAsset()
+		synthSupply := m.mgr.Keeper().GetTotalSupply(ctx, synthAsset)
+		if !synthSupply.IsZero() && spec.seedAsset.MulUint64(2).LTE(synthSupply) {
+			burned, err := m.mgr.Keeper().BurnEntireSynthSupply(ctx, synthAsset)
+			if err != nil {
+				return fmt.Errorf("adr028 seed: fail to burn synth supply for %s: %w", spec.asset, err)
+			}
+			ctx.Logger().Info("adr028 seed: burned residual synth supply",
+				"asset", spec.asset, "synth_burned", burned)
+		}
+
+		pool.BalanceAsset = spec.seedAsset
+		pool.BalanceRune = spec.seedRune
+		if err := m.mgr.Keeper().SetPool(ctx, pool); err != nil {
+			return fmt.Errorf("adr028 seed: fail to set pool %s: %w", spec.asset, err)
+		}
+
+		runeAmt := common.SafeSub(oldRune, spec.seedRune)
+		runeAdd := spec.seedRune.GT(oldRune)
+		if runeAdd {
+			runeAmt = common.SafeSub(spec.seedRune, oldRune)
+		}
+		assetAmt := common.SafeSub(oldAsset, spec.seedAsset)
+		assetAdd := spec.seedAsset.GT(oldAsset)
+		if assetAdd {
+			assetAmt = common.SafeSub(spec.seedAsset, oldAsset)
+		}
+		emitPoolBalanceChangedEvent(ctx, NewPoolMod(spec.asset, runeAmt, runeAdd, assetAmt, assetAdd), "adr028_seed", m.mgr)
+
+		ctx.Logger().Info("adr028 seed: pool re-seeded to $5k per side",
+			"asset", spec.asset,
+			"old_balance_asset", oldAsset, "new_balance_asset", pool.BalanceAsset,
+			"old_balance_rune", oldRune, "new_balance_rune", pool.BalanceRune)
+	}
+
+	return nil
+}
+
+// adr028SeedSpec re-seeds one pool to a fixed $5k-per-side size instead of
+// writing it down to live backing.
+type adr028SeedSpec struct {
+	asset     common.Asset
+	seedAsset cosmos.Uint // pool.BalanceAsset is set to exactly this ($5k of asset)
+	seedRune  cosmos.Uint // pool.BalanceRune is set to exactly this ($5k of RUNE)
+}
+
+// mainnetADR028SeedSpecs17to18 returns the $5k-per-side seed table for the four
+// pools that are re-seeded rather than written down to live backing.
+//
+// SET SELECTION — three of the four are the complete empty-vault set, found by
+// scanning all 30 deficit pools at the snapshot height for
+//
+//	backing = asgard − trade.depth − secured.depth − stream_inflight < 0
+//
+// i.e. the asgard vault cannot cover even the 1:1 trade+secured redemption
+// claims. That returns exactly BSC.USDC, BSC.USDT and BASE.ETH — no other pool
+// qualifies (surplus pools cannot by definition; THOR.TCY/RUJI are bank-backed).
+// ETH.THOR does NOT meet this criterion — its vault holds 4,168,967 THOR, 748%
+// of its claims, and its backing is positive — it is included by explicit
+// decision as the exploit-origin token, not by the scan.
+//
+// SNAPSHOT @ THOR height 26,967,482, priced at that height: RUNE $0.405553,
+// ETH $1,802.40 (ETH.ETH pool spot), THOR $0.033671 (ETH.THOR pool spot),
+// USDC/USDT $1.00. Unlike the writedown deltas, these seed amounts are absolute
+// $-denominated values, so they MUST be re-derived at the actual upgrade height
+// (RUNE and asset prices drift) and hardcoded before release. They are hardcoded
+// rather than computed from live pool state on purpose — a price lookup inside a
+// migration is non-deterministic across nodes and would fork the chain.
+//
+// NOTE: the seeded pools quote against vaults that are physically drained
+// (BSC.USDC holds 7.61 USDC, BSC.USDT 1.51, BASE.ETH 0.04). The seed is balanced
+// $5k/$5k so it quotes at market price; real backing and any claim settlement
+// are handled by a separate manual step after the upgrade.
+func mainnetADR028SeedSpecs17to18() ([]adr028SeedSpec, error) {
+	// $5k RUNE at the snapshot price, identical for all four pools.
+	const seedRune1e8 = 1232884481190
+
+	// {asset, $5k of asset (1e8)}.
+	rows := []struct {
+		asset     string
+		seedAsset uint64
+	}{
+		{"BASE.ETH", 277408024},
+		{"BSC.USDC-0X8AC76A51CC950D9822D68B83FE1AD97B32CD580D", 500000000000},
+		{"BSC.USDT-0X55D398326F99059FF775485246999027B3197955", 500000000000},
+		{"ETH.THOR-0XA5F2211B9B8170F694421F2046281775E8468044", 14849664450329},
+	}
+
+	specs := make([]adr028SeedSpec, 0, len(rows))
+	for _, r := range rows {
+		asset, err := common.NewAsset(r.asset)
+		if err != nil {
+			return nil, fmt.Errorf("adr028 seed: parse asset %s: %w", r.asset, err)
+		}
+		specs = append(specs, adr028SeedSpec{
+			asset:     asset,
+			seedAsset: cosmos.NewUint(r.seedAsset),
+			seedRune:  cosmos.NewUint(seedRune1e8),
+		})
+	}
+
+	return specs, nil
+}
+
+// adr028FreeBacking returns the genuinely unencumbered vault float for asset
+// after the writedown: vault coins − post-writedown pool.BA − trade depth −
+// secured depth. Trade and secured balances are backed by the same Asgard
+// vaults and must be excluded so savers are not settled against collateral
+// already claimed by other account types.
+func (m *Migrator) adr028FreeBacking(ctx cosmos.Context, asset common.Asset, target cosmos.Uint) (cosmos.Uint, error) {
+	vaultCoins := cosmos.ZeroUint()
+	for _, status := range []VaultStatus{ActiveVault, RetiringVault} {
+		vaults, err := m.mgr.Keeper().GetAsgardVaultsByStatus(ctx, status)
+		if err != nil {
+			return cosmos.ZeroUint(), fmt.Errorf("fail to get %s vaults for %s: %w", status, asset, err)
+		}
+		for _, v := range vaults {
+			vaultCoins = vaultCoins.Add(v.GetCoin(asset).Amount)
+		}
+	}
+
+	claims := target
+	tu, err := m.mgr.Keeper().GetTradeUnit(ctx, asset.GetTradeAsset())
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to get trade unit for %s: %w", asset, err)
+	}
+	claims = claims.Add(tu.Depth)
+	sa, err := m.mgr.Keeper().GetSecuredAsset(ctx, asset.GetSecuredAsset())
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to get secured asset for %s: %w", asset, err)
+	}
+	claims = claims.Add(sa.Depth)
+
+	return common.SafeSub(vaultCoins, claims), nil
+}
+
+// adr028SaversHaircut settles saver positions at the pool's real free backing
+// instead of burning their entire synth supply. Mirrors the Migrate15to16
+// step-3 savers haircut pattern: iterates saver LPs, reduces units
+// proportionally, reduces the synth pool depth, then burns the excess synth
+// from Asgard.
+func (m *Migrator) adr028SaversHaircut(
+	ctx cosmos.Context,
+	asset, synthAsset common.Asset,
+	synthSupply, freeBacking cosmos.Uint,
+) error {
+	saverPool, err := m.mgr.Keeper().GetPool(ctx, synthAsset)
+	if err != nil {
+		return fmt.Errorf("fail to get saver pool %s: %w", synthAsset, err)
+	}
+
+	// Determine how much of the savers' depth to keep (capped at freeBacking).
+	saverKeep := freeBacking
+	if saverPool.BalanceAsset.LT(freeBacking) {
+		saverKeep = saverPool.BalanceAsset
+	}
+	saverBurnAmt := common.SafeSub(saverPool.BalanceAsset, saverKeep)
+
+	var saverCount int
+	if !saverBurnAmt.IsZero() {
+		saverLPs := func() []LiquidityProvider {
+			iter := m.mgr.Keeper().GetLiquidityProviderIterator(ctx, synthAsset)
+			defer iter.Close()
+			var lps []LiquidityProvider
+			for ; iter.Valid(); iter.Next() {
+				var lp LiquidityProvider
+				m.mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &lp)
+				lps = append(lps, lp)
+			}
+			return lps
+		}()
+		saverCount = len(saverLPs)
+
+		poolAssetPre := saverPool.BalanceAsset
+		sumLPDeductions := cosmos.ZeroUint()
+		for _, lp := range saverLPs {
+			deduct := lp.Units.Mul(saverBurnAmt).Quo(poolAssetPre)
+			lp.Units = common.SafeSub(lp.Units, deduct)
+			m.mgr.Keeper().SetLiquidityProvider(ctx, lp)
+			sumLPDeductions = sumLPDeductions.Add(deduct)
+		}
+		saverPool.LPUnits = common.SafeSub(saverPool.LPUnits, sumLPDeductions)
+		saverPool.BalanceAsset = common.SafeSub(saverPool.BalanceAsset, saverBurnAmt)
+		if err := m.mgr.Keeper().SetPool(ctx, saverPool); err != nil {
+			return fmt.Errorf("fail to save saver pool %s: %w", synthAsset, err)
+		}
+	}
+
+	// Burn synths in two passes so Asgard retains exactly saverKeep coins
+	// (matching the post-haircut saverPool.BalanceAsset). Reserve-held synths
+	// (ThorFi-era residuals) are burned separately. User-held synths survive
+	// — they're individual bank balances we can't burn.
+	totalBurned := cosmos.ZeroUint()
+
+	// Pass 1: Asgard — burn everything above saverKeep.
+	asgardSynthBal := m.mgr.Keeper().GetBalanceOfModule(ctx, AsgardName, synthAsset.Native())
+	asgardBurn := common.SafeSub(asgardSynthBal, saverKeep)
+	if !asgardBurn.IsZero() {
+		coin := common.NewCoin(synthAsset, asgardBurn)
+		if err := m.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ModuleName, common.NewCoins(coin)); err != nil {
+			return fmt.Errorf("fail to move synths from Asgard for %s: %w", synthAsset, err)
+		}
+		if err := m.mgr.Keeper().BurnFromModule(ctx, ModuleName, coin); err != nil {
+			return fmt.Errorf("fail to burn synths from Asgard for %s: %w", synthAsset, err)
+		}
+		totalBurned = totalBurned.Add(asgardBurn)
+	}
+
+	// Pass 2: Reserve — burn any synths held by the Reserve module.
+	reserveSynthBal := m.mgr.Keeper().GetBalanceOfModule(ctx, ReserveName, synthAsset.Native())
+	if !reserveSynthBal.IsZero() {
+		coin := common.NewCoin(synthAsset, reserveSynthBal)
+		if err := m.mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, ModuleName, common.NewCoins(coin)); err != nil {
+			return fmt.Errorf("fail to move synths from Reserve for %s: %w", synthAsset, err)
+		}
+		if err := m.mgr.Keeper().BurnFromModule(ctx, ModuleName, coin); err != nil {
+			return fmt.Errorf("fail to burn synths from Reserve for %s: %w", synthAsset, err)
+		}
+		totalBurned = totalBurned.Add(reserveSynthBal)
+	}
+
+	if !totalBurned.IsZero() {
+		mod := NewPoolMod(synthAsset, cosmos.ZeroUint(), false, saverBurnAmt, false)
+		emitPoolBalanceChangedEvent(ctx, mod, "adr028_savers_haircut", m.mgr)
+		burnEvt := NewEventMintBurn(BurnSupplyType, synthAsset.Native(), totalBurned, "adr028_savers_haircut")
+		if err := m.mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
+			ctx.Logger().Error("adr028 savers haircut: fail to emit burn event", "error", err, "asset", synthAsset)
+		}
+	}
+
+	userHeld := common.SafeSub(synthSupply, asgardSynthBal.Add(reserveSynthBal))
+	ctx.Logger().Info("adr028 writedown: UNDERBACKED — savers settled at free backing",
+		"asset", asset, "saver_count", saverCount, "saver_burn_amt", saverBurnAmt,
+		"asgard_burn", asgardBurn, "reserve_burn", reserveSynthBal,
+		"user_held_surviving", userHeld, "free_backing", freeBacking)
+	return nil
+}
+
+// adr028ZeroSavers zeros all saver LP records and the saver pool for an
+// UNBACKED pool whose synth supply was just burned. Without this, the saver
+// pool and LP units would reference a synth that no longer exists.
+func (m *Migrator) adr028ZeroSavers(ctx cosmos.Context, synthAsset common.Asset) error {
+	saverPool, err := m.mgr.Keeper().GetPool(ctx, synthAsset)
+	if err != nil {
+		return fmt.Errorf("fail to get saver pool %s: %w", synthAsset, err)
+	}
+	if saverPool.BalanceAsset.IsZero() && saverPool.LPUnits.IsZero() {
+		return nil
+	}
+
+	saverLPs := func() []LiquidityProvider {
+		iter := m.mgr.Keeper().GetLiquidityProviderIterator(ctx, synthAsset)
+		defer iter.Close()
+		var lps []LiquidityProvider
+		for ; iter.Valid(); iter.Next() {
+			var lp LiquidityProvider
+			m.mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &lp)
+			lps = append(lps, lp)
+		}
+		return lps
+	}()
+
+	oldBA := saverPool.BalanceAsset
+	oldLPUnits := saverPool.LPUnits
+
+	for _, lp := range saverLPs {
+		lp.Units = cosmos.ZeroUint()
+		m.mgr.Keeper().SetLiquidityProvider(ctx, lp)
+	}
+
+	saverPool.LPUnits = cosmos.ZeroUint()
+	saverPool.BalanceAsset = cosmos.ZeroUint()
+	if err := m.mgr.Keeper().SetPool(ctx, saverPool); err != nil {
+		return fmt.Errorf("fail to save zeroed saver pool %s: %w", synthAsset, err)
+	}
+
+	ctx.Logger().Info("adr028 writedown: zeroed saver records for UNBACKED pool",
+		"asset", synthAsset, "saver_count", len(saverLPs),
+		"old_balance_asset", oldBA, "old_lp_units", oldLPUnits)
+	return nil
+}

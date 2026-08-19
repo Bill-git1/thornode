@@ -413,6 +413,37 @@ func (k KVStore) BurnFromModule(ctx cosmos.Context, module string, coin common.C
 	return nil
 }
 
+// BurnEntireSynthSupply burns every unit of the given synth denom from every
+// holder account, reducing the bank supply to zero. Used by store migrations to
+// write off settled ThorFi-era synth residuals. For each holder it sends the
+// balance to the thorchain module and burns it.
+func (k KVStore) BurnEntireSynthSupply(ctx cosmos.Context, synthAsset common.Asset) (cosmos.Uint, error) {
+	denom := synthAsset.Native()
+	type holderBalance struct {
+		addr cosmos.AccAddress
+		amt  cosmos.Coin
+	}
+	var holders []holderBalance
+	k.coinKeeper.IterateAllBalances(ctx, func(addr cosmos.AccAddress, coin cosmos.Coin) bool {
+		if coin.Denom == denom && coin.Amount.IsPositive() {
+			holders = append(holders, holderBalance{addr: addr, amt: coin})
+		}
+		return false
+	})
+	total := cosmos.ZeroUint()
+	for _, h := range holders {
+		coins := cosmos.NewCoins(h.amt)
+		if err := k.coinKeeper.SendCoinsFromAccountToModule(ctx, h.addr, ModuleName, coins); err != nil {
+			return total, fmt.Errorf("fail to send %s synth from %s to module: %w", synthAsset, h.addr, err)
+		}
+		if err := k.coinKeeper.BurnCoins(ctx, ModuleName, coins); err != nil {
+			return total, fmt.Errorf("fail to burn %s synth from module: %w", synthAsset, err)
+		}
+		total = total.Add(cosmos.NewUintFromBigInt(h.amt.Amount.BigInt()))
+	}
+	return total, nil
+}
+
 func (k KVStore) MintToModule(ctx cosmos.Context, module string, coin common.Coin) error {
 	// circuit breaker
 	// mint new rune coins until we hit the cap. Once we do, borrow
