@@ -1013,6 +1013,25 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 	}, nil
 }
 
+func sortObserveChains(observeChains []*types.ChainHeight) {
+	sort.Slice(observeChains, func(i, j int) bool {
+		return observeChains[i].Chain < observeChains[j].Chain
+	})
+}
+
+func observeChainsFromHeights(chainHeights map[common.Chain]int64) []*types.ChainHeight {
+	observeChains := make([]*types.ChainHeight, 0, len(chainHeights))
+	// analyze-ignore(map-iteration) - the result is sorted immediately below
+	for chain, height := range chainHeights {
+		observeChains = append(observeChains, &types.ChainHeight{
+			Chain:  chain.String(),
+			Height: height,
+		})
+	}
+	sortObserveChains(observeChains)
+	return observeChains
+}
+
 // queryNode return the Node information related to the request node address
 // /thorchain/node/{nodeaddress}
 func (qs queryServer) queryNode(ctx cosmos.Context, req *types.QueryNodeRequest) (*types.QueryNodeResponse, error) {
@@ -1129,19 +1148,11 @@ func (qs queryServer) queryNode(ctx cosmos.Context, req *types.QueryNodeRequest)
 		result.CurrentAward = reward.String()
 	}
 
-	// TODO: Represent this map as the field directly, instead of making an array?
-	// It would then always be represented in alphabetical order.
 	chainHeights, err := qs.mgr.Keeper().GetLastObserveHeight(ctx, addr)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get last observe chain height: %w", err)
 	}
-	// analyze-ignore(map-iteration)
-	for c, h := range chainHeights {
-		result.ObserveChains = append(result.ObserveChains, &types.ChainHeight{
-			Chain:  c.String(),
-			Height: h,
-		})
-	}
+	result.ObserveChains = observeChainsFromHeights(chainHeights)
 
 	preflightCheckResult, err := getNodePreflightResult(ctx, qs.mgr, nodeAcc)
 	if err != nil {
@@ -1289,19 +1300,11 @@ func (qs queryServer) queryNodes(ctx cosmos.Context, _ *types.QueryNodesRequest)
 			Reason:        jail.Reason,
 		}
 
-		// TODO: Represent this map as the field directly, instead of making an array?
-		// It would then always be represented in alphabetical order.
 		chainHeights, err := qs.mgr.Keeper().GetLastObserveHeight(ctx, na.NodeAddress)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get last observe chain height: %w", err)
 		}
-		// analyze-ignore(map-iteration)
-		for c, h := range chainHeights {
-			result[i].ObserveChains = append(result[i].ObserveChains, &types.ChainHeight{
-				Chain:  c.String(),
-				Height: h,
-			})
-		}
+		result[i].ObserveChains = observeChainsFromHeights(chainHeights)
 
 		preflightCheckResult, err := getNodePreflightResult(ctx, qs.mgr, na)
 		if err != nil {
