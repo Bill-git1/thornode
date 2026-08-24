@@ -786,7 +786,7 @@ func (k KVStoreDummy) SetLastObserveHeight(ctx cosmos.Context, chain common.Chai
 func (k KVStoreDummy) ForceSetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64) {
 }
 
-func (k KVStoreDummy) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddress) (map[common.Chain]int64, error) {
+func (k KVStoreDummy) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddress) ([]kvTypes.ChainHeight, error) {
 	return nil, kaboom
 }
 

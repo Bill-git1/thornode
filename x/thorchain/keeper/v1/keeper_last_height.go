@@ -104,13 +104,20 @@ func (k KVStore) ForceSetLastObserveHeight(ctx cosmos.Context, chain common.Chai
 	k.setInt64(ctx, key, height)
 }
 
-// GetLastObserveHeight retrieve last observe height of a given node account from key value store
-func (k KVStore) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddress) (map[common.Chain]int64, error) {
+// GetLastObserveHeight retrieve last observe heights of a given node account from
+// key value store, in ascending chain order.
+//
+// The ordering is a property of the store, not of a sort: chains are stored one
+// key each and the prefix iterator yields keys in ascending byte order. Returning
+// a slice rather than a map preserves that ordering all the way to the caller.
+// This matters because the node queries are reachable from WASM contracts, where
+// a non-deterministic response order diverges gas metering across validators.
+func (k KVStore) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddress) ([]types.ChainHeight, error) {
 	// TODO(reece): is this last added '/' a bug shouldn't there be some data after it like other keys?
 	// if not then `GetKey(...)` can auto add the '/'s in without us needing to add manually
 	prefixKey := k.GetKey(prefixLastObserveHeight, address.String(), "/")
 	iter := k.getIterator(ctx, types.DbPrefix(prefixKey))
-	result := make(map[common.Chain]int64)
+	result := make([]types.ChainHeight, 0)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		key := string(iter.Key())
@@ -123,7 +130,7 @@ func (k KVStore) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddr
 		if err := k.cdc.Unmarshal(iter.Value(), &value); err != nil {
 			return nil, fmt.Errorf("fail to unmarshal last observe height for %s: %w", chain, err)
 		}
-		result[chain] = value.Value
+		result = append(result, types.ChainHeight{Chain: chain, Height: value.Value})
 	}
 	return result, nil
 }

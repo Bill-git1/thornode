@@ -28,6 +28,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	kvTypes "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/types"
 	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -1013,22 +1014,17 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 	}, nil
 }
 
-func sortObserveChains(observeChains []*types.ChainHeight) {
-	sort.Slice(observeChains, func(i, j int) bool {
-		return observeChains[i].Chain < observeChains[j].Chain
-	})
-}
-
-func observeChainsFromHeights(chainHeights map[common.Chain]int64) []*types.ChainHeight {
+// observeChainsFromHeights converts keeper observe heights into the query
+// response type. No sorting is needed or performed here: the keeper returns the
+// heights in ascending chain order, and this only maps them one-for-one.
+func observeChainsFromHeights(chainHeights []kvTypes.ChainHeight) []*types.ChainHeight {
 	observeChains := make([]*types.ChainHeight, 0, len(chainHeights))
-	// analyze-ignore(map-iteration) - the result is sorted immediately below
-	for chain, height := range chainHeights {
+	for _, chainHeight := range chainHeights {
 		observeChains = append(observeChains, &types.ChainHeight{
-			Chain:  chain.String(),
-			Height: height,
+			Chain:  chainHeight.Chain.String(),
+			Height: chainHeight.Height,
 		})
 	}
-	sortObserveChains(observeChains)
 	return observeChains
 }
 
