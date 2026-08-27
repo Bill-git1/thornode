@@ -1,6 +1,7 @@
 package tss
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,8 +37,113 @@ func (s *RecoverKeysharesSuite) TestRecoverScanBoundsIncludesBoundedForwardWindo
 	c.Check(upper, Equals, int64(648))
 }
 
+func (s *RecoverKeysharesSuite) TestApplyPruneFloor(c *C) {
+	// Whole range below the node floor → unrecoverable, lower bound unchanged.
+	// (legacy vault ~17.4M vs node floor ~20.4M: the exact wedge this fixes.)
+	lower, clamped, unrecoverable := applyPruneFloor(17_400_000, 18_300_000, 20_395_001)
+	c.Check(unrecoverable, Equals, true)
+	c.Check(clamped, Equals, false)
+	c.Check(lower, Equals, int64(17_400_000))
+
+	// Range straddles the floor → clamp lower to earliest-1, still scannable —
+	// but the pruned part of the window is gone, so a subsequent scan miss must
+	// be classified unrecoverable (retrying only loses more history), not as a
+	// transient not-found that wedges the foreground retry loop.
+	lower, clamped, unrecoverable = applyPruneFloor(500, 800, 601)
+	c.Check(unrecoverable, Equals, false)
+	c.Check(clamped, Equals, true)
+	c.Check(lower, Equals, int64(600))
+
+	// Range fully above the floor → untouched.
+	lower, clamped, unrecoverable = applyPruneFloor(700, 900, 601)
+	c.Check(unrecoverable, Equals, false)
+	c.Check(clamped, Equals, false)
+	c.Check(lower, Equals, int64(700))
+
+	// Floor unknown (earliest <= 0) → disabled, no change, never unrecoverable.
+	lower, clamped, unrecoverable = applyPruneFloor(500, 800, 0)
+	c.Check(unrecoverable, Equals, false)
+	c.Check(clamped, Equals, false)
+	c.Check(lower, Equals, int64(500))
+}
+
+func (s *RecoverKeysharesSuite) TestScanMissSentinelDependsOnClamping(c *C) {
+	// Full window scanned, nothing found → possibly transient (flaky RPC collapsed
+	// the window, message just outside) → retryable.
+	c.Check(errors.Is(scanMissSentinel(false), errRecoveryBackupNotFound), Equals, true)
+	// Part of the window was pruned away → the message may sit in the lost part and
+	// retrying can only lose more history → definitively unrecoverable from this
+	// node (degraded start + background retry, where repointing at an archive
+	// endpoint widens the window again).
+	c.Check(errors.Is(scanMissSentinel(true), errRecoveryBackupUnrecoverable), Equals, true)
+	c.Check(errors.Is(scanMissSentinel(true), errRecoveryBackupNotFound), Equals, false)
+}
+
+func (s *RecoverKeysharesSuite) TestShouldSkipUnrecoverable(c *C) {
+	unrec := fmt.Errorf("wrap: %w", errRecoveryBackupUnrecoverable)
+	notFound := fmt.Errorf("wrap: %w", errRecoveryBackupNotFound)
+
+	// Definitively unrecoverable + non-signing (inactive) vault → skip (continue
+	// startup so bifrost reaches TSS instead of wedging on a lost share nobody
+	// signs with any more).
+	c.Check(shouldSkipUnrecoverable(unrec, false), Equals, true)
+	// Same error on a SIGNING (active/retiring) vault → never skip silently: the
+	// error propagates so main.go starts bifrost degraded and keeps retrying
+	// recovery in the background, screaming on every cycle.
+	c.Check(shouldSkipUnrecoverable(unrec, true), Equals, false)
+	// Retryable not-found (e.g. a flaky RPC collapsed the scan window) → never skip;
+	// it stays fatal so the startup loop can retry and succeed once RPC recovers.
+	c.Check(shouldSkipUnrecoverable(notFound, false), Equals, false)
+	// Arbitrary/transient error → never skip.
+	c.Check(shouldSkipUnrecoverable(fmt.Errorf("transient rpc error"), false), Equals, false)
+	// nil → never skip.
+	c.Check(shouldSkipUnrecoverable(nil, false), Equals, false)
+
+	// recoverLegacyKeySharesFromBackups joins the ecdsa and eddsa outcomes. A mixed
+	// join — ecdsa found-but-empty (unrecoverable) alongside a TRANSIENT eddsa write
+	// failure — must not be skipped: skipping would swallow the transient failure
+	// that a single retry would fix, and the node would drop out of every eddsa
+	// keysign for that vault.
+	mixed := errors.Join(unrec, fmt.Errorf("failed to recover eddsa key shares: %w", errors.New("disk full")))
+	c.Check(shouldSkipUnrecoverable(mixed, false), Equals, false)
+	// Every member unrecoverable → skippable (for a non-signing vault).
+	allUnrec := errors.Join(unrec, fmt.Errorf("wrap: %w", errRecoveryBackupUnrecoverable))
+	c.Check(shouldSkipUnrecoverable(allUnrec, false), Equals, true)
+}
+
+func (s *RecoverKeysharesSuite) TestIsSigningVault(c *C) {
+	pk := types.GetRandomPubKey()
+	target := keyshareRecoveryTarget{pubKey: pk}
+	c.Check(isSigningVault(target, types.Vaults{{PubKey: pk, Status: types.VaultStatus_ActiveVault}}), Equals, true)
+	// A retiring vault still signs (migration outbounds — see the RetiringVault
+	// semaphore in bifrost/signer/pipeline.go), so it gets the same never-skip
+	// protection as an active one.
+	c.Check(isSigningVault(target, types.Vaults{{PubKey: pk, Status: types.VaultStatus_RetiringVault}}), Equals, true)
+	c.Check(isSigningVault(target, types.Vaults{{PubKey: pk, Status: types.VaultStatus_InactiveVault}}), Equals, false)
+	// Vault not present in the set → conservative default: treat as signing so the
+	// skip path never fires on a vault whose status we could not determine.
+	c.Check(isSigningVault(target, types.Vaults{}), Equals, true)
+}
+
+func (s *RecoverKeysharesSuite) TestIsUnrecoverableKeyshareError(c *C) {
+	c.Check(IsUnrecoverableKeyshareError(errRecoveryBackupUnrecoverable), Equals, true)
+	c.Check(IsUnrecoverableKeyshareError(fmt.Errorf("wrap: %w", errRecoveryBackupUnrecoverable)), Equals, true)
+	// recoverKeyShares joins per-target errors; one unrecoverable member is enough
+	// for main.go to start bifrost degraded and hand recovery to the background
+	// supervisor (which retries every joined target anyway).
+	c.Check(IsUnrecoverableKeyshareError(errors.Join(fmt.Errorf("transient"), fmt.Errorf("wrap: %w", errRecoveryBackupUnrecoverable))), Equals, true)
+	c.Check(IsUnrecoverableKeyshareError(fmt.Errorf("wrap: %w", errRecoveryBackupNotFound)), Equals, false)
+	c.Check(IsUnrecoverableKeyshareError(fmt.Errorf("transient rpc error")), Equals, false)
+	c.Check(IsUnrecoverableKeyshareError(nil), Equals, false)
+}
+
 func (s *RecoverKeysharesSuite) TestFrostRecoveryBackupMissingIsSkippable(c *C) {
 	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{}, fmt.Errorf("wrapped: %w", errRecoveryBackupNotFound)), Equals, true)
+	// Definitively unrecoverable (pruned below the node floor / found-but-empty) is
+	// just as absent as not-found from the FROST supervisor's perspective — without
+	// this the background FROST retry loop would hammer and error-log forever on a
+	// vault whose TssPool message is below the prune floor.
+	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{}, fmt.Errorf("wrapped: %w", errRecoveryBackupUnrecoverable)), Equals, true)
 	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{}, nil), Equals, true)
 	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{frost: []byte("backup")}, nil), Equals, false)
 	c.Check(isFrostRecoveryBackupMissing(recoveryBackups{}, fmt.Errorf("decode failed")), Equals, false)
@@ -338,7 +444,10 @@ func (s *RecoverKeysharesSuite) TestRecoverLegacyKeySharesMissingEddsaBackupRetu
 
 	err = recoverLegacyKeySharesFromBackups(signer, target, vaults, recoveryBackups{})
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "eddsa key shares backup not found for "+eddsaPubKey.String())
+	// A found-but-empty backup is now classified as definitively unrecoverable, so a
+	// non-active vault can be skipped (continue startup) instead of wedging on it.
+	c.Assert(errors.Is(err, errRecoveryBackupUnrecoverable), Equals, true)
+	c.Assert(err.Error(), Matches, ".*eddsa key shares backup empty for "+eddsaPubKey.String())
 	_, statErr := os.Stat(localstateKeysharePath(eddsaPubKey))
 	c.Assert(os.IsNotExist(statErr), Equals, true)
 }
@@ -575,4 +684,62 @@ func assertRecoveredLocalState(c *C, path string, original []byte) {
 	fi, err := os.Stat(path)
 	c.Assert(err, IsNil)
 	c.Assert(fi.Mode().Perm(), Equals, os.FileMode(0o600))
+}
+
+func (s *RecoverKeysharesSuite) TestBlockPrunedMidScan(c *C) {
+	// The floor is sampled once before a scan that can run for thousands of
+	// blocks. Pruning advances during that scan, and an LB may answer /status
+	// from a different instance than the one serving Block() — so a fetch
+	// failure must be re-checked against a FRESH floor before it is trusted.
+
+	// Height fell below the fresh floor → pruned out from under the scan.
+	c.Check(blockPrunedMidScan(600, 700, nil), Equals, true)
+	// Height still above the fresh floor → a genuine RPC failure, stays transient.
+	c.Check(blockPrunedMidScan(800, 700, nil), Equals, false)
+	// Exactly at the floor is still fetchable.
+	c.Check(blockPrunedMidScan(700, 700, nil), Equals, false)
+	// Fresh floor unavailable → cannot claim pruning; stay transient/retryable.
+	c.Check(blockPrunedMidScan(600, 700, errors.New("status rpc failed")), Equals, false)
+	c.Check(blockPrunedMidScan(600, 0, nil), Equals, false)
+}
+
+func (s *RecoverKeysharesSuite) TestSkipDecisionAcrossVaultStatusAndErrorClass(c *C) {
+	pk := types.GetRandomPubKey()
+	target := keyshareRecoveryTarget{pubKey: pk}
+
+	statuses := []struct {
+		name   string
+		vaults types.Vaults
+	}{
+		{"active", types.Vaults{{PubKey: pk, Status: types.VaultStatus_ActiveVault}}},
+		{"retiring", types.Vaults{{PubKey: pk, Status: types.VaultStatus_RetiringVault}}},
+		{"inactive", types.Vaults{{PubKey: pk, Status: types.VaultStatus_InactiveVault}}},
+		{"absent", types.Vaults{}},
+	}
+	errClasses := []struct {
+		name string
+		err  error
+	}{
+		{"pruned", fmt.Errorf("%w: below the earliest available block", errRecoveryBackupUnrecoverable)},
+		{"empty", fmt.Errorf("%w: ecdsa key shares backup empty", errRecoveryBackupUnrecoverable)},
+		{"not-found", fmt.Errorf("%w: TssPool message not found", errRecoveryBackupNotFound)},
+		{"transient", errors.New("fail to get block: connection reset")},
+	}
+
+	// Skipping is safe ONLY where the vault will never be asked to sign again
+	// (inactive) AND the failure is definitively unrecoverable (pruned/empty).
+	// Everything else must surface: signing vaults degrade + retry in the
+	// background, and retryable classes stay retryable. "absent" is conservative
+	// — an unknown status is treated as signing.
+	want := map[string]bool{
+		"inactive/pruned": true,
+		"inactive/empty":  true,
+	}
+	for _, st := range statuses {
+		for _, ec := range errClasses {
+			key := st.name + "/" + ec.name
+			got := shouldSkipUnrecoverable(ec.err, isSigningVault(target, st.vaults))
+			c.Check(got, Equals, want[key], Commentf("case %s", key))
+		}
+	}
 }

@@ -42,8 +42,15 @@ resolve_signer_seed_phrase() {
   # create_thor_user silently fall through to generating a brand-new key. This
   # uses the same validation as the Go reader (common.IsValidMnemonic).
   if ! validate_err=$(printf '%s' "$SIGNER_SEED_PHRASE" | thornode validate-seed-phrase 2>&1); then
-    echo "SIGNER_SEED_PHRASE is not a valid 24-word BIP39 mnemonic (refusing to start): $validate_err"
+    echo "SIGNER_SEED_PHRASE is not a valid BIP39 mnemonic (refusing to start): $validate_err"
     exit 1
+  fi
+  # A valid but shorter-than-24-word seed passes validation but cannot produce a
+  # keyshare DR backup; validate-seed-phrase emits a warning on stderr in that case.
+  # Surface it at provisioning so the operator sees it before bonding, not only at
+  # the first keygen.
+  if [ -n "$validate_err" ]; then
+    echo "$validate_err"
   fi
   # Intentionally NOT exported: every consumer takes the phrase as a positional
   # arg or via a stdin pipe, so it must never enter the daemon's environment on

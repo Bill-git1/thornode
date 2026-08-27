@@ -914,6 +914,16 @@ func (s *Signer) buildKeygenBackups(secpKeysharePath, eddsaKeysharePath, frostKe
 		s.logger.Error().Err(seedErr).Msg("fail to get signer seed phrase")
 		return keygenBackups{}
 	}
+	// The seed encrypts the keyshare disaster-recovery backup, and EncryptKeyshares
+	// requires a 24-word (256-bit) seed. A shorter — but still valid BIP39 — seed is
+	// accepted at startup so the node can run and sign, but it cannot produce a DR
+	// backup. Surface that loudly on every keygen instead of failing each encrypt
+	// attempt with an opaque "not 24 words" error.
+	if wordCount := len(strings.Fields(seedPhrase)); wordCount < 24 {
+		s.logger.Error().Int("seed_words", wordCount).Msgf(
+			"signer seed is %d words: NO keyshare disaster-recovery backup written — regenerate as a 24-word seed to enable DR", wordCount)
+		return keygenBackups{}
+	}
 	expected := 0
 
 	if secpKeysharePath != "" {
