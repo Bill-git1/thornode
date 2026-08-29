@@ -109,7 +109,7 @@ func (qs queryServer) queryLimitSwaps(ctx cosmos.Context, req *types.QueryLimitS
 	switch sortBy {
 	case "ratio":
 		if sortOrder == "desc" {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				ratioI := cosmos.ZeroUint()
 				ratioJ := cosmos.ZeroUint()
 				if allSwaps[i].Ratio != "" {
@@ -121,7 +121,7 @@ func (qs queryServer) queryLimitSwaps(ctx cosmos.Context, req *types.QueryLimitS
 				return ratioI.GT(ratioJ)
 			})
 		} else {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				ratioI := cosmos.ZeroUint()
 				ratioJ := cosmos.ZeroUint()
 				if allSwaps[i].Ratio != "" {
@@ -135,31 +135,31 @@ func (qs queryServer) queryLimitSwaps(ctx cosmos.Context, req *types.QueryLimitS
 		}
 	case "age":
 		if sortOrder == "desc" {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				return allSwaps[i].BlocksSinceCreated > allSwaps[j].BlocksSinceCreated
 			})
 		} else {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				return allSwaps[i].BlocksSinceCreated < allSwaps[j].BlocksSinceCreated
 			})
 		}
 	case "created_height":
 		if sortOrder == "desc" {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				return allSwaps[i].Swap.InitialBlockHeight > allSwaps[j].Swap.InitialBlockHeight
 			})
 		} else {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				return allSwaps[i].Swap.InitialBlockHeight < allSwaps[j].Swap.InitialBlockHeight
 			})
 		}
 	case "amount":
 		if sortOrder == "desc" {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				return allSwaps[i].Swap.Tx.Coins[0].Amount.GT(allSwaps[j].Swap.Tx.Coins[0].Amount)
 			})
 		} else {
-			sort.Slice(allSwaps, func(i, j int) bool {
+			sort.SliceStable(allSwaps, func(i, j int) bool {
 				return allSwaps[i].Swap.Tx.Coins[0].Amount.LT(allSwaps[j].Swap.Tx.Coins[0].Amount)
 			})
 		}

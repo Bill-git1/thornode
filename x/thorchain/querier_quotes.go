@@ -22,6 +22,9 @@ import (
 
 	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -868,7 +871,10 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	if fromAsset.IsSyntheticAsset() || fromAsset.IsDerivedAsset() || fromAsset.IsTradeAsset() || fromAsset.IsSecuredAsset() {
 		fromChain = common.THORChain
 	}
-	fromPubkey := types.GetRandomPubkeyForChain(fromChain)
+	fromPubkey, err := quotePlaceholderPubKey(fromChain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive placeholder pubkey: %w", err)
+	}
 	fromAddress, err := fromPubkey.GetAddress(fromChain)
 	if err != nil {
 		return nil, fmt.Errorf("bad from address: %w", err)
@@ -902,7 +908,12 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 			chain = toAsset.Chain
 		}
 
-		destination, err = types.GetRandomPubkeyForChain(chain).GetAddress(chain)
+		var destPubkey common.PubKey
+		destPubkey, err = quotePlaceholderPubKey(chain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive placeholder pubkey: %w", err)
+		}
+		destination, err = destPubkey.GetAddress(chain)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate address: %w", err)
 		}
@@ -1349,4 +1360,39 @@ func splitMemo(memo string) []string {
 	}
 
 	return chunks
+}
+
+// -------------------------------------------------------------------------------------
+// Placeholder addresses
+// -------------------------------------------------------------------------------------
+
+// quotePlaceholderPubKey returns the deterministic stand-in pubkey used when a
+// quote has no real address to simulate with.
+//
+// QuoteSwap is callable from CosmWasm contracts during block execution
+// (app/wasm.go), and the placeholder address flows into gas-metered store reads
+// and writes (swapper clout, txout item). A random key would give addresses of
+// differing length on some chains (base58: SOL 43/44, XRP 33/34), so nodes would
+// consume different gas for the same query and the app hash would diverge. The
+// key is derived from a fixed secret instead - deterministic, while the bech32
+// prefix still follows the build's network.
+//
+// The private key is trivially derivable from the secret. That is fine: the
+// simulation runs in a discarded cache, and clout parked on the address only
+// skews the simulated outbound delay, identically on every node.
+//
+// ponytail: derived on every call rather than cached, so it cannot be computed
+// before the bech32 prefix config is set at startup.
+func quotePlaceholderPubKey(chain common.Chain) (common.PubKey, error) {
+	var pk cryptotypes.PubKey
+	if chain.GetSigningAlgo() == common.SigningAlgoEd25519 {
+		pk = ed25519.GenPrivKeyFromSecret([]byte("thorchain/quote-placeholder")).PubKey()
+	} else {
+		pk = secp256k1.GenPrivKeyFromSecret([]byte("thorchain/quote-placeholder")).PubKey()
+	}
+	bech32PubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, pk)
+	if err != nil {
+		return common.EmptyPubKey, err
+	}
+	return common.NewPubKey(bech32PubKey)
 }

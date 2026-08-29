@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 	. "gopkg.in/check.v1"
@@ -240,5 +241,30 @@ func (s *QuotesSuite) TestQuoteLimitStaleState(c *C) {
 	_, err = qs.queryQuoteLimit(ctx, req)
 	if err != nil {
 		c.Assert(strings.Contains(err.Error(), "stale state"), Equals, false)
+	}
+}
+
+// QuoteSwap is WASM-reachable, so the placeholder addresses it simulates with
+// must be identical on every node and every call - a random key would vary the
+// address length on base58 chains and diverge the gas consumed.
+func (s *QuotesSuite) TestQuotePlaceholderIsDeterministic(c *C) {
+	types.SetupConfigForTest()
+	chains := common.Chains{
+		common.BTCChain, common.ETHChain, common.THORChain,
+		common.XRPChain, common.SOLChain, common.DOTChain,
+	}
+	for _, chain := range chains {
+		pk, err := quotePlaceholderPubKey(chain)
+		c.Assert(err, IsNil)
+		first, err := pk.GetAddress(chain)
+		c.Assert(err, IsNil)
+		c.Assert(first.IsEmpty(), Equals, false)
+		for i := 0; i < 100; i++ {
+			pk, err = quotePlaceholderPubKey(chain)
+			c.Assert(err, IsNil)
+			next, err := pk.GetAddress(chain)
+			c.Assert(err, IsNil)
+			c.Assert(next.String(), Equals, first.String(), Commentf("chain %s", chain))
+		}
 	}
 }

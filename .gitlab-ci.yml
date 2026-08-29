@@ -121,6 +121,16 @@ generate:
       when: never
     - if: $CI == "true"
       when: on_success
+  # buf resolves BSR deps at job runtime and intermittently 403s under rate
+  # limiting; without this a transient window blocks the whole pipeline, and
+  # merge-train jobs cannot be retried by hand.
+  retry: &buf_retry
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - scheduler_failure
+      - script_failure
   stage: protobuf
   <<: *use_dind
   before_script:
@@ -222,6 +232,7 @@ proto-check-formatting:
 
 proto-lint:
   rules: *rules
+  retry: *buf_retry
   stage: protobuf
   <<: *use_dind
   before_script:
@@ -245,6 +256,7 @@ proto-check-breaking:
       allow_failure: true
     - if: $CI == "true"
       when: on_success
+  retry: *buf_retry
   stage: protobuf
   <<: *use_dind
   before_script:

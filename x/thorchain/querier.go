@@ -55,8 +55,9 @@ var (
 	queryExport = func(_ sdk.Context, _ *Mgrs) ([]byte, error) {
 		return nil, fmt.Errorf("export query not supported")
 	}
-	tendermintClient   *tmhttp.HTTP
-	initTendermintOnce = sync.Once{}
+	tendermintClient    *tmhttp.HTTP
+	tendermintClientErr error
+	initTendermintOnce  = sync.Once{}
 )
 
 func initTendermint() {
@@ -68,7 +69,10 @@ func initTendermint() {
 	var err error
 	tendermintClient, err = tmhttp.New(fmt.Sprintf("tcp://localhost:%s", port), "/websocket")
 	if err != nil {
-		log.Fatal().Err(err).Msg("fail to create tendermint client")
+		// reachable from a query - return the error to the caller rather than
+		// taking the process down
+		tendermintClientErr = fmt.Errorf("fail to create tendermint client: %w", err)
+		log.Error().Err(err).Msg("fail to create tendermint client")
 	}
 }
 
@@ -2462,7 +2466,7 @@ func (qs queryServer) queryStableReserveActiveSwaps(ctx cosmos.Context) []*types
 	appendActive(qs.mgr.Keeper().GetSwapQueueIterator(ctx))
 	appendActive(qs.mgr.Keeper().GetAdvSwapQueueItemIterator(ctx))
 
-	sort.Slice(active, func(i, j int) bool {
+	sort.SliceStable(active, func(i, j int) bool {
 		if active[i].Purpose != active[j].Purpose {
 			return active[i].Purpose < active[j].Purpose
 		}
@@ -3851,6 +3855,9 @@ func (qs queryServer) queryInvariant(ctx cosmos.Context, req *types.QueryInvaria
 
 func (qs queryServer) queryBlock(ctx cosmos.Context, req *types.QueryBlockRequest) (*types.QueryBlockResponse, error) {
 	initTendermintOnce.Do(initTendermint)
+	if tendermintClientErr != nil {
+		return nil, tendermintClientErr
+	}
 	height := ctx.BlockHeight()
 	if parsed, err := strconv.ParseInt(req.Height, 10, 64); err == nil {
 		height = parsed
