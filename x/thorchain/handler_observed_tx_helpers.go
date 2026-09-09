@@ -1507,6 +1507,13 @@ func resolveReferenceMemo(ctx cosmos.Context, mgr Manager, k keeper.Keeper, tx *
 		k.SetObservedTxInVoter(ctx, *voter)
 		return mem.EmptyMemo, false
 	}
+	if parsedMemo.IsOutbound() || parsedMemo.IsInternal() {
+		ctx.Logger().Error("resolved reference memo expands to a forbidden type; blanking",
+			"type", parsedMemo.GetType().String(), "tx", tx.Tx.ID.String())
+		voter.Tx.Tx.Memo = ""
+		k.SetObservedTxInVoter(ctx, *voter)
+		return mem.EmptyMemo, false
+	}
 
 	tx.Tx.Memo = resolvedMemo
 	if lookup.halted {

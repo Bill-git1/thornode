@@ -118,8 +118,6 @@ func (s *SolTestSuite) TestCreateTxRoutesSelfSend(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)
 
-	e.solScanner.recentBlockHash = "9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo"
-
 	vaultEddsa := common.PubKey("tthorpub1zcjduepq829qzzhllcktltnfdudyupw5qjtyyjzcmv9wx2jvpah4d6nxtl2s7vwca8")
 	vaultAddr, err := vaultEddsa.GetAddress(common.SOLChain)
 	c.Assert(err, IsNil)
@@ -138,7 +136,7 @@ func (s *SolTestSuite) TestCreateTxRoutesSelfSend(c *C) {
 		GasRate: 1,
 		Memo:    "consolidate",
 	}
-	tx, err := e.CreateTx(txOutItem, txOutItem.GetMemo())
+	tx, err := e.CreateTx(txOutItem, txOutItem.GetMemo(), "asdfasdf")
 	c.Assert(err, IsNil)
 
 	// vault, system program, memo program — vault listed exactly once

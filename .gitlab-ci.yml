@@ -218,11 +218,13 @@ proto-lint:
     - make proto-lint
 
 proto-check-breaking:
-  # Compares this branch's protos against upstream `develop` via `buf breaking`.
-  # The long-lived deployment branches (mainnet/stagenet/chainnet) intentionally
-  # lag develop's schema and will report upstream-only additions as "deletions".
-  # On those branches the result is informational, not gating; on MRs and
-  # develop itself the check must block.
+  # Runs `buf breaking` against the branch this change targets:
+  #  - On an MR, compare against the MR target branch. A release MR into a
+  #    deployment branch (mainnet/stagenet/chainnet) thus checks against that
+  #    branch — which intentionally lags develop — instead of develop, so
+  #    develop-only additions are not misreported as "deletions".
+  #  - Otherwise (develop branch pipeline) fall back to develop.
+  # The long-lived deployment branches themselves keep it informational.
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
@@ -236,6 +238,8 @@ proto-check-breaking:
   before_script:
     - apk -U add git make
   script:
+    - export PROTO_BREAKING_BRANCH="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-develop}"
+    - echo "proto-check-breaking against branch=${PROTO_BREAKING_BRANCH}"
     - make proto-check-breaking
 
 build-thornode:

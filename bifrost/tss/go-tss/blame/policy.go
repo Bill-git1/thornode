@@ -155,7 +155,7 @@ func (m *Manager) TssWrongShareBlame(wiredMsg *messages.WireMessage) (string, er
 func (m *Manager) TssMissingShareBlame(rounds int, algo messages.Algo) ([]Node, bool, error) {
 	acceptedShareForMsg := make(map[string][][]string)
 	var blameNodes []Node
-	var peers []string
+	blamed := make(map[string]struct{})
 	isUnicast := false
 	m.acceptShareLocker.Lock()
 	for roundInfo, value := range m.acceptedShares {
@@ -171,6 +171,12 @@ func (m *Manager) TssMissingShareBlame(rounds int, algo messages.Algo) ([]Node, 
 	m.acceptShareLocker.Unlock()
 
 	for _, cachedShares := range acceptedShareForMsg {
+		// peers is reset per message so each message's blame is computed only
+		// against that message's own senders. Accumulating it across messages
+		// makes the blame set depend on Go map iteration order (non-deterministic
+		// consensus ID) and exonerates parties that sent for one message but
+		// withheld for another.
+		var peers []string
 		// we search from the first round to find the missing
 		for index, el := range cachedShares {
 			if len(el)+1 == len(m.PartyIDtoP2PID) {
@@ -215,11 +221,25 @@ func (m *Manager) TssMissingShareBlame(rounds int, algo messages.Algo) ([]Node, 
 			}
 			break
 		}
+		// No missing share was found for this message (every round was complete,
+		// so the loop above never recorded any sender). Such a message blames
+		// nobody; without this guard getBlamePubKeysNotInList(nil) would blame the
+		// entire committee.
+		if len(peers) == 0 {
+			continue
+		}
 		blamePubKeys, err := m.getBlamePubKeysNotInList(peers)
 		if err != nil {
 			return nil, isUnicast, err
 		}
 		for _, el := range blamePubKeys {
+			// dedup: a party missing in multiple messages must be blamed once,
+			// otherwise it is counted repeatedly (affecting the <= threshold gate
+			// in the caller) and appears multiple times in the consensus hash.
+			if _, ok := blamed[el]; ok {
+				continue
+			}
+			blamed[el] = struct{}{}
 			node := Node{
 				el,
 				nil,

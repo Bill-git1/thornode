@@ -45,9 +45,12 @@ func (h ReferenceMemoHandler) validate(ctx cosmos.Context, msg MsgReferenceMemo)
 		return err
 	}
 
-	parsedMemo, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
+	parsed, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
 	if err != nil {
 		return err
+	}
+	if parsed.IsOutbound() || parsed.IsInternal() {
+		return fmt.Errorf("reference memo type %s is reserved for validator-internal use and cannot be registered", parsed.GetType().String())
 	}
 
 	// Chains whose observations may omit the inbound sender cannot issue a safe
@@ -60,17 +63,17 @@ func (h ReferenceMemoHandler) validate(ctx cosmos.Context, msg MsgReferenceMemo)
 	addressField := ""
 	if inboundChain.RequiresExplicitRefundAddress() {
 		switch {
-		case parsedMemo.IsType(TxAdd):
+		case parsed.IsType(TxAdd):
 			addressRole = "add liquidity asset address"
 			addressField = "pair_address/asset_address"
-		case parsedMemo.IsType(TxSwap):
+		case parsed.IsType(TxSwap):
 			addressRole = "swap refund address"
 			addressField = "destination/refund_address"
 		default:
-			return fmt.Errorf("memoless %s %s memo is not supported because it cannot provide an explicit refund address", inboundChain, parsedMemo.GetType())
+			return fmt.Errorf("memoless %s %s memo is not supported because it cannot provide an explicit refund address", inboundChain, parsed.GetType())
 		}
 
-		refundAddr := parsedMemo.GetRefundAddress()
+		refundAddr := parsed.GetRefundAddress()
 		if refundAddr.IsEmpty() {
 			return fmt.Errorf("memoless %s %s is required in the memo (%s)", inboundChain, addressRole, addressField)
 		}

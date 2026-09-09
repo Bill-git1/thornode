@@ -51,6 +51,37 @@ func (s *SolRPC) GetBlock(height uint64) (*BlockResult, error) {
 	return &response.Result, nil
 }
 
+// GetBlockhashAtSlot returns only the blockhash of a finalized slot, without
+// downloading the block's transaction list or rewards. Used by the
+// consensus-blockhash derivation on the sign path, where the full block body
+// (megabytes of transaction JSON on mainnet) is pure overhead spent inside the
+// ~60s blockhash-liveness budget. Unlike GetBlock, a skipped/missing slot is an
+// error rather than an empty result: callers only ask for slots from a finalized
+// getBlocks listing, so any failure is unexpected and should surface for retry.
+func (s *SolRPC) GetBlockhashAtSlot(slot uint64) (string, error) {
+	params := []interface{}{
+		slot,
+		map[string]interface{}{
+			"encoding":                       "json",
+			"transactionDetails":             "none",
+			"rewards":                        false,
+			"commitment":                     "finalized",
+			"maxSupportedTransactionVersion": 0,
+		},
+	}
+
+	var response GetBlockResponse
+	if err := s.post("getBlock", params, &response); err != nil {
+		return "", fmt.Errorf("failed to call getBlock: %w", err)
+	}
+
+	if response.Error != nil && response.Error.Code != 0 {
+		return "", fmt.Errorf("RPC Error %d: %s", response.Error.Code, response.Error.Message)
+	}
+
+	return response.Result.Blockhash, nil
+}
+
 // Get a list of confirmed blocks in a range
 func (s *SolRPC) GetBlockHeights(startSlot, endSlot uint64) ([]uint64, error) {
 	params := []interface{}{

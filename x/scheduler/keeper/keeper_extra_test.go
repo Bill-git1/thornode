@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"errors"
+	"strings"
 
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
@@ -9,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/query"
 	. "gopkg.in/check.v1"
 
+	"gitlab.com/thorchain/thornode/v3/x/scheduler"
 	"gitlab.com/thorchain/thornode/v3/x/scheduler/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/scheduler/types"
 )
@@ -53,6 +55,24 @@ func (m *EventfulErrorWasmKeeper) Execute(ctx sdk.Context, contractAddress, call
 		),
 	})
 	return nil, m.err
+}
+
+// SelectiveWasmKeeper guzzles past the per-execution gas cap when the msg
+// contains "guzzle"; otherwise it writes a marker to the store and succeeds.
+type SelectiveWasmKeeper struct {
+	storeKey *storetypes.KVStoreKey
+}
+
+var committedKey = []byte("selective-committed")
+
+func (m *SelectiveWasmKeeper) Execute(ctx sdk.Context, contractAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+	if strings.Contains(string(msg), "guzzle") {
+		// Exceeds MaxScheduleExecGas -> OutOfGas panic, caught by ExecuteSchedule.
+		ctx.GasMeter().ConsumeGas(types.MaxScheduleExecGas+1, "guzzle")
+		return nil, nil // unreachable
+	}
+	ctx.KVStore(m.storeKey).Set(committedKey, []byte("committed"))
+	return nil, nil
 }
 
 func (s *KeeperTestSuite) TestLogger(c *C) {
@@ -152,6 +172,84 @@ func (s *KeeperTestSuite) TestExecuteSchedule_WasmErrorDiscardsEventsAndState(c 
 	res, err := errKeeper.GetSchedule(sdkCtx, height)
 	c.Assert(err, IsNil)
 	c.Assert(res.Msgs, HasLen, 0)
+}
+
+func (s *KeeperTestSuite) TestExecuteSchedule_PerExecGasCap(c *C) {
+	sdkCtx := sdk.UnwrapSDKContext(s.ctx)
+	gasKeeper := setupKeeperWithWasm(s, &SelectiveWasmKeeper{storeKey: s.storeKeys[types.StoreKey]})
+
+	height := uint64(sdkCtx.BlockHeight()) + 1
+	// A gas-guzzling execution alongside an in-budget sibling at the same height.
+	err := gasKeeper.SetSchedule(sdkCtx, types.Schedule{
+		Height: height,
+		Msgs: []types.MsgScheduleExecuteContract{
+			{Sender: accAddrs[0].String(), Msg: []byte(`{"do":"guzzle"}`)},
+			{Sender: accAddrs[1].String(), Msg: []byte(`{"do":"work"}`)},
+		},
+	})
+	c.Assert(err, IsNil)
+
+	sdkCtx = sdkCtx.WithBlockHeight(int64(height))
+	// Must not halt: the over-budget run is OutOfGas-skipped, not propagated.
+	err = gasKeeper.ExecuteSchedule(sdkCtx)
+	c.Assert(err, IsNil)
+
+	// The in-budget sibling still committed its state write.
+	c.Assert(sdkCtx.KVStore(s.storeKeys[types.StoreKey]).Get(committedKey), DeepEquals, []byte("committed"))
+
+	// Schedule drained.
+	res, err := gasKeeper.GetSchedule(sdkCtx, height)
+	c.Assert(err, IsNil)
+	c.Assert(res.Msgs, HasLen, 0)
+}
+
+func (s *KeeperTestSuite) TestAddMsg_PerHeightCap(c *C) {
+	sdkCtx := sdk.UnwrapSDKContext(s.ctx)
+
+	// The first MaxMsgsPerHeight messages for a height succeed.
+	for i := 0; i < types.MaxMsgsPerHeight; i++ {
+		c.Assert(s.keeper.AddMsg(sdkCtx, types.MsgScheduleExecuteContract{
+			After:  10,
+			Sender: accAddrs[0].String(),
+			Msg:    []byte(`{"a":"1"}`),
+		}), IsNil)
+	}
+
+	// The next one is rejected.
+	err := s.keeper.AddMsg(sdkCtx, types.MsgScheduleExecuteContract{
+		After:  10,
+		Sender: accAddrs[0].String(),
+		Msg:    []byte(`{"a":"1"}`),
+	})
+	c.Assert(err, NotNil)
+	c.Assert(errors.Is(err, types.ErrScheduleHeightFull), Equals, true)
+
+	// The cap is per-height: a different target height still accepts messages.
+	c.Assert(s.keeper.AddMsg(sdkCtx, types.MsgScheduleExecuteContract{
+		After:  11,
+		Sender: accAddrs[0].String(),
+		Msg:    []byte(`{"a":"1"}`),
+	}), IsNil)
+}
+
+func (s *KeeperTestSuite) TestAddMsg_AfterCap(c *C) {
+	sdkCtx := sdk.UnwrapSDKContext(s.ctx)
+
+	// After at the max is accepted.
+	c.Assert(s.keeper.AddMsg(sdkCtx, types.MsgScheduleExecuteContract{
+		After:  types.MaxAfter,
+		Sender: accAddrs[0].String(),
+		Msg:    []byte(`{"a":"1"}`),
+	}), IsNil)
+
+	// After beyond the max is rejected at the keeper, independent of ValidateBasic.
+	err := s.keeper.AddMsg(sdkCtx, types.MsgScheduleExecuteContract{
+		After:  types.MaxAfter + 1,
+		Sender: accAddrs[0].String(),
+		Msg:    []byte(`{"a":"1"}`),
+	})
+	c.Assert(err, NotNil)
+	c.Assert(errors.Is(err, types.ErrAfterTooLarge), Equals, true)
 }
 
 func (s *KeeperTestSuite) TestRemoveSchedule(c *C) {
@@ -403,4 +501,43 @@ func (s *KeeperTestSuite) TestMsgServerScheduleExecuteContract(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(schedule.Msgs, HasLen, 1)
 	c.Assert(schedule.Msgs[0].Sender, Equals, accAddrs[0].String())
+}
+
+// TestExportGenesis_LegacyAfterSurvivesValidation guards the export -> validate
+// round trip for schedules persisted before the MaxAfter horizon existed. The
+// horizon is enforced on new scheduling (AddMsg / ValidateBasic) only; stored
+// messages keep their historical After and must still pass genesis validation.
+func (s *KeeperTestSuite) TestExportGenesis_LegacyAfterSurvivesValidation(c *C) {
+	sdkCtx := sdk.UnwrapSDKContext(s.ctx)
+
+	legacy := types.MsgScheduleExecuteContract{
+		Sender: accAddrs[0].String(),
+		After:  types.MaxAfter + 1,
+		Msg:    []byte(`{"run":{}}`),
+	}
+
+	// New scheduling beyond the horizon is still rejected.
+	err := s.keeper.AddMsg(sdkCtx, legacy)
+	c.Assert(errors.Is(err, types.ErrAfterTooLarge), Equals, true)
+
+	// Simulate pre-upgrade state: the message was stored before the bound existed.
+	height := uint64(sdkCtx.BlockHeight()) + 10
+	err = s.keeper.SetSchedule(sdkCtx, types.Schedule{Height: height, Msgs: []types.MsgScheduleExecuteContract{legacy}})
+	c.Assert(err, IsNil)
+
+	// Export preserves the historical field verbatim...
+	exported := scheduler.ExportGenesis(sdkCtx, s.keeper)
+	c.Assert(exported.Schedules, HasLen, 1)
+	c.Assert(exported.Schedules[0].Height, Equals, height)
+	c.Assert(exported.Schedules[0].Msgs, HasLen, 1)
+	c.Assert(exported.Schedules[0].Msgs[0].After, Equals, uint64(types.MaxAfter+1))
+
+	// ...and the exported genesis still validates, both in memory and after the
+	// JSON round trip that AppModuleBasic.ValidateGenesis performs.
+	c.Assert(exported.Validate(), IsNil)
+	bz, err := s.encCfg.Codec.MarshalJSON(exported)
+	c.Assert(err, IsNil)
+	var decoded types.GenesisState
+	c.Assert(s.encCfg.Codec.UnmarshalJSON(bz, &decoded), IsNil)
+	c.Assert(decoded.Validate(), IsNil)
 }

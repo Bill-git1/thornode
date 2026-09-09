@@ -51,6 +51,22 @@ func TestReadStreamMaxPayloadExceeded(t *testing.T) {
 	assert.Contains(t, err.Error(), "exceed max payload length")
 }
 
+func TestWriteStreamMaxPayloadExceeded(t *testing.T) {
+	ApplyDeadline.Store(false)
+	s := NewMockNetworkStream()
+	msg := make([]byte, MaxPayload+1)
+
+	err := WriteStreamWithBuffer(msg, s)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "exceed max payload length")
+	assert.Zero(t, s.Buffer.Len(), "nothing should be written for an oversized payload")
+
+	err = WriteStreamWithBufferWithContext(context.Background(), msg, s)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "exceed max payload length")
+	assert.Zero(t, s.Buffer.Len(), "nothing should be written for an oversized payload")
+}
+
 func TestReadStreamShortRead(t *testing.T) {
 	ApplyDeadline.Store(false)
 	s := NewMockNetworkStream()

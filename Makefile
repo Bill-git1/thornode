@@ -75,7 +75,12 @@ ifeq (test,$(firstword $(MAKECMDGOALS)))
 endif
 
 TEST_DIR?=${TEST_PATHS}
-BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath
+# -buildmode=pie builds a position-independent executable (ET_DYN) so host ASLR can
+# randomize the binary's own text/data, not just the shared libraries it loads. It
+# needs external linking, which the cgo build (wasmvm) already uses, and the release
+# toolchain (golang bookworm image) ships gcc. Covers the shipped
+# thornode/bifrost/recover-keyshare-backup (BINARIES) via the build/install targets.
+BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath -buildmode=pie
 PARALLELISM ?= 1
 TEST_BUILD_FLAGS := -parallel=$(PARALLELISM) -tags=mocknet
 ifdef RUN
@@ -151,8 +156,13 @@ proto-format-check:
 proto-lint:
 	@$(protoImage) sh -c "cd proto/thorchain/v1 && buf lint --error-format=json"
 
+# Baseline branch for `buf breaking`. Defaults to develop; CI overrides it with the
+# MR target branch so mainnet/stagenet/chainnet release MRs check against the branch
+# they merge into (which intentionally lags develop) instead of develop itself.
+PROTO_BREAKING_BRANCH ?= develop
+
 proto-check-breaking:
-	@$(protoImage) sh -c "cd proto/thorchain/v1 && buf breaking --against $(HTTPS_GIT)#branch=develop,subdir=proto/thorchain/v1"
+	@$(protoImage) sh -c "cd proto/thorchain/v1 && buf breaking --against $(HTTPS_GIT)#branch=$(PROTO_BREAKING_BRANCH),subdir=proto/thorchain/v1"
 
 # ------------------------------ Docs ------------------------------
 

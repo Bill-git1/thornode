@@ -216,7 +216,7 @@ require (
 	github.com/consensys/gnark-crypto v0.19.2 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
-	github.com/cosmos/iavl v1.2.4 // indirect
+	github.com/cosmos/iavl v1.2.8 // indirect
 	github.com/cosmos/ibc-go/modules/capability v1.0.1 // indirect
 	github.com/cosmos/ibc-go/v8 v8.4.0
 	github.com/cosmos/ics23/go v0.11.0 // indirect

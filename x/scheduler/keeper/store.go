@@ -30,11 +30,20 @@ func (k Keeper) SenderIndex() collections.KeySet[collections.Pair[string, uint64
 }
 
 func (k Keeper) AddMsg(ctx sdk.Context, msg types.MsgScheduleExecuteContract) error {
+	// Re-check the horizon bound at the keeper chokepoint (also enforced in
+	// ValidateBasic) so the height computation below cannot overflow regardless
+	// of how AddMsg is reached.
+	if msg.After > types.MaxAfter {
+		return types.ErrAfterTooLarge
+	}
 	height := uint64(ctx.BlockHeight()) + msg.After + 1
 
 	existing, err := k.GetSchedule(ctx, height)
 	if err != nil {
 		return err
+	}
+	if len(existing.Msgs) >= types.MaxMsgsPerHeight {
+		return types.ErrScheduleHeightFull
 	}
 	existing.Msgs = append(existing.Msgs, msg)
 

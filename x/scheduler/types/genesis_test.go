@@ -40,6 +40,23 @@ func TestGenesisState_Validate(t *testing.T) {
 			valid: true,
 		},
 		{
+			// After is only consulted by AddMsg when computing the target height;
+			// stored schedules run on Schedule.Height. A schedule persisted before
+			// the MaxAfter horizon existed must survive export -> validate.
+			name: "legacy after beyond MaxAfter is valid",
+			genState: &types.GenesisState{
+				Schedules: []types.Schedule{
+					{
+						Height: 100,
+						Msgs: []types.MsgScheduleExecuteContract{
+							{Sender: validAddr, After: types.MaxAfter + 1, Msg: []byte(`{}`)},
+						},
+					},
+				},
+			},
+			valid: true,
+		},
+		{
 			name: "invalid height zero",
 			genState: &types.GenesisState{
 				Schedules: []types.Schedule{

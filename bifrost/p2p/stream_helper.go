@@ -187,6 +187,12 @@ func readStreamWithBufferPreflight(
 // WriteStreamWithBuffer write the message to stream
 func WriteStreamWithBuffer(msg []byte, stream network.Stream) error {
 	length := uint32(len(msg))
+	// Fail fast on the sender: receivers enforce the same bound and reject
+	// the frame after the bandwidth is already spent, attributing the error
+	// to the wrong side.
+	if length > MaxPayload {
+		return fmt.Errorf("payload length:%d exceed max payload length:%d", length, MaxPayload)
+	}
 	lengthBytes := make([]byte, LengthHeader)
 	binary.LittleEndian.PutUint32(lengthBytes, length)
 	if ApplyDeadline.Load() {
@@ -280,6 +286,9 @@ func ReadStreamWithBufferWithContext(ctx context.Context, stream network.Stream)
 
 // WriteStreamWithBufferWithContext writes the message to stream with context awareness
 func WriteStreamWithBufferWithContext(ctx context.Context, msg []byte, stream network.Stream) error {
+	if len(msg) > MaxPayload {
+		return fmt.Errorf("payload length:%d exceed max payload length:%d", len(msg), MaxPayload)
+	}
 	// Determine deadline from context or use default
 	deadline := time.Now().Add(TimeoutWritePayload)
 	if dl, ok := ctx.Deadline(); ok {

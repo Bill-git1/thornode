@@ -34,6 +34,16 @@ func TestMsgScheduleExecuteContract_ValidateBasic(t *testing.T) {
 			msg:   types.NewMsgScheduleExecuteContract("invalid", 100, []byte(`{}`)),
 			valid: false,
 		},
+		{
+			name:  "after at max",
+			msg:   types.NewMsgScheduleExecuteContract(validAddr, types.MaxAfter, []byte(`{}`)),
+			valid: true,
+		},
+		{
+			name:  "after exceeds max",
+			msg:   types.NewMsgScheduleExecuteContract(validAddr, types.MaxAfter+1, []byte(`{}`)),
+			valid: false,
+		},
 	}
 
 	for _, tc := range tests {
@@ -46,6 +56,18 @@ func TestMsgScheduleExecuteContract_ValidateBasic(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMsgScheduleExecuteContract_ValidateStored(t *testing.T) {
+	// beyond the horizon: rejected for new scheduling, accepted once stored
+	msg := types.NewMsgScheduleExecuteContract(validAddr, types.MaxAfter+1, []byte(`{}`))
+	require.Error(t, msg.ValidateBasic())
+	require.NoError(t, msg.ValidateStored())
+
+	// an invalid sender is rejected on both paths
+	msg = types.NewMsgScheduleExecuteContract("invalid", 0, []byte(`{}`))
+	require.Error(t, msg.ValidateBasic())
+	require.Error(t, msg.ValidateStored())
 }
 
 func TestMsgScheduleExecuteContract_GetSigners(t *testing.T) {

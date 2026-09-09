@@ -55,6 +55,40 @@ func (s *HandlerReferenceMemoSuite) TestValidate(c *C) {
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 }
 
+func (s *HandlerReferenceMemoSuite) TestValidateRejectsReservedTypes(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewReferenceMemoHandler(mgr)
+	signer := GetRandomBech32Addr()
+	asset := common.BTCAsset
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.Decimals = 8
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
+
+	// Reserved validator-internal types must never be registrable as references.
+	reserved := []string{
+		"OUT:" + GetRandomTxHash().String(),
+		"REFUND:" + GetRandomTxHash().String(),
+		"RAGNAROK:1",
+		"MIGRATE:1",
+		"CONSOLIDATE",
+	}
+	for _, memo := range reserved {
+		msg := NewMsgReferenceMemo(asset, memo, signer)
+		err := handler.validate(ctx, *msg)
+		c.Assert(err, NotNil, check.Commentf("memo %q should be rejected", memo))
+		c.Check(err.Error(), check.Matches, ".*reserved for validator-internal use.*", check.Commentf("memo %q", memo))
+	}
+
+	// A benign type still registers.
+	msg := NewMsgReferenceMemo(asset, "+:BTC.BTC", signer)
+	c.Assert(handler.validate(ctx, *msg), IsNil)
+}
+
 func (s *HandlerReferenceMemoSuite) TestValidateWithCost(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	handler := NewReferenceMemoHandler(mgr)

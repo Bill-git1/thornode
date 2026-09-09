@@ -133,6 +133,13 @@ func (b *AttestationBatcher) updateMaxBatchSize(newSize int64) {
 		b.logger.Error().Int64("new_size", newSize).Msg("invalid batch size, must be greater than 0")
 		return
 	}
+	if newSize > maxAllowedBatchSize {
+		b.logger.Warn().
+			Int64("new_size", newSize).
+			Int64("clamped_to", maxAllowedBatchSize).
+			Msg("batch size above allowed maximum, clamping")
+		newSize = maxAllowedBatchSize
+	}
 
 	b.maxBatchSizeMu.Lock()
 	defer b.maxBatchSizeMu.Unlock()
@@ -198,32 +205,42 @@ func (b *AttestationBatcher) sendBatches(ctx context.Context, force bool) {
 		}
 	}
 
+	// Take items up to both the item-count limit and a shared byte budget so
+	// the marshaled frame stays under the wire-level p2p.MaxPayload read cap.
+	// Anything left behind is sent by a follow-up flush.
 	clear := true
-	batchSizeTx := int64(len(b.observedTxBatch))
-	if batchSizeTx > max {
-		clear = false
-		batchSizeTx = max
+	bytesUsed := 0
+	takeWithinLimits := func(pendingLen int64, itemSize func(int64) int) int64 {
+		n := pendingLen
+		if n > max {
+			n = max
+		}
+		var i int64
+		for ; i < n; i++ {
+			sz := itemSize(i) + protoItemOverhead
+			// Always take the first item of an empty frame so a single
+			// oversized item cannot stall the queue forever.
+			if bytesUsed > 0 && bytesUsed+sz > maxAttestationBatchBytes {
+				break
+			}
+			bytesUsed += sz
+		}
+		if i < pendingLen {
+			clear = false
+		}
+		return i
 	}
-	batchSizeNF := int64(len(b.networkFeeBatch))
-	if batchSizeNF > max {
-		clear = false
-		batchSizeNF = max
-	}
-	batchSizeSolvency := int64(len(b.solvencyBatch))
-	if batchSizeSolvency > max {
-		clear = false
-		batchSizeSolvency = max
-	}
-	batchSizeErrata := int64(len(b.errataTxBatch))
-	if batchSizeErrata > max {
-		clear = false
-		batchSizeErrata = max
-	}
-	batchSizePriceFeed := int64(len(b.priceFeedBatch))
-	if batchSizePriceFeed > max {
-		clear = false
-		batchSizePriceFeed = max
-	}
+
+	batchSizeTx := takeWithinLimits(int64(len(b.observedTxBatch)),
+		func(i int64) int { return b.observedTxBatch[i].Size() })
+	batchSizeNF := takeWithinLimits(int64(len(b.networkFeeBatch)),
+		func(i int64) int { return b.networkFeeBatch[i].Size() })
+	batchSizeSolvency := takeWithinLimits(int64(len(b.solvencyBatch)),
+		func(i int64) int { return b.solvencyBatch[i].Size() })
+	batchSizeErrata := takeWithinLimits(int64(len(b.errataTxBatch)),
+		func(i int64) int { return b.errataTxBatch[i].Size() })
+	batchSizePriceFeed := takeWithinLimits(int64(len(b.priceFeedBatch)),
+		func(i int64) int { return b.priceFeedBatch[i].Size() })
 
 	// Populate the batch
 	batch.AttestTxs = append(batch.AttestTxs[:0], b.observedTxBatch[:batchSizeTx]...)
@@ -276,6 +293,9 @@ func (b *AttestationBatcher) sendBatches(ctx context.Context, force bool) {
 		return
 	}
 	b.lastBatchSent = time.Now()
+	// Items were left behind (count cap or byte budget); schedule a follow-up
+	// flush rather than waiting for the next interval.
+	b.triggerBatchSend()
 }
 
 // AddObservedTx adds an observed transaction attestation to the batch

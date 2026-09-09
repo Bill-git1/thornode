@@ -38,6 +38,7 @@ const (
 	MimirTemplateHaltTrading               = "Halt%sTrading"                // Use with Chain (mixed case, e.g., HaltETHTrading)
 	MimirTemplateSkipSignerCache           = "SkipSignerCache%s"            // Use with Chain (e.g., SkipSignerCacheBTC). Operational flag to allow signer cache bypass on expiry.
 	MimirKeyHaltTradingGlobal              = "HaltTrading"                  // Global trading halt
+	MimirTemplateAllowNoVault              = "AllowNoVault-%s"              // Use with Chain; authorizes noop:novault vault debits on that chain
 
 	MimirRefL1           = "L1"           // Use with SwapSlipBasisPoints
 	MimirRefSynth        = "Synth"        // Use with SwapSlipBasisPoints

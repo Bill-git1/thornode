@@ -152,29 +152,34 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 
 	s.mu.Unlock()
 
-	// Calculate total number of batches
+	// Pack items into batches by serialized size so every frame stays under
+	// the wire-level payload cap, regardless of item counts or how many
+	// attestations each item carries.
+	qb := &quorumStateBatcher{}
+	for _, tx := range allQuorumTxs {
+		qb.add(tx.Size(), func(qs *common.QuorumState) { qs.QuoTxs = append(qs.QuoTxs, tx) })
+	}
+	for _, nf := range allNetworkFees {
+		qb.add(nf.Size(), func(qs *common.QuorumState) { qs.QuoNetworkFees = append(qs.QuoNetworkFees, nf) })
+	}
+	for _, solvency := range allSolvencies {
+		qb.add(solvency.Size(), func(qs *common.QuorumState) { qs.QuoSolvencies = append(qs.QuoSolvencies, solvency) })
+	}
+	for _, errataTx := range allErrataTxs {
+		qb.add(errataTx.Size(), func(qs *common.QuorumState) { qs.QuoErrataTxs = append(qs.QuoErrataTxs, errataTx) })
+	}
+	for _, priceFeed := range allPriceFeeds {
+		qb.add(priceFeed.Size(), func(qs *common.QuorumState) { qs.QuoPriceFeeds = append(qs.QuoPriceFeeds, priceFeed) })
+	}
+	qb.flush()
+	batches := qb.batches
+
 	totalTxs := len(allQuorumTxs)
-	totalTxBatches := (totalTxs + maxQuorumTxsPerBatch - 1) / maxQuorumTxsPerBatch
-
 	totalNfs := len(allNetworkFees)
-	totalNfBatches := (totalNfs + maxQuorumTxsPerBatch - 1) / maxQuorumTxsPerBatch
-
 	totalSolvencies := len(allSolvencies)
-	totalSolvencyBatches := (totalSolvencies + maxQuorumTxsPerBatch - 1) / maxQuorumTxsPerBatch
-
 	totalErrataTxs := len(allErrataTxs)
-	totalErrataBatches := (totalErrataTxs + maxQuorumTxsPerBatch - 1) / maxQuorumTxsPerBatch
-
 	totalPriceFeeds := len(allPriceFeeds)
-	totalPriceFeedBatches := (totalPriceFeeds + maxQuorumTxsPerBatch - 1) / maxQuorumTxsPerBatch
-
-	totalBatches := max(
-		totalTxBatches,
-		totalNfBatches,
-		totalSolvencyBatches,
-		totalErrataBatches,
-		totalPriceFeedBatches,
-	)
+	totalBatches := len(batches)
 
 	s.logger.Debug().
 		Int("total_txs", totalTxs).
@@ -183,7 +188,7 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 		Int("total_errata_txs", totalErrataTxs).
 		Int("total_price_feeds", totalPriceFeeds).
 		Int("total_batches", totalBatches).
-		Int("max_per_batch", maxQuorumTxsPerBatch).
+		Int("max_batch_bytes", maxAttestationBatchBytes).
 		Msg("sending attestation state in batches")
 
 	// Send batch begin signal with total number of batches
@@ -218,71 +223,12 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 	}
 
 	// Send batches
-	for batchNum := 0; batchNum < totalBatches; batchNum++ {
-		startIdx := batchNum * maxQuorumTxsPerBatch
-		endIdx := startIdx + maxQuorumTxsPerBatch
-
-		var batchTxs []*common.QuorumTx
-		var batchNfs []*common.QuorumNetworkFee
-		var batchSolvencies []*common.QuorumSolvency
-		var batchErrataTxs []*common.QuorumErrataTx
-		var batchPriceFeeds []*common.QuorumPriceFeed
-
-		if totalTxs > 0 && startIdx < totalTxs {
-			if endIdx > totalTxs {
-				endIdx = totalTxs
-			}
-			batchTxs = allQuorumTxs[startIdx:endIdx]
-		}
-
-		if totalNfs > 0 && startIdx < totalNfs {
-			if endIdx > totalNfs {
-				endIdx = totalNfs
-			}
-			batchNfs = allNetworkFees[startIdx:endIdx]
-		}
-
-		if totalSolvencies > 0 && startIdx < totalSolvencies {
-			if endIdx > totalSolvencies {
-				endIdx = totalSolvencies
-			}
-			batchSolvencies = allSolvencies[startIdx:endIdx]
-		}
-
-		if totalErrataTxs > 0 && startIdx < totalErrataTxs {
-			if endIdx > totalErrataTxs {
-				endIdx = totalErrataTxs
-			}
-			batchErrataTxs = allErrataTxs[startIdx:endIdx]
-		}
-
-		if totalPriceFeeds > 0 && startIdx < totalPriceFeeds {
-			if endIdx > totalPriceFeeds {
-				endIdx = totalPriceFeeds
-			}
-			batchPriceFeeds = allPriceFeeds[startIdx:endIdx]
-		}
-
-		// Create batch with current set of QuorumTxs
-		batch := common.QuorumState{
-			QuoTxs:         batchTxs,
-			QuoNetworkFees: batchNfs,
-			QuoSolvencies:  batchSolvencies,
-			QuoErrataTxs:   batchErrataTxs,
-			QuoPriceFeeds:  batchPriceFeeds,
-		}
-
-		// Marshal the batch (handle empty batches specially)
+	for batchNum, batch := range batches {
 		var batchData []byte
-		if len(batch.QuoTxs) == 0 {
-			// For empty batches, use an empty buffer rather than marshaling an empty struct
-			batchData = []byte{}
-		} else {
-			batchData, err = batch.Marshal()
-			if err != nil {
-				s.logger.Error().Err(err).Int("batch", batchNum+1).Msg("failed to marshal batch")
-				return
-			}
+		batchData, err = batch.Marshal()
+		if err != nil {
+			s.logger.Error().Err(err).Int("batch", batchNum+1).Msg("failed to marshal batch")
+			return
 		}
 
 		// Send batch info (batch number and data size)

@@ -43,6 +43,11 @@ const (
 	MessagesBatched MetricName = `messages_batched`
 	BatchSize       MetricName = `batch_size`
 	BatchSendTime   MetricName = `batch_send_time`
+
+	// SolKeysignAbstain counts SOL keysign abstentions by reason. A fleet-wide spike
+	// (every node failing IsBlockhashValid, or finalization lag exceeding the margin)
+	// is otherwise invisible — the signer logs an abstain like routine non-selection.
+	SolKeysignAbstain MetricName = `sol_keysign_abstain`
 )
 
 // Metrics used to provide promethus metrics
@@ -140,6 +145,14 @@ var (
 			Help:      "errors in signer",
 		}, []string{
 			"error_name", "additional",
+		}),
+		SolKeysignAbstain: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: "bifrost",
+			Subsystem: "solana",
+			Name:      "keysign_abstain_total",
+			Help:      "SOL keysign abstentions by reason",
+		}, []string{
+			"reason",
 		}),
 		PubKeyManagerError: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: "pubkey_manager",

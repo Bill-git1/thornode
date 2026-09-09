@@ -367,6 +367,14 @@ func parseTradeTarget(limit string) (cosmos.Uint, error) {
 	if err != nil {
 		return cosmos.ZeroUint(), err
 	}
+	// Bound the magnitude before f.Int materializes the integer: big.Float keeps
+	// the value in scientific form, so "1e300000000" parses cheaply but f.Int
+	// would allocate the full 10^exp integer (hundreds of MB) only for
+	// NewUintFromBigInt to reject it. Any finite value past 2^256-1 is an invalid
+	// Uint regardless, so this rejects nothing that was previously accepted.
+	if !f.IsInf() && f.MantExp(nil) > 256 {
+		return cosmos.ZeroUint(), fmt.Errorf("price limit %q is out of range", limit)
+	}
 	i := new(big.Int)
 	f.Int(i) // Note: fractional part will be discarded
 	result := cosmos.NewUintFromBigInt(i)

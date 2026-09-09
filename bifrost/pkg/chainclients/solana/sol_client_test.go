@@ -122,58 +122,49 @@ func (s *SolTestSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// This handler is hit CONCURRENTLY: NewSOLClient starts the block scanner
+		// in a goroutine that polls the SOL RPC while a test drives the sign path.
+		// gocheck's *C is not safe for concurrent use, so never call c.Assert/
+		// c.Fatal here — use local errors and ignore write failures.
 		switch req.RequestURI {
 		case thorclient.ChainVersionEndpoint:
-			_, writeErr := rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
-			c.Assert(writeErr, IsNil)
+			_, _ = rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
 		case thorclient.PubKeysEndpoint:
-			content := fmt.Sprintf(`{
-  "asgard": [
-    {
-      "pub_key_eddsa": "%s"
-    }
-  ]
-}`, pubKey)
 			rw.Header().Set("Content-Type", "application/json")
-			if _, err = rw.Write([]byte(content)); err != nil {
-				c.Fatal(err)
-			}
-			// httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/pubKeys.json")
+			_, _ = fmt.Fprintf(rw, `{"asgard":[{"pub_key_eddsa":%q}]}`, pubKey)
 		default:
-			body, readErr := io.ReadAll(req.Body)
-			c.Assert(readErr, IsNil)
-			type RPCRequest struct {
-				JSONRPC string          `json:"jsonrpc"`
-				ID      interface{}     `json:"id"`
-				Method  string          `json:"method"`
-				Params  json.RawMessage `json:"params"`
+			body, _ := io.ReadAll(req.Body)
+			var rpcRequest struct {
+				ID     json.RawMessage `json:"id"`
+				Method string          `json:"method"`
+				Params json.RawMessage `json:"params"`
 			}
-			var rpcRequest RPCRequest
-			err = json.Unmarshal(body, &rpcRequest)
-			c.Assert(err, IsNil)
-			if rpcRequest.Method == "getBlock" {
-				httpTestHandler(c, rw, "./test/getBlock.json")
+			_ = json.Unmarshal(body, &rpcRequest)
+			rw.Header().Set("Content-Type", "application/json")
+
+			// SOL consensus-blockhash + participation-gate methods (getSlot,
+			// getBlocks, getBlockTime, getBlock, isBlockhashValid).
+			if res, ok := consensusBlockhashRPCResponse(rpcRequest.Method, rpcRequest.Params); ok {
+				_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":%s}`, res)
+				return
 			}
-			if rpcRequest.Method == "getLatestBlockhash" {
-				// fmt.Println("GET LATEST BLOCK HASH", rpcRequest)
-				httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
-			}
-			if rpcRequest.Method == "getTransaction" {
+			switch rpcRequest.Method {
+			case "block": // CometBFT block for the real bridge's GetBlockTimestamp
+				_, _ = rw.Write([]byte(cometBFTBlockResponse(rpcRequest.ID)))
+			case "getLatestBlockhash":
+				_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":279644744},"value":{"blockhash":"2Q1p2F8BDaLRkiJURvxTXAFHffC1uVsTXFkWsE7eawHE","lastValidBlockHeight":258824587}}}`))
+			case "getTransaction":
 				if bytes.Contains(body, []byte("somesig")) {
-					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"slot":12345,"meta":{},"transaction":{}}}`))
+					_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"slot":12345,"meta":{},"transaction":{}}}`))
 				} else {
-					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+					_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
 				}
-				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "getSignatureStatuses" {
-				switch {
-				case bytes.Contains(body, []byte("pendingsig")):
-					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"value":[{"slot":12345,"confirmations":1,"err":null,"confirmationStatus":"processed"}]}}`))
-				default:
-					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"value":[null]}}`))
+			case "getSignatureStatuses":
+				if bytes.Contains(body, []byte("pendingsig")) {
+					_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"value":[{"slot":12345,"confirmations":1,"err":null,"confirmationStatus":"processed"}]}}`))
+				} else {
+					_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"value":[null]}}`))
 				}
-				c.Assert(err, IsNil)
 			}
 		}
 	}))
@@ -181,6 +172,10 @@ func (s *SolTestSuite) SetUpSuite(c *C) {
 	s.server = server
 
 	cfg.ChainHost = server.Listener.Addr().String()
+	// Point the bridge's CometBFT client at the same mock so GetBlockTimestamp
+	// (used by the consensus-blockhash sign path) resolves against the "block"
+	// handler above.
+	cfg.ChainRPC = server.Listener.Addr().String()
 
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	c.Assert(os.Setenv("NET", "stagenet"), IsNil)
@@ -227,8 +222,6 @@ func (s *SolTestSuite) TestCreateAndSerializeTx(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)
 
-	e.solScanner.recentBlockHash = "asdfasdf"
-
 	// Create TX
 	txOutItem := stypes.TxOutItem{
 		Chain:            common.SOLChain,
@@ -244,7 +237,7 @@ func (s *SolTestSuite) TestCreateAndSerializeTx(c *C) {
 		GasRate: 1,
 		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
 	}
-	tx, err := e.CreateTx(txOutItem, txOutItem.GetMemo())
+	tx, err := e.CreateTx(txOutItem, txOutItem.GetMemo(), "asdfasdf")
 	c.Assert(err, IsNil)
 	c.Assert(tx, NotNil)
 
@@ -252,128 +245,6 @@ func (s *SolTestSuite) TestCreateAndSerializeTx(c *C) {
 	rawTx, err := tx.Serialize()
 	c.Assert(err, IsNil)
 	c.Assert(len(rawTx), Equals, 293)
-}
-
-func (s *SolTestSuite) TestSignSOLTx(c *C) {
-	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
-	c.Assert(err, IsNil)
-	poolMgr := thorclient.NewPoolMgr(s.bridge)
-	e, err := NewSOLClient(s.thorKeys,
-		config.BifrostChainConfiguration{
-			RPCHost: "http://" + s.server.Listener.Addr().String(),
-			BlockScanner: config.BifrostBlockScannerConfiguration{
-				ChainID:            common.SOLChain,
-				StartBlockHeight:   1, // avoids querying thorchain for block height
-				HTTPRequestTimeout: time.Second,
-				MaxGasLimit:        80000,
-			},
-		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
-	c.Assert(err, IsNil)
-	c.Assert(e, NotNil)
-	c.Assert(pubkeyMgr.Start(), IsNil)
-	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
-	pubkeys := pubkeyMgr.GetPubKeys()
-
-	// Not SOL chain
-	result, _, obs, err := e.SignTx(stypes.TxOutItem{
-		Chain:       common.BTCChain,
-		ToAddress:   "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
-		VaultPubKey: "",
-	}, 1)
-	c.Assert(err, NotNil)
-	c.Assert(result, IsNil)
-	c.Assert(obs, IsNil)
-
-	e.solScanner.recentBlockHash = "asdfasdf"
-
-	// Valid outbound
-	result, _, obs, err = e.SignTx(stypes.TxOutItem{
-		Chain:            common.SOLChain,
-		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
-		VaultPubKey:      pubkeys[0],
-		VaultPubKeyEddsa: pubkeys[0],
-		Coins: common.Coins{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
-		},
-		GasRate: 1,
-		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
-	}, 1)
-
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
-	c.Assert(obs, NotNil)
-	c.Assert(obs.Gas, HasLen, 1)
-	c.Assert(obs.Gas[0].Amount.Uint64(), Equals, uint64(500))
-	c.Assert(obs.Gas[0].Decimals, Equals, int64(9))
-
-	// Already signed — signer cache should suppress re-signing
-	txOut := stypes.TxOutItem{
-		Chain:            common.SOLChain,
-		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
-		VaultPubKey:      pubkeys[0],
-		VaultPubKeyEddsa: pubkeys[0],
-		Coins: common.Coins{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
-		},
-		GasRate: 1,
-		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
-	}
-	c.Assert(e.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "somesig"), IsNil)
-	result, _, _, err = e.SignTx(txOut, 1)
-	c.Assert(err, IsNil)
-	c.Assert(result, IsNil) // suppressed by signer cache
-}
-
-func (s *SolTestSuite) TestSignSOLTxReSignsWhenCachedTxMissingFromChain(c *C) {
-	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
-	c.Assert(err, IsNil)
-	poolMgr := thorclient.NewPoolMgr(s.bridge)
-	e, err := NewSOLClient(s.thorKeys,
-		config.BifrostChainConfiguration{
-			RPCHost: "http://" + s.server.Listener.Addr().String(),
-			BlockScanner: config.BifrostBlockScannerConfiguration{
-				ChainID:            common.SOLChain,
-				StartBlockHeight:   1,
-				HTTPRequestTimeout: time.Second,
-				MaxGasLimit:        80000,
-			},
-		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
-	c.Assert(err, IsNil)
-	c.Assert(pubkeyMgr.Start(), IsNil)
-	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
-	e.solScanner.recentBlockHash = "asdfasdf"
-	pubkeys := pubkeyMgr.GetPubKeys()
-
-	txOut := stypes.TxOutItem{
-		Chain:            common.SOLChain,
-		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
-		VaultPubKey:      pubkeys[0],
-		VaultPubKeyEddsa: pubkeys[0],
-		Coins: common.Coins{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
-		},
-		GasRate: 1,
-		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
-	}
-
-	expired := time.Now().Add(-time.Minute).UnixMilli()
-	c.Assert(e.signerCacheManager.SetSignedWithExpiry(txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "missingsig", expired), IsNil)
-
-	result, _, _, err := e.SignTx(txOut, 1)
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
-	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false)
 }
 
 func (s *SolTestSuite) TestSignSOLTxDoesNotReSignWhenCachedTxIsStillPending(c *C) {
@@ -394,7 +265,6 @@ func (s *SolTestSuite) TestSignSOLTxDoesNotReSignWhenCachedTxIsStillPending(c *C
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
 	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
-	e.solScanner.recentBlockHash = "asdfasdf"
 	pubkeys := pubkeyMgr.GetPubKeys()
 
 	txOut := stypes.TxOutItem{
@@ -417,89 +287,6 @@ func (s *SolTestSuite) TestSignSOLTxDoesNotReSignWhenCachedTxIsStillPending(c *C
 	result, _, _, err := e.SignTx(txOut, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, IsNil)
-	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
-}
-
-func (s *SolTestSuite) TestBroadcastTxLandedDespiteError(c *C) {
-	// Build a test server that rejects sendTransaction but confirms the tx on-chain
-	// via getTransaction — simulating a network timeout after the tx was accepted.
-	const landedSlot = uint64(12345)
-	broadcastServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		body, _ := io.ReadAll(req.Body)
-		var rpcRequest struct {
-			Method string `json:"method"`
-		}
-		_ = json.Unmarshal(body, &rpcRequest)
-		rw.Header().Set("Content-Type", "application/json")
-		switch rpcRequest.Method {
-		case "sendTransaction":
-			// Simulate RPC error (e.g. node behind, response dropped)
-			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32005,"message":"Node is behind by 150 slots"}}`))
-		case "getTransaction":
-			_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":{"slot":%d,"meta":{},"transaction":{}}}`, landedSlot)
-		case "getLatestBlockhash":
-			httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
-		default:
-			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
-		}
-	}))
-	defer broadcastServer.Close()
-
-	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
-	c.Assert(err, IsNil)
-	poolMgr := thorclient.NewPoolMgr(s.bridge)
-	e, err := NewSOLClient(s.thorKeys,
-		config.BifrostChainConfiguration{
-			RPCHost: "http://" + broadcastServer.Listener.Addr().String(),
-			BlockScanner: config.BifrostBlockScannerConfiguration{
-				ChainID:            common.SOLChain,
-				StartBlockHeight:   1,
-				HTTPRequestTimeout: time.Second,
-				MaxGasLimit:        80000,
-			},
-		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
-	c.Assert(err, IsNil)
-	c.Assert(pubkeyMgr.Start(), IsNil)
-	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
-	pubkeys := pubkeyMgr.GetPubKeys()
-
-	txOut := stypes.TxOutItem{
-		Chain:            common.SOLChain,
-		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
-		VaultPubKey:      pubkeys[0],
-		VaultPubKeyEddsa: pubkeys[0],
-		Coins: common.Coins{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
-		},
-		GasRate: 1,
-		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
-	}
-
-	// Override the broadcast lookup delay so the test doesn't sleep.
-	broadcastLookupDelay = 0
-
-	e.solScanner.recentBlockHash = "asdfasdf"
-	rawTx, _, _, err := e.SignTx(txOut, 1)
-	c.Assert(err, IsNil)
-	c.Assert(rawTx, NotNil)
-
-	// Derive expected sig from raw bytes before broadcast
-	expectedSig, ok := txSigFromRawTx(rawTx)
-	c.Assert(ok, Equals, true)
-
-	// Cache should be empty before broadcast
-	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false)
-
-	// BroadcastTx should detect the tx on-chain despite the RPC error
-	txSig, err := e.BroadcastTx(txOut, rawTx)
-	c.Assert(err, IsNil)
-	c.Assert(txSig, Equals, expectedSig)
-
-	// Cache must now be written so a future reschedule won't re-sign
 	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
 }
 
@@ -553,8 +340,19 @@ type mockSOLThorchainBridge struct {
 	postErr   error
 }
 
+// testConsensusBlockTimeUnix is the fixed THORChain block time the mock bridge
+// reports, so the deterministic-blockhash mock RPC (see makeDeterministicSolRPC)
+// can craft getBlockTime values that bracket target = t - margin.
+const testConsensusBlockTimeUnix = int64(1788116000)
+
 // PostKeysignFailure records the forwarded blame so the Solana signer tests can
 // assert whether Thornode reporting happened.
+// GetBlockTimestamp stub so SignTx's consensusBlockHash path derives a deterministic
+// blockhash from a known consensus time instead of the per-node scanner.
+func (m *mockSOLThorchainBridge) GetBlockTimestamp(int64) (time.Time, error) {
+	return time.Unix(testConsensusBlockTimeUnix, 0).UTC(), nil
+}
+
 func (m *mockSOLThorchainBridge) PostKeysignFailure(blame types2.Blame, height int64, memo string, coins common.Coins, pubkey common.PubKey) (common.TxID, error) {
 	m.postCalls = append(m.postCalls, solKeysignFailureCall{
 		blame:  blame,
@@ -602,10 +400,13 @@ func (s *SolTestSuite) TestSignSOLTx_PostKeysignFailureOnEdDSAFinalRound(c *C) {
 			{Pubkey: types2.GetRandomEd25519PubKey().String()},
 		},
 	}
+	srv, rc := newDeterministicSOLRPC(c)
+	defer srv.Close()
 	client := &SOLClient{
 		bridge:             bridge,
 		localPubKey:        "not-local",
-		solScanner:         &SOLScanner{recentBlockHash: "asdfasdf"},
+		rpcClient:          rc,
+		solScanner:         &SOLScanner{},
 		tssKeyManager:      &mockSOLThorchainKeyManager{err: tss.NewKeysignError(blame)},
 		signerCacheManager: newTestSignerCacheManager(c),
 	}
@@ -654,10 +455,13 @@ func (s *SolTestSuite) TestSignSOLTx_PostKeysignFailureUsesOriginalMemo(c *C) {
 			{Pubkey: types2.GetRandomEd25519PubKey().String()},
 		},
 	}
+	srv, rc := newDeterministicSOLRPC(c)
+	defer srv.Close()
 	client := &SOLClient{
 		bridge:             bridge,
 		localPubKey:        "not-local",
-		solScanner:         &SOLScanner{recentBlockHash: "asdfasdf"},
+		rpcClient:          rc,
+		solScanner:         &SOLScanner{},
 		tssKeyManager:      &mockSOLThorchainKeyManager{err: tss.NewKeysignError(blame)},
 		signerCacheManager: newTestSignerCacheManager(c),
 	}
@@ -686,48 +490,6 @@ func (s *SolTestSuite) TestSignSOLTx_PostKeysignFailureUsesOriginalMemo(c *C) {
 	c.Check(bridge.postCalls[0].memo, Equals, tx.GetMemo())
 }
 
-func (s *SolTestSuite) TestSignSOLTx_ObservationUsesOriginalMemo(c *C) {
-	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
-	c.Assert(err, IsNil)
-	poolMgr := thorclient.NewPoolMgr(s.bridge)
-	client, err := NewSOLClient(s.thorKeys,
-		config.BifrostChainConfiguration{
-			RPCHost: "http://" + s.server.Listener.Addr().String(),
-			BlockScanner: config.BifrostBlockScannerConfiguration{
-				ChainID:            common.SOLChain,
-				StartBlockHeight:   1,
-				HTTPRequestTimeout: time.Second,
-				MaxGasLimit:        80000,
-			},
-		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
-	c.Assert(err, IsNil)
-	c.Assert(pubkeyMgr.Start(), IsNil)
-	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-	client.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
-	client.solScanner.recentBlockHash = "asdfasdf"
-
-	pubkeys := pubkeyMgr.GetPubKeys()
-	originalMemo := "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87"
-	_, _, obs, err := client.SignTx(stypes.TxOutItem{
-		Chain:            common.SOLChain,
-		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
-		VaultPubKey:      pubkeys[0],
-		VaultPubKeyEddsa: pubkeys[0],
-		Coins: common.Coins{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
-		},
-		GasRate:      1,
-		Memo:         "",
-		OriginalMemo: originalMemo,
-	}, 123)
-	c.Assert(err, IsNil)
-	c.Assert(obs, NotNil)
-	c.Check(obs.Memo, Equals, originalMemo)
-}
-
 // TestSignSOLTx_DoesNotPostKeysignFailureWithoutBlameNodes keeps the existing
 // behavior for generic TSS failures where no culprit set is available.
 func (s *SolTestSuite) TestSignSOLTx_DoesNotPostKeysignFailureWithoutBlameNodes(c *C) {
@@ -737,10 +499,13 @@ func (s *SolTestSuite) TestSignSOLTx_DoesNotPostKeysignFailureWithoutBlameNodes(
 	toAddr, err := toPubKey.GetAddress(common.SOLChain)
 	c.Assert(err, IsNil)
 
+	srv, rc := newDeterministicSOLRPC(c)
+	defer srv.Close()
 	client := &SOLClient{
 		bridge:             bridge,
 		localPubKey:        "not-local",
-		solScanner:         &SOLScanner{recentBlockHash: "asdfasdf"},
+		rpcClient:          rc,
+		solScanner:         &SOLScanner{},
 		tssKeyManager:      &mockSOLThorchainKeyManager{err: tss.NewKeysignError(types2.Blame{FailReason: "timeout", Round: "thorchain.tsslib.eddsa.signing.SignRound3Message"})},
 		signerCacheManager: newTestSignerCacheManager(c),
 	}
@@ -839,14 +604,22 @@ type solCacheRPCServer struct {
 	getTxFailedOnChain bool   // true (with slot > 0) → landed but meta.err set (failed execution)
 }
 
-func newSolCacheRPCServer(c *C, s *solCacheRPCServer) *httptest.Server {
+func newSolCacheRPCServer(_ *C, s *solCacheRPCServer) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// Hit concurrently by the background scanner — never touch *C here.
 		body, _ := io.ReadAll(req.Body)
 		var rpcRequest struct {
-			Method string `json:"method"`
+			Method string          `json:"method"`
+			Params json.RawMessage `json:"params"`
 		}
 		_ = json.Unmarshal(body, &rpcRequest)
 		rw.Header().Set("Content-Type", "application/json")
+		// Serve the consensus-blockhash sign path (getSlot/getBlocks/getBlockTime/
+		// getBlock/isBlockhashValid) so the re-sign cache tests can reach signing.
+		if res, ok := consensusBlockhashRPCResponse(rpcRequest.Method, rpcRequest.Params); ok {
+			_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":%s}`, res)
+			return
+		}
 		switch rpcRequest.Method {
 		case "getTransaction":
 			s.getTxCalls++
@@ -865,7 +638,7 @@ func newSolCacheRPCServer(c *C, s *solCacheRPCServer) *httptest.Server {
 				_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
 			}
 		case "getLatestBlockhash":
-			httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":279644744},"value":{"blockhash":"2Q1p2F8BDaLRkiJURvxTXAFHffC1uVsTXFkWsE7eawHE","lastValidBlockHeight":258824587}}}`))
 		default:
 			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
 		}
@@ -892,7 +665,6 @@ func (s *SolTestSuite) newSolCacheTestClient(c *C, server *httptest.Server) (*SO
 	c.Assert(err, IsNil)
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
-	e.solScanner.recentBlockHash = "asdfasdf"
 	pubkeys := pubkeyMgr.GetPubKeys()
 	return e, pubkeys[0], pubkeyMgr
 }
@@ -967,58 +739,6 @@ func (s *SolTestSuite) TestSignTxExpiredEntryOnChainProtectsAgainstDoubleSpend(c
 	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
 }
 
-// TestSignTxExpiredEntryLandedButFailedReSigns verifies the #3089 wedge fix: a
-// recorded broadcast that landed on chain but FAILED at execution (meta.err set,
-// e.g. insufficient lamports — fee burned, transfer reverted) must be treated
-// like a dropped broadcast. Presence on chain (Slot > 0) is NOT sufficient; only
-// a SUCCESSFUL landing is authoritative. The cache is cleared and the outbound
-// re-signed, otherwise every node keeps "confirming" the failed sig and refuses
-// to re-sign, wedging the outbound permanently.
-func (s *SolTestSuite) TestSignTxExpiredEntryLandedButFailedReSigns(c *C) {
-	rpc := &solCacheRPCServer{getTxReturnsSlot: 42, getTxFailedOnChain: true} // landed but failed
-	server := newSolCacheRPCServer(c, rpc)
-	defer server.Close()
-
-	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
-	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-
-	txOut := newSolCacheTestTxOut(pub)
-	expired := time.Now().Add(-time.Minute).UnixMilli()
-	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
-		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "failed-sig", expired,
-	), IsNil)
-
-	result, _, _, err := e.SignTx(txOut, 1)
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)                                                   // re-signed
-	c.Assert(rpc.getTxCalls, Equals, 1)                                        // RPC verified first
-	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false) // cleared
-}
-
-// TestSignTxExpiredEntryNotOnChainReSigns verifies the only path that re-signs:
-// the cache entry is past expiry AND the RPC definitively reports the recorded
-// broadcast is not on chain. This is the dropped-broadcast recovery path.
-func (s *SolTestSuite) TestSignTxExpiredEntryNotOnChainReSigns(c *C) {
-	rpc := &solCacheRPCServer{} // result:null → not on chain
-	server := newSolCacheRPCServer(c, rpc)
-	defer server.Close()
-
-	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
-	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
-
-	txOut := newSolCacheTestTxOut(pub)
-	expired := time.Now().Add(-time.Minute).UnixMilli()
-	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
-		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "dropped-sig", expired,
-	), IsNil)
-
-	result, _, _, err := e.SignTx(txOut, 1)
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)                                                   // re-signed
-	c.Assert(rpc.getTxCalls, Equals, 1)                                        // RPC verified first
-	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false) // cleared
-}
-
 // TestSignTxExpiredEntryRPCErrorRespectsCache verifies the fail-closed behavior:
 // when the cache is past expiry but the RPC returns an error, SignTx must respect
 // the cache — we cannot confirm absence, so re-signing could double-spend.
@@ -1066,24 +786,325 @@ func (s *SolTestSuite) TestSignTxLegacyCacheEntryRespected(c *C) {
 	c.Assert(rpc.getTxCalls, Equals, 0)
 }
 
-// TestBroadcastTxWritesExpiringCacheEntry verifies that a successful BroadcastTx writes
-// a signer-cache entry with expiry semantics: HasSigned is true and GetSignedTxHash
-// returns the broadcast signature. Counterpart to TestSignTxCachedBroadcastConfirmed
-// that exercises the write path.
-func (s *SolTestSuite) TestBroadcastTxWritesExpiringCacheEntry(c *C) {
-	// A minimal test server that accepts any broadcast and reports success.
+// The tests below exercise the successful-signing / re-sign / broadcast paths
+// through the deterministic consensus-blockhash lookup. s.server (and the
+// per-test servers, via consensusBlockhashRPCResponse) canned-serve
+// getSlot/getBlocks/getBlockTime/getBlock/isBlockhashValid so SignTx can derive
+// a blockhash and sign; the real bridge's GetBlockTimestamp resolves against the
+// "block" handler on s.server. The determinism property itself (cross-node hash
+// agreement) is validated in the simulation framework, not in a single-process
+// unit test.
+
+func (s *SolTestSuite) TestSignSOLTx(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + s.server.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1, // avoids querying thorchain for block height
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(e, NotNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	pubkeys := pubkeyMgr.GetPubKeys()
+
+	// Not SOL chain
+	result, _, obs, err := e.SignTx(stypes.TxOutItem{
+		Chain:       common.BTCChain,
+		ToAddress:   "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey: "",
+	}, 1)
+	c.Assert(err, NotNil)
+	c.Assert(result, IsNil)
+	c.Assert(obs, IsNil)
+
+	// Valid outbound
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}, 1)
+
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	c.Assert(obs.Gas, HasLen, 1)
+	c.Assert(obs.Gas[0].Amount.Uint64(), Equals, uint64(500))
+	c.Assert(obs.Gas[0].Decimals, Equals, int64(9))
+
+	// Already signed — signer cache should suppress re-signing
+	txOut := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+	c.Assert(e.signerCacheManager.SetSigned(txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "somesig"), IsNil)
+	result, _, _, err = e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil) // suppressed by signer cache
+}
+
+func (s *SolTestSuite) TestSignSOLTxReSignsWhenCachedTxMissingFromChain(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + s.server.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	pubkeys := pubkeyMgr.GetPubKeys()
+
+	txOut := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "missingsig", expired), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false)
+}
+
+func (s *SolTestSuite) TestBroadcastTxLandedDespiteError(c *C) {
+	// Build a test server that rejects sendTransaction but confirms the tx on-chain
+	// via getTransaction — simulating a network timeout after the tx was accepted.
+	// It also serves the consensus-blockhash lookup so SignTx can derive a hash.
+	const landedSlot = uint64(12345)
 	broadcastServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		body, _ := io.ReadAll(req.Body)
 		var rpcRequest struct {
-			Method string `json:"method"`
+			Method string          `json:"method"`
+			Params json.RawMessage `json:"params"`
 		}
 		_ = json.Unmarshal(body, &rpcRequest)
 		rw.Header().Set("Content-Type", "application/json")
+		if res, ok := consensusBlockhashRPCResponse(rpcRequest.Method, rpcRequest.Params); ok {
+			_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":%s}`, res)
+			return
+		}
+		switch rpcRequest.Method {
+		case "sendTransaction":
+			// Simulate RPC error (e.g. node behind, response dropped)
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32005,"message":"Node is behind by 150 slots"}}`))
+		case "getTransaction":
+			_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":{"slot":%d,"meta":{},"transaction":{}}}`, landedSlot)
+		case "getLatestBlockhash":
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":279644744},"value":{"blockhash":"2Q1p2F8BDaLRkiJURvxTXAFHffC1uVsTXFkWsE7eawHE","lastValidBlockHeight":258824587}}}`))
+		default:
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+		}
+	}))
+	defer broadcastServer.Close()
+
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	e, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + broadcastServer.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	e.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+	pubkeys := pubkeyMgr.GetPubKeys()
+
+	txOut := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate: 1,
+		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	// Override the broadcast lookup delay so the test doesn't sleep.
+	broadcastLookupDelay = 0
+
+	rawTx, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(rawTx, NotNil)
+
+	// Derive expected sig from raw bytes before broadcast
+	expectedSig, ok := txSigFromRawTx(rawTx)
+	c.Assert(ok, Equals, true)
+
+	// Cache should be empty before broadcast
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false)
+
+	// BroadcastTx should detect the tx on-chain despite the RPC error
+	txSig, err := e.BroadcastTx(txOut, rawTx)
+	c.Assert(err, IsNil)
+	c.Assert(txSig, Equals, expectedSig)
+
+	// Cache must now be written so a future reschedule won't re-sign
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
+}
+
+func (s *SolTestSuite) TestSignSOLTx_ObservationUsesOriginalMemo(c *C) {
+	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
+	c.Assert(err, IsNil)
+	poolMgr := thorclient.NewPoolMgr(s.bridge)
+	client, err := NewSOLClient(s.thorKeys,
+		config.BifrostChainConfiguration{
+			RPCHost: "http://" + s.server.Listener.Addr().String(),
+			BlockScanner: config.BifrostBlockScannerConfiguration{
+				ChainID:            common.SOLChain,
+				StartBlockHeight:   1,
+				HTTPRequestTimeout: time.Second,
+				MaxGasLimit:        80000,
+			},
+		}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	c.Assert(err, IsNil)
+	c.Assert(pubkeyMgr.Start(), IsNil)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+	client.solScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
+
+	pubkeys := pubkeyMgr.GetPubKeys()
+	originalMemo := "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87"
+	_, _, obs, err := client.SignTx(stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		VaultPubKey:      pubkeys[0],
+		VaultPubKeyEddsa: pubkeys[0],
+		Coins: common.Coins{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250)),
+		},
+		MaxGas: common.Gas{
+			common.NewCoin(common.SOLAsset, cosmos.NewUint(15000)),
+		},
+		GasRate:      1,
+		Memo:         "",
+		OriginalMemo: originalMemo,
+	}, 123)
+	c.Assert(err, IsNil)
+	c.Assert(obs, NotNil)
+	c.Check(obs.Memo, Equals, originalMemo)
+}
+
+func (s *SolTestSuite) TestSignTxExpiredEntryLandedButFailedReSigns(c *C) {
+	rpc := &solCacheRPCServer{getTxReturnsSlot: 42, getTxFailedOnChain: true} // landed but failed
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "failed-sig", expired,
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)                                                   // re-signed
+	c.Assert(rpc.getTxCalls, Equals, 1)                                        // RPC verified first
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false) // cleared
+}
+
+func (s *SolTestSuite) TestSignTxExpiredEntryNotOnChainReSigns(c *C) {
+	rpc := &solCacheRPCServer{} // result:null → not on chain
+	server := newSolCacheRPCServer(c, rpc)
+	defer server.Close()
+
+	e, pub, pubkeyMgr := s.newSolCacheTestClient(c, server)
+	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
+
+	txOut := newSolCacheTestTxOut(pub)
+	expired := time.Now().Add(-time.Minute).UnixMilli()
+	c.Assert(e.signerCacheManager.SetSignedWithExpiry(
+		txOut.CacheHash(), txOut.CacheVault(common.SOLChain), "dropped-sig", expired,
+	), IsNil)
+
+	result, _, _, err := e.SignTx(txOut, 1)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)                                                   // re-signed
+	c.Assert(rpc.getTxCalls, Equals, 1)                                        // RPC verified first
+	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false) // cleared
+}
+
+func (s *SolTestSuite) TestBroadcastTxWritesExpiringCacheEntry(c *C) {
+	// A minimal test server that accepts any broadcast and reports success. It
+	// also serves the consensus-blockhash lookup so SignTx can derive a hash.
+	broadcastServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
+		var rpcRequest struct {
+			Method string          `json:"method"`
+			Params json.RawMessage `json:"params"`
+		}
+		_ = json.Unmarshal(body, &rpcRequest)
+		rw.Header().Set("Content-Type", "application/json")
+		if res, ok := consensusBlockhashRPCResponse(rpcRequest.Method, rpcRequest.Params); ok {
+			_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":%s}`, res)
+			return
+		}
 		switch rpcRequest.Method {
 		case "sendTransaction":
 			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"broadcast-sig"}`))
 		case "getLatestBlockhash":
-			httpTestHandler(c, rw, "./test/getLatestBlockHash.json")
+			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":279644744},"value":{"blockhash":"2Q1p2F8BDaLRkiJURvxTXAFHffC1uVsTXFkWsE7eawHE","lastValidBlockHeight":258824587}}}`))
 		default:
 			_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
 		}
@@ -1107,4 +1128,116 @@ func (s *SolTestSuite) TestBroadcastTxWritesExpiringCacheEntry(c *C) {
 	sig, ok := e.signerCacheManager.GetSignedTxHash(txOut.CacheHash())
 	c.Assert(ok, Equals, true)
 	c.Assert(sig, Equals, "broadcast-sig")
+}
+
+// TestSignTxAbstainInvalidBlockhashDrops covers the PERMANENT abstain branch: when the
+// derived consensus blockhash is no longer valid at the processed tip, it can never
+// become valid again at this fixed height, so SignTx returns the (nil,nil,nil,nil)
+// no-op — the signer clears the item and THORChain reschedules at a fresh height.
+// Returning an error here would instead re-claim the vault's single signing slot every
+// pass and starve the vault's other SOL outbounds.
+func (s *SolTestSuite) TestSignTxAbstainInvalidBlockhashDrops(c *C) {
+	bridge := &mockSOLThorchainBridge{}
+	vaultPubKey := types2.GetRandomEd25519PubKey()
+	toAddr, err := types2.GetRandomEd25519PubKey().GetAddress(common.SOLChain)
+	c.Assert(err, IsNil)
+
+	srv, rc := newSOLRPCBlockhashInvalid(c)
+	defer srv.Close()
+	client := &SOLClient{
+		bridge:             bridge,
+		localPubKey:        "not-local",
+		rpcClient:          rc,
+		solScanner:         &SOLScanner{},
+		tssKeyManager:      &mockSOLThorchainKeyManager{},
+		signerCacheManager: newTestSignerCacheManager(c),
+	}
+
+	tx := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        toAddr,
+		VaultPubKeyEddsa: vaultPubKey,
+		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250))},
+		MaxGas:           common.Gas{common.NewCoin(common.SOLAsset, cosmos.NewUint(15000))},
+		GasRate:          1,
+		Memo:             "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	result, checkpoint, obs, err := client.SignTx(tx, 123)
+	c.Assert(err, IsNil) // no error -> signer clears the item (drop for reschedule)
+	c.Assert(result, IsNil)
+	c.Assert(checkpoint, IsNil)
+	c.Assert(obs, IsNil)
+	c.Assert(bridge.postCalls, HasLen, 0) // abstain is pre-keysign: no blame posted
+}
+
+// TestSignTxAbstainBlockhashValidErrorRetains covers the TRANSIENT abstain branch: when
+// IsBlockhashValid errors (RPC blip), SignTx fails CLOSED and returns an ERROR so the
+// signer RETAINS the outbound and retries, rather than the no-op that would drop it.
+func (s *SolTestSuite) TestSignTxAbstainBlockhashValidErrorRetains(c *C) {
+	bridge := &mockSOLThorchainBridge{}
+	vaultPubKey := types2.GetRandomEd25519PubKey()
+	toAddr, err := types2.GetRandomEd25519PubKey().GetAddress(common.SOLChain)
+	c.Assert(err, IsNil)
+
+	srv, rc := newSOLRPCBlockhashValidError(c)
+	defer srv.Close()
+	client := &SOLClient{
+		bridge:             bridge,
+		localPubKey:        "not-local",
+		rpcClient:          rc,
+		solScanner:         &SOLScanner{},
+		tssKeyManager:      &mockSOLThorchainKeyManager{},
+		signerCacheManager: newTestSignerCacheManager(c),
+	}
+
+	tx := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        toAddr,
+		VaultPubKeyEddsa: vaultPubKey,
+		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250))},
+		MaxGas:           common.Gas{common.NewCoin(common.SOLAsset, cosmos.NewUint(15000))},
+		GasRate:          1,
+		Memo:             "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	result, _, _, err := client.SignTx(tx, 123)
+	c.Assert(err, NotNil) // fail closed -> error -> signer retains + retries
+	c.Assert(result, IsNil)
+}
+
+// TestSignTxAbstainLaggingBackendRetains covers the minContextSlot guard (d3): a
+// backend whose bank is BELOW the anchor slot answers value:false, but that is a
+// lagging node, not a genuinely expired hash. The guard turns it into an error so
+// SignTx RETAINS + retries instead of dropping a possibly-still-valid outbound.
+func (s *SolTestSuite) TestSignTxAbstainLaggingBackendRetains(c *C) {
+	bridge := &mockSOLThorchainBridge{}
+	vaultPubKey := types2.GetRandomEd25519PubKey()
+	toAddr, err := types2.GetRandomEd25519PubKey().GetAddress(common.SOLChain)
+	c.Assert(err, IsNil)
+
+	srv, rc := newSOLRPCBlockhashLagging(c)
+	defer srv.Close()
+	client := &SOLClient{
+		bridge:             bridge,
+		localPubKey:        "not-local",
+		rpcClient:          rc,
+		solScanner:         &SOLScanner{},
+		tssKeyManager:      &mockSOLThorchainKeyManager{},
+		signerCacheManager: newTestSignerCacheManager(c),
+	}
+
+	tx := stypes.TxOutItem{
+		Chain:            common.SOLChain,
+		ToAddress:        toAddr,
+		VaultPubKeyEddsa: vaultPubKey,
+		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(11047250))},
+		MaxGas:           common.Gas{common.NewCoin(common.SOLAsset, cosmos.NewUint(15000))},
+		GasRate:          1,
+		Memo:             "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
+	}
+
+	result, _, _, err := client.SignTx(tx, 123)
+	c.Assert(err, NotNil) // lagging backend -> error -> retain (NOT drop)
+	c.Assert(result, IsNil)
 }

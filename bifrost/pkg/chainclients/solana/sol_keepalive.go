@@ -90,22 +90,34 @@ func (c *SOLClient) keepAliveLoop() {
 				continue
 			}
 			boundary := c.nextKeepAliveThorMultiple(thorHeight)
-			if boundary <= c.getKeepAliveThorMultiple() {
+			last := c.getKeepAliveThorMultiple()
+			if boundary <= last {
 				continue // no new boundary crossed
 			}
-			// Staleness reference stays in the Solana domain (newest sig slot vs
-			// current scan slot); only the keysign anchor moves to THORChain height.
-			scanSlot, err := c.solScanner.ScanHeight()
-			if err != nil || scanSlot <= 0 {
-				continue
+			// A fresh node (last == 0, e.g. after a restart or downtime) jumps
+			// straight to the CURRENT boundary via nextKeepAliveThorMultiple; that
+			// boundary's height (boundary×cadence) can be up to a full cadence (~5 min)
+			// behind the tip, so the SOL blockhash consensusBlockHash derives from it is
+			// already past Solana's ~60s liveness — a guaranteed-expired, doomed keysign.
+			// Seed the baseline from that first boundary WITHOUT signing; the next
+			// boundary the loop crosses is fresh (≈ current height) and signs normally.
+			// Steady-state boundaries are ~current, so this only skips the one stale
+			// post-restart boundary and self-heals on the next cadence.
+			if last != 0 {
+				// Staleness reference stays in the Solana domain (newest sig slot vs
+				// current scan slot); only the keysign anchor moves to THORChain height.
+				scanSlot, err := c.solScanner.ScanHeight()
+				if err != nil || scanSlot <= 0 {
+					continue // transient; retry next tick without advancing the baseline
+				}
+				// anchorHeight = boundary × cadence: identical across members crossing
+				// this boundary and ≤ the firing node's tip, so it is both a converged
+				// AND a valid THORChain signing_height.
+				c.keepAliveCheck(scanSlot, boundary*keepAliveThorBlockCadence)
 			}
-			// anchorHeight = boundary × cadence: identical across members crossing
-			// this boundary and ≤ the firing node's tip, so it is both a converged
-			// AND a valid THORChain signing_height.
-			c.keepAliveCheck(scanSlot, boundary*keepAliveThorBlockCadence)
-			// Advance past this boundary so it is acted on exactly once, whether or
-			// not a keysign actually fired (disabled/inactive/not-yet-stale all
-			// legitimately no-op until the next boundary).
+			// Advance past this boundary so it is acted on exactly once, whether or not
+			// a keysign actually fired (fresh-node seed / disabled / inactive /
+			// not-yet-stale all legitimately no-op until the next boundary).
 			c.setKeepAliveThorMultiple(boundary)
 		}
 	}
@@ -180,8 +192,10 @@ func (c *SOLClient) keepAliveCheck(currentSlot, anchorHeight int64) {
 	if signing.IsSigningHalted(c.bridge, c.cfg.ChainID, c.logger) {
 		return
 	}
-	// CreateTx needs a fresh recent blockhash from the scanner; an unhealthy
-	// scanner would produce an expired blockhash and a guaranteed-dead broadcast.
+	// The signed blockhash is now derived from the consensus keysign height
+	// (consensusBlockHash), not the scanner, so the scanner no longer feeds the
+	// signed message. An unhealthy scanner still signals a degraded node that
+	// should not be initiating keysigns, so keep it as a liveness gate.
 	if !c.IsBlockScannerHealthy() {
 		return
 	}

@@ -19,7 +19,10 @@ func (gs GenesisState) Validate() error {
 			return errors.Wrapf(ErrInvalidGenesis, "invalid height: %d", schedule.Height)
 		}
 		for _, msg := range schedule.Msgs {
-			if err := msg.ValidateBasic(); err != nil {
+			// Stored messages are validated without the MaxAfter horizon bound:
+			// it applies to new scheduling only, and enforcing it here would make
+			// an exported genesis containing a legacy schedule fail validation.
+			if err := msg.ValidateStored(); err != nil {
 				return errors.Wrapf(ErrInvalidGenesis, "invalid message at height %d: %v", schedule.Height, err)
 			}
 		}

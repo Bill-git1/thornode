@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/mr-tron/base58"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/singleflight"
 
 	cosmoscryptoed25519 "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"gitlab.com/thorchain/thornode/v3/bifrost/blockscanner"
@@ -77,6 +79,7 @@ type SOLClient struct {
 	globalSolvencyQueue chan stypes.Solvency
 	signerCacheManager  *signercache.CacheManager
 	rpcClient           *rpc.SolRPC
+	m                   *metrics.Metrics
 
 	// keepAliveThorMultiple is the last keep-alive cadence boundary this node acted
 	// on. The trigger + keysign anchor are driven off the shared THORChain block
@@ -100,6 +103,26 @@ type SOLClient struct {
 	// The loser TryLocks, fails, and returns immediately (no stall); the winner
 	// still writes the counter at the end, preserving retry-on-failure.
 	reportInFlight sync.Mutex
+
+	// consensusHashes memoizes successful consensusBlockHash derivations by keysign
+	// height. A successful height -> (blockhash, slot) mapping is immutable (CometBFT
+	// block time + finalized SOL slots never change), so every SignTx for the same
+	// height — the other outbounds in that TxOut, retries, a second vault, the
+	// keep-alive goroutine — reuses one derivation instead of repeating the
+	// ~14-call RPC search. Only successes are stored: errors and the empty-hash
+	// abstention are node-local and time-varying, and the per-attempt
+	// IsBlockhashValid gate stays outside the cache. consensusHashGroup coalesces
+	// concurrent first lookups for one height into a single in-flight derivation.
+	consensusHashMu     sync.Mutex
+	consensusHashes     map[int64]consensusBlockHashEntry
+	consensusHashNewest int64
+	consensusHashGroup  singleflight.Group
+}
+
+// consensusBlockHashEntry is one immutable keysign-height derivation.
+type consensusBlockHashEntry struct {
+	hash string
+	slot int64
 }
 
 // NewSOLClient creates a new instance of a SOLClient
@@ -157,6 +180,7 @@ func NewSOLClient(
 		wg:            &sync.WaitGroup{},
 		stopchan:      make(chan struct{}),
 		rpcClient:     rpcClient,
+		m:             m,
 	}
 
 	// initialize storage
@@ -470,6 +494,18 @@ func (c *SOLClient) advanceSolvencySlotMultiple(v int64) {
 
 // --------------------------------- sign ---------------------------------
 
+// countAbstain increments the SOL keysign-abstain metric by reason, so a fleet-wide
+// stall (all nodes failing the blockhash gate) is observable rather than looking like
+// routine keysign non-selection. Nil-safe: directly-constructed test clients omit m.
+func (c *SOLClient) countAbstain(reason string) {
+	if c.m == nil {
+		return
+	}
+	if cv := c.m.GetCounterVec(metrics.SolKeysignAbstain); cv != nil {
+		cv.WithLabelValues(reason).Inc()
+	}
+}
+
 // SignTx returns the signed transaction.
 func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error) {
 	if tx.Chain != common.SOLChain {
@@ -528,7 +564,71 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	// For truly memoless transactions (no Memo or OriginalMemo), default to TxOutbound
 	memoForParsing := tx.GetMemo()
 
-	solTx, err := c.CreateTx(tx, memoForParsing)
+	// Deterministic blockhash: derive it from the CONSENSUS keysign height (txOut.Height
+	// for scheduled outbounds, the shared keep-alive anchor otherwise) instead of the
+	// per-node scanner, so every member signs identical bytes and converges on ONE TSS
+	// party — fixing the scanner-blockhash desync that fragmented SOL keysigns. Same rule
+	// the keep-alive already follows: the signed message is driven off the shared
+	// THORChain height; per-node values only gate participation, never the bytes.
+	// Memoized by height: the mapping is immutable, so the other outbounds in this
+	// TxOut, retries, other vaults and the keep-alive share one RPC derivation.
+	recentBlockhash, anchorSlot, err := c.cachedConsensusBlockHash(height)
+	if err != nil {
+		// RPC failures / probe exhaustion land here — the most likely abstain trigger,
+		// so count it too (the signer retains + retries on this error).
+		c.countAbstain("derive_error")
+		return nil, nil, nil, fmt.Errorf("fail to derive consensus blockhash: %w", err)
+	}
+	if recentBlockhash == "" {
+		// No finalized consensus block for this height yet -> return an ERROR so the
+		// signer RETAINS the outbound and retries next cycle (matching the pre-fix
+		// CreateTx-error behaviour). A (nil,nil,nil,nil) no-op is read as a successful
+		// broadcast (sign.go:signAndBroadcast len(signedTx)==0 -> nil err) and the item
+		// is Remove()d from the store, so a transient miss would DROP the outbound until
+		// THORChain reschedules ~300 blocks later. The slasher reschedule stays the
+		// eventual fallback; retaining+retrying is the fast path.
+		c.logger.Info().Interface("tx", tx).Msg("no consensus blockhash for SOL sign yet, retaining outbound for retry")
+		c.countAbstain("no_consensus_blockhash")
+		return nil, nil, nil, errors.New("no consensus blockhash for SOL height yet; retaining outbound for retry until reschedule")
+	}
+	// Per-node participation gate (never touches the signed bytes — the blockhash
+	// above is deterministic): is the derived blockhash still usable against the
+	// PROCESSING tip, i.e. the bank a broadcast tx is actually validated against?
+	// The finalized slot lags ~13s (~32 slots) behind processed, so an age check
+	// against finalized understates the hash age and can admit a hash already past
+	// Solana's ~151-block MAX_PROCESSING_AGE (a tx that can never land). Ask the
+	// node directly at "processed" commitment, and fail CLOSED on error.
+	// Pass anchorSlot as minContextSlot so a LAGGING backend (its processing bank
+	// behind the network) REJECTS the request instead of answering false for a hash
+	// that is still live on the tip — otherwise the !valid drop below would discard a
+	// perfectly good outbound. A lagging backend then surfaces as vErr -> retain.
+	valid, vErr := c.rpcClient.IsBlockhashValid(recentBlockhash, "processed", uint64(anchorSlot))
+	if vErr != nil {
+		c.logger.Warn().Err(vErr).Int64("anchor_slot", anchorSlot).Interface("tx", tx).
+			Msg("cannot verify SOL blockhash validity, retaining outbound for retry (fail closed)")
+		c.countAbstain("blockhash_valid_rpc_error")
+		return nil, nil, nil, fmt.Errorf("cannot verify SOL blockhash validity (fail closed), retaining outbound for retry: %w", vErr)
+	}
+	if !valid {
+		// PERMANENT for this fixed height: the blockhash is a pure function of
+		// `height`, so re-deriving yields the same, now-expired hash — it can never
+		// become valid again at this height. This differs from the two TRANSIENT
+		// cases above (no consensus block yet / IsBlockhashValid RPC error), which
+		// return an error to RETAIN and retry. Retaining here would be actively
+		// harmful: the item stays the lowest-height SOL outbound for its vault, and
+		// the signer pipeline (lowest-height-first, one item per {vault,chain} per
+		// pass) would let it re-claim the vault's single signing slot every pass and
+		// STARVE every later SOL outbound for that vault until reschedule. Return the
+		// (nil,nil,nil,nil) no-op so the signer clears it; THORChain reschedules at a
+		// FRESH height where a live hash derives. (The transient-blip drop the earlier
+		// review flagged is the IsBlockhashValid-ERROR path above — that stays retained.)
+		c.logger.Warn().Int64("anchor_slot", anchorSlot).Interface("tx", tx).
+			Msg("consensus blockhash expired at processed tip (permanent for this height), dropping for reschedule")
+		c.countAbstain("blockhash_expired_dropped")
+		return nil, nil, nil, nil
+	}
+
+	solTx, err := c.CreateTx(tx, memoForParsing, recentBlockhash)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to create tx: %w", err)
 	}
@@ -627,8 +727,256 @@ func (c *SOLClient) signTransaction(solTx types.Transaction, txOut stypes.TxOutI
 
 // CreateTx builds a solana transfer function from a TxOutItem using the transaction
 // specification (https://solana.com/docs/core/transactions#manual-sol-transfer)
-func (c *SOLClient) CreateTx(tx stypes.TxOutItem, memoForParsing string) (types.Transaction, error) {
-	recentBlockhash := c.solScanner.getRecentBlockHash()
+const (
+	// solFinalizationMarginSeconds steps the target time back from the consensus
+	// THORChain block time so the chosen SOL slot is stably finalized on every
+	// node's RPC (one node must not pick a slot another hasn't finalized yet). Kept
+	// in whole seconds and only ever combined with time.Time.Unix() values, so there
+	// is no time.Duration unit hazard.
+	//
+	// HARD FLOOR ~13s: Solana `finalized` commitment lags ~13s (rooted, ~31 confs),
+	// so the newest finalized slot is always ~13s old. The bracket guard's upper
+	// witness requires a finalized slot NEWER than target = (t - margin); if margin
+	// drops below the finalization lag, target is newer than the finalization
+	// frontier on EVERY node -> all abstain -> the outbound stalls. 15s = ~13s
+	// finalization + ~2s fleet-lag spread, and frees ~5s vs the prior 20s toward the
+	// ~60s blockhash-liveness budget for keysign (tc-vals timing, 2026-08-31). Do NOT
+	// go below ~15s without first measuring the fleet's real p95 finalization lag.
+	solFinalizationMarginSeconds = int64(15)
+
+	// solConsensusInitialLookbackSlots is the first getBlocks lookback below the
+	// finalized tip. It only has to reach a slot OLDER than the target time; it is
+	// NOT a slot-rate estimate — if the window is too shallow to bracket target the
+	// search gallops it wider, so no fixed rate is baked into the answer.
+	solConsensusInitialLookbackSlots = int64(400)
+
+	// solConsensusMaxLookbackSlots caps the galloping expansion (and thus the
+	// getBlocks range) so a degraded / mis-synced RPC can't drive an unbounded scan.
+	solConsensusMaxLookbackSlots = int64(6400)
+
+	// solConsensusMaxProbes bounds total getBlockTime probes per derivation so a
+	// single SignTx can't hold its goroutine on RPC latency without limit. On exceed
+	// we surface an error (retry) rather than a best-effort — never a wrong slot.
+	solConsensusMaxProbes = 32
+
+	// solConsensusCacheWindow bounds the consensus-blockhash memo: entries more than
+	// this many THORChain heights behind the newest stored height are evicted on
+	// insert. Keysign heights only move forward and a derived hash is only usable
+	// for ~60s (~10 heights), so 128 heights (~13 min) is ample while keeping the
+	// map to at most window+1 entries.
+	solConsensusCacheWindow = int64(128)
+)
+
+// errTooManyProbes caps the getBlockTime fan-out inside consensusBlockHash.
+var errTooManyProbes = errors.New("consensus blockhash search exceeded probe budget")
+
+// cachedConsensusBlockHash is consensusBlockHash memoized by keysign height. A
+// successful derivation is immutable, so it is returned from memory on every later
+// call for that height; concurrent first lookups for one height share a single
+// in-flight derivation. Errors and the empty-hash abstention are passed through
+// (and shared with any coalesced waiters) but never stored, so a transient "not
+// finalized yet" or RPC failure is re-derived on the next attempt.
+func (c *SOLClient) cachedConsensusBlockHash(height int64) (string, int64, error) {
+	if e, ok := c.lookupConsensusBlockHash(height); ok {
+		return e.hash, e.slot, nil
+	}
+	v, err, _ := c.consensusHashGroup.Do(strconv.FormatInt(height, 10), func() (interface{}, error) {
+		// A leader may have filled the cache between our miss and joining the group.
+		if e, ok := c.lookupConsensusBlockHash(height); ok {
+			return e, nil
+		}
+		hash, slot, err := c.consensusBlockHash(height)
+		if err != nil {
+			return nil, err
+		}
+		e := consensusBlockHashEntry{hash: hash, slot: slot}
+		if hash != "" {
+			c.storeConsensusBlockHash(height, e)
+		}
+		return e, nil
+	})
+	if err != nil {
+		return "", 0, err
+	}
+	e, ok := v.(consensusBlockHashEntry)
+	if !ok {
+		return "", 0, fmt.Errorf("unexpected consensus blockhash cache value %T", v)
+	}
+	return e.hash, e.slot, nil
+}
+
+// lookupConsensusBlockHash returns the memoized derivation for height, if any.
+func (c *SOLClient) lookupConsensusBlockHash(height int64) (consensusBlockHashEntry, bool) {
+	c.consensusHashMu.Lock()
+	defer c.consensusHashMu.Unlock()
+	e, ok := c.consensusHashes[height]
+	return e, ok
+}
+
+// storeConsensusBlockHash memoizes a SUCCESSFUL derivation and evicts entries more
+// than solConsensusCacheWindow heights behind the newest stored height, bounding
+// the map to window+1 entries. Callers must not store errors or empty hashes.
+func (c *SOLClient) storeConsensusBlockHash(height int64, e consensusBlockHashEntry) {
+	c.consensusHashMu.Lock()
+	defer c.consensusHashMu.Unlock()
+	if c.consensusHashes == nil {
+		c.consensusHashes = make(map[int64]consensusBlockHashEntry)
+	}
+	c.consensusHashes[height] = e
+	if height > c.consensusHashNewest {
+		c.consensusHashNewest = height
+	}
+	floor := c.consensusHashNewest - solConsensusCacheWindow
+	for h := range c.consensusHashes {
+		if h < floor {
+			delete(c.consensusHashes, h)
+		}
+	}
+}
+
+// consensusBlockHash derives the SOL blockhash every signer must embed from a CONSENSUS
+// THORChain height (the keysign height: txOut.Height for scheduled outbounds, the
+// keep-alive anchor otherwise) — never the per-node scanner — so all members sign
+// identical bytes and form ONE TSS party. Returns ("",0,nil) when this node cannot yet
+// PROVE it has finalized past the target time, so SignTx skips and the outbound
+// reschedules rather than signing divergent bytes.
+//
+// Determinism (the load-bearing argument):
+//   - t = GetBlockTimestamp(height) is CometBFT consensus data (identical on all nodes),
+//     so target = t - margin is identical everywhere.
+//   - S* := the greatest FINALIZED SOL slot with blockTime <= target is a global
+//     property of the finalized chain — identical on every node.
+//   - This function returns a hash ONLY for a node whose fetched finalized window
+//     BRACKETS target (oldest listed blockTime <= target < newest listed blockTime).
+//     Any bracketing window contains S* and its successor, so the rightmost listed slot
+//     with blockTime <= target IS S* regardless of where the per-node window starts or
+//     ends — the per-node tip only BOUNDS the search, it never DETERMINES the answer.
+//     If the node has NOT finalized past target (newest listed blockTime <= target) it
+//     returns "" (reschedule) instead of silently returning a smaller, wrong slot — the
+//     exact failure mode that would reintroduce the per-node divergence this fix removes.
+//
+// No slot-rate constant is used: the lookback is only an initial guess, galloped wider
+// until target is bracketed. Only slots returned by getBlocks (finalized listing) are
+// ever probed/fetched, so no unvetted raw slot hits getBlockTime/getBlock.
+func (c *SOLClient) consensusBlockHash(height int64) (string, int64, error) {
+	t, err := c.bridge.GetBlockTimestamp(height)
+	if err != nil {
+		return "", 0, fmt.Errorf("fail to get consensus block timestamp: %w", err)
+	}
+	target := t.Unix() - solFinalizationMarginSeconds
+
+	tip, err := c.rpcClient.GetSlot()
+	if err != nil {
+		return "", 0, fmt.Errorf("fail to get finalized slot: %w", err)
+	}
+
+	// Memoized, probe-bounded getBlockTime. ok=false means the RPC reported null for
+	// that slot (no block / below history) — treated as "not available", NEVER as an
+	// ancient timestamp that would satisfy <= target.
+	times := make(map[uint64]int64)
+	probes := 0
+	blockTimeAt := func(slot uint64) (bt int64, ok bool, err error) {
+		if v, hit := times[slot]; hit {
+			return v, true, nil
+		}
+		if probes >= solConsensusMaxProbes {
+			return 0, false, errTooManyProbes
+		}
+		probes++
+		p, err := c.rpcClient.GetBlockTime(slot)
+		if err != nil {
+			return 0, false, err
+		}
+		if p == nil {
+			return 0, false, nil
+		}
+		times[slot] = *p
+		return *p, true, nil
+	}
+
+	lookback := solConsensusInitialLookbackSlots
+	for {
+		startI := int64(tip) - lookback
+		if startI < 0 {
+			startI = 0
+		}
+		slots, err := c.rpcClient.GetBlockHeights(uint64(startI), tip)
+		if err != nil {
+			return "", 0, fmt.Errorf("fail to get finalized slot range: %w", err)
+		}
+		if len(slots) == 0 {
+			// No finalized blocks in a wide window below tip -> RPC badly behind.
+			if lookback >= solConsensusMaxLookbackSlots {
+				return "", 0, nil // give up this round -> reschedule
+			}
+			lookback *= 2
+			continue
+		}
+
+		// Upper witness (bracket guard): the newest finalized slot must be strictly
+		// PAST target, else this node hasn't caught up -> reschedule, don't guess.
+		newest := slots[len(slots)-1]
+		newestTime, ok, err := blockTimeAt(newest)
+		if err != nil {
+			return "", 0, err
+		}
+		if !ok || newestTime <= target {
+			return "", 0, nil // not finalized past target yet -> reschedule
+		}
+
+		// Lower witness: the window must reach back to <= target, else gallop wider.
+		oldest := slots[0]
+		oldestTime, ok, err := blockTimeAt(oldest)
+		if err != nil {
+			return "", 0, err
+		}
+		if !ok || oldestTime > target {
+			if lookback >= solConsensusMaxLookbackSlots {
+				return "", 0, nil // can't bracket within cap -> reschedule
+			}
+			lookback *= 2
+			continue
+		}
+
+		// target is bracketed (oldestTime <= target < newestTime). Binary-search
+		// slots[] (ascending, blockTime monotonic non-decreasing) for the RIGHTMOST
+		// slot with blockTime <= target == S*. Ties on the coarse blockTime cadence
+		// are fine: selection is by slot index and S* is a global property, so every
+		// bracketing node agrees.
+		lo, hi := 0, len(slots)-1
+		best := slots[0]
+		for lo <= hi {
+			mid := int(uint(lo+hi) >> 1)
+			bt, btOK, btErr := blockTimeAt(slots[mid])
+			if btErr != nil {
+				return "", 0, btErr
+			}
+			if !btOK {
+				// Unexpected null inside a finalized listing -> can't order; retry.
+				return "", 0, fmt.Errorf("no block time for finalized slot %d", slots[mid])
+			}
+			if bt <= target {
+				best = slots[mid]
+				lo = mid + 1
+			} else {
+				hi = mid - 1
+			}
+		}
+
+		// Blockhash only: the full block body (transaction list) is megabytes on
+		// mainnet and would be downloaded inside the ~60s liveness budget and dropped.
+		blockhash, err := c.rpcClient.GetBlockhashAtSlot(best)
+		if err != nil {
+			return "", 0, fmt.Errorf("fail to fetch consensus blockhash for slot %d: %w", best, err)
+		}
+		if blockhash == "" {
+			return "", 0, fmt.Errorf("consensus block %d has empty blockhash", best)
+		}
+		return blockhash, int64(best), nil
+	}
+}
+
+func (c *SOLClient) CreateTx(tx stypes.TxOutItem, memoForParsing, recentBlockhash string) (types.Transaction, error) {
 	if recentBlockhash == "" {
 		return types.Transaction{}, errors.New("recent blockhash is empty")
 	}

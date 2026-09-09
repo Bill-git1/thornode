@@ -276,6 +276,63 @@ func (s *SolRPCTestSuite) TestGetBlockPostError(c *C) {
 	c.Assert(err, ErrorMatches, ".*failed to call getBlock.*")
 }
 
+// --- GetBlockhashAtSlot ---
+
+// The sign path needs ONLY the blockhash of a finalized slot. The request must
+// opt out of the transaction list (megabytes on mainnet) and rewards, or the
+// lookup burns the ~60s blockhash-liveness budget downloading bytes it discards.
+func (s *SolRPCTestSuite) TestGetBlockhashAtSlot(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Method string        `json:"method"`
+			Params []interface{} `json:"params"`
+		}
+		c.Assert(json.NewDecoder(r.Body).Decode(&payload), IsNil)
+		c.Assert(payload.Method, Equals, "getBlock")
+		c.Assert(payload.Params, HasLen, 2)
+		c.Assert(payload.Params[0], Equals, float64(101))
+		cfg, ok := payload.Params[1].(map[string]interface{})
+		c.Assert(ok, Equals, true)
+		c.Assert(cfg["transactionDetails"], Equals, "none")
+		c.Assert(cfg["rewards"], Equals, false)
+		c.Assert(cfg["commitment"], Equals, "finalized")
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"blockhash":"abc123","previousBlockhash":"def456","parentSlot":100,"blockHeight":90}}`))
+	})
+	defer server.Close()
+
+	hash, err := rpc.GetBlockhashAtSlot(101)
+	c.Assert(err, IsNil)
+	c.Assert(hash, Equals, "abc123")
+}
+
+func (s *SolRPCTestSuite) TestGetBlockhashAtSlotRPCError(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32009,"message":"Slot 42 was skipped, or missing due to ledger jump to recent snapshot"}}`))
+	})
+	defer server.Close()
+
+	// Unlike the scanner's GetBlock, a skipped slot here is NOT silently empty:
+	// the caller only ever asks for slots from a finalized getBlocks listing, so
+	// any error is unexpected and must surface (retry), never become "".
+	_, err := rpc.GetBlockhashAtSlot(42)
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, ".*RPC Error -32009: Slot 42 was skipped.*")
+}
+
+func (s *SolRPCTestSuite) TestGetBlockhashAtSlotPostError(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	defer server.Close()
+
+	_, err := rpc.GetBlockhashAtSlot(1)
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, ".*failed to call getBlock.*")
+}
+
 // --- GetBlockHeights ---
 
 func (s *SolRPCTestSuite) TestGetBlockHeights(c *C) {
@@ -490,4 +547,154 @@ func (s *SolRPCTestSuite) TestGetInstructions(c *C) {
 	c.Assert(instrs, HasLen, 2)
 	c.Assert(instrs[0].Data, Equals, "data1")
 	c.Assert(instrs[1].ProgramIdIndex, Equals, 4)
+}
+
+// --- GetBlockTime ---
+
+func (s *SolRPCTestSuite) TestGetBlockTime(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":1788116000}`))
+	})
+	defer server.Close()
+
+	ts, err := rpc.GetBlockTime(950)
+	c.Assert(err, IsNil)
+	c.Assert(ts, NotNil)
+	c.Assert(*ts, Equals, int64(1788116000))
+}
+
+// TestGetBlockTimeNull is the load-bearing case: a JSON null result MUST decode to
+// a nil *int64 (not 0 / 1970). A bare int64 would silently read null as 0, which
+// always compares <= any target time and would diverge one node from another.
+func (s *SolRPCTestSuite) TestGetBlockTimeNull(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+	})
+	defer server.Close()
+
+	ts, err := rpc.GetBlockTime(950)
+	c.Assert(err, IsNil)
+	c.Assert(ts, IsNil)
+}
+
+func (s *SolRPCTestSuite) TestGetBlockTimeRPCError(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32004,"message":"Block not available for slot"}}`))
+	})
+	defer server.Close()
+
+	ts, err := rpc.GetBlockTime(950)
+	c.Assert(err, NotNil)
+	c.Assert(ts, IsNil)
+}
+
+func (s *SolRPCTestSuite) TestGetBlockTimePostError(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	defer server.Close()
+
+	ts, err := rpc.GetBlockTime(950)
+	c.Assert(err, NotNil)
+	c.Assert(ts, IsNil)
+}
+
+// --- IsBlockhashValid ---
+
+func (s *SolRPCTestSuite) TestIsBlockhashValidTrue(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":1},"value":true}}`))
+	})
+	defer server.Close()
+
+	valid, err := rpc.IsBlockhashValid("9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo", "processed", 0)
+	c.Assert(err, IsNil)
+	c.Assert(valid, Equals, true)
+}
+
+func (s *SolRPCTestSuite) TestIsBlockhashValidFalse(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":1},"value":false}}`))
+	})
+	defer server.Close()
+
+	valid, err := rpc.IsBlockhashValid("9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo", "processed", 0)
+	c.Assert(err, IsNil)
+	c.Assert(valid, Equals, false)
+}
+
+// TestIsBlockhashValidNilResult drives the fail-closed path: a nil result must be an
+// ERROR (not a silent false), because SignTx abstains on error rather than guessing.
+func (s *SolRPCTestSuite) TestIsBlockhashValidNilResult(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+	})
+	defer server.Close()
+
+	valid, err := rpc.IsBlockhashValid("9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo", "processed", 0)
+	c.Assert(err, NotNil)
+	c.Assert(valid, Equals, false)
+}
+
+func (s *SolRPCTestSuite) TestIsBlockhashValidRPCError(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"Invalid params"}}`))
+	})
+	defer server.Close()
+
+	valid, err := rpc.IsBlockhashValid("9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo", "processed", 0)
+	c.Assert(err, NotNil)
+	c.Assert(valid, Equals, false)
+}
+
+func (s *SolRPCTestSuite) TestIsBlockhashValidPostError(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	defer server.Close()
+
+	valid, err := rpc.IsBlockhashValid("9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo", "processed", 0)
+	c.Assert(err, NotNil)
+	c.Assert(valid, Equals, false)
+}
+
+// TestIsBlockhashValidMinContextSlotSent asserts the minContextSlot config is passed
+// through when non-zero (so a lagging backend can reject the request).
+func (s *SolRPCTestSuite) TestIsBlockhashValidMinContextSlotSent(c *C) {
+	var gotMinContext interface{}
+	var hadKey bool
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Params []json.RawMessage `json:"params"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		if len(payload.Params) > 1 {
+			var cfg map[string]interface{}
+			_ = json.Unmarshal(payload.Params[1], &cfg)
+			gotMinContext, hadKey = cfg["minContextSlot"]
+		}
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":950},"value":true}}`))
+	})
+	defer server.Close()
+
+	valid, err := rpc.IsBlockhashValid("9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo", "processed", 950)
+	c.Assert(err, IsNil)
+	c.Assert(valid, Equals, true)
+	c.Assert(hadKey, Equals, true)
+	c.Assert(gotMinContext, Equals, float64(950)) // JSON numbers decode to float64
+}
+
+// TestIsBlockhashValidLaggingBackend covers the defensive guard: a backend that
+// answers from a bank BELOW the requested minContextSlot is treated as lagging ->
+// error, so SignTx retains rather than trusting a possibly-stale false.
+func (s *SolRPCTestSuite) TestIsBlockhashValidLaggingBackend(c *C) {
+	server, rpc := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		// context.slot 800 is below the requested min of 950
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"context":{"slot":800},"value":false}}`))
+	})
+	defer server.Close()
+
+	valid, err := rpc.IsBlockhashValid("9rAtxuhtKn8qagc3UtZFyhLrw5zkh6etv43TibaXuSKo", "processed", 950)
+	c.Assert(err, NotNil) // lagging backend -> error -> caller retains
+	c.Assert(valid, Equals, false)
 }

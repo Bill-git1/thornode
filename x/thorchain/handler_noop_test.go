@@ -1,14 +1,22 @@
 package thorchain
 
 import (
+	"fmt"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	. "gopkg.in/check.v1"
 )
 
 type HandlerNoOpSuite struct{}
 
 var _ = Suite(&HandlerNoOpSuite{})
+
+// authorizeNoVault opens the chain-scoped mimir gate so a noop:novault debit is permitted.
+func authorizeNoVault(w handlerTestWrapper, chain common.Chain) {
+	w.mgr.Keeper().SetMimir(w.ctx, fmt.Sprintf(constants.MimirTemplateAllowNoVault, chain.String()), 1)
+}
 
 func (HandlerNoOpSuite) TestNoOpValidation(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, true)
@@ -33,6 +41,7 @@ func (HandlerNoOpSuite) TestNoOpVaultValidation(c *C) {
 
 	// Test with nonexistent vault
 	obsTx := GetRandomObservedTx()
+	authorizeNoVault(w, obsTx.Tx.Chain)
 	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
 	result, err := h.Run(w.ctx, m)
 	c.Assert(err, NotNil)
@@ -62,6 +71,7 @@ func (HandlerNoOpSuite) TestNoOpInactiveVault(c *C) {
 	)
 	obsTx := common.NewObservedTx(tx, 33, pk, 33)
 
+	authorizeNoVault(w, obsTx.Tx.Chain)
 	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
 	result, err := h.Run(w.ctx, m)
 	c.Assert(err, NotNil)
@@ -90,6 +100,7 @@ func (HandlerNoOpSuite) TestNoOpInsufficientFunds(c *C) {
 	)
 	obsTx := common.NewObservedTx(tx, 33, pk, 33)
 
+	authorizeNoVault(w, obsTx.Tx.Chain)
 	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
 	result, err := h.Run(w.ctx, m)
 	c.Assert(err, NotNil)
@@ -120,6 +131,7 @@ func (HandlerNoOpSuite) TestNoOpInsufficientFundsAggregatesDuplicateCoins(c *C) 
 	)
 	obsTx := common.NewObservedTx(tx, 33, pk, 33)
 
+	authorizeNoVault(w, obsTx.Tx.Chain)
 	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
 	result, err := h.Run(w.ctx, m)
 	c.Assert(err, NotNil)
@@ -155,6 +167,7 @@ func (HandlerNoOpSuite) TestNoOpSuccessfulSubtraction(c *C) {
 	)
 	obsTx := common.NewObservedTx(tx, 33, pk, 33)
 
+	authorizeNoVault(w, obsTx.Tx.Chain)
 	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
 	result, err := h.Run(w.ctx, m)
 	c.Assert(err, IsNil)
@@ -165,6 +178,39 @@ func (HandlerNoOpSuite) TestNoOpSuccessfulSubtraction(c *C) {
 	c.Assert(err, IsNil)
 	expectedAmount := initialAmount.Sub(subtractAmount)
 	c.Assert(updatedVault.GetCoin(common.ETHAsset).Amount.Equal(expectedAmount), Equals, true)
+}
+
+func (HandlerNoOpSuite) TestNoOpNoVaultUnauthorized(c *C) {
+	w := getHandlerTestWrapper(c, 1, true, true)
+	h := NewNoOpHandler(w.mgr)
+
+	// Create an active vault that has already been credited by the observation pipeline.
+	pk := GetRandomPubKey()
+	vault := NewVault(w.ctx.BlockHeight(), ActiveVault, AsgardVault, pk, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
+	initialAmount := cosmos.NewUint(100 * common.One)
+	vault.AddFunds(common.Coins{common.NewCoin(common.ETHAsset, initialAmount)})
+	c.Assert(w.mgr.Keeper().SetVault(w.ctx, vault), IsNil)
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+		common.Gas{{Asset: common.ETHAsset, Amount: cosmos.NewUint(37500)}},
+		"",
+	)
+	obsTx := common.NewObservedTx(tx, 33, pk, 33)
+
+	// Gate is closed (no AllowNoVault mimir set): the debit must be skipped and the
+	// observation credit left in place, so tracked balance is unchanged from credited.
+	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
+	result, err := h.Run(w.ctx, m)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+
+	updatedVault, err := w.mgr.Keeper().GetVault(w.ctx, pk)
+	c.Assert(err, IsNil)
+	c.Assert(updatedVault.GetCoin(common.ETHAsset).Amount.Equal(initialAmount), Equals, true)
 }
 
 func (HandlerNoOpSuite) TestNoOpRetiringVaultAllowed(c *C) {
@@ -190,6 +236,7 @@ func (HandlerNoOpSuite) TestNoOpRetiringVaultAllowed(c *C) {
 	)
 	obsTx := common.NewObservedTx(tx, 33, pk, 33)
 
+	authorizeNoVault(w, obsTx.Tx.Chain)
 	m := NewMsgNoOp(obsTx, w.activeNodeAccount.NodeAddress, "novault")
 	result, err := h.Run(w.ctx, m)
 	c.Assert(err, IsNil)

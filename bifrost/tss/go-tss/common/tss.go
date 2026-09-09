@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -51,6 +52,7 @@ type TssCommon struct {
 	culpritsLock                *sync.RWMutex
 	cachedWireBroadcastMsgLists *sync.Map
 	cachedWireUnicastMsgLists   *sync.Map
+	poisonedParties             *sync.Map
 	msgNum                      int
 }
 
@@ -77,6 +79,7 @@ func NewTssCommon(peerID string, broadcastChannel chan *messages.BroadcastMsgCha
 		culpritsLock:                &sync.RWMutex{},
 		cachedWireBroadcastMsgLists: &sync.Map{},
 		cachedWireUnicastMsgLists:   &sync.Map{},
+		poisonedParties:             &sync.Map{},
 		msgNum:                      msgNum,
 	}
 }
@@ -114,15 +117,21 @@ func newJob(party btss.Party, wireBytes []byte, msgIdentifier string, from *btss
 }
 
 func (t *TssCommon) doTssJob(tssJobChan chan *tssJob, jobWg *sync.WaitGroup) {
-	defer func() {
-		jobWg.Done()
-	}()
+	defer jobWg.Done()
 
 	for tssjob := range tssJobChan {
 		party := tssjob.localParty
 		wireBytes := tssjob.wireBytes
 		partyID := tssjob.partyID
 		isBroadcast := tssjob.isBroadcast
+
+		if _, poisoned := t.poisonedParties.Load(tssjob.msgIdentifier); poisoned {
+			t.logger.Warn().
+				Str("msg_identifier", tssjob.msgIdentifier).
+				Str("from_party_id", partyID.Id).
+				Msg("dropping share for poisoned party, an earlier panic left its mutex held")
+			continue
+		}
 
 		round, err := GetMsgRound(wireBytes, partyID, isBroadcast)
 		if err != nil {
@@ -131,14 +140,54 @@ func (t *TssCommon) doTssJob(tssJobChan chan *tssJob, jobWg *sync.WaitGroup) {
 		}
 		round.MsgIdentifier = tssjob.msgIdentifier
 
-		_, errUp := party.UpdateFromBytes(wireBytes, partyID, isBroadcast)
-		if errUp != nil {
-			err := t.processInvalidMsgBlame(round.RoundMsg, round, errUp)
-			t.logger.Error().Err(err).Msgf("fail to apply the share to tss")
-			continue
-		}
-		// we need to retrieve the partylist again as others may update it once we process apply tss share
-		t.blameMgr.UpdateAcceptShare(round, partyID.Id)
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.logger.Error().
+						Interface("panic", r).
+						Str("from_party_id", partyID.Id).
+						Bytes("stack", debug.Stack()).
+						Msg("tss-lib panicked while processing peer message; attributing to sender")
+
+					// The panic escaped tss-lib's BaseUpdate with the party
+					// mutex held; drop all further jobs for this party so
+					// workers don't block on it forever.
+					t.poisonedParties.Store(tssjob.msgIdentifier, true)
+
+					// Attribute to the verified sender. Routing.From was
+					// authenticated upstream (verifySignature in processTSSMsg),
+					// so partyID is cryptographically bound to the bytes
+					// that caused this panic.
+					t.culpritsLock.Lock()
+					t.culprits = append(t.culprits, partyID)
+					t.culpritsLock.Unlock()
+
+					pubkeys, pkErr := conversion.AccPubKeysFromPartyIDs(
+						[]string{partyID.Id}, t.partyInfo.PartyIDMap)
+					var blameNodes []blame.Node
+					if pkErr == nil && len(pubkeys) > 0 {
+						blameNodes = append(blameNodes,
+							blame.NewNode(pubkeys[0], wireBytes, nil))
+					}
+					t.blameMgr.GetBlame().SetBlame(
+						blame.TssBrokenMsg,
+						blameNodes,
+						checkUnicast(round),
+						round.RoundMsg,
+					)
+				}
+			}()
+
+			_, errUp := party.UpdateFromBytes(wireBytes, partyID, isBroadcast)
+			if errUp != nil {
+				if err := t.processInvalidMsgBlame(round.RoundMsg, round, errUp); err != nil {
+					t.logger.Error().Err(err).Msgf("fail to apply the share to tss")
+				}
+				return
+			}
+			// we need to retrieve the partylist again as others may update it once we process apply tss share
+			t.blameMgr.UpdateAcceptShare(round, partyID.Id)
+		}()
 	}
 }
 

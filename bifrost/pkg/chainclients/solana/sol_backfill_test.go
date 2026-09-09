@@ -225,16 +225,6 @@ func (s *BackfillSuite) TestScannerIsHealthy(c *C) {
 	c.Assert(scanner.IsHealthy(), Equals, true)
 }
 
-func (s *BackfillSuite) TestScannerGetSetRecentBlockHash(c *C) {
-	server := makeSolRPCServer(c, map[string]string{})
-	defer server.Close()
-	scanner, _ := s.newScannerWithServer(c, "http://"+server.Listener.Addr().String())
-
-	c.Assert(scanner.getRecentBlockHash(), Equals, "")
-	scanner.setRecentBlockHash("abc123")
-	c.Assert(scanner.getRecentBlockHash(), Equals, "abc123")
-}
-
 func (s *BackfillSuite) TestScannerGetNetworkFee(c *C) {
 	server := makeSolRPCServer(c, map[string]string{})
 	defer server.Close()
@@ -1026,9 +1016,8 @@ func (s *ClientBackfillSuite) TestCreateTxEmptyBlockhash(c *C) {
 	defer server.Close()
 	client := s.makeClient(c, server)
 
-	// recentBlockHash is empty
-	client.solScanner.setRecentBlockHash("")
-	_, err := client.CreateTx(stypes.TxOutItem{}, "")
+	// blockhash arg is empty
+	_, err := client.CreateTx(stypes.TxOutItem{}, "", "")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "recent blockhash is empty")
 }
@@ -1039,12 +1028,11 @@ func (s *ClientBackfillSuite) TestCreateTxInboundMemo(c *C) {
 	})
 	defer server.Close()
 	client := s.makeClient(c, server)
-	client.solScanner.setRecentBlockHash("blockhash123")
 
 	// Use ADD memo which is inbound and parses successfully
 	_, err := client.CreateTx(stypes.TxOutItem{
 		Coins: common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(1000))},
-	}, "ADD:ETH.ETH")
+	}, "ADD:ETH.ETH", "asdfasdf")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "inbound memo should not be used for outbound tx")
 }
@@ -1055,7 +1043,6 @@ func (s *ClientBackfillSuite) TestCreateTxMultipleCoins(c *C) {
 	})
 	defer server.Close()
 	client := s.makeClient(c, server)
-	client.solScanner.setRecentBlockHash("blockhash123")
 
 	txHash := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	_, err := client.CreateTx(stypes.TxOutItem{
@@ -1063,7 +1050,7 @@ func (s *ClientBackfillSuite) TestCreateTxMultipleCoins(c *C) {
 			common.NewCoin(common.SOLAsset, cosmos.NewUint(1000)),
 			common.NewCoin(common.SOLAsset, cosmos.NewUint(2000)),
 		},
-	}, fmt.Sprintf("OUT:%s", txHash))
+	}, fmt.Sprintf("OUT:%s", txHash), "asdfasdf")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "only support one coin per transaction, received: 2")
 }
@@ -1074,14 +1061,13 @@ func (s *ClientBackfillSuite) TestCreateTxZeroAmount(c *C) {
 	})
 	defer server.Close()
 	client := s.makeClient(c, server)
-	client.solScanner.setRecentBlockHash("blockhash123")
 
 	txHash := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	_, err := client.CreateTx(stypes.TxOutItem{
 		VaultPubKeyEddsa: s.vaultPubKeyEDDSA(c),
 		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
 		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(0))},
-	}, fmt.Sprintf("OUT:%s", txHash))
+	}, fmt.Sprintf("OUT:%s", txHash), "asdfasdf")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "sol value is zero")
 }
@@ -1092,7 +1078,6 @@ func (s *ClientBackfillSuite) TestCreateTxEmptyMemoDefaultsToOutbound(c *C) {
 	})
 	defer server.Close()
 	client := s.makeClient(c, server)
-	client.solScanner.setRecentBlockHash("blockhash123")
 
 	txHash := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	tx, err := client.CreateTx(stypes.TxOutItem{
@@ -1101,9 +1086,47 @@ func (s *ClientBackfillSuite) TestCreateTxEmptyMemoDefaultsToOutbound(c *C) {
 		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(1000))},
 		InHash:           common.TxID(txHash),
 		Memo:             "test memo",
-	}, "")
+	}, "", "asdfasdf")
 	c.Assert(err, IsNil)
 	c.Assert(tx.Message.Accounts, HasLen, 4)
+}
+
+func (s *ClientBackfillSuite) TestCreateTxDeterministicForFixedBlockhash(c *C) {
+	server := makeSolRPCServer(c, map[string]string{
+		"getSlot": `{"jsonrpc":"2.0","result":1,"id":1}`,
+	})
+	defer server.Close()
+	client := s.makeClient(c, server)
+
+	txHash := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	toi := stypes.TxOutItem{
+		VaultPubKeyEddsa: s.vaultPubKeyEDDSA(c),
+		ToAddress:        "D9A6eE2pZ6oSiGb8BPkag4gvAeEhHvc3eEYPBoLSMshG",
+		Coins:            common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(1000))},
+		InHash:           common.TxID(txHash),
+		Memo:             "test memo",
+	}
+
+	// The board-661 fix's core invariant: identical (tx, memo, blockhash) -> byte-identical
+	// signed message, regardless of any per-node state. Two builds with the SAME
+	// consensus blockhash must serialize equal.
+	tx1, err := client.CreateTx(toi, "", "asdfasdf")
+	c.Assert(err, IsNil)
+	tx2, err := client.CreateTx(toi, "", "asdfasdf")
+	c.Assert(err, IsNil)
+	b1, err := tx1.Message.Serialize()
+	c.Assert(err, IsNil)
+	b2, err := tx2.Message.Serialize()
+	c.Assert(err, IsNil)
+	c.Assert(b1, DeepEquals, b2)
+
+	// And a DIFFERENT blockhash must produce DIFFERENT bytes — proving the blockhash is
+	// what drives message identity (the exact reason per-node blockhash desynced parties).
+	tx3, err := client.CreateTx(toi, "", "asdfasdg")
+	c.Assert(err, IsNil)
+	b3, err := tx3.Message.Serialize()
+	c.Assert(err, IsNil)
+	c.Check(fmt.Sprintf("%x", b1) == fmt.Sprintf("%x", b3), Equals, false)
 }
 
 // -------------------------------------------------------------------------

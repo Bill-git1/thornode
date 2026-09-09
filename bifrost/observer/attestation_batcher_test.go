@@ -41,6 +41,21 @@ func TestAttestationBatcher(t *testing.T) {
 		assert.Equal(t, concurrentSends, batcher.peerMgr.limit)
 	})
 
+	t.Run("clamps mimir-driven batch size", func(t *testing.T) {
+		host := NewMockHost([]peer.ID{})
+		batcher := NewAttestationBatcher(host, logger, nil, time.Second, 100, time.Second, 1)
+
+		batcher.updateMaxBatchSize(maxAllowedBatchSize * 10)
+		assert.Equal(t, maxAllowedBatchSize, batcher.getMaxBatchSize())
+
+		batcher.updateMaxBatchSize(500)
+		assert.Equal(t, int64(500), batcher.getMaxBatchSize())
+
+		// invalid values are ignored
+		batcher.updateMaxBatchSize(0)
+		assert.Equal(t, int64(500), batcher.getMaxBatchSize())
+	})
+
 	t.Run("batches and broadcasts attestations", func(t *testing.T) {
 		// Create peer IDs
 		peer1 := peer.ID("peer1")

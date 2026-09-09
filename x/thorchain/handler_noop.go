@@ -6,6 +6,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 // NoOpHandler is to handle no-op messages (e.g. vault balance adjustments)
@@ -54,6 +55,20 @@ func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 		return nil
 	}
 
+	// The "novault" action subtracts the just-credited coins from the vault's tracked
+	// balance, deliberately diverging tracked from physical accounting. The action
+	// string originates from the inbound L1 memo, which any sender controls, so on its
+	// own it lets anyone debit an asgard vault's accounting by depositing real funds.
+	// Gate the debit behind a chain-scoped mimir that node operators open only for the
+	// brief, coordinated window in which a legitimate insolvency correction is made.
+	// When the gate is closed, leave the observation credit in place (equivalent to a
+	// plain noop / donation) so an unauthorized novault cannot desync the vault.
+	if !h.noVaultAuthorized(ctx, msg.ObservedTx.Tx.Chain) {
+		ctx.Logger().Info("noop:novault not authorized, leaving vault credit in place",
+			"chain", msg.ObservedTx.Tx.Chain, "tx_id", msg.ObservedTx.Tx.ID)
+		return nil
+	}
+
 	// Get the vault and verify it exists
 	vault, err := h.mgr.Keeper().GetVault(ctx, msg.ObservedTx.ObservedPubKey)
 	if err != nil {
@@ -90,5 +105,29 @@ func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 	if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
 		return fmt.Errorf("fail to save vault: %w", err)
 	}
+
+	// Emit an event on every authorized debit so external monitoring can alarm if a
+	// novault adjustment ever occurs (these are rare, dangerous, dev-centric ops).
+	ctx.EventManager().EmitEvent(
+		cosmos.NewEvent("noop_novault_debit",
+			cosmos.NewAttribute("chain", msg.ObservedTx.Tx.Chain.String()),
+			cosmos.NewAttribute("vault", msg.ObservedTx.ObservedPubKey.String()),
+			cosmos.NewAttribute("tx_id", msg.ObservedTx.Tx.ID.String()),
+			cosmos.NewAttribute("coins", msg.ObservedTx.Tx.Coins.String()),
+		),
+	)
 	return nil
+}
+
+// noVaultAuthorized reports whether node operators have opened the chain-scoped
+// mimir gate that authorizes a noop:novault vault debit. The gate is honored when
+// the mimir is set to 1 (manual, indefinite override) or to a block height that has
+// not yet passed (a windowed authorization that auto-expires).
+func (h NoOpHandler) noVaultAuthorized(ctx cosmos.Context, chain common.Chain) bool {
+	m, err := h.mgr.Keeper().GetMimirWithRef(ctx, constants.MimirTemplateAllowNoVault, chain.String())
+	if err != nil {
+		ctx.Logger().Error("fail to get AllowNoVault mimir", "error", err, "chain", chain)
+		return false
+	}
+	return m == 1 || (m > 0 && m >= ctx.BlockHeight())
 }

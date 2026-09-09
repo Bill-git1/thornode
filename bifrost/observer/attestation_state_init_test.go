@@ -251,14 +251,13 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 	// Create a test instance
 	ag, _, _, _, _, _ := setupTestGossip(t)
 
-	// Set a smaller batch size for testing
-	origMaxQuorumTxsPerBatch := maxQuorumTxsPerBatch
-	maxQuorumTxsPerBatch = 2                                           // Small value for testing
-	defer func() { maxQuorumTxsPerBatch = origMaxQuorumTxsPerBatch }() // Restore original value
+	// Set a small byte budget so the state splits into multiple batches
+	origMaxAttestationBatchBytes := maxAttestationBatchBytes
+	maxAttestationBatchBytes = 1000                                            // Small value for testing
+	defer func() { maxAttestationBatchBytes = origMaxAttestationBatchBytes }() // Restore original value
 
-	// Create a large set of observed transactions (more than maxQuorumTxsPerBatch)
-	numTxs := 5 // Will be split into 3 batches with maxQuorumTxsPerBatch=2
-	expectedBatches := (numTxs + maxQuorumTxsPerBatch - 1) / maxQuorumTxsPerBatch
+	// Create a set of observed transactions large enough to span several batches
+	numTxs := 5
 
 	numVals := 4
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
@@ -364,8 +363,8 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 
 	// Verify the basic protocol flow
 	assert.Equal(t, 1, beginCount, "Should have one batch begin message")
-	assert.Equal(t, expectedBatches, headerCount, "Should have expected number of batch header messages")
-	assert.Equal(t, expectedBatches, dataCount, "Should have expected number of batch data messages")
+	assert.GreaterOrEqual(t, headerCount, 2, "Byte budget should force multiple batches")
+	assert.Equal(t, headerCount, dataCount, "Every batch header should have a data message")
 	assert.Equal(t, 1, endCount, "Should have one batch end message")
 
 	// Check the batch begin message
@@ -373,20 +372,24 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 		if bytes.HasPrefix(msg, prefixBatchBegin) {
 			// Extract total batches
 			totalBatches := binary.LittleEndian.Uint32(msg[1:5])
-			assert.Equal(t, uint32(expectedBatches), totalBatches, "Should have expected number of batches")
+			assert.Equal(t, uint32(headerCount), totalBatches, "Announced batch count should match batches sent")
 		}
 
 		// For data messages, check the batch number and contents
 		if bytes.HasPrefix(msg, prefixBatchHeader) && len(msg) >= 9 {
 			// Extract batch number
 			batchNum := binary.LittleEndian.Uint32(msg[1:5])
-			assert.Less(t, batchNum, uint32(expectedBatches), "Batch number should be valid")
+			assert.Less(t, batchNum, uint32(headerCount), "Batch number should be valid")
 
 			// Get the batch data (should be the next message)
 			if len(messages) > i+1 {
 				batchData := messages[i+1]
 
 				assert.True(t, bytes.HasPrefix(batchData, prefixBatchData))
+
+				// Every frame must respect the byte budget (minus the one-byte prefix)
+				assert.LessOrEqual(t, len(batchData)-1, maxAttestationBatchBytes,
+					"Batch %d should fit the byte budget", batchNum)
 
 				// Unmarshal the batch
 				var batch common.QuorumState
@@ -396,14 +399,7 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 					continue
 				}
 
-				// Verify the batch size
-				expectedSize := maxQuorumTxsPerBatch
-				if batchNum == uint32(expectedBatches-1) && numTxs%maxQuorumTxsPerBatch != 0 {
-					expectedSize = numTxs % maxQuorumTxsPerBatch
-				}
-
-				assert.Equal(t, expectedSize, len(batch.QuoTxs),
-					"Batch %d should have %d transactions", batchNum, expectedSize)
+				assert.NotEmpty(t, batch.QuoTxs, "Batch %d should carry at least one transaction", batchNum)
 			}
 		}
 	}
@@ -440,16 +436,15 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 	// Create a test instance
 	ag, _, _, _, _, _ := setupTestGossip(t)
 
-	// Set a smaller batch size for testing
-	origMaxQuorumTxsPerBatch := maxQuorumTxsPerBatch
-	maxQuorumTxsPerBatch = 2                                           // Small value for testing
-	defer func() { maxQuorumTxsPerBatch = origMaxQuorumTxsPerBatch }() // Restore original value
+	// The receiver accepts whatever batch boundaries the sender chose; this
+	// test simulates a sender that packed two txs per batch.
+	batchSize := 2
 
 	numVals := 4
 
 	// Create test data: 5 transactions split into 3 batches
 	numTxs := 5
-	expectedBatches := (numTxs + maxQuorumTxsPerBatch - 1) / maxQuorumTxsPerBatch
+	expectedBatches := (numTxs + batchSize - 1) / batchSize
 
 	numSolvencies := 3
 
@@ -570,8 +565,8 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 
 		// Send each batch
 		for batchIdx := 0; batchIdx < expectedBatches; batchIdx++ {
-			startIdx := batchIdx * maxQuorumTxsPerBatch
-			endIdx := startIdx + maxQuorumTxsPerBatch
+			startIdx := batchIdx * batchSize
+			endIdx := startIdx + batchSize
 
 			if endIdx > numTxs {
 				endIdx = numTxs
@@ -581,7 +576,7 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 
 			var batchSolvencies []*common.QuorumSolvency
 			if startIdx < numSolvencies {
-				endIdxSolvency := startIdx + maxQuorumTxsPerBatch
+				endIdxSolvency := startIdx + batchSize
 				if endIdxSolvency > numSolvencies {
 					endIdxSolvency = numSolvencies
 				}
@@ -697,14 +692,14 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 	agSender, _, _, _, _, _ := setupTestGossip(t)
 	agReceiver, _, _, _, _, _ := setupTestGossip(t)
 
-	// Set a smaller batch size for testing
-	origMaxQuorumTxsPerBatch := maxQuorumTxsPerBatch
-	maxQuorumTxsPerBatch = 2                                           // Small value for testing
-	defer func() { maxQuorumTxsPerBatch = origMaxQuorumTxsPerBatch }() // Restore original value
+	// Set a small byte budget so the state splits into multiple batches
+	origMaxAttestationBatchBytes := maxAttestationBatchBytes
+	maxAttestationBatchBytes = 1000                                            // Small value for testing
+	defer func() { maxAttestationBatchBytes = origMaxAttestationBatchBytes }() // Restore original value
 
-	// Create a large set of observed transactions (more than maxQuorumTxsPerBatch)
-	numTxs := 5        // Will be split into 3 batches with maxQuorumTxsPerBatch=2
-	numSolvencies := 3 // Will be split into 2 batches with maxQuorumTxsPerBatch=2
+	// Create enough items that the byte budget forces several batches
+	numTxs := 5
+	numSolvencies := 3
 	numVals := 4
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)

@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -75,9 +76,53 @@ var (
 	prefixBatchData   = []byte{0x04} // data of a batch
 	prefixBatchEnd    = []byte{0x05} // end of a batch
 
-	// Maximum number of QuorumTxs to send in a single batch when sending attestation state.
-	maxQuorumTxsPerBatch = 100
+	// maxAttestationBatchBytes bounds the serialized size of any single
+	// attestation frame written to a p2p stream (state-sync batches and live
+	// gossip broadcasts). Batches are packed by bytes rather than item count,
+	// so honest frames stay under the wire-level p2p.MaxPayload read cap
+	// regardless of validator-set size or mimir batch settings. Var rather
+	// than const so tests can lower it to force splitting.
+	maxAttestationBatchBytes = p2p.MaxPayload / 2
+
+	// maxAllowedBatchSize caps mimir-driven MaxBatchSize growth. Frame size
+	// is bound by maxAttestationBatchBytes, so larger item counts only add
+	// per-flush latency and pool memory.
+	maxAllowedBatchSize int64 = 1000
 )
+
+// quorumStateBatcher greedily packs items into QuorumState batches whose
+// serialized size stays under maxAttestationBatchBytes.
+type quorumStateBatcher struct {
+	batches []common.QuorumState
+	current common.QuorumState
+	size    int
+}
+
+// protoItemOverhead over-estimates the per-item proto framing cost inside a
+// QuorumState: one byte for the repeated-field tag plus up to four bytes for
+// the length varint.
+const protoItemOverhead = 5
+
+func (q *quorumStateBatcher) add(itemSize int, appendItem func(*common.QuorumState)) {
+	sz := itemSize + protoItemOverhead
+	// Flush before adding if this item would push the current batch over the
+	// budget. A single item larger than the budget still gets its own batch:
+	// dropping it silently would be worse, and honest items never approach
+	// the budget.
+	if q.size > 0 && q.size+sz > maxAttestationBatchBytes {
+		q.flush()
+	}
+	appendItem(&q.current)
+	q.size += sz
+}
+
+func (q *quorumStateBatcher) flush() {
+	if q.size > 0 {
+		q.batches = append(q.batches, q.current)
+		q.current = common.QuorumState{}
+		q.size = 0
+	}
+}
 
 // txKey contains the properties that are required to uniquely identify an observed tx
 type txKey struct {

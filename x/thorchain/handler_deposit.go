@@ -172,6 +172,12 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit, idx uint16) (
 		referenceResolved = resolvedMemo != ""
 	}
 
+	// Defense-in-depth: a reference memo can resolve to a reserved
+	// validator-internal type; re-apply the inbound guard to the resolved memo.
+	if memo.IsOutbound() || memo.IsInternal() {
+		return nil, fmt.Errorf("resolved reference memo expands to a forbidden type: %s", memo.GetType().String())
+	}
+
 	var targetModule string
 	switch memo.GetType() {
 	case TxBond, TxUnBond, TxLeave, TxOperatorRotate:
