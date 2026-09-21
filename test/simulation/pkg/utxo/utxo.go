@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -350,10 +351,27 @@ func (c *Client) BroadcastTx(payload []byte) (string, error) {
 	if c.chain.Equals(common.ZECChain) {
 		var hash string
 		payloadHex := hex.EncodeToString(payload)
+		txid := chainhash.DoubleHashH(payload).String() // Our ZEC encoder emits v4.
 		args := []any{payloadHex}
 		err := c.rpc.Call(&hash, "sendrawtransaction", args...)
-		c.finalizePendingSpentUtxos(payloadHex, err == nil)
-		return hash, err
+		if err == nil && !strings.EqualFold(hash, txid) {
+			err = fmt.Errorf("unexpected ZEC broadcast txid: got %q, expected %s", hash, txid)
+		}
+		if err != nil {
+			// Zebra may requeue verification after cancelling the RPC. Check
+			// the original payload in the mempool/chain before retrying it.
+			raw, lookupErr := c.rpc.GetRawTransaction(txid)
+			if lookupErr == nil && strings.EqualFold(raw, payloadHex) {
+				c.finalizePendingSpentUtxos(payloadHex)
+				return txid, nil
+			}
+			// Keep these inputs reserved on an ambiguous result, including
+			// exhausted retries. They become spent only after acceptance; a
+			// failed simulation must not reuse possibly consumed inputs.
+			return "", err
+		}
+		c.finalizePendingSpentUtxos(payloadHex)
+		return hash, nil
 	}
 
 	redeemTx := btcwire.NewMsgTx(btcwire.TxVersion)
@@ -600,7 +618,7 @@ func (c *Client) rememberPendingSpentUtxos(payload []byte, amounts map[string]in
 	c.pendingSpentUtxos[hex.EncodeToString(payload)] = keys
 }
 
-func (c *Client) finalizePendingSpentUtxos(payloadHex string, success bool) {
+func (c *Client) finalizePendingSpentUtxos(payloadHex string) {
 	if !c.chain.Equals(common.ZECChain) {
 		return
 	}
@@ -609,10 +627,6 @@ func (c *Client) finalizePendingSpentUtxos(payloadHex string, success bool) {
 	defer c.mtx.Unlock()
 	keys := c.pendingSpentUtxos[payloadHex]
 	delete(c.pendingSpentUtxos, payloadHex)
-
-	if !success {
-		return
-	}
 
 	for _, key := range keys {
 		if c.spentUtxos == nil {

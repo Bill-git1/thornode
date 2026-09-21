@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 )
 
@@ -70,6 +71,12 @@ type RPCError struct {
 	Message string `json:"message"`
 }
 
+// Error implements the error interface so callers can errors.As a returned
+// error back to *RPCError and inspect the Solana JSON-RPC code/message.
+func (e *RPCError) Error() string {
+	return fmt.Sprintf("rpc error %d: %s", e.Code, e.Message)
+}
+
 // Custom type for Version to handle both string and numeric values
 type RPCVersion struct {
 	Value string
@@ -95,9 +102,48 @@ func (r *RPCTxnData) GetInstructions() []RPCInstruction {
 	return r.Message.Instructions
 }
 
+// GetAccountAtIndex returns the static account key at index i, or "" when i is
+// out of range (including negative). It resolves ONLY the static message
+// account keys; for versioned transactions whose instructions reference
+// addresses loaded from address lookup tables, use ResolvedAccounts instead.
 func (r *RPCTxnData) GetAccountAtIndex(i int) string {
-	if i >= len(r.Message.AccountKeys) || len(r.Message.AccountKeys) == 0 {
+	if i < 0 || i >= len(r.Message.AccountKeys) {
 		return ""
 	}
 	return r.Message.AccountKeys[i]
+}
+
+// Strings returns the loaded addresses in the canonical Solana ordering that
+// follows the static account keys for versioned (v0+) transactions: writable
+// loaded addresses first, then readonly. A non-string entry (never emitted by
+// the RPC in practice) is preserved as an empty-string placeholder rather than
+// dropped, so it matches nothing yet does not shift the index of subsequent
+// loaded addresses. Legacy transactions have empty loaded addresses, so this
+// returns an empty slice and account resolution is unchanged for them.
+func (l RPCAddrList) Strings() []string {
+	out := make([]string, 0, len(l.Writable)+len(l.Readonly))
+	appendAddrs := func(addrs []interface{}) {
+		for _, v := range addrs {
+			// Preserve position so instruction account indices stay aligned. A
+			// non-string entry (the RPC always emits base58 strings, so this is
+			// defensive) becomes an empty address that matches nothing, rather
+			// than shifting every subsequent index by one.
+			s, _ := v.(string)
+			out = append(out, s)
+		}
+	}
+	appendAddrs(l.Writable)
+	appendAddrs(l.Readonly)
+	return out
+}
+
+// ResolvedAccounts returns the full account list an instruction's account
+// indices reference: the transaction's static account keys followed by any
+// addresses loaded from address lookup tables (writable then readonly). For
+// legacy transactions this equals the static account keys.
+func (r *RPCTxnData) ResolvedAccounts(loaded RPCAddrList) []string {
+	accounts := make([]string, 0, len(r.Message.AccountKeys)+len(loaded.Writable)+len(loaded.Readonly))
+	accounts = append(accounts, r.Message.AccountKeys...)
+	accounts = append(accounts, loaded.Strings()...)
+	return accounts
 }

@@ -393,10 +393,8 @@ class EVMSetupTool:
 
 def check_socket(host, port):
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        if sock.connect_ex((host, port)) == 0:
-            return True
-        else:
-            return False
+        sock.settimeout(3)
+        return sock.connect_ex((host, port)) == 0
 
 
 def rpc_call(rpc_url, method, params=None, timeout=5):
@@ -421,10 +419,17 @@ def rpc_call(rpc_url, method, params=None, timeout=5):
 def wait_for_rpc_open(rpc_url, attempts=30, interval=1):
     target = urlparse(rpc_url)
     for attempt in range(1, attempts + 1):
-        if check_socket(target.hostname, target.port):
-            return
+        last_error = None
+        try:
+            if check_socket(target.hostname, target.port):
+                return
+        except OSError as err:
+            # Docker DNS and connections can fail transiently during startup.
+            last_error = err
         if attempt == attempts:
-            raise TimeoutError(f"{target.hostname}:{target.port} not open")
+            raise TimeoutError(
+                f"{target.hostname}:{target.port} not open after {attempts} attempts"
+            ) from last_error
         time.sleep(interval)
 
 
@@ -446,16 +451,22 @@ def wait_for_chain_progress(rpc_url, attempts=45, interval=2):
     logging.info(f"waiting for chain progress from block {current_block}")
     for attempt in range(1, attempts + 1):
         time.sleep(interval)
-        latest_block = wait_for_block_number(rpc_url, attempts=1, interval=interval)
-        if latest_block > current_block:
-            logging.info(
-                f"observed chain progress on {rpc_url}: {current_block} -> {latest_block}"
-            )
-            return latest_block
+        last_error = None
+        try:
+            latest_block = wait_for_block_number(rpc_url, attempts=1, interval=interval)
+        except TimeoutError as err:
+            # A failed RPC poll consumes one attempt, not the entire progress wait.
+            last_error = err
+        else:
+            if latest_block > current_block:
+                logging.info(
+                    f"observed chain progress on {rpc_url}: {current_block} -> {latest_block}"
+                )
+                return latest_block
         if attempt == attempts:
             raise TimeoutError(
                 f"timed out waiting for block production on {rpc_url} from block {current_block}"
-            )
+            ) from last_error
 
 
 def wait_for_chain_readiness(chain, rpc_url):

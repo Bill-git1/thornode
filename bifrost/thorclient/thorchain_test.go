@@ -3,10 +3,14 @@ package thorclient
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	cometed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -19,10 +23,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	. "gopkg.in/check.v1"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/constants"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	stypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -104,304 +111,433 @@ func (s *ThorchainSuite) TestGetThorChainURL(c *C) {
 	c.Assert(uri, Equals, "http://"+s.server.Listener.Addr().String())
 }
 
-// TestGetKeysignPartyReadsEndpointSigners verifies the new policy endpoint
-// shape is decoded by both the legacy signer-only and full-policy callers.
-func (s *ThorchainSuite) TestGetKeysignPartyReadsEndpointSigners(c *C) {
-	vaultPubKey := stypes.GetRandomPubKey()
-	members := common.PubKeys{
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-	}
-	neverSigners := common.PubKeys{stypes.GetRandomPubKey()}
-	jailedFallbackSigners := common.PubKeys{stypes.GetRandomPubKey()}
-	var requestedPath string
-	var requestedQuery string
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		requestedPath = req.URL.Path
-		requestedQuery = req.URL.RawQuery
-		rw.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(rw).Encode(map[string]any{
-			"pub_key":                 vaultPubKey.String(),
-			"signers":                 members.Strings(),
-			"height":                  "100",
-			"threshold":               "1",
-			"required_signers":        "2",
-			"never_signers":           neverSigners.Strings(),
-			"jailed_fallback_signers": jailedFallbackSigners.Strings(),
-			"active_signer_count":     "2",
-		}); err != nil {
-			c.Fatalf("failed to encode keysign party response: %v", err)
-		}
-	}))
-	defer server.Close()
-
-	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = nil
-	bridge := &thorchainBridge{
-		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
-		httpClient: httpClient,
-		errCounter: newThorchainTestErrCounter(),
-	}
-
-	party, err := bridge.GetKeysignParty(vaultPubKey, 100)
-	c.Assert(err, IsNil)
-	c.Assert(requestedPath, Equals, "/thorchain/vault/"+vaultPubKey.String()+"/keysign_party")
-	c.Assert(requestedQuery, Equals, "signing_height=100")
-	c.Assert(party.Equals(members), Equals, true)
-	policy, err := bridge.GetKeysignPolicy(vaultPubKey, 100)
-	c.Assert(err, IsNil)
-	c.Assert(policy.Signers.Equals(members), Equals, true)
-	c.Assert(policy.NeverSigners.Equals(neverSigners), Equals, true)
-	c.Assert(policy.JailedFallbackSigners.Equals(jailedFallbackSigners), Equals, true)
-	c.Assert(policy.RequiredSigners, Equals, 2)
-	c.Assert(policy.ActiveSignerCount, Equals, 2)
+// Model committed stores separately from signing_height: changing the latter
+// alone never selects a historical store in the gateway.
+type keysignPolicyState struct {
+	disable     int64
+	compromised int64
+	policy      KeysignPolicy
 }
 
-// TestGetKeysignPartyIncludesErrorBody keeps endpoint failures actionable by
-// preserving the thornode response body in the returned error.
-func (s *ThorchainSuite) TestGetKeysignPartyIncludesErrorBody(c *C) {
-	vaultPubKey := stypes.GetRandomPubKey()
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		rw.WriteHeader(http.StatusBadRequest)
-		if _, err := rw.Write([]byte(`{"error":"vault temporarily unavailable"}`)); err != nil {
-			c.Fatalf("failed to write response: %v", err)
-		}
-	}))
-	defer server.Close()
-
-	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = nil
-	bridge := &thorchainBridge{
-		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
-		httpClient: httpClient,
-		errCounter: newThorchainTestErrCounter(),
-	}
-
-	_, err := bridge.GetKeysignParty(vaultPubKey, 100)
-	c.Assert(err, NotNil)
-	c.Assert(strings.Contains(err.Error(), "/thorchain/vault/"+vaultPubKey.String()+"/keysign_party"), Equals, true)
-	c.Assert(strings.Contains(err.Error(), "vault temporarily unavailable"), Equals, true)
+type keysignPolicyAPI struct {
+	mu       sync.Mutex
+	tip      int64
+	vault    stypes.Vault
+	alias    common.PubKey
+	states   map[int64]keysignPolicyState
+	requests []string
+	// Intercepts errors or advances the tip between requests, under mu.
+	intercept func(http.ResponseWriter, *http.Request) bool
 }
 
-// TestGetKeysignPolicyFallsBackToVaultMembershipWhenEndpointUnavailable
-// preserves signing compatibility with thornode versions that do not expose the
-// keysign-party endpoint yet.
-func (s *ThorchainSuite) TestGetKeysignPolicyFallsBackToVaultMembershipWhenEndpointUnavailable(c *C) {
-	vaultPubKey := stypes.GetRandomPubKey()
-	members := common.PubKeys{
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
+func newKeysignPolicyAPI(t *testing.T) (*keysignPolicyAPI, *thorchainBridge) {
+	t.Helper()
+	members := make(common.PubKeys, 17)
+	for i := range members {
+		members[i] = stypes.GetRandomPubKey()
 	}
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		switch req.URL.Path {
-		case "/thorchain/vault/" + vaultPubKey.String() + "/keysign_party":
-			rw.WriteHeader(http.StatusNotFound)
-			if _, err := rw.Write([]byte(`{"error":"not found"}`)); err != nil {
-				c.Fatalf("failed to write response: %v", err)
+	threshold, err := conversion.GetThreshold(len(members))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := &keysignPolicyAPI{
+		tip:    200,
+		vault:  stypes.Vault{PubKey: stypes.GetRandomPubKey(), Membership: members.Strings()},
+		alias:  stypes.GetRandomPubKey(),
+		states: make(map[int64]keysignPolicyState),
+	}
+	policy := KeysignPolicy{
+		PubKey: f.vault.PubKey, Signers: members[:threshold+1], Height: 100,
+		Threshold: threshold, RequiredSigners: threshold + 1, ActiveSignerCount: threshold + 1,
+		NeverSigners: members[16:], JailedFallbackSigners: members[7 : threshold+1],
+	}
+	f.states[100] = keysignPolicyState{disable: -1, policy: policy}
+	f.states[200] = f.states[100]
+	server := httptest.NewServer(http.HandlerFunc(f.serveHTTP))
+	t.Cleanup(server.Close)
+	client := retryablehttp.NewClient()
+	client.Logger = nil
+	client.RetryMax = 0
+	bridge := &thorchainBridge{
+		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
+		httpClient: client, errCounter: newThorchainTestErrCounter(),
+	}
+	return f, bridge
+}
+
+func (f *keysignPolicyAPI) serveHTTP(w http.ResponseWriter, r *http.Request) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.requests = append(f.requests, r.URL.RequestURI())
+	w.Header().Set("Content-Type", "application/json")
+	if f.intercept != nil && f.intercept(w, r) {
+		return
+	}
+	if r.URL.Path == LastBlockEndpoint {
+		_ = json.NewEncoder(w).Encode([]openapi.LastBlock{{Thorchain: f.tip}})
+		return
+	}
+	height := f.tip
+	if h := r.URL.Query().Get("height"); h != "" {
+		var err error
+		height, err = strconv.ParseInt(h, 10, 64)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	state, ok := f.states[height]
+	if !ok {
+		http.Error(w, "historical store unavailable", http.StatusNotFound)
+		return
+	}
+	path := r.URL.Path
+	switch {
+	case path == fmt.Sprintf(VaultEndpoint, f.vault.PubKey) || path == fmt.Sprintf(VaultEndpoint, f.alias):
+		_ = json.NewEncoder(w).Encode(f.vault)
+	case path == MimirEndpoint+"/key/CompromisedVault-"+f.vault.PubKey.String():
+		_ = json.NewEncoder(w).Encode(state.compromised)
+	case path == MimirEndpoint+"/key/"+constants.MimirKeyDisableTSSSignerFiltering:
+		_ = json.NewEncoder(w).Encode(state.disable)
+	case path == fmt.Sprintf(KeysignPartyEndpoint, f.vault.PubKey) || path == fmt.Sprintf(KeysignPartyEndpoint, f.alias):
+		if state.compromised > 0 {
+			http.Error(w, "vault is "+common.CompromisedVaultErrorText, http.StatusBadRequest)
+			return
+		}
+		policy := state.policy
+		policy.Height, _ = strconv.ParseInt(r.URL.Query().Get("signing_height"), 10, 64)
+		if state.disable > 0 && state.disable <= policy.Height {
+			policy.Signers = f.vault.GetMembership()
+			policy.ActiveSignerCount = len(policy.Signers)
+			policy.NeverSigners = nil
+			policy.JailedFallbackSigners = nil
+		}
+		_ = json.NewEncoder(w).Encode(policy)
+	default:
+		http.Error(w, "unexpected endpoint", http.StatusNotFound)
+	}
+}
+
+func TestKeysignPolicySnapshotSurvivesLiveJailChanges(t *testing.T) {
+	f, bridge := newKeysignPolicyAPI(t)
+	expected := f.states[100].policy
+	// A later jail/slash update replaces a preferred fallback in the live party.
+	live := f.states[200]
+	live.policy.Signers = append(common.PubKeys(nil), expected.Signers[1:]...)
+	live.policy.Signers = append(live.policy.Signers, f.vault.GetMembership()[12])
+	f.states[200] = live
+	first, err := bridge.GetKeysignPolicy(f.vault.PubKey, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first, expected) {
+		t.Fatalf("signing height 100 used live jail state instead of its committed snapshot: got %v, want %v", first.Signers, expected.Signers)
+	}
+	f.mu.Lock()
+	for _, request := range f.requests[1:] {
+		wantHeight := "height=200"
+		if strings.Contains(request, "keysign_party") {
+			wantHeight = "height=100&signing_height=100"
+		}
+		if !strings.HasSuffix(request, wantHeight) {
+			t.Errorf("read used the wrong store: %s (want %s)", request, wantHeight)
+		}
+	}
+	live.policy.Signers = f.vault.GetMembership()[5:]
+	f.states[201] = live
+	f.tip = 201
+	f.mu.Unlock()
+	second, err := bridge.GetKeysignPolicy(f.vault.PubKey, 100)
+	if err != nil || !reflect.DeepEqual(first, second) {
+		t.Fatalf("retry changed policy: %v; %v", second, err)
+	}
+	party, err := bridge.GetKeysignParty(f.vault.PubKey, 100)
+	if err != nil || !party.Equals(expected.Signers) {
+		t.Fatalf("legacy wrapper changed policy: %v, %v", party, err)
+	}
+}
+
+func TestKeysignPolicyOverrideTransition(t *testing.T) {
+	// S=150 (effective vote), C=200 (clear). Patched nodes retain the historical
+	// override for S <= H < C. Pre-S work must be drained at the process boundary.
+	for _, h := range []int64{149, 150, 199, 200} {
+		t.Run(strconv.FormatInt(h, 10), func(t *testing.T) {
+			f, bridge := newKeysignPolicyAPI(t)
+			state := f.states[100]
+			state.policy.Height = h
+			switch {
+			case h >= 200:
+				state.disable = 0
+			case h >= 150:
+				state.disable = 1
 			}
-		case "/thorchain/vault/" + vaultPubKey.String():
-			if err := json.NewEncoder(rw).Encode(map[string]any{
-				"block_height": 100,
-				"pub_key":      vaultPubKey.String(),
-				"coins":        []string{},
-				"type":         "AsgardVault",
-				"status":       "ActiveVault",
-				"membership":   members.Strings(),
-			}); err != nil {
-				c.Fatalf("failed to encode vault response: %v", err)
+			f.states[h] = state
+			cleared := f.states[200]
+			cleared.disable = 0
+			f.states[200] = cleared
+			policy, err := bridge.GetKeysignPolicy(f.vault.PubKey, h)
+			if err != nil {
+				t.Fatal(err)
 			}
-		default:
-			rw.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer server.Close()
-
-	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = nil
-	bridge := &thorchainBridge{
-		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
-		httpClient: httpClient,
-		errCounter: newThorchainTestErrCounter(),
-	}
-
-	policy, err := bridge.GetKeysignPolicy(vaultPubKey, 120)
-	c.Assert(err, IsNil)
-	c.Assert(policy.Signers.Equals(members), Equals, true)
-	c.Assert(policy.Threshold, Equals, 2)
-	c.Assert(policy.RequiredSigners, Equals, 3)
-	c.Assert(policy.ActiveSignerCount, Equals, len(members))
-	c.Assert(policy.Height, Equals, int64(120))
-}
-
-// TestGetKeysignPolicyFallsBackToVaultMembershipWhenEndpoint404HasEmptyBody
-// keeps rolling-upgrade compatibility for genuine HTTP endpoint absence even
-// when the old thornode response has no body.
-func (s *ThorchainSuite) TestGetKeysignPolicyFallsBackToVaultMembershipWhenEndpoint404HasEmptyBody(c *C) {
-	vaultPubKey := stypes.GetRandomPubKey()
-	members := common.PubKeys{
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-	}
-	vaultRequests := 0
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		switch req.URL.Path {
-		case "/thorchain/vault/" + vaultPubKey.String() + "/keysign_party":
-			rw.WriteHeader(http.StatusNotFound)
-		case "/thorchain/vault/" + vaultPubKey.String():
-			vaultRequests++
-			if err := json.NewEncoder(rw).Encode(map[string]any{
-				"block_height": 120,
-				"pub_key":      vaultPubKey.String(),
-				"coins":        []string{},
-				"type":         "AsgardVault",
-				"status":       "ActiveVault",
-				"membership":   members.Strings(),
-			}); err != nil {
-				c.Fatalf("failed to encode vault response: %v", err)
+			want := state.policy.Signers
+			if h >= 150 && h < 200 {
+				want = f.vault.GetMembership()
 			}
-		default:
-			rw.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer server.Close()
-
-	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = nil
-	bridge := &thorchainBridge{
-		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
-		httpClient: httpClient,
-		errCounter: newThorchainTestErrCounter(),
-	}
-
-	policy, err := bridge.GetKeysignPolicy(vaultPubKey, 120)
-	c.Assert(err, IsNil)
-	c.Assert(vaultRequests, Equals, 1)
-	c.Assert(policy.Signers.Equals(members), Equals, true)
-}
-
-// TestGetKeysignPolicyDoesNotFallbackToVaultMembershipOnTransportError makes
-// the compromised-vault guard fail closed when the policy request does not
-// receive a real HTTP response.
-func (s *ThorchainSuite) TestGetKeysignPolicyDoesNotFallbackToVaultMembershipOnTransportError(c *C) {
-	vaultPubKey := stypes.GetRandomPubKey()
-	members := common.PubKeys{
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-		stypes.GetRandomPubKey(),
-	}
-	vaultRequests := 0
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		switch req.URL.Path {
-		case "/thorchain/vault/" + vaultPubKey.String():
-			vaultRequests++
-			if err := json.NewEncoder(rw).Encode(map[string]any{
-				"block_height": 100,
-				"pub_key":      vaultPubKey.String(),
-				"coins":        []string{},
-				"type":         "AsgardVault",
-				"status":       "ActiveVault",
-				"membership":   members.Strings(),
-			}); err != nil {
-				c.Fatalf("failed to encode vault response: %v", err)
+			if !policy.Signers.Equals(want) {
+				t.Fatalf("unexpected party after clearing for H=%d: %v", h, policy.Signers)
 			}
-		default:
-			rw.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer server.Close()
-
-	baseTransport := http.DefaultTransport
-	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = nil
-	httpClient.RetryMax = 0
-	httpClient.HTTPClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.URL.Path == "/thorchain/vault/"+vaultPubKey.String()+"/keysign_party" {
-			return nil, errors.New("policy endpoint timeout")
-		}
-		return baseTransport.RoundTrip(req)
-	})
-	bridge := &thorchainBridge{
-		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
-		httpClient: httpClient,
-		errCounter: newThorchainTestErrCounter(),
+			// Before clearing, today's explicit override widens even pre-S work.
+			f.mu.Lock()
+			current := f.states[200]
+			current.disable = 1
+			f.states[200] = current
+			f.mu.Unlock()
+			beforeClear, err := bridge.GetKeysignPolicy(f.vault.PubKey, h)
+			if err != nil || !beforeClear.Signers.Equals(f.vault.GetMembership()) {
+				t.Fatalf("override failed: %v, %v", beforeClear, err)
+			}
+			if h < 150 && beforeClear.Signers.Equals(policy.Signers) {
+				t.Fatal("fixture did not reproduce pre-S work changing party at clearing")
+			}
+		})
 	}
-
-	_, err := bridge.GetKeysignPolicy(vaultPubKey, 120)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Is(err, errThorchainTransport), Equals, true)
-	c.Assert(vaultRequests, Equals, 0)
 }
 
-// TestGetKeysignPolicyUsesGenericHTTPResponseCache documents that this read is
-// cached by the shared thorchain HTTP cache rather than a bespoke policy cache.
-func (s *ThorchainSuite) TestGetKeysignPolicyUsesGenericHTTPResponseCache(c *C) {
-	vaultPubKey := stypes.GetRandomPubKey()
-	signers := common.PubKeys{stypes.GetRandomPubKey(), stypes.GetRandomPubKey()}
-	requests := 0
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		requests++
-		rw.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(rw).Encode(map[string]any{
-			"pub_key":                 vaultPubKey.String(),
-			"signers":                 signers.Strings(),
-			"height":                  "120",
-			"threshold":               "1",
-			"required_signers":        "2",
-			"never_signers":           []string{},
-			"jailed_fallback_signers": []string{},
-			"active_signer_count":     "2",
-		}); err != nil {
-			c.Fatalf("failed to encode keysign party response: %v", err)
-		}
-	}))
-	defer server.Close()
-
-	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = nil
-	bridge := &thorchainBridge{
-		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
-		httpClient: httpClient,
-		errCounter: newThorchainTestErrCounter(),
+func TestKeysignPolicyOverrideDoesNotRequireHistory(t *testing.T) {
+	for _, disable := range []int64{1, 100, 101} {
+		t.Run(strconv.FormatInt(disable, 10), func(t *testing.T) {
+			f, bridge := newKeysignPolicyAPI(t)
+			delete(f.states, 100)
+			current := f.states[200]
+			current.disable = disable
+			f.states[200] = current
+			policy, err := bridge.GetKeysignPolicy(f.alias, 100)
+			if disable > 100 {
+				if err == nil {
+					t.Fatal("future override must not bypass missing history")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !policy.PubKey.Equals(f.vault.PubKey) || !policy.Signers.Equals(f.vault.GetMembership()) || policy.Threshold != 11 || policy.RequiredSigners != 12 || policy.Height != 100 {
+				t.Fatalf("incorrect full-vault policy: %+v", policy)
+			}
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			for _, request := range f.requests {
+				if strings.Contains(request, "keysign_party") {
+					t.Fatal("override unexpectedly queried history")
+				}
+			}
+		})
 	}
-
-	policy, err := bridge.GetKeysignPolicy(vaultPubKey, 120)
-	c.Assert(err, IsNil)
-	policy.Signers[0] = stypes.GetRandomPubKey()
-	cached, err := bridge.GetKeysignPolicy(vaultPubKey, 120)
-	c.Assert(err, IsNil)
-	c.Assert(requests, Equals, 1)
-	c.Assert(cached.Signers.Equals(signers), Equals, true)
 }
 
-// TestGetKeysignPolicyCompromisedVaultError makes compromised vaults a hard
-// stop even when the endpoint response arrives as a normal HTTP error body.
-func (s *ThorchainSuite) TestGetKeysignPolicyCompromisedVaultError(c *C) {
-	vaultPubKey := stypes.GetRandomPubKey()
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		rw.WriteHeader(http.StatusBadRequest)
-		if _, err := rw.Write([]byte(`{"error":"vault ` + vaultPubKey.String() + ` is marked compromised"}`)); err != nil {
-			c.Fatalf("failed to write response: %v", err)
-		}
-	}))
-	defer server.Close()
-
-	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = nil
-	bridge := &thorchainBridge{
-		cfg:        config.BifrostClientConfiguration{ChainHost: server.Listener.Addr().String()},
-		httpClient: httpClient,
-		errCounter: newThorchainTestErrCounter(),
+func TestKeysignPolicyControlsAreFreshAndPinned(t *testing.T) {
+	f, bridge := newKeysignPolicyAPI(t)
+	state := f.states[100]
+	state.disable = 1
+	f.states[199] = state
+	f.tip = 199
+	// Populate the shared one-block cache immediately before clearing at C=200.
+	if _, err := bridge.GetBlockHeight(); err != nil {
+		t.Fatal(err)
 	}
+	if _, err := bridge.GetMimir(constants.MimirKeyDisableTSSSignerFiltering); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bridge.GetMimir("CompromisedVault-" + f.vault.PubKey.String()); err != nil {
+		t.Fatal(err)
+	}
+	f.mu.Lock()
+	cleared := f.states[200]
+	cleared.disable = 0
+	f.states[200] = cleared
+	f.tip = 200
+	f.requests = nil
+	// The tip advances after its read. Both controls must still be read at T=200.
+	f.intercept = func(w http.ResponseWriter, r *http.Request) bool {
+		if strings.HasPrefix(r.URL.Path, "/thorchain/vault/") {
+			f.tip = 201
+		}
+		return false
+	}
+	f.mu.Unlock()
+	policy, err := bridge.GetKeysignPolicy(f.vault.PubKey, 200)
+	if err != nil || !policy.Signers.Equals(f.states[200].policy.Signers) {
+		t.Fatalf("stale controls at clearing: %v, %v", policy, err)
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, request := range f.requests[1:] {
+		if !strings.Contains(request, "height=200") {
+			t.Fatalf("read not pinned to T: %s", request)
+		}
+	}
+	// Height-bearing URLs must not accumulate in the global cache indefinitely.
+	httpResponseCachesMu.Lock()
+	defer httpResponseCachesMu.Unlock()
+	for key := range httpResponseCaches {
+		if strings.HasPrefix(key, bridge.getThorChainURL("")) && strings.Contains(key, "height=") {
+			t.Fatalf("snapshot URL retained in generic cache: %s", key)
+		}
+	}
+}
 
-	_, err := bridge.GetKeysignPolicy(vaultPubKey, 100)
-	c.Assert(IsCompromisedVaultError(err), Equals, true)
+func TestKeysignPolicyFailsClosed(t *testing.T) {
+	for _, route := range []string{"tip", "vault", "compromised", "override", "history"} {
+		for _, failure := range []string{"404", "501", "500", "empty404", "malformed", "null", "transport"} {
+			t.Run(route+"/"+failure, func(t *testing.T) {
+				f, bridge := newKeysignPolicyAPI(t)
+				if route == "compromised" {
+					state := f.states[200]
+					state.disable = 1
+					f.states[200] = state
+				}
+				matches := func(r *http.Request) bool {
+					switch route {
+					case "tip":
+						return r.URL.Path == LastBlockEndpoint
+					case "vault":
+						return r.URL.Path == fmt.Sprintf(VaultEndpoint, f.vault.PubKey)
+					case "compromised":
+						return strings.Contains(r.URL.Path, "CompromisedVault-")
+					case "override":
+						return strings.Contains(r.URL.Path, constants.MimirKeyDisableTSSSignerFiltering)
+					default:
+						return strings.HasSuffix(r.URL.Path, "/keysign_party")
+					}
+				}
+				f.intercept = func(w http.ResponseWriter, r *http.Request) bool {
+					if !matches(r) {
+						return false
+					}
+					switch failure {
+					case "malformed":
+						_, _ = w.Write([]byte("{"))
+					case "null":
+						_, _ = w.Write([]byte("null"))
+					case "empty404":
+						w.WriteHeader(http.StatusNotFound)
+					default:
+						status, _ := strconv.Atoi(failure)
+						http.Error(w, "historical store unavailable", status)
+					}
+					return true
+				}
+				if failure == "transport" {
+					bridge.httpClient.HTTPClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+						if matches(r) {
+							return nil, errors.New("connection failed")
+						}
+						return http.DefaultTransport.RoundTrip(r)
+					})
+				}
+				policy, err := bridge.GetKeysignPolicy(f.vault.PubKey, 100)
+				if err == nil || len(policy.Signers) != 0 {
+					t.Fatalf("error widened policy: %+v; %v", policy, err)
+				}
+				if failure == "transport" && !errors.Is(err, errThorchainTransport) {
+					t.Fatalf("lost transport error: %v", err)
+				}
+				if failure == "404" && route != "tip" && !strings.Contains(err.Error(), "historical store unavailable") {
+					t.Fatalf("lost error body: %v", err)
+				}
+			})
+		}
+	}
+}
+
+func TestKeysignPolicyCompromisedVaultWins(t *testing.T) {
+	for _, current := range []bool{true, false} {
+		t.Run(fmt.Sprintf("current=%v", current), func(t *testing.T) {
+			f, bridge := newKeysignPolicyAPI(t)
+			h := int64(100)
+			if current {
+				h = 200
+			}
+			state := f.states[h]
+			state.compromised = 1
+			state.disable = 1
+			f.states[h] = state
+			_, err := bridge.GetKeysignPolicy(f.alias, 100)
+			if !IsCompromisedVaultError(err) {
+				t.Fatalf("compromised vault did not override full membership: %v", err)
+			}
+		})
+	}
+}
+
+func TestKeysignPolicyRejectsUnavailableHeight(t *testing.T) {
+	for _, h := range []int64{-1, 0, 201} {
+		f, bridge := newKeysignPolicyAPI(t)
+		policy, err := bridge.GetKeysignPolicy(f.vault.PubKey, h)
+		if err == nil || len(policy.Signers) != 0 {
+			t.Fatalf("accepted unavailable H=%d: %+v, %v", h, policy, err)
+		}
+	}
+}
+
+func TestKeysignPolicyRejectsInvalidSnapshot(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*KeysignPolicy)
+	}{
+		{"height", func(p *KeysignPolicy) { p.Height++ }},
+		{"pubkey", func(p *KeysignPolicy) { p.PubKey = stypes.GetRandomPubKey() }},
+		{"missing-pubkey", func(p *KeysignPolicy) { p.PubKey = common.EmptyPubKey }},
+		{"threshold", func(p *KeysignPolicy) { p.Threshold-- }},
+		{"required-signers", func(p *KeysignPolicy) { p.RequiredSigners-- }},
+		{"no-quorum", func(p *KeysignPolicy) { p.Signers = p.Signers[:p.Threshold] }},
+		{"duplicate", func(p *KeysignPolicy) { p.Signers[0] = p.Signers[1] }},
+		{"non-member", func(p *KeysignPolicy) { p.Signers[0] = stypes.GetRandomPubKey() }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			f, bridge := newKeysignPolicyAPI(t)
+			policy := f.states[100].policy
+			test.change(&policy)
+			f.intercept = func(w http.ResponseWriter, r *http.Request) bool {
+				if !strings.HasSuffix(r.URL.Path, "/keysign_party") {
+					return false
+				}
+				_ = json.NewEncoder(w).Encode(policy)
+				return true
+			}
+			result, err := bridge.GetKeysignPolicy(f.vault.PubKey, 100)
+			if err == nil || len(result.Signers) != 0 {
+				t.Fatalf("accepted invalid snapshot: %+v, %v", result, err)
+			}
+		})
+	}
+}
+
+func TestKeysignPolicyCompromisedControlBypassesCache(t *testing.T) {
+	f, bridge := newKeysignPolicyAPI(t)
+	if value, err := bridge.GetMimir("CompromisedVault-" + f.vault.PubKey.String()); err != nil || value != 0 {
+		t.Fatalf("seed cached control: %d, %v", value, err)
+	}
+	f.mu.Lock()
+	state := f.states[200]
+	state.compromised = 1
+	state.disable = 1
+	f.states[201] = state
+	f.tip = 201
+	f.mu.Unlock()
+	_, err := bridge.GetKeysignPolicy(f.alias, 100)
+	if !IsCompromisedVaultError(err) {
+		t.Fatalf("cached control bypassed compromised hard stop: %v", err)
+	}
+}
+
+func TestKeysignPolicyRetiringVault(t *testing.T) {
+	f, bridge := newKeysignPolicyAPI(t)
+	f.vault.Status = stypes.VaultStatus_RetiringVault
+	policy, err := bridge.GetKeysignPolicy(f.vault.PubKey, 100)
+	if err != nil || !policy.Signers.Equals(f.states[100].policy.Signers) {
+		t.Fatalf("retiring vault lost recovery policy: %+v, %v", policy, err)
+	}
 }
 
 // newThorchainTestErrCounter returns an isolated Prometheus counter so these

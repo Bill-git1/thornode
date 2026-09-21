@@ -231,6 +231,9 @@ func (tKeySign *TssKeySign) processKeySign(reqNum int, errChan chan struct{}, ou
 			// we bail out after KeySignTimeoutSeconds
 			tKeySign.logger.Error().Msgf("fail to sign message with %s", tssConf.KeySignTimeout.String())
 			lastMsg := blameMgr.GetLastMsg()
+			if lastMsg == nil {
+				return nil, blame.ErrTssTimeOut
+			}
 			failReason := blameMgr.GetBlame().GetFailReason()
 			if failReason == "" {
 				failReason = blame.TssTimeout

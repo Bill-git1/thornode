@@ -368,11 +368,18 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 	c.networkFeeLock.Lock()
 	defer c.networkFeeLock.Unlock()
 
+	// ZEC fees are static, but its agreed chain height must stay fresh for
+	// deterministic transaction expiry. Report every quarter of the expiry
+	// window even when fees are unchanged, using the scanned block height so
+	// validators report the same heights regardless of local timing.
+	// See ZecTxExpiry for the cadence, scanner-lag and quorum-latency budget.
+	zecHeightReport := c.GetChain() == common.ZECChain && height%zecHeightReportInterval == 0
+
 	// skip fee if less than 1 resolution away from the last
 	lastFeeRate := c.lastFeeRate.Load()
 	feeDelta := new(big.Int).Sub(big.NewInt(int64(feeRateSats)), big.NewInt(int64(lastFeeRate)))
 	feeDelta.Abs(feeDelta)
-	if lastFeeRate != 0 && feeDelta.Cmp(big.NewInt(c.cfg.BlockScanner.GasPriceResolution)) != 1 {
+	if !zecHeightReport && lastFeeRate != 0 && feeDelta.Cmp(big.NewInt(c.cfg.BlockScanner.GasPriceResolution)) != 1 {
 		return nil
 	}
 

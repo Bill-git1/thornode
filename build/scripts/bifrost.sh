@@ -53,32 +53,7 @@ wait_for_tss_bootstrap_peer() {
   echo "Bootstrap peer ready: $peer ($peer_id)"
 }
 
-wait_for_solana_rpc() {
-  local endpoint="$1"
-
-  case "${BIFROST_CHAINS_SOL_DISABLED:-false}" in
-  true | TRUE | 1 | yes | YES)
-    return 0
-    ;;
-  esac
-
-  if [ -z "$endpoint" ]; then
-    return 0
-  fi
-
-  echo "Waiting for Solana RPC: $endpoint"
-  until curl -fsS --max-time 2 \
-    -H "Content-Type: application/json" \
-    -d '{"jsonrpc":"2.0","id":1,"method":"getSlot","params":[]}' \
-    "$endpoint" 2>/dev/null | grep -q '"result"'; do
-    sleep 1
-  done
-
-  echo "Solana RPC ready: $endpoint"
-}
-
 wait_for_tss_bootstrap_peer "${PEER-}"
-wait_for_solana_rpc "${BIFROST_CHAINS_SOL_RPC_HOST-}"
 
 create_thor_user "$SIGNER_NAME" "$SIGNER_PASSWD" "$SIGNER_SEED_PHRASE"
 

@@ -516,7 +516,7 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 	// consolidate UTXOs if there is not one in progress
 	if c.consolidateInProgress.CompareAndSwap(false, true) {
 		c.wg.Add(1)
-		go c.consolidateUTXOs()
+		go c.consolidateUTXOs(height)
 	}
 
 	if c.cfg.ChainID == common.ZECChain {

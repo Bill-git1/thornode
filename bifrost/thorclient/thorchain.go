@@ -129,6 +129,7 @@ type ThorchainBridge interface {
 	GetBlockHeight() (int64, error)
 	GetBlockTimestamp(height int64) (time.Time, error)
 	GetLastObservedInHeight(chain common.Chain) (int64, error)
+	GetLastObservedInHeightAtHeight(chain common.Chain, thorchainHeight int64) (int64, error)
 	GetLastSignedOutHeight(chain common.Chain) (int64, error)
 	Broadcast(msgs ...sdk.Msg) (common.TxID, error)
 	BroadcastWithBlocking(msgs ...sdk.Msg) (common.TxID, error)
@@ -507,21 +508,23 @@ func (b *thorchainBridge) GetInboundOutbound(txIns common.ObservedTxs) (common.O
 	return inbound, outbound, nil
 }
 
-// EnsureNodeWhitelistedWithTimeout check node is whitelisted with timeout retry
+// EnsureNodeWhitelistedWithTimeout loops until the node is whitelisted (any
+// status other than Unknown). Unknown means no node account exists for this
+// signer address: never bonded, fully unbonded, or the signer key does not
+// match the bonded address. Any non-zero bond creates the account as
+// Whitelisted; a below-minimum bond only prevents churning in (Standby),
+// and both pass this check. Bonding happens on a human timescale, so retry
+// indefinitely. (The prior 1-hour timeout was never enforced: time.After
+// was re-evaluated each iteration, so the wait was already indefinite. The
+// behavioral change here is the retry interval, 5s to 30s.)
 func (b *thorchainBridge) EnsureNodeWhitelistedWithTimeout() error {
 	for {
-		select {
-		case <-time.After(time.Hour):
-			return errors.New("Observer is not whitelisted yet")
-		default:
-			err := b.EnsureNodeWhitelisted()
-			if err == nil {
-				// node had been whitelisted
-				return nil
-			}
-			b.logger.Error().Err(err).Msg("observer is not whitelisted , will retry a bit later")
-			time.Sleep(time.Second * 5)
+		err := b.EnsureNodeWhitelisted()
+		if err == nil {
+			return nil
 		}
+		b.logger.Error().Err(err).Msg("observer is not whitelisted, will retry in 30s")
+		time.Sleep(time.Second * 30)
 	}
 }
 
@@ -569,89 +572,118 @@ func (b *thorchainBridge) FetchNodeStatus() (stypes.NodeStatus, error) {
 	return na.Status, nil
 }
 
-// GetKeysignPolicy fetches the keysign signer policy for the vault. A positive
-// blockHeight pins jail and leave-state evaluation to that signing height.
+// GetKeysignPolicy reads the party from committed state at the item's signing
+// height H. signing_height alone only changes jail evaluation, not the store.
+// Current safety controls are read first, together at a fresh committed T >= H.
+// Errors remain local and retryable: only the explicit override may widen the
+// party to full vault membership, including when H is no longer available.
 func (b *thorchainBridge) GetKeysignPolicy(vaultPubKey common.PubKey, blockHeight int64) (KeysignPolicy, error) {
-	path := fmt.Sprintf(KeysignPartyEndpoint, vaultPubKey.String())
-	uri := b.getThorChainURL(path)
-	if blockHeight > 0 {
-		uri += "?signing_height=" + strconv.FormatInt(blockHeight, 10)
+	if blockHeight <= 0 {
+		return KeysignPolicy{}, fmt.Errorf("key sign policy requires a positive signing height: %d", blockHeight)
 	}
-	buf, s, err := b.get(uri)
+	currentHeight, err := b.GetBlockHeightUncached()
 	if err != nil {
-		if errors.Is(err, errThorchainTransport) {
-			return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from thorchain: %w", err)
-		}
-		if len(buf) > 0 {
-			body := responseBodySnippet(buf)
-			// Compromised vaults are a hard stop; never fall back to full vault
-			// membership when thornode explicitly marks the vault unsafe.
-			if IsCompromisedVaultError(errors.New(body)) {
-				return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from %s: status code %d: %w: %s", path, s, common.ErrCompromisedVault, body)
-			}
-			// 404/501 are treated as upgrade compatibility only. Other status
-			// bodies remain errors so real policy failures do not silently widen.
-			if keysignPolicyEndpointUnavailable(s) {
-				return b.getKeysignPolicyFromVaultMembership(vaultPubKey, blockHeight)
-			}
-			return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from %s: status code %d: %s", path, s, body)
-		}
-		// Preserve signing on older thornode versions that do not implement the
-		// endpoint yet, but do not mask transport errors from implemented nodes.
-		if keysignPolicyEndpointUnavailable(s) {
-			return b.getKeysignPolicyFromVaultMembership(vaultPubKey, blockHeight)
-		}
-		return KeysignPolicy{}, fmt.Errorf("fail to get key sign policy from thorchain: %w", err)
+		return KeysignPolicy{}, fmt.Errorf("fail to get current key sign control height: %w", err)
 	}
+	if currentHeight < blockHeight {
+		return KeysignPolicy{}, fmt.Errorf("key sign control height %d is behind signing height %d", currentHeight, blockHeight)
+	}
+
+	// Resolve alternate EdDSA/FROST pubkeys to the canonical vault key before
+	// looking up its compromised flag. Membership is fixed at keygen, including
+	// for retiring vaults which still have recovery work.
+	var vault stypes.Vault
+	if err = b.getKeysignStateAtHeight(fmt.Sprintf(VaultEndpoint, vaultPubKey), currentHeight, &vault); err != nil {
+		return KeysignPolicy{}, err
+	}
+	members := vault.GetMembership()
+	if vault.PubKey.IsEmpty() || len(members) == 0 {
+		return KeysignPolicy{}, fmt.Errorf("vault %s has no canonical pubkey or signer membership at height %d", vaultPubKey, currentHeight)
+	}
+	compromised, err := b.getKeysignMimirAtHeight("CompromisedVault-"+vault.PubKey.String(), currentHeight)
+	if err != nil {
+		return KeysignPolicy{}, err
+	}
+	if compromised > 0 {
+		return KeysignPolicy{}, fmt.Errorf("vault %s is %w at height %d", vault.PubKey, common.ErrCompromisedVault, currentHeight)
+	}
+	disableAt, err := b.getKeysignMimirAtHeight(constants.MimirKeyDisableTSSSignerFiltering, currentHeight)
+	if err != nil {
+		return KeysignPolicy{}, err
+	}
+	threshold, err := conversion.GetThreshold(len(members))
+	if err != nil {
+		return KeysignPolicy{}, fmt.Errorf("fail to calculate key sign threshold: %w", err)
+	}
+	// Match the existing query's activation rule, evaluated at signing height.
+	if disableAt > 0 && disableAt <= blockHeight {
+		return KeysignPolicy{
+			PubKey: vault.PubKey, Signers: members, Height: blockHeight,
+			Threshold: threshold, RequiredSigners: threshold + 1, ActiveSignerCount: len(members),
+		}, nil
+	}
+
+	path := fmt.Sprintf(KeysignPartyEndpoint, vaultPubKey) + "?signing_height=" + strconv.FormatInt(blockHeight, 10)
 	var policy KeysignPolicy
-	if err = json.Unmarshal(buf, &policy); err != nil {
-		return KeysignPolicy{}, fmt.Errorf("fail to unmarshal key sign policy from json: %w", err)
+	if err := b.getKeysignStateAtHeight(path, blockHeight, &policy); err != nil {
+		// Missing history and endpoint absence must not silently choose a
+		// different party. Historical compromised-vault errors also stay fatal.
+		return KeysignPolicy{}, err
 	}
-	if len(policy.Signers) == 0 {
-		return KeysignPolicy{}, fmt.Errorf("vault %s has empty signer membership", vaultPubKey.String())
+	if policy.Height != blockHeight || !policy.PubKey.Equals(vault.PubKey) {
+		return KeysignPolicy{}, fmt.Errorf("key sign policy snapshot does not match vault %s at height %d", vault.PubKey, blockHeight)
 	}
-	if policy.PubKey.IsEmpty() {
-		policy.PubKey = vaultPubKey
+	if policy.Threshold != threshold || policy.RequiredSigners != threshold+1 || len(policy.Signers) < threshold+1 {
+		return KeysignPolicy{}, fmt.Errorf("key sign policy for vault %s at height %d does not satisfy the original vault threshold", vault.PubKey, blockHeight)
+	}
+	allowed := make(map[common.PubKey]bool, len(members))
+	for _, member := range members {
+		allowed[member] = true
+	}
+	for _, signer := range policy.Signers {
+		if !allowed[signer] {
+			return KeysignPolicy{}, fmt.Errorf("key sign policy for vault %s at height %d contains a duplicate or non-member signer %s", vault.PubKey, blockHeight, signer)
+		}
+		allowed[signer] = false
 	}
 	return policy, nil
 }
 
-// keysignPolicyEndpointUnavailable identifies endpoint absence during rolling
-// upgrades; these are the only errors allowed to use the vault-membership
-// compatibility fallback.
-func keysignPolicyEndpointUnavailable(status int) bool {
-	return status == http.StatusNotFound || status == http.StatusNotImplemented
+// getKeysignStateAtHeight bypasses the shared one-block cache. Control reads
+// must observe the fresh visibility barrier, and height-specific URLs must not
+// accumulate forever in that cache. The gateway maps height to the SDK store.
+func (b *thorchainBridge) getKeysignStateAtHeight(path string, height int64, result any) error {
+	u, err := url.Parse(path)
+	if err != nil {
+		return err
+	}
+	query := u.Query()
+	query.Set("height", strconv.FormatInt(height, 10))
+	buf, status, err := b.getUncached(b.getThorChainURL(u.Path) + "?" + query.Encode())
+	if err != nil {
+		body := responseBodySnippet(buf)
+		if IsCompromisedVaultError(err) || IsCompromisedVaultError(errors.New(body)) {
+			return fmt.Errorf("fail to get key sign state from %s at height %d: status %d: %w: %s", path, height, status, common.ErrCompromisedVault, body)
+		}
+		return fmt.Errorf("fail to get key sign state from %s at height %d: status %d: %w: %s", path, height, status, err, body)
+	}
+	if err := json.Unmarshal(buf, result); err != nil {
+		return fmt.Errorf("fail to decode key sign state from %s at height %d: %w", path, height, err)
+	}
+	return nil
 }
 
-// getKeysignPolicyFromVaultMembership preserves signing compatibility with
-// thornode versions that have vault membership but no keysign-party endpoint.
-func (b *thorchainBridge) getKeysignPolicyFromVaultMembership(vaultPubKey common.PubKey, blockHeight int64) (KeysignPolicy, error) {
-	vault, err := b.GetVault(vaultPubKey.String())
-	if err != nil {
-		return KeysignPolicy{}, fmt.Errorf("fail to fallback to vault membership for key sign policy: %w", err)
+func (b *thorchainBridge) getKeysignMimirAtHeight(key string, height int64) (int64, error) {
+	// A missing Mimir is encoded as -1. null is not evidence that a safety
+	// control is disabled, so reject it along with other malformed responses.
+	var value *int64
+	if err := b.getKeysignStateAtHeight(MimirEndpoint+"/key/"+key, height, &value); err != nil {
+		return 0, err
 	}
-	members := vault.GetMembership()
-	if len(members) == 0 {
-		return KeysignPolicy{}, fmt.Errorf("vault %s has empty signer membership", vaultPubKey.String())
+	if value == nil {
+		return 0, fmt.Errorf("missing key sign control %s at height %d", key, height)
 	}
-	threshold, err := conversion.GetThreshold(len(members))
-	if err != nil {
-		return KeysignPolicy{}, fmt.Errorf("fail to calculate fallback key sign threshold: %w", err)
-	}
-	pubKey := vault.PubKey
-	if pubKey.IsEmpty() {
-		// FROST callers may query by a vault-specific alternate pubkey; retain
-		// the requested key when the legacy vault record lacks a secp key.
-		pubKey = vaultPubKey
-	}
-	return KeysignPolicy{
-		PubKey:            pubKey,
-		Signers:           members,
-		Height:            blockHeight,
-		Threshold:         threshold,
-		RequiredSigners:   threshold + 1,
-		ActiveSignerCount: len(members),
-	}, nil
+	return *value, nil
 }
 
 // GetKeysignParty keeps the legacy bridge helper for callers that still need

@@ -211,16 +211,10 @@ func TestZECSpentUtxosOnlyFinalizedAfterSuccessfulBroadcast(t *testing.T) {
 	const key = "txid-0"
 
 	client.rememberPendingSpentUtxos(payload, map[string]int64{key: 1})
-	client.finalizePendingSpentUtxos(payloadHex, false)
-	if client.spentUtxos[key] {
-		t.Fatal("expected failed ZEC broadcast to leave selected UTXOs spendable")
+	if client.spentUtxos[key] || len(client.pendingSpentUtxos[payloadHex]) != 1 {
+		t.Fatal("signing must reserve inputs without marking them spent")
 	}
-	if _, ok := client.pendingSpentUtxos[payloadHex]; ok {
-		t.Fatal("expected failed ZEC broadcast to clear pending selected UTXOs")
-	}
-
-	client.rememberPendingSpentUtxos(payload, map[string]int64{key: 1})
-	client.finalizePendingSpentUtxos(payloadHex, true)
+	client.finalizePendingSpentUtxos(payloadHex)
 	if !client.spentUtxos[key] {
 		t.Fatal("expected successful ZEC broadcast to mark selected UTXOs spent")
 	}

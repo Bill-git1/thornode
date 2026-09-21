@@ -148,9 +148,9 @@ func (s *SOLScanner) Start() {
 	s.lastMimirCheck = time.Now().Add(-constants.ThorchainBlockTime)
 	s.isChainPaused = false
 
-	initialSlot, err := s.solRpc.GetSlot()
-	if err != nil {
-		s.logger.Error().Err(err).Msg("failed to get initial slot")
+	initialSlot, ok := waitForInitialSlot(s.solRpc, s.stopChan, s.cfg.Solana.ScanInterval, s.logger)
+	if !ok {
+		s.logger.Info().Msg("stopping SOL scanner")
 		return
 	}
 
@@ -789,8 +789,20 @@ func (s *SOLScanner) getTxInItem(txn *rpc.TransactionResult, blockHeight int64) 
 
 	instructions := txn.Transaction.GetInstructions()
 
+	// Resolve instruction account indices against the full account list: the
+	// static account keys followed by any addresses loaded from address lookup
+	// tables (versioned/v0+ transactions). Legacy transactions carry no loaded
+	// addresses, so this is identical to the static account keys for them.
+	accounts := txn.Transaction.ResolvedAccounts(txn.Meta.LoadedAddresses)
+	accountByIndex := func(i int) string {
+		if i < 0 || i >= len(accounts) {
+			return ""
+		}
+		return accounts[i]
+	}
+
 	for _, instruction := range instructions {
-		programID := txn.Transaction.GetAccountAtIndex(instruction.ProgramIdIndex)
+		programID := accountByIndex(instruction.ProgramIdIndex)
 
 		// Handle memo
 		if types.MemoProgramID.EqualsString(programID) {
@@ -833,16 +845,14 @@ func (s *SOLScanner) getTxInItem(txn *rpc.TransactionResult, blockHeight int64) 
 
 			fromIdx := instruction.Accounts[0]
 			toIdx := instruction.Accounts[1]
-			// TODO: V0 transactions using Address Lookup Tables (ALTs) can have account
-			// indices that reference addresses in Meta.LoadedAddresses rather than
-			// Message.AccountKeys. These transactions are silently dropped here. To
-			// support them, parse LoadedAddresses and extend the account resolution.
-			if fromIdx >= len(txn.Transaction.Message.AccountKeys) || toIdx >= len(txn.Transaction.Message.AccountKeys) {
+			// Indices may reference addresses loaded from address lookup tables
+			// (versioned txs); accounts (built above) already includes them.
+			if fromIdx < 0 || toIdx < 0 || fromIdx >= len(accounts) || toIdx >= len(accounts) {
 				s.logger.Debug().Msg("Account index out of range")
 				return nil
 			}
-			fromAccount = txn.Transaction.Message.AccountKeys[fromIdx]
-			toAccount = txn.Transaction.Message.AccountKeys[toIdx]
+			fromAccount = accounts[fromIdx]
+			toAccount = accounts[toIdx]
 
 			if len(data) < 12 {
 				s.logger.Debug().Msg("Transfer instruction data too short")

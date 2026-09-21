@@ -54,6 +54,29 @@ type DogecoinSignerSuite struct {
 
 var _ = Suite(&DogecoinSignerSuite{})
 
+func (s *DogecoinSignerSuite) TestStaticFeeDoesNotUseZECHeightRefresh(c *C) {
+	s.client.cfg.BlockScanner.GasPriceResolution = 1
+	queue := make(chan common.NetworkFee, 2)
+	s.client.globalNetworkFeeQueue = queue
+	block := &btcjson.GetBlockVerboseTxResult{
+		Height: 1200,
+		Tx: []btcjson.TxRawResult{
+			{Vin: []btcjson.Vin{{Coinbase: "01"}}, Vout: []btcjson.Vout{{Value: common.DOGEChain.DefaultCoinbase() + 1}}},
+			{Vin: []btcjson.Vin{{Txid: "abc"}}, Vsize: 250},
+		},
+	}
+	c.Assert(s.client.sendNetworkFeeFromBlock(block), IsNil)
+	c.Assert(len(queue), Equals, 1)
+	first := <-queue
+	c.Assert(first.Chain, Equals, common.DOGEChain)
+	c.Assert(first.TransactionRate > 0, Equals, true)
+
+	block.Height = 1210 // A ZEC refresh boundary must not force a DOGE report.
+	c.Assert(s.client.sendNetworkFeeFromBlock(block), IsNil)
+	c.Assert(len(queue), Equals, 0)
+	c.Assert(s.client.lastFeeRate.Load(), Equals, first.TransactionRate)
+}
+
 func (s *DogecoinSignerSuite) SetUpSuite(c *C) {
 	registry := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(registry)

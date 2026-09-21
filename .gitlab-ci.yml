@@ -165,6 +165,18 @@ unit-tests:
     paths:
       - coverage*
 
+test-mocknet-scripts:
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
+      when: never
+    - *rules
+  stage: test
+  image: alpine:3.21
+  before_script:
+    - apk add --no-cache bash python3
+  script:
+    - python3 -m unittest discover -s build/scripts/tests -v
+
 xmr-e2e-gates:
   rules:
     - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
@@ -304,6 +316,10 @@ go-tss:
     - changes:
         paths:
           - bifrost/tss/go-tss/**/*
+          # go-tss is excluded from unit-tests (TEST_PATHS), so a tss-lib bump in
+          # go.mod would otherwise run no TSS tests at all.
+          - go.mod
+          - go.sum
   stage: test
   before_script:
     - !reference [.go-private-auth, before_script]
@@ -411,6 +427,22 @@ test-simulation:
         -d '{"spend_key_hex":"00"}' \
         > logs/xmr-debug/sim-balance.txt 2>&1 || true
 
+unit-tests-race-bifrost:
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
+      when: never
+    - *rules
+  # long-test, not test: the race detector makes this a ~35m job, and running it
+  # alongside unit-tests and lint on the shared runner starved both of CPU --
+  # unit-tests failed on localhost "context deadline exceeded" and lint hit its
+  # 1h timeout at 3x its usual runtime.
+  stage: long-test
+  timeout: 1h
+  before_script:
+    - !reference [.go-private-auth, before_script]
+  script:
+    - make test-race-bifrost
+
 test-regression:
   rules:
     - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
@@ -470,11 +502,27 @@ secret_detection:
 semgrep:
   stage: test
   rules: *rules
-  image: returntocorp/semgrep-agent:v1
-  script: semgrep-agent --gitlab-json > gl-sast-report.json || true
-  variables:
-    SEMGREP_RULES: >-
-      https://semgrep.dev/s/heimdallthor:insecure-logging
+  image: semgrep/semgrep:1.140.0
+  # --error makes findings fail the job; the previous `|| true` meant this check
+  # could never fail. Rules live in-repo (semgrep/) so no network fetch is needed.
+  script:
+    # --no-git-ignore: target discovery must not depend on git working inside the
+    # image, otherwise a git error scans 0 files and still exits 0.
+    - semgrep scan --config semgrep/ --no-git-ignore --error --metrics=off --gitlab-sast --output gl-sast-report.json .
   artifacts:
+    when: always
     reports:
       sast: gl-sast-report.json
+
+govulncheck:
+  stage: test
+  rules: *rules
+  # Informational until the baseline is cleared: on 2026-09-14 it reported 32
+  # reachable vulnerabilities across 18 modules. Remove allow_failure once the
+  # job is green so new reachable vulns block the pipeline.
+  allow_failure: true
+  before_script:
+    - !reference [.go-private-auth, before_script]
+  script:
+    # only reports vulnerable symbols actually reachable from this module's call graph
+    - go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 -tags mocknet ./...

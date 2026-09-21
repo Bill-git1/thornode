@@ -1220,6 +1220,23 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 	if err != nil {
 		s.logger.Error().Err(err).Str("memo", tx.Memo).Msg("fail to broadcast tx to chain")
 
+		// A chain client returns ErrResignRequired when the signed bytes can never
+		// land (e.g. a SOL tx whose blockhash expired mid-keysign): re-broadcasting
+		// the same bytes loops forever. Clear the stored signed tx + checkpoint so
+		// the next pass re-enters SignTx, where the chain's sign-time validity gate
+		// re-evaluates (for SOL, dropping the item for a deterministic fresh-height
+		// reschedule). Every other broadcast error keeps the signed tx for a plain
+		// broadcast retry, since re-signing wastes a keysign and risks a double
+		// broadcast when the tx may still land.
+		if errors.Is(err, types.ErrResignRequired) {
+			item.SignedTx = nil
+			item.Checkpoint = nil
+			if storeErr := s.storage.Set(item); storeErr != nil {
+				s.logger.Error().Err(storeErr).Msg("fail to clear signed tx for re-sign")
+			}
+			return nil, observation, err
+		}
+
 		// store the signed tx for the next retry
 		item.SignedTx = signedTx
 		item.Observation = observation
@@ -1288,6 +1305,18 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 	checkpoint, obs, err := runWithContext(ctx, func() ([]byte, *types.TxInItem, error) {
 		return s.signAndBroadcast(item)
 	})
+
+	if errors.Is(err, chainclienttypes.ErrTxExpired) {
+		// Expiry is terminal for this attempt, including saved payloads and
+		// terminal-round retries. Never auto-observe it as a successful outbound.
+		s.logger.Warn().Err(err).Interface("tx", item.TxOutItem).
+			Msg("retiring expired transaction; awaiting THORChain rescheduling")
+		if removeErr := s.storage.Remove(item); removeErr != nil {
+			s.logger.Error().Err(removeErr).Msg("fail to remove expired tx out store item")
+		}
+		cancel()
+		return
+	}
 
 	// Apply spent output refs from the signing observation before handling
 	// errors. The observation is populated during FROST signing and contains

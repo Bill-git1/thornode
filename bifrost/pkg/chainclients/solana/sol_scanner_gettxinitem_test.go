@@ -398,3 +398,61 @@ func (s *GetTxInItemSuite) TestCalculateMedianDoesNotMutate(c *C) {
 			Commentf("index %d: expected %d, got %d — calculateMedian mutated the input slice", i, expectedOrder[i], v))
 	}
 }
+
+// TestVersionedTxLoadedAddresses verifies that a transaction whose transfer
+// references an account loaded from an address lookup table — an index beyond
+// the static AccountKeys, resolved from Meta.LoadedAddresses — is observed
+// correctly. The signer (sender) is always a static key (lookup-table addresses
+// cannot sign), so here the recipient vault is the lookup-table-loaded account.
+// Before this fix such indices exceeded len(AccountKeys) and the transaction was
+// silently dropped, leaving these deposits unobservable. A readonly loaded entry
+// is included to exercise both lists and pin the writable-before-readonly order:
+// the vault (writable) must resolve at index 3, immediately after the 3 static
+// keys and before the readonly entry at index 4.
+func (s *GetTxInItemSuite) TestVersionedTxLoadedAddresses(c *C) {
+	scanner := newTestScanner()
+
+	oneSol := uint64(1_000_000_000)
+	fee := uint64(5000)
+
+	txn := &rpc.TransactionResult{
+		Slot: 100,
+		Meta: rpc.RPCMeta{
+			Fee: fee,
+			// Loaded via address lookup table, appended after the static keys as
+			// writable-then-readonly. Full account list becomes:
+			// [sender(0), systemProgram(1), memoProgram(2), vault(3), newAccount(4)].
+			LoadedAddresses: rpc.RPCAddrList{
+				Writable: []interface{}{testVault},
+				Readonly: []interface{}{testNewAccount},
+			},
+		},
+		Transaction: rpc.RPCTxnData{
+			Signatures: []string{testTxSig},
+			Message: rpc.RPCMessage{
+				// The signer and the programs are static; the vault is loaded.
+				AccountKeys: []string{testSender, testSystemProgram, testMemoProgram},
+				Instructions: []rpc.RPCInstruction{
+					{
+						ProgramIdIndex: 1,           // System Program (static)
+						Accounts:       []int{0, 3}, // from=sender (static), to=vault (loaded)
+						Data:           makeTransferData(oneSol),
+					},
+					{
+						ProgramIdIndex: 2,        // Memo Program (static)
+						Accounts:       []int{0}, // sender (static)
+						Data:           makeMemoData("=:ETH.ETH:0x1234567890abcdef"),
+					},
+				},
+			},
+		},
+	}
+
+	item := scanner.getTxInItem(txn, 100)
+	c.Assert(item, NotNil, Commentf("transfer via a lookup-table-loaded account must be observed"))
+	c.Assert(item.Sender, Equals, testSender)
+	c.Assert(item.To, Equals, testVault)
+	c.Assert(item.Memo, Equals, "=:ETH.ETH:0x1234567890abcdef")
+	c.Assert(item.Coins[0].Amount.Equal(convertLamportsToTHORChain(oneSol)), Equals, true,
+		Commentf("expected %s, got %s", convertLamportsToTHORChain(oneSol), item.Coins[0].Amount))
+}

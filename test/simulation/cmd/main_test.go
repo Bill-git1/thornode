@@ -395,8 +395,8 @@ func TestSimulationWaitsForZecInitialBlocksBeforeCreatingUsers(t *testing.T) {
 	if !strings.Contains(mainGo, `method":"getblockcount"`) {
 		t.Fatal("ZEC readiness should poll getblockcount before simulation users are created")
 	}
-	if !strings.Contains(mainGo, "const requiredHeight int64 = 250") {
-		t.Fatal("ZEC readiness should wait for the initial 250-block mocknet bootstrap before funding users")
+	if !strings.Contains(mainGo, "const initialBlocks int64 = 400") {
+		t.Fatal("ZEC readiness should wait past the 400-block warm-up")
 	}
 	if !strings.Contains(mainGo, "zec readiness timed out after") {
 		t.Fatal("ZEC readiness should time out with a clear error instead of racing immature coinbase outputs")

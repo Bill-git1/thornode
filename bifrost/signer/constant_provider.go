@@ -38,14 +38,18 @@ func (cp *ConstantsProvider) GetInt64Value(thorchainBlockHeight int64, key const
 }
 
 func (cp *ConstantsProvider) EnsureConstants(thorchainBlockHeight int64) error {
-	if cp.requestHeight == 0 {
-		return cp.getConstantsFromThorchain(thorchainBlockHeight)
-	}
+	// requestHeight and churnInterval are read together under the lock: they are
+	// written together by getConstantsFromThorchain, and reading either outside
+	// the lock races with a concurrent refresh.
 	cp.constantsLock.Lock()
+	requestHeight := cp.requestHeight
 	churnInterval := cp.constants[constants.ChurnInterval.String()]
 	cp.constantsLock.Unlock()
+	if requestHeight == 0 {
+		return cp.getConstantsFromThorchain(thorchainBlockHeight)
+	}
 	// Thorchain will have new version and constants only when new node get rotated in , and the new version get consensus
-	if thorchainBlockHeight-cp.requestHeight < churnInterval {
+	if thorchainBlockHeight-requestHeight < churnInterval {
 		return nil
 	}
 	return cp.getConstantsFromThorchain(thorchainBlockHeight)

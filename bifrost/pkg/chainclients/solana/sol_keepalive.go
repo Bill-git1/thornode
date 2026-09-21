@@ -282,6 +282,7 @@ func (c *SOLClient) keepAliveVault(vault ttypes.Vault, currentSlot uint64, refre
 	}
 
 	toi := stypes.TxOutItem{
+		Height:           anchorHeight,
 		Chain:            common.SOLChain,
 		ToAddress:        addr,
 		VaultPubKey:      vault.PubKey,

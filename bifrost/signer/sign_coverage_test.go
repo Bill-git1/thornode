@@ -1375,8 +1375,7 @@ func (s *SignCoverageSuite) TestSignAndBroadcast_WithExistingSignedTx(c *C) {
 
 func (s *SignCoverageSuite) TestSignAndBroadcast_DropsStaleSignedTxBeforeDifferentVaultReplacement(c *C) {
 	vaultPubKey, _ := common.NewPubKey(pubkeymanager.MockPubkey)
-	replacementVault, err := common.NewPubKey("tthorpub1addwnpepqfup3y8p0egd7ml7vrnlxgl3wvnp89mpn0tjpj0p2nm2gh0n9hlrvrtylay")
-	c.Assert(err, IsNil)
+	replacementVault := ttypes.GetRandomPubKey()
 	bridge := &mockSignBridge{
 		blockHeight: 1000,
 		constants: map[string]int64{

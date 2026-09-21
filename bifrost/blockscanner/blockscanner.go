@@ -54,6 +54,10 @@ type BlockScanner struct {
 	thorchainBridge       thorclient.ThorchainBridge
 	chainScanner          BlockScannerFetcher
 	healthy               *atomic.Bool
+
+	// stall tracking, only touched from the scanBlocks goroutine
+	stallHeight int64
+	stallSince  time.Time
 }
 
 // NewBlockScanner create a new instance of BlockScanner
@@ -199,6 +203,77 @@ func (b *BlockScanner) rewindToNextHeight(currentHeight, nextHeight int64) error
 	}
 	atomic.StoreInt64(&b.previousBlock, previousHeight)
 	return nil
+}
+
+// maxResumeLagBlocks converts MaxResumeBlockLag into a block count for this
+// chain, or 0 when catch-up is disabled or the chain has no known block time.
+func (b *BlockScanner) maxResumeLagBlocks() int64 {
+	if b.cfg.MaxResumeBlockLag <= 0 {
+		return 0
+	}
+	ms := b.cfg.ChainID.ApproximateBlockMilliseconds()
+	if ms <= 0 {
+		return 0
+	}
+	return b.cfg.MaxResumeBlockLag.Milliseconds() / ms
+}
+
+// skipAheadIfStalled moves a wedged cursor forward to the catch-up window and
+// reports whether it moved. GetStartHeight applies the same MaxResumeBlockLag
+// bound when the scanner starts, but a scanner that wedges while running — a
+// pruned or permanently unavailable block, a fetch that fails deterministically
+// — would otherwise retry the same height until an operator restarts it, and
+// stay unhealthy (so refuse to sign) the whole time.
+//
+// The skip target is derived from the chain's last observed height on
+// THORChain, which is a consensus value, so every block passed over was already
+// observed to supermajority by the rest of the network. That is what makes this
+// safe to do unilaterally, unlike the operator-chosen FloorBlockHeight.
+func (b *BlockScanner) skipAheadIfStalled(currentBlock int64) bool {
+	maxLag := b.maxResumeLagBlocks()
+	if maxLag <= 0 || b.thorchainBridge == nil || b.cfg.ChainID.Equals(common.THORChain) {
+		return false
+	}
+
+	// A single failure is not a stall. Only skip once this exact height has been
+	// failing for longer than MaxResumeBlockLag, which is the same window that
+	// decides the skip target: a scanner stuck on one block for that long is by
+	// definition past the lag the operator agreed to tolerate. Reusing it needs
+	// no new config, and no transient RPC error or daemon restart trips it.
+	if b.stallHeight != currentBlock {
+		b.stallHeight, b.stallSince = currentBlock, time.Now()
+		return false
+	}
+	if time.Since(b.stallSince) < b.cfg.MaxResumeBlockLag {
+		return false
+	}
+
+	observed, err := b.thorchainBridge.GetLastObservedInHeight(b.cfg.ChainID)
+	if err != nil || observed <= 0 {
+		return false
+	}
+
+	// Forward-only: a cursor inside the catch-up window is not stalled, it is
+	// just behind, and must keep scanning every block it has not seen.
+	target := observed - maxLag
+	if target <= b.PreviousHeight() {
+		return false
+	}
+
+	// Publish the in-memory cursor only after the durable write succeeds, so a
+	// restart and the running process agree on the next block to fetch.
+	if err := b.scannerStorage.SetScanPos(target); err != nil {
+		b.logger.Error().Err(err).Int64("target", target).Msg("fail to persist stall skip ahead")
+		return false
+	}
+	previous := atomic.SwapInt64(&b.previousBlock, target)
+	b.logger.Warn().
+		Int64("from", previous).
+		Int64("to", target).
+		Int64("last_observed_in", observed).
+		Msg("block scanner stalled beyond max resume lag, skipping ahead to consensus observed height")
+	b.recordError("stalled_scanner_skip_ahead")
+	return true
 }
 
 func rewindRequiredNextHeight(err error) (int64, bool) {
@@ -494,10 +569,25 @@ func (b *BlockScanner) scanBlocks() {
 				if !errors.Is(err, btypes.ErrUnavailableBlock) {
 					b.logger.Error().Err(err).Int64("block height", currentBlock).Msg("fail to get RPCBlock")
 					b.healthy.Store(false)
+
+					// An error that never clears would otherwise retry this same height
+					// forever, so give the cursor the same catch-up bound the scanner
+					// gets at startup before backing off. ErrUnavailableBlock is
+					// excluded: chain clients return it to ask for a retry of this
+					// exact height while they keep per-height state, and their
+					// terminal cases already use ScannerRecoveryRequiredError.
+					if b.skipAheadIfStalled(currentBlock) {
+						clearPrefetch()
+						continue
+					}
 				}
 				time.Sleep(b.cfg.BlockHeightDiscoverBackoff)
 				continue
 			}
+
+			// a height that fetched is not stalled, so a later rewind back to it
+			// starts its stall clock fresh rather than inheriting an old one
+			b.stallHeight = 0
 
 			// start prefetching next blocks if configured
 			if b.cfg.PrefetchBlocks > 1 {
@@ -712,13 +802,23 @@ func (b *BlockScanner) GetStartHeight() (int64, error) {
 	}
 
 	if b.thorchainBridge != nil && b.cfg.ChainID != common.THORChain {
-		height, _ := b.thorchainBridge.GetLastObservedInHeight(b.cfg.ChainID)
+		// A failure here is not fatal: THORChain legitimately has no lastblock row
+		// for a chain it has never observed. But it does mean the max-lag bound
+		// below is skipped and the stale local cursor is returned verbatim, so say
+		// so rather than dropping the error on the floor. skipAheadIfStalled
+		// re-applies the bound once scanning is running.
+		height, err := b.thorchainBridge.GetLastObservedInHeight(b.cfg.ChainID)
+		if err != nil {
+			clog.Warn().Err(err).
+				Int64("scan_pos", currentPos).
+				Msg("no consensus observed height, starting without the max resume lag bound")
+		}
 		if height > 0 {
 
 			// 2.a) Use local scanner storage height if available, up to the max lag from lastblock.
 			if currentPos > 0 {
 				// calculate the max lag
-				maxLagBlocks := b.cfg.MaxResumeBlockLag.Milliseconds() / b.cfg.ChainID.ApproximateBlockMilliseconds()
+				maxLagBlocks := b.maxResumeLagBlocks()
 
 				// return the position up to the max block lag behind the consensus height
 				if height <= currentPos+maxLagBlocks {
@@ -760,7 +860,7 @@ func (b *BlockScanner) GetStartHeight() (int64, error) {
 		return 0, err
 	}
 	if b.cfg.ChainID == common.THORChain && b.cfg.MaxResumeBlockLag > 0 {
-		maxLagBlocks := b.cfg.MaxResumeBlockLag.Milliseconds() / b.cfg.ChainID.ApproximateBlockMilliseconds()
+		maxLagBlocks := b.maxResumeLagBlocks()
 		if maxLagBlocks > 0 {
 			startHeight := height - maxLagBlocks
 			if startHeight < 1 {

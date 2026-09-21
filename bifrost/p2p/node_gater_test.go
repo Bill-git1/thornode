@@ -186,6 +186,10 @@ func (m *MockThorchainBridge) GetLastObservedInHeight(chain common.Chain) (int64
 	return 0, nil
 }
 
+func (m *MockThorchainBridge) GetLastObservedInHeightAtHeight(common.Chain, int64) (int64, error) {
+	return 0, nil
+}
+
 func (m *MockThorchainBridge) GetLastSignedOutHeight(chain common.Chain) (int64, error) {
 	return 0, nil
 }
@@ -757,10 +761,9 @@ func (s *NodeGaterTestSuite) TestPeriodicRefresh(c *C) {
 	})
 
 	gater.Start()
-	time.Sleep(time.Millisecond * 50)
 
 	// Verify initial allowlist
-	c.Assert(len(gater.allowedPeers), Equals, 1)
+	c.Assert(waitForAllowlistLen(gater, 1), Equals, 1)
 
 	// Update the node list
 	s.mockBridge.SetNodeAccounts([]*types.QueryNodeResponse{
@@ -782,13 +785,28 @@ func (s *NodeGaterTestSuite) TestPeriodicRefresh(c *C) {
 		},
 	})
 
-	// Wait for a refresh cycle
-	time.Sleep(time.Millisecond * 150)
-
-	// Verify allowlist was updated
-	c.Assert(len(gater.allowedPeers), Equals, 2)
+	// Verify allowlist was updated on the next refresh cycle
+	c.Assert(waitForAllowlistLen(gater, 2), Equals, 2)
 
 	gater.Stop()
+}
+
+// waitForAllowlistLen polls the allowlist under the gater's own lock until it
+// reaches want, or 5s elapses, and returns the length it settled on. The
+// refresh goroutine is live during TestPeriodicRefresh, so reading
+// gater.allowedPeers directly is a data race, and a fixed sleep is a flake on a
+// loaded runner.
+func waitForAllowlistLen(g *NodeGater, want int) int {
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		g.mu.RLock()
+		got := len(g.allowedPeers)
+		g.mu.RUnlock()
+		if got == want || time.Now().After(deadline) {
+			return got
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 func (s *NodeGaterTestSuite) TestConcurrentAccess(c *C) {

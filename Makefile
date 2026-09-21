@@ -226,12 +226,14 @@ test-coverage: test-network-specific
 coverage-report: test-coverage
 	@go tool cover -html=coverage.txt
 
+# only print the coverage total: the full per-function dump pushed the CI job log
+# past GitLab's 4MB cap, truncating the "total:" line the coverage regex reads
 test-coverage-sum: test-network-specific
 	@go run gotest.tools/gotestsum@v1.13.0 --junitfile report.xml --format testname -- ${TEST_BUILD_FLAGS} -v -coverprofile=coverage.txt -covermode count ${TEST_DIR}
 	sed -i.bak '/\.pb\.go:/d' coverage.txt
 	@rm -f coverage.txt.bak
 	@GOFLAGS='${TEST_BUILD_FLAGS}' go run github.com/boumenot/gocover-cobertura@v1.4.0 < coverage.txt > coverage.xml
-	@go tool cover -func=coverage.txt
+	@go tool cover -func=coverage.txt | tail -n 1
 	@go tool cover -html=coverage.txt -o coverage.html
 
 test:
@@ -259,6 +261,10 @@ test-network-specific:
 
 test-race:
 	@go test -race ${TEST_BUILD_FLAGS} ${RUN_FLAG} ${TEST_DIR}
+
+# bifrost is the concurrent half of the system; go-tss is covered by test-go-tss.
+test-race-bifrost:
+	@go test -race -timeout 20m ${TEST_BUILD_FLAGS} ${RUN_FLAG} $$(go list ./bifrost/... | grep -v bifrost/tss/go-tss)
 
 # ------------------------------ Performance Tests ------------------------------
 

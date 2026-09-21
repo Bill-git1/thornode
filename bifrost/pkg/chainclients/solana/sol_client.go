@@ -3,10 +3,12 @@ package solana
 import (
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -117,6 +119,12 @@ type SOLClient struct {
 	consensusHashes     map[int64]consensusBlockHashEntry
 	consensusHashNewest int64
 	consensusHashGroup  singleflight.Group
+
+	// resignDeadHash remembers blockhashes whose expiry was confirmed at or
+	// beyond their anchor slot. SignTx can then drop other items using the same
+	// expired hash without repeating keysign, even if RPC backends disagree.
+	resignDeadMu   sync.Mutex
+	resignDeadHash map[string]struct{}
 }
 
 // consensusBlockHashEntry is one immutable keysign-height derivation.
@@ -591,6 +599,15 @@ func (c *SOLClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		c.countAbstain("no_consensus_blockhash")
 		return nil, nil, nil, errors.New("no consensus blockhash for SOL height yet; retaining outbound for retry until reschedule")
 	}
+	// Only a confirmed expiry at broadcast can mark this hash dead. A preflight
+	// rejection alone may come from a lagging backend and must not suppress
+	// participation in other outbounds that share the same consensus hash.
+	if c.isResignDeadHash(recentBlockhash) {
+		c.logger.Warn().Str("blockhash", recentBlockhash).Interface("tx", tx).
+			Msg("consensus blockhash expiry already confirmed; dropping for reschedule")
+		c.countAbstain("blockhash_dead_resign_dropped")
+		return nil, nil, nil, nil
+	}
 	// Per-node participation gate (never touches the signed bytes — the blockhash
 	// above is deterministic): is the derived blockhash still usable against the
 	// PROCESSING tip, i.e. the bank a broadcast tx is actually validated against?
@@ -834,6 +851,37 @@ func (c *SOLClient) storeConsensusBlockHash(height int64, e consensusBlockHashEn
 	}
 }
 
+// maxResignDeadHashes caps the dead-blockhash set. Dead hashes are self-obsolete
+// (a reschedule derives a new height -> new hash that is never dead), so this is
+// only a guard against unbounded growth in a pathological loop.
+const maxResignDeadHashes = 512
+
+// markResignDead records only a blockhash whose expiry was confirmed by
+// IsBlockhashValid at a processing bank at or beyond that hash's anchor slot.
+func (c *SOLClient) markResignDead(blockhash string) {
+	c.resignDeadMu.Lock()
+	defer c.resignDeadMu.Unlock()
+	if c.resignDeadHash == nil {
+		c.resignDeadHash = make(map[string]struct{})
+	}
+	if len(c.resignDeadHash) >= maxResignDeadHashes {
+		for k := range c.resignDeadHash {
+			delete(c.resignDeadHash, k)
+			break
+		}
+	}
+	c.resignDeadHash[blockhash] = struct{}{}
+}
+
+// isResignDeadHash reports whether a derived consensus blockhash was already
+// confirmed expired at broadcast and must not be re-signed.
+func (c *SOLClient) isResignDeadHash(blockhash string) bool {
+	c.resignDeadMu.Lock()
+	defer c.resignDeadMu.Unlock()
+	_, dead := c.resignDeadHash[blockhash]
+	return dead
+}
+
 // consensusBlockHash derives the SOL blockhash every signer must embed from a CONSENSUS
 // THORChain height (the keysign height: txOut.Height for scheduled outbounds, the
 // keep-alive anchor otherwise) — never the per-node scanner — so all members sign
@@ -1067,6 +1115,20 @@ func (c *SOLClient) BroadcastTx(txOutItem stypes.TxOutItem, rawTx []byte) (strin
 				return knownSig, nil
 			}
 		}
+		// A lagging backend can reject a still-valid hash. Keep the signed bytes
+		// unless a caught-up processing bank confirms that their hash expired.
+		if isBlockhashNotFound(err) {
+			blockhash, expiryErr := c.confirmedExpiredBlockhash(txOutItem, rawTx)
+			if expiryErr != nil {
+				c.logger.Warn().Err(expiryErr).Str("memo", txOutItem.Memo).
+					Msg("cannot confirm SOL blockhash expiry; retaining signed tx for retry")
+			} else if blockhash != "" {
+				c.logger.Warn().Err(err).Str("memo", txOutItem.Memo).
+					Msg("SOL blockhash expiry confirmed; dropping signed tx for reschedule")
+				c.markResignDead(blockhash)
+				return "", fmt.Errorf("%w: %v", stypes.ErrResignRequired, err)
+			}
+		}
 		return "", fmt.Errorf("failed to broadcast tx: %w", err)
 	}
 	c.logger.Info().Str("memo", txOutItem.Memo).Str("txid", txSig).Msg("broadcast tx")
@@ -1081,6 +1143,62 @@ func (c *SOLClient) BroadcastTx(txOutItem stypes.TxOutItem, rawTx []byte) (strin
 	}
 
 	return txSig, nil
+}
+
+// confirmedExpiredBlockhash returns the signed transaction's hash only when
+// expiry is confirmed. Derive its anchor from the persisted signing height so
+// saved signed transactions remain verifiable after a Bifrost restart.
+func (c *SOLClient) confirmedExpiredBlockhash(txOutItem stypes.TxOutItem, rawTx []byte) (string, error) {
+	blockhash, ok := txBlockhashFromRawTx(rawTx)
+	if !ok || txOutItem.Height <= 0 {
+		return "", errors.New("signed SOL transaction is missing its blockhash or signing height")
+	}
+	expectedHash, anchorSlot, err := c.cachedConsensusBlockHash(txOutItem.Height)
+	if err != nil {
+		return "", fmt.Errorf("fail to derive signed SOL blockhash anchor: %w", err)
+	}
+	if expectedHash != blockhash || anchorSlot <= 0 {
+		return "", errors.New("signed SOL blockhash does not match its consensus anchor")
+	}
+	valid, err := c.rpcClient.IsBlockhashValid(blockhash, "processed", uint64(anchorSlot))
+	if err != nil {
+		return "", err
+	}
+	if valid {
+		return "", nil
+	}
+	return blockhash, nil
+}
+
+// isBlockhashNotFound matches the preflight rejection that needs an expiry
+// check. The error itself does not distinguish expiry from a lagging RPC.
+func isBlockhashNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "blockhash not found")
+}
+
+// txBlockhashFromRawTx reads the hash from the single-signature legacy
+// transactions Bifrost creates. Reject truncated or unsupported encodings so
+// they cannot provide expiry evidence for clearing a persisted signed tx.
+func txBlockhashFromRawTx(rawTx []byte) (string, bool) {
+	const messageOffset = 1 + ed25519.SignatureSize
+	const accountsOffset = messageOffset + 3 // legacy message header
+	if len(rawTx) <= accountsOffset || rawTx[0] != 1 || rawTx[messageOffset] != 1 {
+		return "", false
+	}
+	accountCount, prefixLen := binary.Uvarint(rawTx[accountsOffset:])
+	if prefixLen <= 0 || prefixLen > 3 || accountCount == 0 || accountCount > 256 {
+		return "", false
+	}
+	const hashSize = 32
+	hashOffset := accountsOffset + prefixLen + int(accountCount)*ed25519.PublicKeySize
+	// A serialized message also contains an instruction-count prefix after the hash.
+	if hashOffset+hashSize >= len(rawTx) {
+		return "", false
+	}
+	return base58.Encode(rawTx[hashOffset : hashOffset+hashSize]), true
 }
 
 // txSigFromRawTx extracts the base58-encoded transaction signature from a

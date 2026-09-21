@@ -164,6 +164,10 @@ func (m *mockBridgeForKeysign) GetBlockTimestamp(int64) (time.Time, error) {
 
 func (m *mockBridgeForKeysign) GetLastObservedInHeight(common.Chain) (int64, error) { return 0, nil }
 
+func (m *mockBridgeForKeysign) GetLastObservedInHeightAtHeight(common.Chain, int64) (int64, error) {
+	return 0, nil
+}
+
 func (m *mockBridgeForKeysign) GetLastSignedOutHeight(common.Chain) (int64, error) { return 0, nil }
 
 func (m *mockBridgeForKeysign) Broadcast(...sdk.Msg) (common.TxID, error) { return "", nil }
@@ -802,6 +806,34 @@ func (s *KeySignTestSuite) TestToLocalTSSSignerMissingHeightError(c *C) {
 	result := <-tasks[0].Resp
 	c.Assert(result.Err, NotNil)
 	c.Assert(result.Err.Error(), Matches, ".*keysign task height must be positive.*")
+}
+
+// A local history/control failure must never enter TSS or become peer blame.
+// A subsequent retry at the same item height must remain possible.
+func (s *KeySignTestSuite) TestToLocalTSSSignerPolicyReadFailure(c *C) {
+	for _, algo := range []common.SigningAlgo{common.SigningAlgoSecp256k1, common.SigningAlgoEd25519} {
+		readErr := errors.New("historical store unavailable at height 100")
+		server := &mockTssServer{}
+		bridge := &mockBridgeForKeysign{keysignPartyErr: readErr}
+		ks, err := NewKeySign(server, bridge)
+		c.Assert(err, IsNil)
+		task := &tssKeySignTask{PoolPubKey: "poolpub", Algo: algo, Msg: "msg1", Height: 100, Resp: make(chan tssKeySignResult, 1)}
+		ks.wg.Add(1)
+		ks.toLocalTSSSigner("poolpub", algo, []*tssKeySignTask{task})
+		result := <-task.Resp
+		c.Assert(errors.Is(result.Err, readErr), Equals, true)
+		var blameErr KeysignError
+		c.Assert(errors.As(result.Err, &blameErr), Equals, false)
+		c.Assert(server.lastReq.PoolPubKey, Equals, "")
+		c.Assert(bridge.lastKeysignPartyBlock, Equals, int64(100))
+
+		bridge.keysignPartyErr = nil
+		ks.wg.Add(1)
+		ks.toLocalTSSSigner("poolpub", algo, []*tssKeySignTask{task})
+		c.Assert((<-task.Resp).Err, IsNil)
+		c.Assert(server.lastReq.PoolPubKey, Equals, "poolpub")
+		c.Assert(server.lastReq.BlockHeight, Equals, int64(100))
+	}
 }
 
 // ---------------------------------------------------------------------------

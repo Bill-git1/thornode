@@ -189,13 +189,15 @@ func (s *CoverageBackfillSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	s.cfg.RPCHost = s.server.Listener.Addr().String()
 	s.client, err = NewClient(s.keys, s.cfg, nil, s.bridge, s.m)
+	// Check initialization before accessing client fields so a wallet RPC error
+	// is reported instead of being masked by a nil-pointer panic.
+	c.Assert(err, IsNil)
+	c.Assert(s.client, NotNil)
 	s.client.disableVinZeroBatch = true
 	netFeeQueue := make(chan common.NetworkFee, 100)
 	s.client.globalNetworkFeeQueue = netFeeQueue
 	s.client.globalErrataQueue = make(chan stypes.ErrataBlock, 10)
 	s.client.globalSolvencyQueue = make(chan stypes.Solvency, 10)
-	c.Assert(err, IsNil)
-	c.Assert(s.client, NotNil)
 }
 
 func (s *CoverageBackfillSuite) TearDownTest(_ *C) {

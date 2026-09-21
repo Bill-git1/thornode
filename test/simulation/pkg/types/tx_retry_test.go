@@ -1,7 +1,9 @@
 package types
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -14,11 +16,12 @@ type TxRetrySuite struct{}
 var _ = Suite(&TxRetrySuite{})
 
 type retryLiteChainClient struct {
-	signCalls      int
-	broadcastCalls int
-	signErrs       []error
-	broadcastErrs  []error
-	broadcastTxIDs []string
+	signCalls         int
+	broadcastCalls    int
+	signErrs          []error
+	broadcastErrs     []error
+	broadcastTxIDs    []string
+	broadcastPayloads [][]byte
 }
 
 func (r *retryLiteChainClient) GetAccount(_ *common.PubKey) (*common.Account, error) {
@@ -32,11 +35,12 @@ func (r *retryLiteChainClient) SignTx(SimTx) ([]byte, error) {
 		return nil, r.signErrs[idx]
 	}
 
-	return []byte("signed"), nil
+	return []byte(fmt.Sprintf("signed-%d", r.signCalls)), nil
 }
 
-func (r *retryLiteChainClient) BroadcastTx([]byte) (string, error) {
+func (r *retryLiteChainClient) BroadcastTx(payload []byte) (string, error) {
 	r.broadcastCalls++
+	r.broadcastPayloads = append(r.broadcastPayloads, append([]byte(nil), payload...))
 	idx := r.broadcastCalls - 1
 	if idx < len(r.broadcastErrs) && r.broadcastErrs[idx] != nil {
 		if idx < len(r.broadcastTxIDs) {
@@ -335,8 +339,8 @@ func TestSignAndBroadcastTxRetriesZecQueuedDownloadFailures(t *testing.T) {
 	if txid != "ok" {
 		t.Fatalf("expected successful txid, got %s", txid)
 	}
-	if client.signCalls != 2 {
-		t.Fatalf("expected 2 sign attempts, got %d", client.signCalls)
+	if client.signCalls != 1 {
+		t.Fatalf("expected 1 sign attempt, got %d", client.signCalls)
 	}
 	if client.broadcastCalls != 2 {
 		t.Fatalf("expected 2 broadcast attempts, got %d", client.broadcastCalls)
@@ -356,7 +360,7 @@ func TestSignAndBroadcastTxRetriesZecChannelClosedFailures(t *testing.T) {
 	}()
 
 	// A closed RPC channel does not prove the funding transaction is invalid,
-	// so the simulation should rebuild and rebroadcast instead of exiting.
+	// so the simulation should rebroadcast the original bytes instead of exiting.
 	client := &retryLiteChainClient{
 		broadcastErrs: []error{
 			errors.New("channel closed"),
@@ -371,8 +375,8 @@ func TestSignAndBroadcastTxRetriesZecChannelClosedFailures(t *testing.T) {
 	if txid != "ok" {
 		t.Fatalf("expected successful txid, got %s", txid)
 	}
-	if client.signCalls != 2 {
-		t.Fatalf("expected 2 sign attempts, got %d", client.signCalls)
+	if client.signCalls != 1 {
+		t.Fatalf("expected 1 sign attempt, got %d", client.signCalls)
 	}
 	if client.broadcastCalls != 2 {
 		t.Fatalf("expected 2 broadcast attempts, got %d", client.broadcastCalls)
@@ -430,5 +434,38 @@ func TestShouldRetrySolanaSimTxFailures(t *testing.T) {
 	}
 	if shouldRetrySolanaSimTxSign(errors.New("other error")) {
 		t.Fatal("expected unrelated sign errors to be non-retriable")
+	}
+}
+
+func TestZecBroadcastRetryKeepsOriginalPayload(t *testing.T) {
+	previous := zecSimTxBroadcastRetryDelay
+	zecSimTxBroadcastRetryDelay = 0
+	t.Cleanup(func() { zecSimTxBroadcastRetryDelay = previous })
+	for _, tc := range []struct {
+		name     string
+		errs     []error
+		attempts int
+		success  bool
+	}{
+		{"cancelled then accepted", []error{errors.New("verification cancelled"), nil}, 2, true},
+		{"verification timeout", []error{errors.New("timeout waiting for verification result"), nil}, 2, true},
+		{"exhausted", []error{errors.New("verification cancelled"), errors.New("channel closed"), errors.New("verification cancelled"), errors.New("verification cancelled")}, 4, false},
+		{"invalid", []error{errors.New("failed to validate tx: bad-txns-inputs-missingorspent")}, 1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &retryLiteChainClient{broadcastErrs: tc.errs}
+			txid, err := SignAndBroadcastTx(client, SimTx{Chain: common.ZECChain})
+			if (err == nil) != tc.success || (txid != "") != tc.success {
+				t.Fatalf("unexpected outcome: txid=%q err=%v", txid, err)
+			}
+			if client.signCalls != 1 || client.broadcastCalls != tc.attempts {
+				t.Fatalf("signed %d times, broadcast %d times", client.signCalls, client.broadcastCalls)
+			}
+			for _, payload := range client.broadcastPayloads {
+				if !bytes.Equal(payload, []byte("signed-1")) {
+					t.Fatalf("replacement payload: %q", payload)
+				}
+			}
+		})
 	}
 }

@@ -703,7 +703,7 @@ func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToCon
 // UTXO Consolidation
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func (c *Client) consolidateVaultUTXOs(vault types.Vault, utxosToSpend int64) error {
+func (c *Client) consolidateVaultUTXOs(vault types.Vault, utxosToSpend, scannedHeight int64) error {
 	lock := c.GetVaultLock(vault.PubKey.String())
 
 	// Hold the vault lock through broadcast to avoid local double-spend on failure/timeout.
@@ -730,6 +730,12 @@ func (c *Client) consolidateVaultUTXOs(vault types.Vault, utxosToSpend int64) er
 	height, err := c.bridge.GetBlockHeight()
 	if err != nil {
 		return fmt.Errorf("get THORChain block height: %w", err)
+	}
+	if c.GetChain() == common.ZECChain {
+		height, err = c.getZecConsolidationHeight(scannedHeight, height, vault.BlockHeight)
+		if err != nil {
+			return fmt.Errorf("get ZEC consolidation signing height: %w", err)
+		}
 	}
 
 	rawTx, _, _, err := c.SignTx(txOutItem, height)
@@ -783,7 +789,7 @@ func (c *Client) buildConsolidateTxOutItem(vault types.Vault, utxos []btcjson.Li
 }
 
 // consolidateUTXOs only required when there is a new block
-func (c *Client) consolidateUTXOs() {
+func (c *Client) consolidateUTXOs(scannedHeight int64) {
 	defer func() {
 		c.wg.Done()
 		c.consolidateInProgress.Store(false)
@@ -812,7 +818,7 @@ func (c *Client) consolidateUTXOs() {
 			// Not part of this vault , don't need to consolidate UTXOs for this Vault
 			continue
 		}
-		if err = c.consolidateVaultUTXOs(vault, utxosToSpend); err != nil {
+		if err = c.consolidateVaultUTXOs(vault, utxosToSpend, scannedHeight); err != nil {
 			c.log.Err(err).Str("vault_pubkey", vault.PubKey.String()).Msg("fail to consolidate utxos for vault")
 		}
 	}

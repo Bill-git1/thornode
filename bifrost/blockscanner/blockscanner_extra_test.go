@@ -877,8 +877,16 @@ func (s *BlockScannerExtraSuite) TestScanBlocksProcessesTxs(c *C) {
 	nfChan := make(chan common.NetworkFee, 5)
 	scanner.Start(globalChan, nfChan)
 
-	// Wait for scanner to process some blocks
-	time.Sleep(2 * time.Second)
+	// Wait for the scanner to process some blocks. Poll instead of sleeping a fixed
+	// 2s: under -race on a loaded CI runner that budget expired before the first
+	// block was scanned, failing both checks below.
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		if len(globalChan) > 0 && scanner.PreviousHeight() > 1 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	scanner.Stop()
 
 	// Should have received txs

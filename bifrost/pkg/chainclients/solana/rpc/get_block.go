@@ -30,7 +30,7 @@ func (s *SolRPC) GetBlock(height uint64) (*BlockResult, error) {
 			"transactionDetails":             "full",
 			"rewards":                        false,
 			"commitment":                     "finalized",
-			"maxSupportedTransactionVersion": 0,
+			"maxSupportedTransactionVersion": 1,
 		},
 	}
 
@@ -66,7 +66,7 @@ func (s *SolRPC) GetBlockhashAtSlot(slot uint64) (string, error) {
 			"transactionDetails":             "none",
 			"rewards":                        false,
 			"commitment":                     "finalized",
-			"maxSupportedTransactionVersion": 0,
+			"maxSupportedTransactionVersion": 1,
 		},
 	}
 

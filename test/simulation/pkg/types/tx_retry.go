@@ -16,15 +16,19 @@ var (
 	zecSimTxBroadcastRetryDelay     = 2 * time.Second
 )
 
-// SignAndBroadcastTx signs a fresh transaction payload for each attempt so
-// chain-specific retries can recover from transient broadcast failures without
-// reusing stale signed payloads.
+// SignAndBroadcastTx retries transient failures with each chain's payload policy.
+// ZEC must reuse signed bytes: a cancelled verification or transport error may
+// still result in acceptance, so signing another transfer can pay twice.
 func SignAndBroadcastTx(client LiteChainClient, tx SimTx) (string, error) {
 	attempts, retryDelay := simTxRetryConfig(tx.Chain)
 
 	var lastErr error
+	var signed []byte
 	for attempt := 1; attempt <= attempts; attempt++ {
-		signed, err := client.SignTx(tx)
+		var err error
+		if signed == nil || !tx.Chain.Equals(common.ZECChain) {
+			signed, err = client.SignTx(tx)
+		}
 		if err != nil {
 			lastErr = err
 			if attempt < attempts && shouldRetrySimTxSign(tx.Chain, err) {
@@ -152,7 +156,9 @@ func shouldRetryZecSimTxBroadcast(err error) bool {
 	}
 
 	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "already queued for download") ||
+	return strings.Contains(message, "verification cancelled") ||
+		strings.Contains(message, "timeout waiting for verification result") ||
+		strings.Contains(message, "already queued for download") ||
 		isTransientSimTxRPCError(message)
 }
 

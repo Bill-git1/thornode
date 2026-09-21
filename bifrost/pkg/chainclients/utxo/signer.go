@@ -28,6 +28,7 @@ import (
 	"github.com/eager7/dogutil"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
+	chainclienttypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo/rpc/zec"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
@@ -39,8 +40,21 @@ import (
 	"github.com/btcsuite/btcd/mempool"
 )
 
-// ZecTxExpiry (in blocks) is used to calculate the tx expiry height
+// ZecTxExpiry is the window, in ZEC blocks, after the agreed LastObservedIn
+// at the outbound's fixed THORChain signing height. Its budget must cover report
+// staleness plus outbound scheduling, TSS, broadcast and inclusion delays.
+// With every scheduled report reaching quorum, a conservative staleness budget
+// is zecHeightReportInterval + ObservationFlexibilityBlocks + quorum latency:
+// the defaults give 10 + 3 + Q = 13 + Q blocks, leaving 27 - Q for the outbound.
+// Q and all other delays here are measured in ZEC blocks, not THORChain blocks.
+// The scanner's near-tip gate in FetchTxs can skip scheduled reports; each
+// missed interval spends another 10 blocks. Scanner/quorum stalls have no finite
+// worst-case bound. Revisit this budget when changing any of these settings.
+// checkZecExpiry rejects exhausted windows without changing the shared digest;
+// THORChain must reschedule expired outbounds with a new signing height.
 const ZecTxExpiry = uint32(40)
+
+const zecHeightReportInterval = int64(ZecTxExpiry) / 4
 
 // ZecExtraFee (in Zats) is added to the calculated gas costs
 const ZecExtraFee = int(0)
@@ -172,6 +186,15 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		if err = json.Unmarshal(tx.Checkpoint, &checkpoint); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to unmarshal checkpoint: %w", err)
 		}
+		if c.cfg.ChainID == common.ZECChain && checkpoint.ZecExpiryHeight == 0 {
+			// This version must be deployed before first ZEC mainnet activation,
+			// so there are no live mainnet signatures from the old schema to
+			// migrate. Test networks must drain old signings or reset the network
+			// before upgrading. Skip without rebuilding a digest; the nil result
+			// retires even Round7Retry for normal rescheduling.
+			c.log.Warn().Msg("discarding pre-activation ZEC checkpoint without expiry; awaiting THORChain rescheduling")
+			return nil, nil, nil, nil
+		}
 		if err = redeemTx.Deserialize(bytes.NewReader(checkpoint.UnsignedTx)); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to deserialize tx: %w", err)
 		}
@@ -198,6 +221,13 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 			return nil, nil, nil, fmt.Errorf("fail to serialize tx: %w", err)
 		}
 		checkpoint.UnsignedTx = buf.Bytes()
+	}
+
+	if c.cfg.ChainID == common.ZECChain && checkpoint.ZecExpiryHeight == 0 {
+		checkpoint.ZecExpiryHeight, err = c.getZecExpiryHeight(thorchainHeight)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 	}
 
 	// serialize the checkpoint for later
@@ -237,6 +267,9 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 
 	chainHeight, err := c.rpc.GetBlockCount()
 	if err != nil {
+		if c.cfg.ChainID == common.ZECChain {
+			return nil, checkpointBytes, nil, fmt.Errorf("get ZEC tip for expiry check: %w", err)
+		}
 		// fall back to the scanner height, thornode voter does not use height
 		chainHeight = c.getCurrentBlockHeight()
 		c.log.Warn().Err(err).
@@ -247,6 +280,9 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	// only used for zcash
 	var zecTx *zecutil.MsgTx
 	if c.cfg.ChainID == common.ZECChain {
+		if err = checkZecExpiry(checkpoint.ZecExpiryHeight, chainHeight); err != nil {
+			return nil, checkpointBytes, nil, err
+		}
 		// WARNING: v4 (Sapling) is assumed by both BroadcastTx (double-SHA256 txid)
 		// and zecutil signing (Blake2b sighash). Upgrading to v5 requires updating
 		// txid calculation per ZIP-244 and the signing algorithm.
@@ -254,7 +290,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 
 		zecTx = &zecutil.MsgTx{
 			MsgTx:        redeemTx,
-			ExpiryHeight: uint32(chainHeight) + ZecTxExpiry,
+			ExpiryHeight: checkpoint.ZecExpiryHeight,
 		}
 	}
 
@@ -319,6 +355,25 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		}
 		err = utxo.PostKeysignFailure(c.bridge, tx, c.log, thorchainHeight, utxoErr)
 		return nil, checkpointBytes, nil, fmt.Errorf("fail to sign the message: %w", err)
+	}
+
+	if c.cfg.ChainID == common.ZECChain {
+		// TSS may span the expiry boundary. Check again before creating an
+		// observation or reserving inputs for a transaction that cannot be mined.
+		latestHeight, heightErr := c.rpc.GetBlockCount()
+		if heightErr == nil {
+			heightErr = checkZecExpiry(checkpoint.ZecExpiryHeight, latestHeight)
+		}
+		if errors.Is(heightErr, chainclienttypes.ErrTxExpired) {
+			return nil, checkpointBytes, nil, heightErr
+		}
+		if heightErr != nil {
+			// Signatures have already been exposed. Preserve the payload and its
+			// input reservations; broadcast requires a live tip before submission.
+			c.log.Warn().Err(heightErr).Msg("cannot refresh ZEC tip after signing; retaining signed payload for broadcast expiry check")
+		} else {
+			chainHeight = latestHeight
+		}
 	}
 
 	// convert back to wire tx
@@ -413,7 +468,10 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 			id := formatUtxoKey(vin.PreviousOutPoint.Hash.String(), vin.PreviousOutPoint.Index)
 			ids = append(ids, id)
 		}
-		err = c.temporalStorage.SetSpentUtxos(ids, chainHeight)
+		// PruneSpentUtxos removes reservations after ZecTxExpiry blocks. Anchor
+		// them to the fixed expiry instead of extending them on a delayed retry.
+		reservationHeight := int64(checkpoint.ZecExpiryHeight) - int64(ZecTxExpiry)
+		err = c.temporalStorage.SetSpentUtxos(ids, reservationHeight)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to set utxos: %w", err)
 		}
@@ -544,6 +602,14 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 	case common.ZECChain:
 		if len(payload) == 0 {
 			return "", fmt.Errorf("payload is empty")
+		}
+		txid, err = c.checkZecBroadcastExpiry(payload, height)
+		if err != nil {
+			return "", err
+		}
+		if txid != "" {
+			// Already mined by another signer; retain the normal success/cache path.
+			break
 		}
 
 		args := []any{hex.EncodeToString(payload)}

@@ -137,9 +137,26 @@ genesis_init() {
 # Main
 ########################################################################################
 
+# A failed deployment may leave both genesis.json and contracts on other chains.
+# Persist the incomplete state across container restarts; neither starting from
+# that genesis nor blindly deploying again is safe.
+MOCKNET_GENESIS_INIT_MARKER="$HOME/.thornode/.mocknet-genesis-in-progress"
+if [ "$NET" = "mocknet" ] && [ -e "$MOCKNET_GENESIS_INIT_MARKER" ]; then
+  echo "Incomplete mocknet genesis initialization: $MOCKNET_GENESIS_INIT_MARKER" >&2
+  echo "Refusing to start or redeploy. Inspect the startup logs and recreate the disposable mocknet volumes together." >&2
+  exit 1
+fi
+
 # genesis on first init if we are the genesis node
 if [ ! -f ~/.thornode/config/genesis.json ]; then
-  genesis_init
+  if [ "$NET" = "mocknet" ]; then
+    mkdir -p "$HOME/.thornode" || exit 1
+    mkdir "$MOCKNET_GENESIS_INIT_MARKER" || exit 1
+  fi
+  genesis_init || exit 1
+  if [ "$NET" = "mocknet" ]; then
+    rmdir "$MOCKNET_GENESIS_INIT_MARKER" || exit 1
+  fi
 fi
 
 # render tendermint and cosmos configuration files

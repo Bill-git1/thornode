@@ -85,7 +85,7 @@ func (s *SolRPC) GetTransactionWithCommitment(signature, commitment string) (*Tr
 		map[string]interface{}{
 			"commitment":                     commitment,
 			"encoding":                       "json",
-			"maxSupportedTransactionVersion": 0,
+			"maxSupportedTransactionVersion": 1,
 		},
 	}
 

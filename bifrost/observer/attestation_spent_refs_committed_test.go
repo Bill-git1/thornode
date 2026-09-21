@@ -17,9 +17,12 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 	ag, _, _, _, _, _ := setupTestGossip(t)
 
 	t.Run("applies spent refs for XMR outbound on committed event", func(t *testing.T) {
-		var callbackTx *common.ObservedTx
+		// The callback runs on the import goroutine, so it hands the tx back
+		// over a channel: reading a plain variable after a sleep races the
+		// write, and so does the next subtest rebinding the callback field.
+		fired := make(chan common.ObservedTx, 1)
 		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
-			callbackTx = &tx
+			fired <- tx
 			if onOutcome != nil {
 				onOutcome(true)
 			}
@@ -64,18 +67,22 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Payload: payload,
 		})
 
-		time.Sleep(50 * time.Millisecond)
+		var callbackTx common.ObservedTx
+		select {
+		case callbackTx = <-fired:
+		case <-time.After(5 * time.Second):
+			require.FailNow(t, "spent refs callback should fire for XMR outbound committed event")
+		}
 
-		require.NotNil(t, callbackTx, "spent refs callback should fire for XMR outbound committed event")
 		assert.Equal(t, 2, len(callbackTx.SpentOutputRefs))
 		assert.Equal(t, "spent1", callbackTx.SpentOutputRefs[0].TxHash)
 		assert.Equal(t, "spent2", callbackTx.SpentOutputRefs[1].TxHash)
 	})
 
 	t.Run("does not apply spent refs for non-XMR committed event", func(t *testing.T) {
-		var called bool
+		fired := make(chan struct{}, 1)
 		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
-			called = true
+			fired <- struct{}{}
 			if onOutcome != nil {
 				onOutcome(true)
 			}
@@ -113,14 +120,17 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Payload: payload,
 		})
 
-		time.Sleep(50 * time.Millisecond)
-		assert.False(t, called, "spent refs callback should NOT fire for non-XMR chain")
+		select {
+		case <-fired:
+			assert.Fail(t, "spent refs callback should NOT fire for non-XMR chain")
+		case <-time.After(50 * time.Millisecond):
+		}
 	})
 
 	t.Run("does not apply spent refs for inbound XMR committed event", func(t *testing.T) {
-		var called bool
+		fired := make(chan struct{}, 1)
 		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
-			called = true
+			fired <- struct{}{}
 			if onOutcome != nil {
 				onOutcome(true)
 			}
@@ -159,14 +169,17 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Payload: payload,
 		})
 
-		time.Sleep(50 * time.Millisecond)
-		assert.False(t, called, "spent refs callback should NOT fire for inbound XMR")
+		select {
+		case <-fired:
+			assert.Fail(t, "spent refs callback should NOT fire for inbound XMR")
+		case <-time.After(50 * time.Millisecond):
+		}
 	})
 
 	t.Run("does not apply spent refs when no refs present", func(t *testing.T) {
-		var called bool
+		fired := make(chan struct{}, 1)
 		ag.SetObserverApplySpentOutputRefs(func(tx common.ObservedTx, onOutcome func(applied bool)) {
-			called = true
+			fired <- struct{}{}
 			if onOutcome != nil {
 				onOutcome(true)
 			}
@@ -203,7 +216,10 @@ func TestQuorumTxCommittedAppliesXMRSpentRefs(t *testing.T) {
 			Payload: payload,
 		})
 
-		time.Sleep(50 * time.Millisecond)
-		assert.False(t, called, "spent refs callback should NOT fire when no refs present")
+		select {
+		case <-fired:
+			assert.Fail(t, "spent refs callback should NOT fire when no refs present")
+		case <-time.After(50 * time.Millisecond):
+		}
 	})
 }

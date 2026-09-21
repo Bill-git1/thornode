@@ -414,7 +414,7 @@ func (s *BitcoinSignerSuite) TestConsolidateVaultUTXOsSkipsBelowThreshold(c *C) 
 	vault := types2.Vault{PubKey: s.client.nodePubKey}
 	cacheKey := stypes.BroadcastCacheKey(vault.PubKey.String(), s.client.GetChain().String())
 
-	err := s.client.consolidateVaultUTXOs(vault, 3)
+	err := s.client.consolidateVaultUTXOs(vault, 3, 0)
 	c.Assert(err, IsNil)
 
 	latestTx, err := s.client.signerCacheManager.GetLatestRecordedTx(cacheKey)
@@ -458,7 +458,7 @@ func (s *BitcoinSignerSuite) TestConsolidateVaultUTXOsReturnsSignError(c *C) {
 	s.client.tssKeySigner = &errorThorchainKeyManager{}
 	vault := types2.Vault{PubKey: types2.GetRandomPubKey()}
 
-	err := s.client.consolidateVaultUTXOs(vault, 2)
+	err := s.client.consolidateVaultUTXOs(vault, 2, 0)
 	c.Assert(err, ErrorMatches, "(?s)sign consolidate txout item: .*mock remote sign failure.*")
 }
 
@@ -492,7 +492,7 @@ func (s *BitcoinSignerSuite) TestConsolidateVaultUTXOsReturnsBroadcastError(c *C
 		s.client.rpc = originalRPC
 	}()
 
-	err = s.client.consolidateVaultUTXOs(vault, 2)
+	err = s.client.consolidateVaultUTXOs(vault, 2, 0)
 	c.Assert(err, ErrorMatches, "broadcast consolidate tx: fail to broadcast transaction to chain: .*broadcast failed.*")
 }
 

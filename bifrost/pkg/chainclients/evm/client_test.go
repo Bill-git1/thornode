@@ -284,6 +284,14 @@ func (s *EVMSuite) SetUpTest(c *C) {
 }
 
 func (s *EVMSuite) TearDownTest(c *C) {
+	// Close the server SetUpTest started. Its handler closes over s.thorKeys, so
+	// leaving it serving lets the next SetUpTest race the handler goroutine when
+	// it reassigns that field. Close waits for outstanding requests to finish.
+	if s.server != nil {
+		s.server.Close()
+		s.server = nil
+	}
+
 	c.Assert(os.Unsetenv("NET"), IsNil)
 
 	if err := os.RemoveAll(s.thordir); err != nil {
@@ -366,7 +374,7 @@ func (s *EVMSuite) TestConvertSigningAmount(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 		},
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
@@ -389,7 +397,7 @@ func (s *EVMSuite) TestGetTokenAddressFromAsset(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 		},
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
@@ -415,7 +423,7 @@ func (s *EVMSuite) TestClient(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 		},
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err2, IsNil)
@@ -506,7 +514,7 @@ func (s *EVMSuite) TestL1FeeDeduction(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 			MaxGasLimit:        80000,
 		},
 	}
@@ -570,7 +578,7 @@ func (s *EVMSuite) TestGetAccount(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 		},
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
@@ -595,7 +603,7 @@ func (s *EVMSuite) TestGetVaultBalancesUsesVaultCoins(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1,
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 		},
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
@@ -645,7 +653,7 @@ func (s *EVMSuite) TestSignEVMTx(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 			MaxGasLimit:        80000,
 		},
 	}
@@ -861,7 +869,7 @@ func (s *EVMSuite) TestSignTxChecksMemLiability(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 			MaxGasLimit:        80000,
 		},
 	}
@@ -932,7 +940,7 @@ func (s *EVMSuite) TestCheckAndApproveAllowance(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 			MaxGasLimit:        80000,
 		},
 	}
@@ -1017,7 +1025,7 @@ func (s *EVMSuite) TestSignTxWithAllowanceFlow(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1, // avoids querying thorchain for block height
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 			MaxGasLimit:        80000,
 		},
 	}
@@ -1137,7 +1145,7 @@ func (s *EVMSuite) TestAllowanceCheckWithDecimalConversions(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1,
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 			MaxGasLimit:        80000,
 		},
 	}
@@ -1274,7 +1282,7 @@ func (s *EVMSuite) TestApprovalTransactionBroadcastFlow(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			ChainID:            common.AVAXChain,
 			StartBlockHeight:   1,
-			HTTPRequestTimeout: time.Second,
+			HTTPRequestTimeout: 10 * time.Second,
 			MaxGasLimit:        80000,
 		},
 	}

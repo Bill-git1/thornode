@@ -397,6 +397,20 @@ func InitConfig(parallelism int, seed bool, rng *rand.Rand) *OpConfig {
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////
 
+func waitForZecFunding(client LiteChainClient, target sdkmath.Uint, now func() time.Time, sleep func(time.Duration), timeout time.Duration) error {
+	deadline := now().Add(timeout)
+	var lastErr error
+	for now().Before(deadline) {
+		account, err := client.GetAccount(nil)
+		lastErr = err
+		if err == nil && account != nil && account.Coins.GetCoin(common.ZECAsset).Amount.GTE(target) {
+			return nil
+		}
+		sleep(time.Second)
+	}
+	return fmt.Errorf("zec funding did not reach %s after %s (last RPC error: %v)", target, timeout, lastErr)
+}
+
 // nolint:typecheck
 func fundUserChainAccounts(master *User, users []*User, chain common.Chain, amount sdkmath.Uint) {
 	for _, user := range users {
@@ -409,8 +423,11 @@ func fundUserZecAccounts(master *User, users []*User, amount sdkmath.Uint, txs i
 		cumulativeAmount := amount.MulUint64(uint64(i + 1))
 		for _, user := range users {
 			fundUserChainAccount(master, user, common.ZECChain, cumulativeAmount)
-			if err := generateZecBlocks(chainRPCs[common.ZECChain], 1); err != nil {
-				log.Fatal().Err(err).Msg("failed to mine zec funding block")
+			// The container owns mining. Wait for the balance before calculating
+			// another cumulative funding delta, so an unmined transfer cannot
+			// cause the next iteration to pay it again.
+			if err := waitForZecFunding(user.ChainClients[common.ZECChain], cumulativeAmount, time.Now, time.Sleep, 2*time.Minute); err != nil {
+				log.Fatal().Err(err).Str("user", user.Name()).Msg("failed waiting for zec funding confirmation")
 			}
 		}
 	}

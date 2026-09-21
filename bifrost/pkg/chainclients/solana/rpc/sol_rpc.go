@@ -131,18 +131,18 @@ func (s *SolRPC) BroadcastTx(rawTx string) (string, error) {
 	params := []interface{}{rawTx, map[string]interface{}{"encoding": "base64"}}
 
 	var response struct {
-		Result string `json:"result"`
-		Error  struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-		} `json:"error,omitempty"`
+		Result string    `json:"result"`
+		Error  *RPCError `json:"error,omitempty"`
 	}
 	if err := s.post("sendTransaction", params, &response); err != nil {
 		return "", fmt.Errorf("failed to sendTransaction: %w", err)
 	}
 
-	if response.Error.Message != "" {
-		return "", fmt.Errorf("sendTransaction error: %s (code: %d)", response.Error.Message, response.Error.Code)
+	// Return the typed *RPCError (wrapped) so callers can errors.As it and branch
+	// on the Solana code/message — e.g. a "Blockhash not found" rejection means the
+	// signed tx can never land and must be re-signed, not re-broadcast.
+	if response.Error != nil {
+		return "", fmt.Errorf("sendTransaction error: %w", response.Error)
 	}
 
 	return response.Result, nil

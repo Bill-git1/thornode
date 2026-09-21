@@ -618,8 +618,11 @@ func (op *OpCreateBlocks) Execute(out io.Writer, path string, _, routine int, p 
 		var res *http.Response
 		for j := 0; j < 5; j++ {
 			res, err = httpClient.Get(url)
-			if res.StatusCode == http.StatusOK {
-				break
+			if err == nil {
+				if res.StatusCode == http.StatusOK {
+					break
+				}
+				_ = res.Body.Close()
 			}
 			time.Sleep(100 * time.Millisecond * getTimeFactor())
 		}

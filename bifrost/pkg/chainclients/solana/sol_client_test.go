@@ -2,6 +2,7 @@ package solana
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,6 +29,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
+	soltypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/solana/types"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
@@ -1000,6 +1003,218 @@ func (s *SolTestSuite) TestBroadcastTxLandedDespiteError(c *C) {
 
 	// Cache must now be written so a future reschedule won't re-sign
 	c.Assert(e.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, true)
+}
+
+// A broadcast rejection alone cannot distinguish expiry from a lagging RPC.
+// Only confirmed expiry may clear signed bytes or poison the shared blockhash.
+func (s *SolTestSuite) TestBroadcastTxBlockhashValidity(c *C) {
+	oldDelay := broadcastLookupDelay
+	broadcastLookupDelay = 0
+	defer func() { broadcastLookupDelay = oldDelay }()
+
+	for _, tc := range []struct {
+		name     string
+		response string
+		expired  bool
+		restart  bool
+	}{
+		{"valid", `"result":{"context":{"slot":1000},"value":true}`, false, false},
+		{"expired", `"result":{"context":{"slot":1000},"value":false}`, true, false},
+		{"RPC error", `"error":{"code":-32016,"message":"Minimum context slot has not been reached"}`, false, false},
+		{"lagging context", `"result":{"context":{"slot":949},"value":false}`, false, false},
+		{"missing result", `"result":null`, false, false},
+		{"valid after restart", `"result":{"context":{"slot":1000},"value":true}`, false, true},
+		{"expired after restart", `"result":{"context":{"slot":1000},"value":false}`, true, true},
+	} {
+		func() {
+			var phase atomic.Int32 // 0: sign; 1: failed broadcast; 2: healthy retry
+			validityRequests := make(chan json.RawMessage, 4)
+			broadcasts := make(chan string, 2)
+			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				var request struct {
+					Method string          `json:"method"`
+					Params json.RawMessage `json:"params"`
+				}
+				if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
+					http.Error(rw, err.Error(), http.StatusBadRequest)
+					return
+				}
+				rw.Header().Set("Content-Type", "application/json")
+				switch request.Method {
+				case "sendTransaction":
+					var params []json.RawMessage
+					var encoded string
+					if json.Unmarshal(request.Params, &params) == nil && len(params) > 0 {
+						_ = json.Unmarshal(params[0], &encoded)
+					}
+					broadcasts <- encoded
+					if phase.Load() == 1 {
+						_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":-32002,"message":"Transaction simulation failed: Blockhash not found"}}`))
+					} else {
+						_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"retry-sig"}`))
+					}
+					return
+				case "isBlockhashValid":
+					if phase.Load() == 1 {
+						validityRequests <- request.Params
+						_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,%s}`, tc.response)
+						return
+					}
+				}
+				if result, ok := consensusBlockhashRPCResponse(request.Method, request.Params); ok {
+					_, _ = fmt.Fprintf(rw, `{"jsonrpc":"2.0","id":1,"result":%s}`, result)
+					return
+				}
+				_, _ = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":null}`))
+			}))
+			defer server.Close()
+
+			client, pub, manager := s.newSolCacheTestClient(c, server)
+			defer func() { c.Assert(manager.Stop(), IsNil) }()
+			txOut := newSolCacheTestTxOut(pub)
+			txOut.Height = 1
+			rawTx, _, _, err := client.SignTx(txOut, txOut.Height)
+			c.Assert(err, IsNil)
+			c.Assert(len(rawTx) > 0, Equals, true)
+			if tc.restart {
+				// Only the persisted outbound and signed bytes survive a restart.
+				restarted, _, restartedManager := s.newSolCacheTestClient(c, server)
+				defer func() { c.Assert(restartedManager.Stop(), IsNil) }()
+				client = restarted
+			}
+
+			phase.Store(1)
+			_, err = client.BroadcastTx(txOut, rawTx)
+			c.Assert(err, NotNil, Commentf("%s", tc.name))
+			c.Assert(errors.Is(err, stypes.ErrResignRequired), Equals, tc.expired, Commentf("%s", tc.name))
+			c.Assert(client.signerCacheManager.HasSigned(txOut.CacheHash()), Equals, false)
+			select {
+			case params := <-validityRequests:
+				var values []json.RawMessage
+				c.Assert(json.Unmarshal(params, &values), IsNil)
+				c.Assert(len(values), Equals, 2)
+				var hash string
+				var cfg struct {
+					Commitment     string `json:"commitment"`
+					MinContextSlot uint64 `json:"minContextSlot"`
+				}
+				c.Assert(json.Unmarshal(values[0], &hash), IsNil)
+				c.Assert(json.Unmarshal(values[1], &cfg), IsNil)
+				c.Check(hash, Equals, mockBlockhashForSlot(950))
+				c.Check(cfg.Commitment, Equals, "processed")
+				c.Check(cfg.MinContextSlot, Equals, uint64(950))
+			default:
+				c.Fatal("broadcast rejection must check blockhash validity: ", tc.name)
+			}
+
+			// Once the RPC catches up, later outbounds at the same height must
+			// still sign unless that shared hash was actually confirmed expired.
+			phase.Store(2)
+			sibling := txOut
+			sibling.Coins = common.Coins{common.NewCoin(common.SOLAsset, cosmos.NewUint(12000000))}
+			siblingTx, _, _, err := client.SignTx(sibling, txOut.Height)
+			c.Assert(err, IsNil)
+			c.Assert(len(siblingTx) == 0, Equals, tc.expired, Commentf("%s: shared hash", tc.name))
+			c.Assert(<-broadcasts, Equals, base64.StdEncoding.EncodeToString(rawTx))
+			if !tc.expired {
+				// Retry the original signed bytes after the provider recovers.
+				sig, retryErr := client.BroadcastTx(txOut, rawTx)
+				c.Assert(retryErr, IsNil)
+				c.Assert(sig, Equals, "retry-sig")
+				c.Assert(<-broadcasts, Equals, base64.StdEncoding.EncodeToString(rawTx))
+			}
+		}()
+	}
+}
+
+// TestIsBlockhashNotFound guards the message match that gates the re-sign signal:
+// only the "Blockhash not found" preflight cause, not other simulation failures.
+func (s *SolTestSuite) TestIsBlockhashNotFound(c *C) {
+	c.Assert(isBlockhashNotFound(nil), Equals, false)
+	c.Assert(isBlockhashNotFound(errors.New("sendTransaction error: rpc error -32002: Transaction simulation failed: Blockhash not found")), Equals, true)
+	c.Assert(isBlockhashNotFound(errors.New("BlockHash Not Found")), Equals, true)
+	c.Assert(isBlockhashNotFound(errors.New("sendTransaction error: rpc error -32002: insufficient lamports")), Equals, false)
+	c.Assert(isBlockhashNotFound(errors.New("node is behind")), Equals, false)
+}
+
+func TestTxBlockhashFromRawTx(t *testing.T) {
+	hash := mockBlockhashForSlot(950)
+	for _, accountCount := range []int{2, 4, 128, 256} {
+		message := soltypes.NewMessage(
+			soltypes.MessageHeader{NumRequireSignatures: 1},
+			make([]soltypes.PublicKey, accountCount), hash, nil,
+		)
+		tx := soltypes.NewTransaction(message)
+		rawTx, err := tx.Serialize()
+		require.NoError(t, err)
+		got, ok := txBlockhashFromRawTx(rawTx)
+		require.True(t, ok)
+		require.Equal(t, hash, got)
+		// Every truncation of this header/accounts/hash-only fixture must fail.
+		for size := 0; size < len(rawTx); size++ {
+			_, ok = txBlockhashFromRawTx(rawTx[:size])
+			require.False(t, ok, "accounts=%d truncated at %d", accountCount, size)
+		}
+	}
+
+	message := soltypes.NewMessage(
+		soltypes.MessageHeader{NumRequireSignatures: 1},
+		make([]soltypes.PublicKey, 2), hash, nil,
+	)
+	tx := soltypes.NewTransaction(message)
+	rawTx, err := tx.Serialize()
+	require.NoError(t, err)
+	for _, tc := range []struct {
+		name   string
+		offset int
+		value  byte
+	}{
+		{"wrong signature count", 0, 2},
+		{"versioned message", 65, 0x80},
+		{"wrong signer count", 65, 2},
+		{"no accounts", 68, 0},
+		{"truncated account vector", 68, 127},
+	} {
+		malformed := bytes.Clone(rawTx)
+		malformed[tc.offset] = tc.value
+		_, ok := txBlockhashFromRawTx(malformed)
+		require.False(t, ok, tc.name)
+	}
+	malformed := bytes.Clone(rawTx)
+	copy(malformed[68:], bytes.Repeat([]byte{0xff}, 10))
+	_, ok := txBlockhashFromRawTx(malformed)
+	require.False(t, ok, "overflowing account count")
+}
+
+func TestConfirmedExpiredBlockhashRequiresMatchingAnchor(t *testing.T) {
+	hash := mockBlockhashForSlot(950)
+	message := soltypes.NewMessage(
+		soltypes.MessageHeader{NumRequireSignatures: 1},
+		make([]soltypes.PublicKey, 2), hash, nil,
+	)
+	tx := soltypes.NewTransaction(message)
+	rawTx, err := tx.Serialize()
+	require.NoError(t, err)
+	for _, tc := range []struct {
+		name   string
+		height int64
+		anchor consensusBlockHashEntry
+		rawTx  []byte
+	}{
+		{"missing height", 0, consensusBlockHashEntry{hash: hash, slot: 950}, rawTx},
+		{"missing hash", 1, consensusBlockHashEntry{hash: hash, slot: 950}, nil},
+		{"different signed hash", 1, consensusBlockHashEntry{hash: mockBlockhashForSlot(951), slot: 951}, rawTx},
+		{"missing slot", 1, consensusBlockHashEntry{hash: hash, slot: 0}, rawTx},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// No RPC client: ambiguous anchor data must be rejected before any
+			// validity query can classify the signed transaction as expired.
+			client := &SOLClient{consensusHashes: map[int64]consensusBlockHashEntry{tc.height: tc.anchor}}
+			expiredHash, expiryErr := client.confirmedExpiredBlockhash(stypes.TxOutItem{Height: tc.height}, tc.rawTx)
+			require.Error(t, expiryErr)
+			require.Empty(t, expiredHash)
+		})
+	}
 }
 
 func (s *SolTestSuite) TestSignSOLTx_ObservationUsesOriginalMemo(c *C) {

@@ -269,8 +269,7 @@ func (s *ZcashSignerSuite) TestVinsUnspentRejectsSpentCachedZECInput(c *C) {
 }
 
 // TestBroadcastTx tests transaction broadcasting behavior.
-// ZEC chain sends raw bytes directly to RPC without local validation (unlike BTC/LTC/DOGE/BCH).
-// This tests that: 1) empty payload fails, 2) non-empty payload is sent to RPC.
+// Empty and malformed payloads must fail before RPC; valid payloads are forwarded.
 func (s *ZcashSignerSuite) TestBroadcastTx(c *C) {
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.ZECChain,
@@ -291,9 +290,12 @@ func (s *ZcashSignerSuite) TestBroadcastTx(c *C) {
 	c.Assert(strings.Contains(err.Error(), "empty"), Equals, true,
 		Commentf("Error should mention empty payload: %v", err))
 
-	// Non-empty payload sends to RPC (mock returns success)
-	// ZEC doesn't validate tx format locally, just forwards to RPC
-	somePayload := []byte("some payload bytes")
+	// Malformed payloads cannot bypass the expiry check.
+	_, err = s.client.BroadcastTx(txOutItem, []byte("invalid payload"))
+	c.Assert(err, ErrorMatches, "fail to deserialize ZEC payload: .*")
+
+	// A valid non-expiring payload sends to RPC (mock returns success).
+	somePayload := zecExpiryPayload(c, 0)
 	txid, err := s.client.BroadcastTx(txOutItem, somePayload)
 	c.Assert(err, IsNil, Commentf("Non-empty payload should be forwarded to RPC"))
 	c.Assert(txid, Not(Equals), "", Commentf("Should return txid from RPC"))
@@ -327,7 +329,7 @@ func (s *ZcashSignerSuite) TestBroadcastTxAlreadyInBlockChainMarksSignerCache(c 
 		InHash: thorchain.GetRandomTxHash(),
 		Memo:   "OUT:" + thorchain.GetRandomTxHash().String(),
 	}
-	payload := []byte("already broadcast by another node")
+	payload := zecExpiryPayload(c, 20000)
 
 	rpcServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		body, err := io.ReadAll(req.Body)
