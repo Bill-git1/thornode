@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -20,6 +19,7 @@ import (
 	eth "github.com/ethereum/go-ethereum/crypto"
 	bchchaincfg "github.com/gcash/bchd/chaincfg"
 	"github.com/gcash/bchutil"
+	lru "github.com/hashicorp/golang-lru"
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/ltcsuite/ltcutil"
 	"github.com/mr-tron/base58"
@@ -42,12 +42,21 @@ type (
 	PubKeys []PubKey
 )
 
+const pubkeyToAddressCacheSize = 100_000
+
 var (
-	EmptyPubKey            PubKey
-	EmptyPubKeySet         PubKeySet
-	pubkeyToAddressCache   = make(map[string]Address)
-	pubkeyToAddressCacheMu = &sync.RWMutex{}
+	EmptyPubKey          PubKey
+	EmptyPubKeySet       PubKeySet
+	pubkeyToAddressCache = newPubKeyToAddressCache()
 )
+
+func newPubKeyToAddressCache() *lru.Cache {
+	cache, err := lru.New(pubkeyToAddressCacheSize)
+	if err != nil {
+		panic(fmt.Errorf("failed to create pubkey to address cache: %w", err))
+	}
+	return cache
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // PubKey
@@ -120,12 +129,11 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 
 	// cache pubkey to address, since this is expensive with many vaults in pubkey manager
 	key := fmt.Sprintf("%s-%s", chain.String(), p.String())
-	pubkeyToAddressCacheMu.RLock()
-	if v, ok := pubkeyToAddressCache[key]; ok {
-		pubkeyToAddressCacheMu.RUnlock()
-		return v, nil
+	if value, ok := pubkeyToAddressCache.Get(key); ok {
+		if address, ok := value.(Address); ok {
+			return address, nil
+		}
 	}
-	pubkeyToAddressCacheMu.RUnlock()
 
 	chainNetwork := CurrentChainNetwork
 	var addressString string
@@ -339,9 +347,7 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 	if err != nil {
 		return address, fmt.Errorf("NewAddress, addressString %s, %w", addressString, err)
 	}
-	pubkeyToAddressCacheMu.Lock()
-	pubkeyToAddressCache[key] = address
-	pubkeyToAddressCacheMu.Unlock()
+	pubkeyToAddressCache.Add(key, address)
 	return address, nil
 }
 

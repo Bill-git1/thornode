@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -199,6 +200,112 @@ func (s *PubKeyTestSuite) TestPubKey(c *C) {
 	err = json.Unmarshal(result, &pk2)
 	c.Assert(err, IsNil)
 	c.Assert(pk2.Equals(pk), Equals, true)
+}
+
+func (s *PubKeyTestSuite) TestPubKeyAddressCache(c *C) {
+	previousCache := pubkeyToAddressCache
+	pubkeyToAddressCache = newPubKeyToAddressCache()
+	defer func() { pubkeyToAddressCache = previousCache }()
+
+	_, rawPubKey, _ := testdata.KeyTestPubAddr()
+	bech32PubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, rawPubKey)
+	c.Assert(err, IsNil)
+	pubKey, err := NewPubKey(bech32PubKey)
+	c.Assert(err, IsNil)
+
+	address, err := pubKey.GetAddress(ETHChain)
+	c.Assert(err, IsNil)
+	key := fmt.Sprintf("%s-%s", ETHChain.String(), pubKey.String())
+	cached, ok := pubkeyToAddressCache.Get(key)
+	c.Assert(ok, Equals, true)
+	cachedAddress, ok := cached.(Address)
+	c.Assert(ok, Equals, true)
+	c.Check(cachedAddress, Equals, address)
+
+	// A malformed cache entry must be treated as a miss rather than panicking.
+	pubkeyToAddressCache.Add(key, "not an address")
+	recomputed, err := pubKey.GetAddress(ETHChain)
+	c.Assert(err, IsNil)
+	c.Check(recomputed, Equals, address)
+	cached, ok = pubkeyToAddressCache.Get(key)
+	c.Assert(ok, Equals, true)
+	_, ok = cached.(Address)
+	c.Check(ok, Equals, true)
+}
+
+func (s *PubKeyTestSuite) TestPubKeyAddressCacheCapacityAndEviction(c *C) {
+	previousCache := pubkeyToAddressCache
+	pubkeyToAddressCache = newPubKeyToAddressCache()
+	defer func() { pubkeyToAddressCache = previousCache }()
+
+	_, rawPubKey, _ := testdata.KeyTestPubAddr()
+	bech32PubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, rawPubKey)
+	c.Assert(err, IsNil)
+	pubKey, err := NewPubKey(bech32PubKey)
+	c.Assert(err, IsNil)
+
+	address, err := pubKey.GetAddress(ETHChain)
+	c.Assert(err, IsNil)
+	pubKeyCacheKey := fmt.Sprintf("%s-%s", ETHChain.String(), pubKey.String())
+
+	const entries = 105_000
+	for i := 0; i < entries; i++ {
+		pubkeyToAddressCache.Add(fmt.Sprintf("test-%d", i), address)
+	}
+
+	c.Check(pubkeyToAddressCache.Len() <= pubkeyToAddressCacheSize, Equals, true)
+	c.Check(pubkeyToAddressCache.Len(), Equals, pubkeyToAddressCacheSize)
+	_, ok := pubkeyToAddressCache.Get(pubKeyCacheKey)
+	c.Check(ok, Equals, false)
+	_, ok = pubkeyToAddressCache.Get("test-0")
+	c.Check(ok, Equals, false)
+
+	recomputed, err := pubKey.GetAddress(ETHChain)
+	c.Assert(err, IsNil)
+	c.Check(recomputed, Equals, address)
+	c.Check(pubkeyToAddressCache.Len(), Equals, pubkeyToAddressCacheSize)
+	cached, ok := pubkeyToAddressCache.Get(pubKeyCacheKey)
+	c.Assert(ok, Equals, true)
+	c.Check(cached, Equals, interface{}(address))
+}
+
+func (s *PubKeyTestSuite) TestPubKeyAddressCacheConcurrentAccess(c *C) {
+	previousCache := pubkeyToAddressCache
+	pubkeyToAddressCache = newPubKeyToAddressCache()
+	defer func() { pubkeyToAddressCache = previousCache }()
+
+	_, rawPubKey, _ := testdata.KeyTestPubAddr()
+	bech32PubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, rawPubKey)
+	c.Assert(err, IsNil)
+	pubKey, err := NewPubKey(bech32PubKey)
+	c.Assert(err, IsNil)
+	expected, err := pubKey.GetAddress(ETHChain)
+	c.Assert(err, IsNil)
+	pubkeyToAddressCache.Purge()
+
+	type result struct {
+		address Address
+		err     error
+	}
+	const goroutines = 32
+	results := make(chan result, goroutines)
+	var wg sync.WaitGroup
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			address, err := pubKey.GetAddress(ETHChain)
+			results <- result{address: address, err: err}
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	for result := range results {
+		c.Assert(result.err, IsNil)
+		c.Check(result.address, Equals, expected)
+	}
+	c.Check(pubkeyToAddressCache.Len(), Equals, 1)
 }
 
 func (s *PubKeyTestSuite) TestPubKeySet(c *C) {
