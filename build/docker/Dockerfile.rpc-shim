@@ -1,0 +1,55 @@
+########################################################################################
+# Build the RPC-only thornode binary with a non-functional private TSS compatibility shim.
+########################################################################################
+
+ARG DOCKER_MIRROR=
+FROM ${DOCKER_MIRROR}golang:1.26.4-bookworm AS build
+
+ENV GOBIN=/go/bin
+ENV GOPATH=/go
+ENV GOOS=linux
+ENV GOARCH=amd64
+ENV CGO_ENABLED=1
+ENV CC=x86_64-linux-gnu-gcc
+
+# The official v3.20.3 runtime is amd64-only. Install the Debian cross compiler
+# so this Dockerfile also builds reliably on ARM hosts without executing the Go
+# toolchain itself through user-mode emulation.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      gcc-x86-64-linux-gnu \
+      libc6-dev-amd64-cross && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+COPY build/tss-lib-shim /tss-lib-shim
+
+RUN go mod edit \
+      -replace=gitlab.com/thorchain/tss/tss-lib-private.git/v3=/tss-lib-shim && \
+    go mod download
+
+ARG TAG=mainnet
+ARG COMMIT=unknown
+
+# Reproduce the upstream Makefile's release ldflags and build flags, but compile
+# only cmd/thornode. `go build` is used instead of `go install` because Go
+# rejects cross-compiled installs when GOBIN is set.
+RUN VERSION="$(cat version)" && \
+    go build \
+      -ldflags "-X gitlab.com/thorchain/thornode/v3/constants.Version=${VERSION} -X gitlab.com/thorchain/thornode/v3/constants.GitCommit=${COMMIT} -X github.com/cosmos/cosmos-sdk/version.Name=THORChain -X github.com/cosmos/cosmos-sdk/version.AppName=thornode -X github.com/cosmos/cosmos-sdk/version.Version=${VERSION} -X github.com/cosmos/cosmos-sdk/version.Commit=${COMMIT} -X github.com/cosmos/cosmos-sdk/version.BuildTags=${TAG} -buildid=" \
+      -tags "${TAG}" \
+      -trimpath \
+      -buildmode=pie \
+      -o /go/bin/thornode \
+      ./cmd/thornode
+
+########################################################################################
+# Preserve the official v3.20.3 runtime and replace only the thornode binary.
+########################################################################################
+
+FROM registry.gitlab.com/thorchain/thornode:mainnet-3.20.3
+
+COPY --from=build /go/bin/thornode /usr/bin/thornode
+
+LABEL org.opencontainers.image.description="Liquify THORNode v3.20.3 patched RPC-only build using non-functional TSS compatibility shim"
