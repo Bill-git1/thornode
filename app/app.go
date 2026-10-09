@@ -451,7 +451,7 @@ func NewChainApp(
 	}
 
 	mgrs := thorchain.NewManagers(app.ThorchainKeeper, app.appCodec, runtime.NewKVStoreService(keys[thorchaintypes.StoreKey]), app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, app.WasmKeeper)
-	app.msgServiceRouter.AddCustomRoute("cosmos.bank.v1beta1.Msg", thorchain.NewBankSendHandler(thorchain.NewSendHandler(mgrs)))
+	app.msgServiceRouter.AddCustomRoute("cosmos.bank.v1beta1.Msg", thorchain.NewBankSendHandler(mgrs))
 
 	thorchainModule := thorchain.NewAppModule(mgrs, telemetryEnabled, testApp)
 

@@ -20,18 +20,22 @@ var _ types.MsgServer = (*BankSendHandler)(nil)
 
 // BankSendHandler is a wrapper handler used to override msg routing for cosmos bank sends.
 type BankSendHandler struct {
-	h BaseHandler[sdk.Msg]
+	mgr Manager
 }
 
 // NewBankSendHandler create a new instance of BankSendHandler
-func NewBankSendHandler(h BaseHandler[sdk.Msg]) BankSendHandler {
-	return BankSendHandler{h: h}
+func NewBankSendHandler(mgr Manager) BankSendHandler {
+	return BankSendHandler{mgr: mgr}
 }
 
 // Send is the entrypoint for bank MsgSend, passing through to the thorchain handler.
 func (h BankSendHandler) Send(goCtx context.Context, msg *bank.MsgSend) (*bank.MsgSendResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	if _, err := h.h.Run(ctx, msg); err != nil {
+	mgr, err := managersForExecMode(goCtx, h.mgr)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = NewSendHandler(mgr).Run(ctx, msg); err != nil {
 		return nil, err
 	}
 
